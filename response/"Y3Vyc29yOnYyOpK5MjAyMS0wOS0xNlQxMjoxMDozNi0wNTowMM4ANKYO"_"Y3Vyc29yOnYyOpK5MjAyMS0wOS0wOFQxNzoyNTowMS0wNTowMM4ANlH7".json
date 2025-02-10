@@ -1,0 +1,1113 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMS0wOS0wOFQxNzoyNTowMS0wNTowMM4ANlH7"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Should I use MatchedValueBC or PenaltyInterfaceDiffusion to enforce solution continuity at an interface?",
+          "author": {
+            "login": "lindsayad"
+          },
+          "bodyText": "The former enforces continuity strongly while the latter imposes continuity in a weak sense using a penalty method. Which one is better?",
+          "url": "https://github.com/idaholab/moose/discussions/18799",
+          "updatedAt": "2023-01-12T04:55:06Z",
+          "publishedAt": "2021-09-09T22:49:18Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "lindsayad"
+                  },
+                  "bodyText": "The answer is that it depends on what you're after. MatchedValueBC may yield a better conditioned system because it does not introduce any penalty parameters. However, this may not always be the case. For instance if you are solving a diffusivity problem, and you impose a penalty equivalent to the diffiusivity, then the penalty method will actually be better conditioned than the strongly enforced method. However, you may not be satisfied with the jump between the solution value on either side of the face.\nWhat is unequivocal is that the penalty method (given wise choice of the penalty parameter) preserves optimal convergence of the finite element method while the strong method of enforcing continuity degrades the convergence by order 1. So if using first order Lagrange variables, the expected approximation error of the method is O(h^2). This is indeed the result when using the penalty method. However, in this case the strong enforcement method would yield error O(h^1). For more discussion please see the old MOOSE forum",
+                  "url": "https://github.com/idaholab/moose/discussions/18799#discussioncomment-1304075",
+                  "updatedAt": "2023-01-12T04:55:06Z",
+                  "publishedAt": "2021-09-09T22:54:30Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "jiangwen84"
+                  },
+                  "bodyText": "@lindsayad  I was bit puzzled about the convergence rate you gave for strong enforcement v.s penalty method. Is it specific to the interfacial conditions? Or it is also true for boundary conditions?\nFor boundary condition, my experience is that the strong enforcement, i.e. DirichletBC, gives optimal rate while  PenaltyDirichletBC typically does not provide optimal rate convergence.  The penalty method requires theoretically very large number to give accurate result, and when the penalty becomes large, the optimal rate can not be obtained.",
+                  "url": "https://github.com/idaholab/moose/discussions/18799#discussioncomment-1304125",
+                  "updatedAt": "2023-01-12T04:55:42Z",
+                  "publishedAt": "2021-09-09T23:17:00Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "If you read that whole thread that I linked to, then I think you'll see that I was quite surprised as well! An analogy I can think of is that if we apply mechanical contact constraints in a point-wise way like we do for NodeFaceConstraints, then you fail the patch test and the method is not variationally consistent. However, if you apply the constraint in a weak/integral/weighted way then the variational consistency of the method is restored. @YaqiWang was the one who initially questioned the strong enforcement method and suggested that I look into the penalty method. I'm thankful that he did!",
+                          "url": "https://github.com/idaholab/moose/discussions/18799#discussioncomment-1304334",
+                          "updatedAt": "2023-05-01T16:51:50Z",
+                          "publishedAt": "2021-09-10T01:07:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "Instead of penalty we could also do weak enforcement with lagrange multipliers as well. Then you would get exact constraint enforcement (at the cost of making your system saddle point)",
+                          "url": "https://github.com/idaholab/moose/discussions/18799#discussioncomment-1304349",
+                          "updatedAt": "2023-05-01T16:51:50Z",
+                          "publishedAt": "2021-09-10T01:13:34Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "I agreed that the MatchedValueBC is not a variational consistent approach, just like the NodeFace Contact which is more like a collocation method. For MatchedValueBC, I do not think it can be called as strong enforcement. It has its own residual that needs to be minimized by the solver.  Unlike the Dirichlet boundary condition, we can choose a finite element space which exactly satisfies the BC. For that we say it is a strong enforcement.\nFor penalty, I am not sure if it is always optimal rate of convergence. It can be super or sub. Like you said, it is highly depends on the choice of the penalty parameter, which can be mesh dependent and problem dependent.\nFor stabilized Lagrange Multiplier method, I believe it always has optimal rate of convergence.",
+                          "url": "https://github.com/idaholab/moose/discussions/18799#discussioncomment-1304918",
+                          "updatedAt": "2023-05-01T16:51:50Z",
+                          "publishedAt": "2021-09-10T05:08:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "For MatchedValueBC, I do not think it can be called as strong enforcement. It has its own residual that needs to be minimized by the solver.\n\nIt is implemented as a NodalBC though. It overwrites any existing residual information for the degree of freedom on the node and plugs the residual of the NodalBC in. The only way the residual can be zero is if if the NodalBC residual is satisfied. In addiition, no information from the boundary faces is considered, e.g. no integration is performed. I would consider that strong enforcement.",
+                          "url": "https://github.com/idaholab/moose/discussions/18799#discussioncomment-1307096",
+                          "updatedAt": "2023-05-01T16:51:50Z",
+                          "publishedAt": "2021-09-10T13:54:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "For penalty, I am not sure if it is always optimal rate of convergence. It can be super or sub. Like you said, it is highly depends on the choice of the penalty parameter, which can be mesh dependent and problem dependent.\n\nThis statement is true. At least I have observed sub-convergence rates with too small a choice of penalty. I have not yet observed super-convergence rates. I will say that just last night @fdkong tried out both the matched and penalty approaches and his error was significantly less with the penalty approach which is consistent with the plots from the MOOSE users thread I linked to.\n\nFor stabilized Lagrange Multiplier method, I believe it always has optimal rate of convergence.\n\nYes, I think it would be great to add an object that does this with LMs",
+                          "url": "https://github.com/idaholab/moose/discussions/18799#discussioncomment-1307109",
+                          "updatedAt": "2023-05-01T16:51:50Z",
+                          "publishedAt": "2021-09-10T13:57:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "If you look at the residual defined by MatchedValueBC, i.e., _u[_qp] - _v[_qp], it is a penalty-like enforcement with penalty number of 1. I think if you user a higher penalty number there, you will get better results.\nIn my opinion, those two methods are both penalty enforcement, with one enforces on the node, the other on the face/side.",
+                          "url": "https://github.com/idaholab/moose/discussions/18799#discussioncomment-1316677",
+                          "updatedAt": "2023-05-01T16:51:51Z",
+                          "publishedAt": "2021-09-13T15:00:34Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "No it is exact. MatchedValueBC is a NodalBC. NodalBC overwrites (e.g. it calls NumericVector::set) its residual and its Jacobian row instead of adding to it.",
+                          "url": "https://github.com/idaholab/moose/discussions/18799#discussioncomment-1317013",
+                          "updatedAt": "2023-05-01T16:52:46Z",
+                          "publishedAt": "2021-09-13T15:59:26Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "I might not understand how it works well. Here is what I thought.\nThe residual cannot not be exactly zero. It will be minimized to meet the tolerance, e.g. L2 norm of the residual vector. So my understanding is that the _u won't be exactly equal to _v. If you add a larger penalty number to the residual term in MatchedValueBC, e.g. 1e6 * (_u[_qp] - _v[_qp]), the contribution of this term to the overall residual vector will become larger. With a same tolerance, the _u will get closer to _v.",
+                          "url": "https://github.com/idaholab/moose/discussions/18799#discussioncomment-1317313",
+                          "updatedAt": "2023-05-01T16:52:46Z",
+                          "publishedAt": "2021-09-13T16:43:44Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "By that logic we should also add penalty parameters to Lagrange Multiplier residuals",
+                          "url": "https://github.com/idaholab/moose/discussions/18799#discussioncomment-1317326",
+                          "updatedAt": "2023-05-01T16:53:16Z",
+                          "publishedAt": "2021-09-13T16:47:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "So yes you are right ... if you're registering your problem as converged when the L2 norm of the residual vector is, say, 1e-8, then you are requiring that u and v are at most 1e-4 apart. If you add a penalty parameter, then you will force them to be even closer than that. My suspicion is that even if you add a penalty parameter to MatchedValueBC, no matter what value you have for it, you will never get the optimal convergence rate for the same reason that node-face constraints do not yield optimal convergence. But I could be wrong. @fdkong would you want to try adding a penalty parameter to MatchedValueBC and see if you get better errors, both better constant and slope?",
+                          "url": "https://github.com/idaholab/moose/discussions/18799#discussioncomment-1317343",
+                          "updatedAt": "2023-05-01T16:53:27Z",
+                          "publishedAt": "2021-09-13T16:50:23Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to refine mesh when current solve failed ?",
+          "author": {
+            "login": "xiekai-mc"
+          },
+          "bodyText": "I want to refine mesh, when current solve failed, not just to cut the time step.\nIs that easy to implement \uff1fWhich files might need to be modified?",
+          "url": "https://github.com/idaholab/moose/discussions/18748",
+          "updatedAt": "2022-10-18T18:39:21Z",
+          "publishedAt": "2021-09-01T09:58:14Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "I think it would not be hard to implement. You would run a step of adaptivity. We might need a new execution flag for adaptivity though.\nI would look at Transient.C in framework/executioners\nAround line 413 you ll see the logic when a time step failed. Then you could add a run of adaptivity there _problem.adaptMesh(); I think",
+                  "url": "https://github.com/idaholab/moose/discussions/18748#discussioncomment-1269242",
+                  "updatedAt": "2022-07-04T08:36:56Z",
+                  "publishedAt": "2021-09-02T00:47:34Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xiekai-mc"
+                          },
+                          "bodyText": "Thank you for your reply.\nNow I am trying to set the new execution flag according to the values of an aux variable ( or an indicator ). But I do not know how to get the pointer to my aux variables. Which function should I use ? I find some functions in FEProblemBase.h:\nvirtual const MooseVariableFieldBase &\n getVariable(THREAD_ID tid,\n             const std::string & var_name,\n             Moose::VarKindType expected_var_type = Moose::VarKindType::VAR_ANY,\n             Moose::VarFieldType expected_var_field_type =\n                 Moose::VarFieldType::VAR_FIELD_ANY) const override;\n\nvirtual MooseVariableFieldBase & getActualFieldVariable(THREAD_ID tid,\n                                                 const std::string & var_name) override;\n\nvirtual MooseVariable & getStandardVariable(THREAD_ID tid, const std::string & var_name) override;\nI do not know what the THREAD_ID tid means. If I should use these functions, what should I do to the THREAD_ID tid ?",
+                          "url": "https://github.com/idaholab/moose/discussions/18748#discussioncomment-1271746",
+                          "updatedAt": "2022-07-04T08:36:55Z",
+                          "publishedAt": "2021-09-02T12:30:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Since you are using the value, you should just use the Coupleable interface. You can find the code for that in interfaces/Coupleable.C and you can see many examples in kernels, like CoupledForce for example.\ntid can be set to _tid, which is the current thread id (=number)\nI'm not sure about using aux variables over indicators for adaptivity. Can you give more details about this?",
+                          "url": "https://github.com/idaholab/moose/discussions/18748#discussioncomment-1272409",
+                          "updatedAt": "2022-07-04T08:36:50Z",
+                          "publishedAt": "2021-09-02T14:49:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xiekai-mc"
+                          },
+                          "bodyText": "I want to add an additional adaptivity step, if the aux variable value of an element exceed the threshold and this element can still be refined (value > threshold && level < max_h_level). I have tried ValueThresholdMarker before. But the change of the mesh seems to be a step behind the change of the variable values.",
+                          "url": "https://github.com/idaholab/moose/discussions/18748#discussioncomment-1273062",
+                          "updatedAt": "2022-07-04T08:36:51Z",
+                          "publishedAt": "2021-09-02T16:48:04Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Ah it may be (it is) that auxckernels are not run when the solve failed.\nCan you base your mesh change on something else? Like a primary variable or a residual",
+                          "url": "https://github.com/idaholab/moose/discussions/18748#discussioncomment-1293141",
+                          "updatedAt": "2022-07-04T08:37:05Z",
+                          "publishedAt": "2021-09-07T20:26:52Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xiekai-mc"
+                          },
+                          "bodyText": "Thank you for the reply.\nI try to put this code into FixedPointSolve.C to check the variable value and the mesh level.\nbool\nFixedPointSolve::check_mesh_and_d()\n{\n  MooseVariable & _d_var = _problem.getStandardVariable(_tid,\"d\");\n  MooseMesh & _mesh = _problem.mesh();\n  for (dof_id_type i = 0; i < _mesh.nElem(); i++)\n  {\n    if (_mesh.elemPtr(i)->active()\n      && (_mesh.elemPtr(i)->level() < _problem.adaptivity().getMaxHLevel())\n      && (_d_var.getElementalValue(_mesh.elemPtr(i)) >= 1.0))\n    {\n      return false;\n    }\n  }\n  return true;\n}\nIt works when using only one processor. But it errors when using more processors.\n===================================================================================\n=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES\n=   PID 106918 RUNNING AT node01\n=   EXIT CODE: 139\n=   CLEANING UP REMAINING PROCESSES\n=   YOU CAN IGNORE THE BELOW CLEANUP MESSAGES\n===================================================================================\nYOUR APPLICATION TERMINATED WITH THE EXIT STRING: Segmentation fault (signal 11)\nThis typically refers to a problem with your application.\nPlease see the FAQ page for debugging suggestions\n\nThe _tid here is only declared in the header file but not assigned value. I think this is the problem. Please help me, thanks.",
+                          "url": "https://github.com/idaholab/moose/discussions/18748#discussioncomment-1295738",
+                          "updatedAt": "2022-07-04T08:37:05Z",
+                          "publishedAt": "2021-09-08T11:22:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "What does it return for _tid?\n_tid is the thread id. Did you turn on threading or processes?",
+                          "url": "https://github.com/idaholab/moose/discussions/18748#discussioncomment-1296919",
+                          "updatedAt": "2022-07-04T08:37:07Z",
+                          "publishedAt": "2021-09-08T15:41:24Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xiekai-mc"
+                          },
+                          "bodyText": "_tid is 0. I didn't do anything, just declared _tid.",
+                          "url": "https://github.com/idaholab/moose/discussions/18748#discussioncomment-1299320",
+                          "updatedAt": "2022-07-04T08:37:08Z",
+                          "publishedAt": "2021-09-09T03:55:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xiekai-mc"
+                          },
+                          "bodyText": "mpiexec -n 1 ./myapp-opt -i input.i or ./myapp-opt -i input.i is ok.\nmpiexec -n 4 ./myapp-opt -i input.i would be wrong.",
+                          "url": "https://github.com/idaholab/moose/discussions/18748#discussioncomment-1299638",
+                          "updatedAt": "2022-07-04T08:37:07Z",
+                          "publishedAt": "2021-09-09T06:19:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "ok tid seems fine.\nLet's get a backtrace on this error. Please compile in debug mode (METHOD=dbg make) then run in a debugger, one way is like this:\nmpirun -n 4 gdb --ex run --ex bt --args ./myapp-opt -i input.i",
+                          "url": "https://github.com/idaholab/moose/discussions/18748#discussioncomment-1299667",
+                          "updatedAt": "2022-07-04T08:37:09Z",
+                          "publishedAt": "2021-09-09T06:30:24Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xiekai-mc"
+                          },
+                          "bodyText": "Thread 1 \"myapp-opt\" received signal SIGSEGV, Segmentation fault.\n0x00007ffff614d20a in libMesh::PetscVector::operator()(unsigned long) const () from /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#0  0x00007ffff614d20a in libMesh::PetscVector::operator()(unsigned long) const () from /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#1  0x00007ffff5372d03 in MooseVariableData::getElementalValue(libMesh::Elem const*, Moose::SolutionState, unsigned int) const ()\nfrom /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#2  0x00007ffff52f5a0c in FixedPointSolve::check_mesh_and_d() ()\nfrom /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#3  0x00007ffff5319d4e in FixedPointSolve::solve() ()\nfrom /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#4  0x00007ffff5f7687e in TimeStepper::step() ()\nfrom /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#5  0x00007ffff52f981e in Transient::takeStep(double) ()\nfrom /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#6  0x00007ffff52f600e in Transient::execute() ()\nfrom /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#7  0x00007ffff60d420a in MooseApp::executeExecutioner() ()\nfrom /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#8  0x00007ffff60d8939 in MooseApp::run() ()\nfrom /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#9  0x0000555555557153 in main ()\nProgram received signal SIGSEGV, Segmentation fault.\n0x00007ffff614d20a in libMesh::PetscVector::operator()(unsigned long) const () from /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#0  0x00007ffff614d20a in libMesh::PetscVector::operator()(unsigned long) const () from /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#1  0x00007ffff5372d03 in MooseVariableData::getElementalValue(libMesh::Elem const*, Moose::SolutionState, unsigned int) const ()\nfrom /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#2  0x00007ffff52f5a0c in FixedPointSolve::check_mesh_and_d() ()\nfrom /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#3  0x00007ffff5319d4e in FixedPointSolve::solve() ()\nfrom /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#4  0x00007ffff5f7687e in TimeStepper::step() ()\nfrom /home/redslime/projects/moose/framework/libmoose-opt.so.0\nProgram received signal SIGSEGV, Segmentation fault.\n0x00007ffff614d20a in libMesh::PetscVector::operator()(unsigned long) const () from /home/redslime/projects/moose/framework/libmoose-opt.so.0\nProgram received signal SIGSEGV, Segmentation fault.\n0x00007ffff614d20a in libMesh::PetscVector::operator()(unsigned long) const () from /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#5  0x00007ffff52f981e in Transient::takeStep(double) ()\nfrom /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#6  0x00007ffff52f600e in Transient::execute() ()\nfrom /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#7  0x00007ffff60d420a in MooseApp::executeExecutioner() ()\nfrom /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#8  0x00007ffff60d8939 in MooseApp::run() ()\nfrom /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#0  0x00007ffff614d20a in libMesh::PetscVector::operator()(unsigned long) const () from /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#0  0x00007ffff614d20a in libMesh::PetscVector::operator()(unsigned long) const () from /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#1  0x00007ffff5372d03 in MooseVariableData::getElementalValue(libMesh::Elem const*, Moose::SolutionState, unsigned int) const ()\nfrom /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#1  0x00007ffff5372d03 in MooseVariableData::getElementalValue(libMesh::Elem const*, Moose::SolutionState, unsigned int) const ()\nfrom /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#9  0x0000555555557153 in main ()\n#2  0x00007ffff52f5a0c in FixedPointSolve::check_mesh_and_d() ()\nfrom /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#2  0x00007ffff52f5a0c in FixedPointSolve::check_mesh_and_d() ()\nfrom /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#3  0x00007ffff5319d4e in FixedPointSolve::solve() ()\nfrom /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#3  0x00007ffff5319d4e in FixedPointSolve::solve() ()\nfrom /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#4  0x00007ffff5f7687e in TimeStepper::step() ()\nfrom /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#4  0x00007ffff5f7687e in TimeStepper::step() ()\nfrom /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#5  0x00007ffff52f981e in Transient::takeStep(double) ()\nfrom /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#5  0x00007ffff52f981e in Transient::takeStep(double) ()\nfrom /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#6  0x00007ffff52f600e in Transient::execute() ()\nfrom /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#6  0x00007ffff52f600e in Transient::execute() ()\nfrom /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#7  0x00007ffff60d420a in MooseApp::executeExecutioner() ()\nfrom /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#7  0x00007ffff60d420a in MooseApp::executeExecutioner() ()\nfrom /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#8  0x00007ffff60d8939 in MooseApp::run() ()\nfrom /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#8  0x00007ffff60d8939 in MooseApp::run() ()\nfrom /home/redslime/projects/moose/framework/libmoose-opt.so.0\n#9  0x0000555555557153 in main ()\n#9  0x0000555555557153 in main ()",
+                          "url": "https://github.com/idaholab/moose/discussions/18748#discussioncomment-1310510",
+                          "updatedAt": "2022-07-04T08:37:08Z",
+                          "publishedAt": "2021-09-11T15:32:33Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Solving the phase field model for brittle fracture using Multiapp and adptivity",
+          "author": {
+            "login": "MartimSalgado"
+          },
+          "bodyText": "Dear Moosers,\nI'm trying to solve the phase field model for brittle fracture using staggered (Picard) iterations. The history variable gets solved in the master (Tensor Mechanics) app and is transferred to the sub (phase field) app. The phase field variable is solved using a TransientApp and then transferred to the master (end of picard iteration).\nI'm getting incorrect crack propagation with angle cracks instead of horizontal cracks (as it should be). I think this may be due to the method used to transfer these variables or due to the meshes used.\nI'm cloning the master mesh and independently using the same markers to h-adapt each mesh so I get the same mesh after each time step.\nI'm using mesh function transfers (copy transfers are not possible since the transfer happens before the adaptivity step that would lead to the sub app having the same mesh as the master.\nAny suggestions for fixing this problem? I'm sending both input files attached.\nThanks!\nsub_sent_staggered.zip",
+          "url": "https://github.com/idaholab/moose/discussions/18813",
+          "updatedAt": "2022-07-04T11:07:12Z",
+          "publishedAt": "2021-09-13T12:07:57Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "jiangwen84"
+                  },
+                  "bodyText": "First, have you tried the picard iteration without adaptivity?\nA few comments:\n\nwithout adaptivity, you can use MultiAppCopyTransfer\nI usually transfer displacements from master to sub and damage from sub to master. In both master and sub input files, I add materials to recompute all quantities, including fracture driving energy so that I do not need to transfer them.",
+                  "url": "https://github.com/idaholab/moose/discussions/18813#discussioncomment-1320547",
+                  "updatedAt": "2022-07-04T11:07:14Z",
+                  "publishedAt": "2021-09-13T20:33:17Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aeslaughter"
+                          },
+                          "bodyText": "I created LevelSetMeshRefinementTransfer 5 years ago for this same concept. There might be a better way to do it now, but if not you can take a look at it for some inspiration.",
+                          "url": "https://github.com/idaholab/moose/discussions/18813#discussioncomment-1320876",
+                          "updatedAt": "2022-07-04T11:07:15Z",
+                          "publishedAt": "2021-09-13T21:59:12Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "MartimSalgado"
+                          },
+                          "bodyText": "@jiangwen84 Thanks for your reply. I was trying to avoid recomputing the history variable, but I will follow your advice.\n@aeslaughter that's the perfect method to couple the adaptivity of my apps, thanks!",
+                          "url": "https://github.com/idaholab/moose/discussions/18813#discussioncomment-1322823",
+                          "updatedAt": "2022-07-04T11:07:16Z",
+                          "publishedAt": "2021-09-14T09:43:53Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "There is an app for phase field fracture: RACCOON. This tutorial is doing exactly what you are describing.",
+                  "url": "https://github.com/idaholab/moose/discussions/18813#discussioncomment-1322760",
+                  "updatedAt": "2022-07-04T11:07:17Z",
+                  "publishedAt": "2021-09-14T09:29:16Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "MartimSalgado"
+                          },
+                          "bodyText": "If only I had known.... Thanks @hugary1995! I'll definitely start using the RACOON",
+                          "url": "https://github.com/idaholab/moose/discussions/18813#discussioncomment-1323105",
+                          "updatedAt": "2022-07-04T11:07:17Z",
+                          "publishedAt": "2021-09-14T10:42:25Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Smeared cracking rotation with respect to a principal axis",
+          "author": {
+            "login": "aashiquear"
+          },
+          "bodyText": "I like to model smeared cracking of a spherical particle by modeling a plane (half circle) in RZ coordinate. Now, in my understanding ComputeSmearedCrackingStress rotate the crack stiffness towards the principal axis (in my case r or z or theta) direction. But to model the half-circle as a spherical particle, the principal direction at each integration point needs to be rotated at an angle delta with respect to the r direction for the smeared cracking stiffness ratio.\ndelta would be a variable at each quadratic point. I am wondering how can I input delta into ComputeSmearedCrackingStress to rotate with respect to the r axis?",
+          "url": "https://github.com/idaholab/moose/discussions/18786",
+          "updatedAt": "2022-07-06T21:42:36Z",
+          "publishedAt": "2021-09-07T19:58:31Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@ngrilli @jiangwen84",
+                  "url": "https://github.com/idaholab/moose/discussions/18786#discussioncomment-1321236",
+                  "updatedAt": "2022-07-06T21:42:37Z",
+                  "publishedAt": "2021-09-14T00:31:30Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "I don't believe you can do this without modifying the source code. Look at the method around \n  \n    \n      moose/modules/tensor_mechanics/src/materials/ADComputeSmearedCrackingStress.C\n    \n    \n         Line 287\n      in\n      7df3b09\n    \n  \n  \n    \n\n        \n          \n           ADComputeSmearedCrackingStress::updateLocalElasticityTensor() \n        \n    \n  \n\n where we perform the rotation.\n@bwspenc knows about the smeared crack models in moose better than anyone.",
+                  "url": "https://github.com/idaholab/moose/discussions/18786#discussioncomment-1322891",
+                  "updatedAt": "2022-07-06T21:42:35Z",
+                  "publishedAt": "2021-09-14T09:56:33Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "ComputeVariableEigenStrain",
+          "author": {
+            "login": "uchiha-JN"
+          },
+          "bodyText": "I am using AD for my simulation and I need to use the material module \"ComputeVariableEigenStrain\" in TensorMechanics.\nHowever, I cannot find its AD version and my input file won.t run otherwise . Can someone kindly help me out ?\nAm I not searching in the right place or does it not exist?",
+          "url": "https://github.com/idaholab/moose/discussions/18797",
+          "updatedAt": "2022-06-13T08:28:46Z",
+          "publishedAt": "2021-09-09T12:01:15Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@hugary1995",
+                  "url": "https://github.com/idaholab/moose/discussions/18797#discussioncomment-1303550",
+                  "updatedAt": "2022-06-13T08:28:45Z",
+                  "publishedAt": "2021-09-09T19:40:40Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "I guess it does not exist. You should be able to mix AD with non-AD though.",
+                          "url": "https://github.com/idaholab/moose/discussions/18797#discussioncomment-1304143",
+                          "updatedAt": "2022-06-13T08:28:53Z",
+                          "publishedAt": "2021-09-09T23:21:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "uchiha-JN"
+                          },
+                          "bodyText": "Okay... Thanks for your reply.\n\nI did not know AD and non-AD could be mixed . Thanks for the info. It gives me hope and an idea\nI keep getting errors about some properties being declared as AD while being requested as regular and vice versa. I guess that will require me to get into the CPP codes and header files. an example of the error message is below\n\nerror message\n*** ERROR ***\nThe requested AD material property mechanical_strain is declared as a regular material property. Either retrieve it as a regular material property with getMaterialProperty or declare it as an AD property with declareADProperty.",
+                          "url": "https://github.com/idaholab/moose/discussions/18797#discussioncomment-1305920",
+                          "updatedAt": "2022-06-13T08:28:55Z",
+                          "publishedAt": "2021-09-10T09:28:31Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "It can be mixed though there might be some difficulties on the way.\nFor example for this property (which is defined behind the scenes by the Tensor_Mechanics action I think), if you cannot sub the non_AD kernel that requires it with an AD version, then you will have to make a non-AD copy of the material property, will obviously loose the derivatives information.",
+                          "url": "https://github.com/idaholab/moose/discussions/18797#discussioncomment-1307831",
+                          "updatedAt": "2022-06-13T08:28:54Z",
+                          "publishedAt": "2021-09-10T16:38:08Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "uchiha-JN"
+                          },
+                          "bodyText": "Gotcha... It did come with difficulties. Just like you said. And yes, I believe you are right about me losing the derivative information.\nHowever, I managed to make a copy like you suggested and changed a few things to make it work just fine.\nThank you @GiudGiud  and @jiangwen84  for your help. I really appreciate it.\nI am now running a simulation with the new kernel and I hope I do not run into any more issues :)",
+                          "url": "https://github.com/idaholab/moose/discussions/18797#discussioncomment-1310976",
+                          "updatedAt": "2022-06-13T08:29:02Z",
+                          "publishedAt": "2021-09-11T19:50:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Sorry I'm late on this. Glad you've figured it out! You can also make a pull request to add the AD version of CompiteVariableEigenstrain to moose. I believe such contribution is very welcome.",
+                          "url": "https://github.com/idaholab/moose/discussions/18797#discussioncomment-1322848",
+                          "updatedAt": "2022-06-13T08:29:02Z",
+                          "publishedAt": "2021-09-14T09:49:16Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Transfer of variable-dependent property between multiapps",
+          "author": {
+            "login": "rh201"
+          },
+          "bodyText": "Hi Moosers,\nI'm trying to pass a material property (K) from the main app to the sub app  using multiapps, as code below in main app:\n[MultiApps]\n  [sub]\n    type = TransientMultiApp\n    input_files = sub.i\n    cli_args = 'K=${K}'\n    execute_on = 'TIMESTEP_END'\n  []\n[]\n\nand define K as a GenericMaterial in sub.\nWhen K is a constant, it works well. Now I want to make it variable (temperature) -dependent, but it fails.\nThen I tried to define it as Auxvariable and use [transfer] block\n[to_K]\n     type = MultiAppCopyTransfer\n     multi_app = sub\n     direction = to_multiapp\n     variable = K\n     source_variable = K\n   []\n\nand retrieve it with MaterialRealAux, but it also don't work. Is this the right way to solve the problem?  How can I transfer this kind of nonlinear variable-dependent material property to sub app? Thanks.\nAny comments or suggestions are highly appreciated.",
+          "url": "https://github.com/idaholab/moose/discussions/18790",
+          "updatedAt": "2022-08-02T18:18:11Z",
+          "publishedAt": "2021-09-08T14:26:40Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThe first block you pasted gives a command line argument to the subapp. More than that needs to be transferred. The whole field of material property values needs to make its way over.\nThe second block is the way to go. What do you mean by it doesnt work? Does K exist as a variable on both apps? Are they both populated with the right values?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/18790#discussioncomment-1296830",
+                  "updatedAt": "2022-07-07T04:44:30Z",
+                  "publishedAt": "2021-09-08T15:24:48Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rh201"
+                          },
+                          "bodyText": "@GiudGiud Thanks for replying.\nYes, K(T) is used in both apps, and T is calculated in main, after K is updated I want it to be passed to sub.\nI define K as Auxvariable and Auxkernel in both apps\n[AuxVariables]\n  [K]\n  []\n[]\n[AuxKernels]\n  [K]\n    type = ADMaterialRealAux\n    variable = K\n    property = K\n  []\n[]\n\nand in main app, define K as material property\n  [K]\n    type = ADPiecewiseLinearInterpolationMaterial\n    variable = 'T'\n    property = 'K'\n    x = '300    600'\n    y = '42.47  21.235'\n    outputs = exodus\n  []\n\nThe error message is\n\n*** ERROR ***\nThe following error occurred in the object \"K\", of type \"ADMaterialRealAux\".\nNodal AuxKernel 'K' attempted to reference material property 'property'\nConsider using an elemental auxiliary variable for 'K'.\n\nWhat may be the problems? and how can I retrieve K in the sub in the right way? Thanks",
+                          "url": "https://github.com/idaholab/moose/discussions/18790#discussioncomment-1297015",
+                          "updatedAt": "2022-07-07T05:35:37Z",
+                          "publishedAt": "2021-09-08T15:54:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "looks like an issue with the type of the variable.\nCan you make variable K a CONST MONOMIAL?  family=MONOMIAL, order = CONST\nplease use the triple quotes to format your posts",
+                          "url": "https://github.com/idaholab/moose/discussions/18790#discussioncomment-1297051",
+                          "updatedAt": "2022-07-07T04:44:32Z",
+                          "publishedAt": "2021-09-08T15:59:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rh201"
+                          },
+                          "bodyText": "Hi, I changed K to \"  order = CONSTANT    family = MONOMIAL\" , and  has error below\n\n*** ERROR ***\nThe following error occurred in the object \"MOOSE Problem\", of type \"FEProblem\".\nMaterial property 'K', requested by 'K' is not defined on block 0\n\n(used the triple quotes but it doesn't show as code format :(",
+                          "url": "https://github.com/idaholab/moose/discussions/18790#discussioncomment-1297627",
+                          "updatedAt": "2022-07-07T04:44:32Z",
+                          "publishedAt": "2021-09-08T17:57:45Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "great we came through the first error.\nok so now, is there multiple subdomains in your simulation\nAlso can you please rename everything? Like everything is called K and it s really confusing.\nHow about K_var, K_material, K_matprop, K_auxkernel for the names",
+                          "url": "https://github.com/idaholab/moose/discussions/18790#discussioncomment-1297983",
+                          "updatedAt": "2022-07-07T04:45:29Z",
+                          "publishedAt": "2021-09-08T19:25:44Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rh201"
+                          },
+                          "bodyText": "@GiudGiud Thank you for your patience.\nGreat advice! Now the error message is more clear:\n\n*** ERROR ***\nThe following error occurred in the object \"MOOSE Problem\", of type \"FEProblem\".\nMaterial property 'K', requested by 'K_AuxKer_Sub' is not defined on block 0\n\nNow the question seems down to how to convert the AuxVariable K to a material property in sub app.",
+                          "url": "https://github.com/idaholab/moose/discussions/18790#discussioncomment-1298087",
+                          "updatedAt": "2022-07-07T04:45:29Z",
+                          "publishedAt": "2021-09-08T19:58:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "oh this is from the subapp\nOk the issue is that the material property is not defined in the subapp. It s only defined in the main app.\nSo you should use a Transfer to copy the auxvariable from the main app to the subapp\nSee this\nhttps://mooseframework.inl.gov/syntax/Transfers/index.html#!\nThen you can work on turning the aux variable into a material property.",
+                          "url": "https://github.com/idaholab/moose/discussions/18790#discussioncomment-1298095",
+                          "updatedAt": "2022-07-07T04:45:29Z",
+                          "publishedAt": "2021-09-08T20:02:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rh201"
+                          },
+                          "bodyText": "Hi, as you can see from my initial question, I have the [Transfer] block to transfer K from main to sub already.",
+                          "url": "https://github.com/idaholab/moose/discussions/18790#discussioncomment-1301139",
+                          "updatedAt": "2022-08-19T07:16:55Z",
+                          "publishedAt": "2021-09-09T12:04:50Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Ok but have you created the material property in the subapp?",
+                          "url": "https://github.com/idaholab/moose/discussions/18790#discussioncomment-1302018",
+                          "updatedAt": "2022-08-19T07:17:52Z",
+                          "publishedAt": "2021-09-09T14:38:52Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "actually you need some material that will have the same value as a variable. There are a few of those in Navier Stokes, but in the framework I m not sure?\nIf you cant find one, then I suggest you use the VarCouplingMaterial test object,\nTest objects may be used by passing the '--allow-test-objects' flag on the command line\nSet the \"var\" argument to the K variable in the subapp",
+                          "url": "https://github.com/idaholab/moose/discussions/18790#discussioncomment-1302298",
+                          "updatedAt": "2022-08-19T07:17:52Z",
+                          "publishedAt": "2021-09-09T15:24:05Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "fdkong"
+                          },
+                          "bodyText": "Now the question seems down to how to convert the AuxVariable K to a material property in sub app.\n\nSomething like this can covert an AuxVariable/NonlinearVariable  to a material property\n[AuxVariables]\n  [vt]\n  []\n[]\n\n[Materials]\n  [diff]\n    type = ParsedMaterial\n    f_name = D\n    args = 'vt'\n    function = 'vt'\n  []\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/18790#discussioncomment-1304807",
+                          "updatedAt": "2022-08-19T07:17:52Z",
+                          "publishedAt": "2021-09-10T04:38:40Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Generate refined mesh with elements as the center",
+          "author": {
+            "login": "BoZeng1997"
+          },
+          "bodyText": "Hi,\nI have a square domain and it is symmetric about the x-axis. I need refined mesh around the x-axis but I still want to keep a line of elements as the center, not nodes. Is there a way to achieve that in moose? Simple refinement would always break central elements.\nBo",
+          "url": "https://github.com/idaholab/moose/discussions/18802",
+          "updatedAt": "2023-07-06T07:45:20Z",
+          "publishedAt": "2021-09-10T16:11:47Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hi Bo\nThere is. You should define the center element to be in a different block then refine by block. This can be done easily in this PR: #18744\nBut in the mean time, you can use adaptivity to do it like in the example we are adding in this PR:\n#18657\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/18802#discussioncomment-1307792",
+                  "updatedAt": "2023-07-06T07:45:21Z",
+                  "publishedAt": "2021-09-10T16:24:07Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "BoZeng1997"
+                          },
+                          "bodyText": "I think I did not make myself clear. I want to have odd number of elements in the y direction and they are dense mesh. The usual refinement will always split the initial elements and make a line of nodes on the x-axis. I do not care if I can keep the exact original central elements, I just want a line of refined element on the x-axis. The examples provided do not solve this issue.",
+                          "url": "https://github.com/idaholab/moose/discussions/18802#discussioncomment-1308032",
+                          "updatedAt": "2023-07-06T07:45:21Z",
+                          "publishedAt": "2021-09-10T17:33:14Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "well we can\u2019t split elements in 3 parts in one direction. So unless I\u2019m missing something this isn\u2019t possible through refinement\nbut you could just change the ny in a RectiliearMeshGenerator and refine that way while keeping an element on the x axis",
+                          "url": "https://github.com/idaholab/moose/discussions/18802#discussioncomment-1308055",
+                          "updatedAt": "2023-07-06T07:46:20Z",
+                          "publishedAt": "2021-09-10T17:41:50Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "YaqiWang"
+                          },
+                          "bodyText": "If only quad in 2D or cube in 3D is needed, you can try CartesianMeshGenerator, which has more flexibility on controlling the element sizing than GeneratedMeshGenerator.",
+                          "url": "https://github.com/idaholab/moose/discussions/18802#discussioncomment-1308366",
+                          "updatedAt": "2023-07-06T07:46:55Z",
+                          "publishedAt": "2021-09-10T19:15:44Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Elasticity tensor for 3D cylinder mesh",
+          "author": {
+            "login": "MartimSalgado"
+          },
+          "bodyText": "Are the principal directions 1,2,3 for C_{ijkl} associated with material coordinates or the global xyz cartesian reference? If we are modeling a 3D cylinder mesh, the elasticity tensor should be defined in terms of cylindrical coordinates and not global xyz.",
+          "url": "https://github.com/idaholab/moose/discussions/18679",
+          "updatedAt": "2022-06-27T12:42:50Z",
+          "publishedAt": "2021-08-23T12:26:15Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "So you are asking for a nonhomogeneous anisotropic elasticity tensor. That is doable -- in moose you can define material properties per qp however you like.",
+                  "url": "https://github.com/idaholab/moose/discussions/18679#discussioncomment-1222121",
+                  "updatedAt": "2022-06-27T12:42:50Z",
+                  "publishedAt": "2021-08-23T12:31:26Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "MartimSalgado"
+                          },
+                          "bodyText": "@hugary1995 Thanks. I'm saying that this is a relatively common tensor mechanics problem (I'm modelling a fibrous composite material) and there should be an easy way of telling MOOSE that we are defining [C] in terms of a cylindrical coordinate system.",
+                          "url": "https://github.com/idaholab/moose/discussions/18679#discussioncomment-1222347",
+                          "updatedAt": "2022-06-27T12:42:59Z",
+                          "publishedAt": "2021-08-23T13:14:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Yes, it should be pretty straightforward to implement. In your app, create a material that defines the elasticity tensor. You can request information about the coordinate system, e.g. center axis direction, center axis point, etc., from the user by defining input parameters. You can then transform the current point _q_point[_qp] into the cylindrical coordinates, and define the elasticity tensor from that.\nYou can watch the workshop video on the moose homepage for how to create an app and write a custom material.",
+                          "url": "https://github.com/idaholab/moose/discussions/18679#discussioncomment-1222932",
+                          "updatedAt": "2022-06-27T12:43:03Z",
+                          "publishedAt": "2021-08-23T15:05:59Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "MartimSalgado"
+                          },
+                          "bodyText": "@hugary1995 that does seem like a straightforward approach. Need to get more into the _q_point transformation.\nI've started developing a ComputeElasticityTensor child material ('ComputeFromCylindricalElasticityTensor'). My approach is to rotate Cijkl twice - once for coordinate transformation, another to take into account each transversely isotropic ply's orientation - and then assign it to the elasticity tensor. Here's the thing: I'm not getting accurate results - quantitatively, since C_ij values do not correspond with the material being modeled, and qualitatively (for instance, C_33 varies with (x,y) for a given ply). Do you see anything wrong with my computeQpElasticityTensor?\nPS: I haven't programmed this appropriately, yet, I'm just testing to get results. I assume that the layup of plies is made by rotating the radial direction axis and that the z-axis is aligned with the cylinder's axis.\nComputeFromCylindricalElasticityTensor.zip",
+                          "url": "https://github.com/idaholab/moose/discussions/18679#discussioncomment-1268978",
+                          "updatedAt": "2022-06-27T12:43:04Z",
+                          "publishedAt": "2021-09-01T22:41:04Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "MartimSalgado"
+                          },
+                          "bodyText": "Maybe it would be even better to develop Stress divergence equations kernels for the r-theta-z coordinated system. If I understood correctly, MOOSE only allows to model 2D or 1D problems using polar coordinates, right?",
+                          "url": "https://github.com/idaholab/moose/discussions/18679#discussioncomment-1270728",
+                          "updatedAt": "2022-11-14T04:08:04Z",
+                          "publishedAt": "2021-09-02T09:18:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "MartimSalgado"
+                          },
+                          "bodyText": "Hey @hugary1995, have you managed to look into this?",
+                          "url": "https://github.com/idaholab/moose/discussions/18679#discussioncomment-1295230",
+                          "updatedAt": "2022-11-14T04:08:04Z",
+                          "publishedAt": "2021-09-08T09:23:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dschwen"
+                          },
+                          "bodyText": "Maybe it would be even better to develop Stress divergence equations kernels for the r-theta-z coordinated system. If I understood correctly, MOOSE only allows to model 2D or 1D problems using polar coordinates, right?\n\nThose already exist",
+                          "url": "https://github.com/idaholab/moose/discussions/18679#discussioncomment-1296798",
+                          "updatedAt": "2022-11-14T04:08:04Z",
+                          "publishedAt": "2021-09-08T15:18:51Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "MartimSalgado"
+                          },
+                          "bodyText": "Thanks @dschwen!\nI've read the  ADStressDivergenceRZTensors page and it seems that it only works for axisymmetric problems (equations are shown for 2-D, z and r). What I meant by developing the kernel is to obtain the stress divergence for the full 3D problem.\nI forgot to mention that I do not have axisymmetric BCs",
+                          "url": "https://github.com/idaholab/moose/discussions/18679#discussioncomment-1308254",
+                          "updatedAt": "2022-11-14T04:08:05Z",
+                          "publishedAt": "2021-09-10T18:44:07Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "regenerating *.i file from *_outfile.e file",
+          "author": {
+            "login": "DomenicoCFD"
+          },
+          "bodyText": "Hi All,\nI would like to regenerate the input file of MOOSE if only the _outfile.e is given. This is because I would expect to modify the input file and therefore I may well loose the track of all the input that I provided in MOOSE for a particular _outfile.e MOOSE result file.\nA similar feature does exist in ANSYS so eventually MOOSE does have a similar thing.\nI would really appreciate your help on this.\nKind Regards,",
+          "url": "https://github.com/idaholab/moose/discussions/18789",
+          "updatedAt": "2023-09-26T17:50:28Z",
+          "publishedAt": "2021-09-08T13:19:32Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "dschwen"
+                  },
+                  "bodyText": "The input file is actually stored in the exodus output as a data block. You can reveal some of it on the command line using strings my_out.e. Note that this is a reconstructed input with all default parameters inserted by MOOSE.",
+                  "url": "https://github.com/idaholab/moose/discussions/18789#discussioncomment-1296248",
+                  "updatedAt": "2023-09-26T17:50:28Z",
+                  "publishedAt": "2021-09-08T13:26:23Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dschwen"
+                          },
+                          "bodyText": "You can extract the text properly with the ncdump command from netcdf (the Exodus II fileformat is based on netcdf)",
+                          "url": "https://github.com/idaholab/moose/discussions/18789#discussioncomment-1296274",
+                          "updatedAt": "2023-09-26T17:50:28Z",
+                          "publishedAt": "2021-09-08T13:29:52Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dschwen"
+                          },
+                          "bodyText": "ncdump -v info_records my_out.e",
+                          "url": "https://github.com/idaholab/moose/discussions/18789#discussioncomment-1296280",
+                          "updatedAt": "2023-09-26T17:50:47Z",
+                          "publishedAt": "2021-09-08T13:30:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "DomenicoCFD"
+                          },
+                          "bodyText": "Hi,\nMany thanks for your direction. Following your instruction, it seems that the \"ncdump\" option does give a better format than \"strings\". Other than that, is there a command line which returns the .i file ready to be rerun in MOOSE?\nI look forward to hearing from you.\nKind Regards,\nDomenico",
+                          "url": "https://github.com/idaholab/moose/discussions/18789#discussioncomment-1301246",
+                          "updatedAt": "2023-09-26T17:50:49Z",
+                          "publishedAt": "2021-09-09T12:25:34Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dschwen"
+                          },
+                          "bodyText": "No single command. I suppose we could write a python script though. There is likely some post processing required though before passing the extracted input back to moose. Things like\ninactive                     = (no_default)\n\nor\n  \"    constant_properties          = \\'1 3.17e+07 0.32 0 3.17e+07 0.32 1000 6.67...\",\n  \"e-06 100 1e-08 5000 4 0.02 0\\'\",\n\n(which uses ... to mark a broken string)\nneed special treatment.",
+                          "url": "https://github.com/idaholab/moose/discussions/18789#discussioncomment-1302803",
+                          "updatedAt": "2023-09-26T17:51:08Z",
+                          "publishedAt": "2021-09-09T17:00:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aaelmeli"
+                          },
+                          "bodyText": "Hi\nyou can check Matlab ncread(), see this discussion #17852.",
+                          "url": "https://github.com/idaholab/moose/discussions/18789#discussioncomment-1303477",
+                          "updatedAt": "2023-09-26T17:51:14Z",
+                          "publishedAt": "2021-09-09T19:25:35Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "On the computation of the sensitivities",
+          "author": {
+            "login": "aaelmeli"
+          },
+          "bodyText": "Hi\nThis topic is a follow-up to the topic in #18464 where we seek a way to compute the gradient of a cost functional w.r.t material parameter.\nLet's consider the diffusion equation with spatial heterogenous diffusivity, the final discretized form would be of the form A(m) u=b where m is the material parameters (the diffusivity).\nTo invert for the diffusivities m, given measured data d , the reconstruction process seeks minimizing a cost functional, which can be written as J(m)=0.5 (Pu-d)^T (Pu-d), where P is a projection operator to project u to the location of the measurements d.\nThe ith element in the gradient vector g_i = \u2202J(m)/\u2202m_i = (\u2202u/\u2202m_i)^T (Pu-d)  . This means, for M number of parameters, computing g requires M evaluation of (\u2202u/\u2202m_i ) which means M forward solves. This is very expensive especially when the problem is parameterized such that each finite element has a different material parameter (i.e. the diffusivity in this example).\nOne way to circumvent this is to expand (\u2202u/\u2202m_i), this yields g_i=u^T  (\u2202A/\u2202m_i)^T v with v=(A^T)^(-1) P^T (d-Pu(m)). This means, we only need one forward solve to compute v, then we need to evaluate the sparse matrix-vector multiplication(\u2202A/\u2202m_i)^T v which will result in a sparse vector to be inner-product with u in  g_i=u^T  (\u2202A/\u2202m_i)^T v .\nSo, we no longer need M forward solves and just need one. Now the whole effort is to get u^T (\u2202A/\u2202m_i)^T v  within moose.\nI have some plan and I need evaluation, and/or suggestions on how to improve it.\n1-Solve for u, then use the results to solve for v.\n2- Have a map of diffusivity_vs._element, where each diffusivity parameter id has a pointer to the corresponding finite element.\n3- In a third input file, have auxkernel to postprocessu^T  (\u2202A/\u2202m_i)^T v  where the material is defined as constant function = 1 because we only have the diffusivity and we took the derivative with respect to it.\n4- repeat 3 for all M paramters!\nComputing (\u2202A/\u2202m_i)^T v  is not clear for me since we need to compute it for a given diffusivity_id and repeat that for all diffusivities M .\nAny hint specifically on the mapping part (parameter id vs. elements) and on how to post-process in point 3?",
+          "url": "https://github.com/idaholab/moose/discussions/18784",
+          "updatedAt": "2022-07-25T09:43:41Z",
+          "publishedAt": "2021-09-07T17:20:30Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "lynnmunday"
+                  },
+                  "bodyText": "@aaelmeli\nIn (1), is v the solution to the adjoint equation?  I would use something like a the dirac kernel reporterPointSource to apply the projection in your adjoint solve.  You can read your misfit into this using a csvReader vector postprocessor.\nCan you do material inversion for the much simpler case where the entire block has a single unknown diffusivity?  I would start with this since it will require a new auxkernel to compute the gradient term mentioned in #18464    Once that works, you could make a more complicated problem where the diffusivity is a parameterized function of some spatial dimension?\nI think an optimization problem where every element has a different diffusivity will be hard to solve and will require Tikhonov regularization.  I'm not sure how you can create this map of element to diffusivity.  I think @Traiwit has asked about a similar capability, maybe they can give you some advice on having a material property that is different in each element in this disucssion #18727\nIf you were going to take approach 4, we have the simplex algorithm in Tao working.  We are in the process of getting our optimization code approved for release.  I think this will take another month but at that point you could use and develop that code.\nAre you going to use something like python to do your optimization and do the data transfers using files?",
+                  "url": "https://github.com/idaholab/moose/discussions/18784#discussioncomment-1292868",
+                  "updatedAt": "2022-07-25T09:43:39Z",
+                  "publishedAt": "2021-09-07T19:33:10Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "aaelmeli"
+                  },
+                  "bodyText": "In (1), is v the solution to the adjoint equation?\n\nyes, it is.\n\nCan you do material inversion for the much simpler case where the entire block has a single unknown diffusivity? I would start with this since it will require a new auxkernel to compute the gradient term mentioned in #18464 Once that works, you could make a more complicated problem where the diffusivity is a parameterized function of some spatial dimension?\n\nYes, that is probably better and what I should start with. In this regard, I had some questions,\na-Regarding the input file/s, based on what you suggested in your reply on (1), we can compute u and v using two different input files, Am I correct?\nthen to compute  u^T (\u2202A/\u2202m_i)^T v , we need to have another additional input file (so we would have 3 input files to compute g_i), Am I correct?\nb- Do you mean by new auxkernel that I need to implement a new auxkernel that takes u and v from previous run as input, and compute u^T (\u2202A/\u2202m_i)^T v? or do we have something to reuse in moose?\nc- In the input file where we want to compute u^T (\u2202A/\u2202m_i)^T v, since this term is just matrix_vector multiplication and inner product of the result with u, so there is no solve is required, my question now, is it possible to have dummy kernel and dummy variable and explicitly tell moose not to solve the linear system of equations?\n\nI think an optimization problem where every element has a different diffusivity will be hard to solve and will require Tikhonov regularization. I'm not sure how you can create this map of element to diffusivity. I think @Traiwit has asked about a similar capability, maybe they can give you some advice on having a material property that is different in each element in this disucssion #18727\n\nI have implemented this approach for 2D wave-equation inversion in frequency domain and the results were quite well. Now, I am using moose in order to do a similar thing but in 3D efficiently.\nRegarding parameter_vs_elements map, I have design my in-house code to have a map of parameterId_vs_elements, for example, given the parameter_id, it returns a vector of pointers to the finite elements associated with that parameter. However, because of my little experience with moose, I was not sure if this was possible or not, maybe they have something more elegant and more efficient.\n\nIf you were going to take approach 4, we have the simplex algorithm in Tao working. We are in the process of getting our optimization code approved for release. I think this will take another month but at that point, you could use and develop that code.\n\nThat will be very helpful especially when I do wave equation inversion in 3D.\n\nAre you going to use something like python to do your optimization and do the data transfers using files?\n\nYes, my initial thought is to have something working to test a research idea and not worry much about the efficiency. So, I am going to link Matlab with moose. I will use Matlab's optimization routines for the optimization and communicate with moose through files. these files are: one contains the parameters at the kth iteration, the other one contains the value of the cost function and the gradient vector (computed in moose).",
+                  "url": "https://github.com/idaholab/moose/discussions/18784#discussioncomment-1293363",
+                  "updatedAt": "2022-07-25T09:43:36Z",
+                  "publishedAt": "2021-09-07T21:25:53Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "lynnmunday"
+                  },
+                  "bodyText": "I've done something similar to this where I was using matlab to do the optimization. I've attached two input files to this that I used for the forward and adjoint input files.  These input fils were used for for load inversion for a point source so it is was much simpler than the material inversion problem because the adjoint variable was my gradient, I didn't need to compute a gradient term.\nTo solve u^T (\u2202A/\u2202m_i)^T v    I think you will run the forward problem, save the primary variable (u) to an exodus file and then read that exodus file into the adjoint problem, read u into a auxvariable using a userObject.  Then in the adjoint problem, use a parsedAuxKernel to multiply the adjoint variable, v, by u.  Then use a postprocessor to sum all of this up across all of the elements.\nI used something like this for a convective boundary condition where temperature_forward is the solution field from teh forward problem:\n[AuxVariables]\n  [temperature_forward]\n  []\n  [T2]\n  []\n[]\n[AuxKernels]\n  [TT]\n    type = ParsedAux\n    args = 'temperature temperature_forward'\n    variable = T2\n    function = 'temperature*(100-temperature_forward)'\n  []\n[]\n\n[Variables]\n  [temperature]\n  []\n[]\n\n[Postprocessors]\n  [adjoint_pt_0]\n    type = SideIntegralVariablePostprocessor\n    variable = T2\n    boundary = left\n  []\n[]\n\nI saw this discussion #18790\nand they are computing material properties on one app and passing them to the subapp.  Maybe if you grep for ADMaterialRealAux you might find a place where it is being used in a material.  something like that might work in place of the material to element map you need.",
+                  "url": "https://github.com/idaholab/moose/discussions/18784#discussioncomment-1298478",
+                  "updatedAt": "2022-07-25T09:43:57Z",
+                  "publishedAt": "2021-09-08T22:21:58Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "lynnmunday"
+                  },
+                  "bodyText": "This is the forward input file:\n[Mesh]\n  [gen]\n    type = GeneratedMeshGenerator\n    dim = 2\n    xmin = 0\n    xmax = 1.0\n    ymin = 0\n    ymax = 2.0\n    elem_type = QUAD4\n    nx = 10\n    ny = 20\n  []\n[]\n\n[Variables]\n  [temperature]\n  []\n[]\n\n[Kernels]\n  [heat_conduction]\n    type = ADHeatConduction\n    variable = temperature\n  []\n[]\n\n[DiracKernels]\n  [force_0]\n    type = ReporterPointSource\n    variable = 'temperature'\n    value_name = 'csv_reader/value'\n    x_coord_name = csv_reader/x\n    y_coord_name = csv_reader/y\n    z_coord_name = csv_reader/z\n  []\n[]\n\n[BCs]\n  [top]\n    type = DirichletBC\n    variable = temperature\n    boundary = top\n    value = 0\n  []\n  [bottom]\n    type = DirichletBC\n    variable = temperature\n    boundary = bottom\n    value = 0\n  []\n  [left]\n    type = DirichletBC\n    variable = temperature\n    boundary = left\n    value = 0\n  []\n  [right]\n    type = DirichletBC\n    variable = temperature\n    boundary = right\n    value = 0\n  []\n[]\n\n[Materials]\n  [steel]\n    type = ADGenericConstantMaterial\n    prop_names = thermal_conductivity\n    prop_values = .5\n  []\n[]\n\n[Problem]\n  type = FEProblem\n[]\n\n[Executioner]\n  type = Steady\n  solve_type = NEWTON\n  petsc_options_iname = '-pc_type -pc_hypre_type'\n  petsc_options_value = 'hypre boomeramg'\n[]\n\n[VectorPostprocessors]\n  [temperatures]\n    type = NodalValueSampler\n    variable = temperature\n    block = '0'\n    sort_by = id\n    outputs = fullResponseVector\n  []\n  [csv_reader]\n    type = CSVReader\n    csv_file = 'zForwardInput/inputForces.csv'\n  []\n[]\n\n[Outputs]\n  [exodus]\n    file_base = 'zForwardOutput/out'\n    type = Exodus\n    execute_on = final\n  []\n  [fullResponseVector]\n    file_base = 'zForwardOutput/all'\n    type = CSV\n    execute_vector_postprocessors_on = final\n  []\n[]",
+                  "url": "https://github.com/idaholab/moose/discussions/18784#discussioncomment-1298484",
+                  "updatedAt": "2022-07-25T09:44:27Z",
+                  "publishedAt": "2021-09-08T22:23:59Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lynnmunday"
+                          },
+                          "bodyText": "I had to paste them in, I couldn't figure out how to attach them.",
+                          "url": "https://github.com/idaholab/moose/discussions/18784#discussioncomment-1298487",
+                          "updatedAt": "2022-08-15T09:01:10Z",
+                          "publishedAt": "2021-09-08T22:25:01Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "lynnmunday"
+                  },
+                  "bodyText": "this is the adjoint input file:\n[Mesh]\n  [gen]\n    type = GeneratedMeshGenerator\n    dim = 2\n    xmin = 0\n    xmax = 1.0\n    ymin = 0\n    ymax = 2.0\n    elem_type = QUAD4\n    nx = 10\n    ny = 20\n  []\n[]\n\n[Variables]\n  [temperature]\n  []\n[]\n\n[Kernels]\n  [heat_conduction]\n    type = ADHeatConduction\n    variable = temperature\n  []\n[]\n\n[DiracKernels]\n  [force_0]\n    type = ReporterPointSource\n    variable = temperature\n    value_name = csv_reader/value \n    x_coord_name = csv_reader/x\n    y_coord_name = csv_reader/y\n    z_coord_name = csv_reader/z\n  []\n[]\n\n[BCs]\n  [top]\n    type = DirichletBC\n    variable = temperature\n    boundary = top\n    value = 0\n  []\n  [bottom]\n    type = DirichletBC\n    variable = temperature\n    boundary = bottom\n    value = 0\n  []\n  [left]\n    type = DirichletBC\n    variable = temperature\n    boundary = left\n    value = 0\n  []\n  [right]\n    type = DirichletBC\n    variable = temperature\n    boundary = right\n    value = 0\n  []\n[]\n\n[Materials]\n  [steel]\n    type = ADGenericConstantMaterial\n    prop_names = thermal_conductivity\n    prop_values = .5\n  []\n[]\n\n[Problem]\n  type = FEProblem\n[]\n\n[Executioner]\n  type = Steady\n  solve_type = NEWTON\n  petsc_options_iname = '-pc_type -pc_hypre_type'\n  petsc_options_value = 'hypre boomeramg'\n[]\n\n[VectorPostprocessors]\n  [temperatures]\n    type = NodalValueSampler\n    variable = temperature\n    block = '0'\n    sort_by = id\n    outputs = fullResponseVector\n  []\n  [csv_reader]\n    type = CSVReader\n    csv_file = 'zAdjointInput/inputForces.csv'\n    # execute_on = initial\n  []\n[]\n\n[Outputs]\n  [exodus]\n    file_base = 'zAdjointOutput/out'\n    type = Exodus\n    execute_on = final\n  []\n  [fullResponseVector]\n    file_base = 'zAdjointOutput/all'\n    type = CSV\n    execute_vector_postprocessors_on = final\n  []\n[]",
+                  "url": "https://github.com/idaholab/moose/discussions/18784#discussioncomment-1298486",
+                  "updatedAt": "2022-08-15T09:01:10Z",
+                  "publishedAt": "2021-09-08T22:24:21Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

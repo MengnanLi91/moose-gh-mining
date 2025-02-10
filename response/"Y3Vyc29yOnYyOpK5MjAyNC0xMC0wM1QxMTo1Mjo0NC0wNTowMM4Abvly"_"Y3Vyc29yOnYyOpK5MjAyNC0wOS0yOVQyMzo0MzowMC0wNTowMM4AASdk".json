@@ -1,0 +1,710 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyNC0wOS0yOVQyMzo0MzowMC0wNTowMM4AASdk"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Activating third block not working",
+          "author": {
+            "login": "fervaldies"
+          },
+          "bodyText": "Hello, I am trying to activate three blocks, each of them after a certain amount of time in the simulation. For the first 2 blocks everything is working and the heat conduction and heat source are correct, but when I try to activate the third block (after 640 seconds) the block does not activate its properties. This is part of the input file:\n[Kernels]\n  [./time]\n    type = ADHeatConductionTimeDerivative\n    variable = T\n    block = '1'\n  [../]\n  [./heat_conduct]\n    type = ADHeatConduction\n    variable = T\n    thermal_conductivity = thermal_conductivity\n    block = '1'\n  [../]\n  [./heat_source]\n    type = ADMatHeatSource\n    material_property = volumetric_heat\n    variable = T\n    block = '1'\n  [../]\n  [./time2]\n    type = ADHeatConductionTimeDerivative\n    variable = T\n    block = '2'\n  [../]\n  [./heat_conduct2]\n    type = ADHeatConduction\n    variable = T\n    thermal_conductivity = thermal_conductivity\n    block = '2'\n  [../]\n  [./heat_source2]\n    type = ADMatHeatSource\n    material_property = volumetric_heat\n    variable = T\n    block = '2'\n  [../]\n  [./time3]\n    type = ADHeatConductionTimeDerivative\n    variable = T\n    block = '3'\n  [../]\n  [./heat_conduct3]\n    type = ADHeatConduction\n    variable = T\n    thermal_conductivity = thermal_conductivity\n    block = '3'\n  [../]\n  [./heat_source3]\n    type = ADMatHeatSource\n    material_property = volumetric_heat\n    variable = T\n    block = '3'\n  [../]\n[]\n\n[Functions]\n  [./conditional_function]\n    type = ParsedFunction\n    expression = 't <= 120'\n  [../]\n  [./conditional_function2]\n    type = ParsedFunction\n    expression = 'if(t > 120,if(t <= 640,1,0),0)'\n  [../]\n  [./conditional_function3]\n    type = ParsedFunction\n    expression = 't > 640'\n  [../]\n[]\n\n[Controls]\n  [./u_threshold]\n    type = ConditionalFunctionEnableControl\n    conditional_function = conditional_function\n    disable_objects = 'Kernels::time2 Kernels::heat_conduct2 Kernels::heat_source2 Kernels::time3 Kernels::heat_conduct3 Kernels::heat_source3'\n    enable_objects = 'Kernels::time Kernels::heat_conduct Kernels::heat_source'\n  [../]\n  [./u_threshold2]\n    type = ConditionalFunctionEnableControl\n    conditional_function = conditional_function2\n    disable_objects = 'Kernels::time3 Kernels::heat_conduct3 Kernels::heat_source3'\n    enable_objects = 'Kernels::time2 Kernels::heat_conduct2 Kernels::heat_source2'\n  [../]\n  [./u_threshold3]\n    type = ConditionalFunctionEnableControl\n    conditional_function = conditional_function3\n    enable_objects = 'Kernels::time3 Kernels::heat_conduct3 Kernels::heat_source3'\n  [../]\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/28740",
+          "updatedAt": "2024-10-03T03:52:31Z",
+          "publishedAt": "2024-10-01T05:16:54Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "I wonder if the u_threshold_2 is executed after the _3 and disabling the kernels::xyz3 objects.\nLet's try to chain them.\nAdd the depends_on parameter. 3 depends on 2, which depends on 1",
+                  "url": "https://github.com/idaholab/moose/discussions/28740#discussioncomment-10808925",
+                  "updatedAt": "2024-10-01T13:00:20Z",
+                  "publishedAt": "2024-10-01T13:00:19Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "fervaldies"
+                          },
+                          "bodyText": "Thank you for your answer. I have tried this, but no the first two conditions are not acting at all and it is only after 640s that the third one is activated:\n[Kernels]\n[./time]\ntype = ADHeatConductionTimeDerivative\nvariable = T\nblock = '1'\n[../]\n[./heat_conduct]\ntype = ADHeatConduction\nvariable = T\nthermal_conductivity = thermal_conductivity\nblock = '1'\n[../]\n[./heat_source]\ntype = ADMatHeatSource\nmaterial_property = volumetric_heat\nvariable = T\nblock = '1'\n[../]\n[./time2]\ntype = ADHeatConductionTimeDerivative\nvariable = T\nblock = '2'\n[../]\n[./heat_conduct2]\ntype = ADHeatConduction\nvariable = T\nthermal_conductivity = thermal_conductivity\nblock = '2'\n[../]\n[./heat_source2]\ntype = ADMatHeatSource\nmaterial_property = volumetric_heat\nvariable = T\nblock = '2'\n[../]\n[./time3]\ntype = ADHeatConductionTimeDerivative\nvariable = T\nblock = '3'\n[../]\n[./heat_conduct3]\ntype = ADHeatConduction\nvariable = T\nthermal_conductivity = thermal_conductivity\nblock = '3'\n[../]\n[./heat_source3]\ntype = ADMatHeatSource\nmaterial_property = volumetric_heat\nvariable = T\nblock = '3'\n[../]\n[]\n[Functions]\n[./conditional_function]\ntype = ParsedFunction\nexpression = 't <= 120'\n[../]\n[./conditional_function2]\ntype = ParsedFunction\nexpression = 'if(t > 120,if(t <= 640,1,0),0)'\n[../]\n[./conditional_function3]\ntype = ParsedFunction\nexpression = 't > 640'\n[../]\n[]\n[Controls]\n[./u_threshold]\ntype = ConditionalFunctionEnableControl\nconditional_function = conditional_function\ndisable_objects = 'Kernels::time2 Kernels::heat_conduct2 Kernels::heat_source2 Kernels::time3 Kernels::heat_conduct3 Kernels::heat_source3'\nenable_objects = 'Kernels::time Kernels::heat_conduct Kernels::heat_source'\n[../]\n[./u_threshold2]\ntype = ConditionalFunctionEnableControl\nconditional_function = conditional_function2\ndisable_objects = 'Kernels::time3 Kernels::heat_conduct3 Kernels::heat_source3'\nenable_objects = 'Kernels::time Kernels::heat_conduct Kernels::heat_source Kernels::time2 Kernels::heat_conduct2 Kernels::heat_source2'\ndepends_on = u_threshold\n[../]\n[./u_threshold3]\ntype = ConditionalFunctionEnableControl\nconditional_function = conditional_function3\n#disable_objects = 'Kernels::time Kernels::heat_conduct Kernels::heat_source Kernels::time2 Kernels::heat_conduct2 Kernels::heat_source2'\nenable_objects = 'Kernels::time Kernels::heat_conduct Kernels::heat_source Kernels::time2 Kernels::heat_conduct2 Kernels::heat_source2 Kernels::time3 Kernels::heat_conduct3 Kernels::heat_source3'\ndepends_on = u_threshold2\n[../]\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/28740#discussioncomment-10826717",
+                          "updatedAt": "2024-10-03T01:47:22Z",
+                          "publishedAt": "2024-10-03T01:47:22Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "fervaldies"
+                  },
+                  "bodyText": "Okay I think it is working now. I just disabled the previous conditions and created new kernels that are activating the 2 or 3 blocks for each time, rather than having different kernels that only activate one block each. Thanks!",
+                  "url": "https://github.com/idaholab/moose/discussions/28740#discussioncomment-10827276",
+                  "updatedAt": "2024-10-03T03:52:32Z",
+                  "publishedAt": "2024-10-03T03:52:31Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "gtest.h include error",
+          "author": {
+            "login": "Flolaffel"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nHello,\nwhile using VSCode after updating I get an include error for \"gtest/gtest.h\". How can I fix that?",
+          "url": "https://github.com/idaholab/moose/discussions/28750",
+          "updatedAt": "2024-10-02T08:05:27Z",
+          "publishedAt": "2024-10-02T07:36:35Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "Flolaffel"
+                  },
+                  "bodyText": "Found the fix. Had to add\n\"${workspaceFolder}/../moose/framework/contrib/gtest\"\nto my includePath in the c_cpp_properties.json.",
+                  "url": "https://github.com/idaholab/moose/discussions/28750#discussioncomment-10817296",
+                  "updatedAt": "2024-10-02T08:05:25Z",
+                  "publishedAt": "2024-10-02T08:05:25Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Python script for extracting images from output",
+          "author": {
+            "login": "rnpratoori"
+          },
+          "bodyText": "I have run ~500 simulations and have the corresponding output files. I want to extract the images of the last timesteps of each of the files. I know how to do it with *vtu format using Python. I am not familiar with the MultiBlock type of writing output with Exodus. Can anyone tell me how to handle this data?\nI am not sure if this is the right place to ask this question, but it would be great if someone could point me to a proper source on this.",
+          "url": "https://github.com/idaholab/moose/discussions/28746",
+          "updatedAt": "2024-10-03T18:59:54Z",
+          "publishedAt": "2024-10-01T20:41:32Z",
+          "category": {
+            "name": "Q&A Tools"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "I think whichever python package you are working with for extracting the data from vtu files is a better place to start from.\nNote that you can use VTK output in moose, exodus is not the only option\nhttps://mooseframework.inl.gov/source/outputs/VTKOutput.html",
+                  "url": "https://github.com/idaholab/moose/discussions/28746#discussioncomment-10813579",
+                  "updatedAt": "2024-10-01T20:53:20Z",
+                  "publishedAt": "2024-10-01T20:53:19Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to Compute Directional Derivatives or Derivatives with Respect to Coordinates x and y of a Field in MOOSE ?",
+          "author": {
+            "login": "mahdipasaie"
+          },
+          "bodyText": "Hi,\nI am working on implementing a phase field equation in MOOSE that involves directional derivatives of a field $\\phi$. Specifically, I need to compute the derivatives of  $\\phi$  with respect to the ( x )- and ( y )-coordinates (i.e., $\\frac{\\partial \\phi}{\\partial x}$ and $\\frac{\\partial \\phi}{\\partial y}$).\nThese derivatives are required to calculate an angular-dependent function, $\\theta$, defined as:\n$$\n\\theta = \\arctan \\left( \\frac{\\frac{\\partial \\phi}{\\partial y}}{\\frac{\\partial \\phi}{\\partial x}} \\right)\n$$\nI need to define $\\theta$ as a material property in MOOSE, but I'm not sure how to compute the directional derivatives in this framework. Could someone guide me on how to obtain these derivatives and use them in the material property definition?\nHere is the full equation if anyone is interested:\n$$\n\\tau_0 a(\\theta)^2 \\frac{\\partial \\phi}{\\partial t} = W_0^2 \\nabla \\cdot \\left[a(\\theta)^2 \\nabla \\phi\\right] - \\frac{\\partial}{\\partial x}\\left[a(\\theta) a^{\\prime}(\\theta) \\frac{\\partial \\phi}{\\partial y}\\right] + \\frac{\\partial}{\\partial y}\\left[a(\\theta) a^{\\prime}(\\theta) \\frac{\\partial \\phi}{\\partial x}\\right] + \\left[\\phi - \\lambda u(1 - \\phi^2)\\right]\\left(1 - \\phi^2\\right)\n$$\nwhere:\n\n$\\ a(\\theta) = 1 + \\epsilon \\cos(4 \\theta) $\n$\\ \\theta = \\arctan\\left(\\frac{\\frac{\\partial \\phi}{\\partial y}}{\\frac{\\partial \\phi}{\\partial x}}\\right) $\n\nThe coupled equation:\n$$\n\\frac{\\partial u}{\\partial t} = D \\nabla^2 u + \\frac{1}{2} \\frac{\\partial h(\\psi)}{\\partial t}\n$$\nAny examples or pointers would be greatly appreciated. Thanks in advance!\nFor reference, the equations I'm working with are Equations 87 and 88 from \"Quantitative Phase-field Modeling of Dendritic Growth in Two and Three Dimensions\" by Alain Karma. You can find the article here\nMahdi.",
+          "url": "https://github.com/idaholab/moose/discussions/28637",
+          "updatedAt": "2024-10-01T16:57:00Z",
+          "publishedAt": "2024-09-16T22:13:00Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nDirectional derivatives are computed using a chain rule.\nso\nda/dtheta = da/dx dx/dtheta + da/dy dy/theta\n\ndx/dtheta = 1 / dtheta/dx\n\nhere",
+                  "url": "https://github.com/idaholab/moose/discussions/28637#discussioncomment-10664672",
+                  "updatedAt": "2024-09-16T22:47:32Z",
+                  "publishedAt": "2024-09-16T22:47:31Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mahdipasaie"
+                          },
+                          "bodyText": "thank you for your reply. To define theta, is it possible that I extract the x and y components of the phi as _grad_u [_qp](0) and _grad_u[_qp](1) then define these as material properties and use them to define theta?\nand my second question is for the terms $\\frac{\\partial}{\\partial x}\\left[a(\\theta) a^{\\prime}(\\theta) \\frac{\\partial \\phi}{\\partial y}\\right]$  and $\\frac{\\partial}{\\partial y}\\left[a(\\theta) a^{\\prime}(\\theta) \\frac{\\partial \\phi}{\\partial x}\\right]$ :\n$a(\\theta) a^{\\prime}(\\theta) \\frac{\\partial \\phi}{\\partial x}\\ = term1$\n$a(\\theta) a^{\\prime}(\\theta) \\frac{\\partial \\phi}{\\partial y}\\ = term2$\nwhen I get the weak forms of these terms the partial derivative would go on the test function I mean the weak form is:\n$&lt; term1 , \\frac{\\partial \\ Testfunction}{\\partial y}\\ &gt;$\nand\n$&lt; term2 , \\frac{\\partial \\ Testfunction}{\\partial x}\\ &gt;$\nso is it possible to multiply ( inner product )  the x and y components of the test function in moose? is it  _grad_test[_i][_qp](0) and  _grad_test[_i][_qp](1).\nThanks again.",
+                          "url": "https://github.com/idaholab/moose/discussions/28637#discussioncomment-10665668",
+                          "updatedAt": "2024-09-17T02:51:05Z",
+                          "publishedAt": "2024-09-17T02:51:05Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "if u is a variable,\nyou should be able to compute grad_u directly in any material property using the coupledGradient routine from the Coupleable API, no need to save them as material properties\n\nso is it possible to multiply ( inner product ) the x and y components of the test function in moose?\n\nyes. You can index into grad_test[_i][_qp] like you did",
+                          "url": "https://github.com/idaholab/moose/discussions/28637#discussioncomment-10665813",
+                          "updatedAt": "2024-09-17T03:13:04Z",
+                          "publishedAt": "2024-09-17T03:13:04Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "mahdipasaie"
+                  },
+                  "bodyText": "So this is how I define Theta in FEM:\n\n$\\ a(\\theta) = 1 + \\epsilon \\cos(4 \\theta) $\n\n#include \"ADtheta.h\"\n#include \"MooseMesh.h\"\n#include \"MathUtils.h\"\n\nregisterMooseObject(\"diffApp\", ADtheta);\n\nInputParameters\nADtheta::validParams()\n{\n    InputParameters params = Material::validParams();\n    params.addClassDescription(\"2D interfacial anisotropy\");\n    params.addParam<Real>(\n        \"epsilon\", 0.02, \"Strength of the anisotropy\");\n    params.addParam<Real>(\n        \"w0\", 1.0, \"Interface width\");\n    params.addRequiredCoupledVar(\"op\", \"Order parameter defining the solid phase\");\n    \n  return params;\n}\n\nADtheta::ADtheta(const InputParameters & parameters)\n  : Material(parameters),\n    _epsilon(getParam<Real>(\"epsilon\")),\n    _w0(getParam<Real>(\"w0\")),\n    _eps(declareADProperty<Real>(\"eps\")),\n    _deps(declareADProperty<Real>(\"deps\")),\n    _op(adCoupledValue(\"op\")),\n    _grad_op(adCoupledGradient(\"op\"))\n{\n  // this currently only works in 2D simulations\n  if (_mesh.dimension() != 2)\n    mooseError(\"ADInterfaceOrientationMaterial requires a two-dimensional mesh.\");\n}\n\n\nvoid\nADtheta::computeQpProperties()\n{\n    const ADReal grad_x_phi = _grad_op[_qp](0);  // \u2202x \u03c6\n    const ADReal grad_y_phi = _grad_op[_qp](1);  // \u2202y \u03c6\n\n    // Compute the magnitude of the gradient\n    const ADReal grad_norm = std::sqrt(grad_x_phi * grad_x_phi + grad_y_phi * grad_y_phi);\n\n    // Initialize theta\n    ADReal theta = 0.0;\n\n    // Avoid undefined atan2 when gradient is zero\n    if (grad_norm > 1e-14) // Use a small tolerance to avoid division by zero\n    {\n        theta = std::atan2(grad_y_phi, grad_x_phi);\n    }\n\n    // Compute anisotropy functions\n    _eps[_qp] = _w0 * (1.0 + _epsilon * std::cos(4.0 * theta));\n    _deps[_qp] = _w0 * (- _epsilon * 4.0 * std::sin(4.0 * theta));\n}\nand in the input file:\n[Materials]\n[./Theta]\ntype = ADtheta\nop = phi\n[../]\n[]",
+                  "url": "https://github.com/idaholab/moose/discussions/28637#discussioncomment-10800427",
+                  "updatedAt": "2024-09-30T16:42:26Z",
+                  "publishedAt": "2024-09-30T16:42:26Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "what is deps again? deps/d_theta?\nfor this line\n   if (grad_norm > 1e-14) // Use a small tolerance to avoid division by zero\n    {\n        theta = std::atan2(grad_y_phi, grad_x_phi);\n\njust make sure you are ok with the limit behaviors listed here\nhttps://en.cppreference.com/w/cpp/numeric/math/atan2",
+                          "url": "https://github.com/idaholab/moose/discussions/28637#discussioncomment-10800501",
+                          "updatedAt": "2024-09-30T16:49:41Z",
+                          "publishedAt": "2024-09-30T16:49:40Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mahdipasaie"
+                          },
+                          "bodyText": "Yes, deps represents the derivative of $a(\\theta)$ with respect to $\\theta$. I should also mention that I reviewed the pahse filed source code on MOOSE's GitHub, which gave me some insights. However, I found it overly complex for my specific needs, so I opted to write my own implementation. That said, there might still be some details that I didn't fully grasp.\nRegarding the tolerance check, I initially expected the code to work without the if statement. However, without it, the simulation wasn't converging. That said, I made several parameter changes afterward to get the simulation working, so I\u2019ll need to revisit this check to see if it's still necessary under the updated configuration",
+                          "url": "https://github.com/idaholab/moose/discussions/28637#discussioncomment-10800678",
+                          "updatedAt": "2024-09-30T17:10:59Z",
+                          "publishedAt": "2024-09-30T17:07:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mahdipasaie"
+                          },
+                          "bodyText": "I'd like to also test the Finite Volume Method (FVM) kernel in MOOSE by implementing the same physics, but this time using FVM. Could you help me with defining $a(\\theta)$ in an FVM kernel, similar to how it's defined in the current setup?",
+                          "url": "https://github.com/idaholab/moose/discussions/28637#discussioncomment-10801194",
+                          "updatedAt": "2024-09-30T18:06:14Z",
+                          "publishedAt": "2024-09-30T18:06:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "you can use the same material properties in finite volume simulations\nThe kernels are a little different, as in FV you implement the strong form rather than the weak form in the kernels\nsee\nhttps://mooseframework.inl.gov/moose/finite_volumes/fv_design.html\nhttps://mooseframework.inl.gov/moose/syntax/FVKernels/",
+                          "url": "https://github.com/idaholab/moose/discussions/28637#discussioncomment-10801505",
+                          "updatedAt": "2024-09-30T18:40:56Z",
+                          "publishedAt": "2024-09-30T18:40:56Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mahdipasaie"
+                          },
+                          "bodyText": "It seems that $a(\\theta)$ should now be a FunctorMaterial in order to be used within a kernel for a term like the one shown below in the Finite Volume Method (FVM):\n$$\n\\nabla \\cdot \\left[a(\\theta)^2 \\nabla \\phi\\right]\n$$\nThis term in my PDE behaves similarly to the FVDiffusion.C kernel in MOOSE, where $a(\\theta)$ plays a role analogous to the coeff in that kernel. In FVDiffusion.C, the coefficient is interpolated to the faces of the elements. This interpolation process can be handled if Coeff is a FunctorMaterial object in MOOSE, correct?\nHere\u2019s the relevant part of the kernel implementation for reference:\nADReal\nFVDiffusion::computeQpResidual()\n{\n  using namespace Moose::FV;\n  const auto state = determineState();\n\n  auto dudn = gradUDotNormal(state);\n  ADReal coeff;\n\n  // If we are on internal faces, we interpolate the diffusivity as usual\n  if (_var.isInternalFace(*_face_info))\n  {\n    const ADReal coeff_elem = _coeff(elemArg(), state);\n    const ADReal coeff_neighbor = _coeff(neighborArg(), state);\n    // If the diffusion coefficients are zero, then we can early return 0 (and avoid warnings if we\n    // have a harmonic interpolation)\n    if (!coeff_elem.value() && !coeff_neighbor.value())\n      return 0;\n\n    interpolate(_coeff_interp_method, coeff, coeff_elem, coeff_neighbor, *_face_info, true);\n  }\n  // Else we just use the boundary values (which depend on how the diffusion\n  // coefficient is constructed)\n  else\n  {\n    const auto face = singleSidedFaceArg();\n    coeff = _coeff(face, state);\n  }\n\n  return -1 * coeff * dudn;\n}",
+                          "url": "https://github.com/idaholab/moose/discussions/28637#discussioncomment-10811466",
+                          "updatedAt": "2024-10-01T16:49:56Z",
+                          "publishedAt": "2024-10-01T16:49:56Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "some of the FVKernels do use functor materials. there are still a few using regular material properties. It's as you want",
+                          "url": "https://github.com/idaholab/moose/discussions/28637#discussioncomment-10811550",
+                          "updatedAt": "2024-10-01T16:57:01Z",
+                          "publishedAt": "2024-10-01T16:57:00Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Doubts Regarding Solution of Cahn Hillard Equation Using Moose and in Reference Moose Example",
+          "author": {
+            "login": "vikramroybarc"
+          },
+          "bodyText": "Dear Moose Team,\nI am a new user of Moose and currently learning how to utilize it effectively.\nI have some questions regarding the following Moose example: ~/projects/moose/modules/combined/test/tests/DiffuseCreep/stress.i.\nThe contents of the example script are reproduced below:\n[Mesh]\n  type = GeneratedMesh\n  dim = 2\n  nx = 50\n  ny = 2\n  xmin = 0\n  xmax = 10\n  ymin = 0\n  ymax = 2\n[]\n\n[Variables]\n  [./c]\n    [./InitialCondition]\n      type = FunctionIC\n      function = 'x0:=5.0;thk:=0.5;m:=2;r:=abs(x-x0);v:=exp(-(r/thk)^m);0.1+0.1*v'\n    [../]\n  [../]\n  [./mu]\n  [../]\n  [./jx]\n  [../]\n  [./jy]\n  [../]\n[]\n\n[AuxVariables]\n  [./gb]\n    family = LAGRANGE\n    order  = FIRST\n  [../]\n  [./creep_strain_xx]\n    family = MONOMIAL\n    order  = CONSTANT\n  [../]\n  [./creep_strain_yy]\n    family = MONOMIAL\n    order  = CONSTANT\n  [../]\n  [./creep_strain_xy]\n    family = MONOMIAL\n    order  = CONSTANT\n  [../]\n[]\n\n[Kernels]\n  [./conc]\n    type = CHSplitConcentration\n    variable = c\n    mobility = mobility_prop\n    chemical_potential_var = mu\n  [../]\n  [./chempot]\n    type = CHSplitChemicalPotential\n    variable = mu\n    chemical_potential_prop = mu_prop\n    c = c\n  [../]\n  [./flux_x]\n    type = CHSplitFlux\n    variable = jx\n    component = 0\n    mobility_name = mobility_prop\n    mu = mu\n    c = c\n  [../]\n  [./flux_y]\n    type = CHSplitFlux\n    variable = jy\n    component = 1\n    mobility_name = mobility_prop\n    mu = mu\n    c = c\n  [../]\n  [./time]\n    type = TimeDerivative\n    variable = c\n  [../]\n[]\n\n[AuxKernels]\n  [./gb]\n    type = FunctionAux\n    variable = gb\n    function = 'x0:=5.0;thk:=0.5;m:=2;r:=abs(x-x0);v:=exp(-(r/thk)^m);v'\n  [../]\n  [./creep_strain_xx]\n    type = RankTwoAux\n    variable = creep_strain_xx\n    rank_two_tensor = creep_strain\n    index_i = 0\n    index_j = 0\n  [../]\n  [./creep_strain_yy]\n    type = RankTwoAux\n    variable = creep_strain_yy\n    rank_two_tensor = creep_strain\n    index_i = 1\n    index_j = 1\n  [../]\n  [./creep_strain_xy]\n    type = RankTwoAux\n    variable = creep_strain_xy\n    rank_two_tensor = creep_strain\n    index_i = 0\n    index_j = 1\n  [../]\n[]\n\n[Materials]\n  [./chemical_potential]\n    type = DerivativeParsedMaterial\n    block = 0\n    property_name = mu_prop\n    coupled_variables = c\n    expression = 'c'\n    derivative_order = 1\n  [../]\n  [./var_dependence]\n    type = DerivativeParsedMaterial\n    block = 0\n    expression = 'c*(1.0-c)'\n    coupled_variables = c\n    property_name = var_dep\n    derivative_order = 1\n  [../]\n  [./mobility]\n    type = CompositeMobilityTensor\n    block = 0\n    M_name = mobility_prop\n    tensors = diffusivity\n    weights = var_dep\n    args = c\n  [../]\n  [./phase_normal]\n    type = PhaseNormalTensor\n    phase = gb\n    normal_tensor_name = gb_normal\n  [../]\n  [./aniso_tensor]\n    type = GBDependentAnisotropicTensor\n    gb = gb\n    bulk_parameter = 0.1\n    gb_parameter = 1\n    gb_normal_tensor_name = gb_normal\n    gb_tensor_prop_name = aniso_tensor\n  [../]\n  [./diffusivity]\n    type = GBDependentDiffusivity\n    gb = gb\n    bulk_parameter = 0.1\n    gb_parameter = 1\n    gb_normal_tensor_name = gb_normal\n    gb_tensor_prop_name = diffusivity\n  [../]\n  [./diffuse_strain_increment]\n    type = FluxBasedStrainIncrement\n    xflux = jx\n    yflux = jy\n    gb = gb\n    property_name = diffuse\n  [../]\n  [./diffuse_creep_strain]\n    type = SumTensorIncrements\n    tensor_name = creep_strain\n    coupled_tensor_increment_names = diffuse\n  [../]\n[]\n\n[BCs]\n  [./Periodic]\n    [./all]\n      auto_direction = 'x y'\n    [../]\n  [../]\n[]\n\n[Executioner]\n  type = Transient\n  solve_type = PJFNK\n\n  petsc_options_iname = '-pc_type -ksp_grmres_restart -sub_ksp_type -sub_pc_type -pc_asm_overlap'\n  petsc_options_value = 'asm      31                  preonly       lu           1'\n\n  nl_max_its = 5\n  dt = 20\n  num_steps = 5\n[]\n\n[Preconditioning]\n  [./smp]\n     type = SMP\n     full = true\n  [../]\n[]\n\n[Outputs]\n  exodus = true\n[]\n\n\nI have following doubts regarding this example:\n\nConsidering the Cahn Hillard equation written as :\n\n\nThe Weak Form of this equation will be :\n\nWhen I reffered the return value of all the kernals Mentioned in the example script I am getting the following:\nCHSplitConcentration::computeQpResidual()\n{\n  const RealVectorValue a = _mobility[_qp] * _grad_mu[_qp];\n  return _grad_test[_i][_qp] * a;\n}\nReal\nCHSplitChemicalPotential::computeQpResidual()\n{\n  return _test[_i][_qp] * (_u[_qp] - _chemical_potential[_qp]);\n}\nReal\nCHSplitFlux::computeQpResidual()\n{\n  return _test[_i][_qp] * (_u[_qp] + _mobility[_qp].row(_component) * _grad_mu[_qp]);\n}\nReal\nTimeDerivative::computeQpResidual()\n{\n  return _test[_i][_qp] * _u_dot[_qp];\n}\nAdding All Residual components of all the kernals I am getting the following:\nR = _test[_i][_qp] * _u_dot[_qp] +  _test[_i][_qp] * (_u[_qp] + _mobility[_qp].row(_component) * _grad_mu[_qp]) + _test[_i][_qp] * (_u[_qp] - _chemical_potential[_qp]) +  _grad_test[_i][_qp] * _mobility[_qp] * _grad_mu[_qp]\n\nand this results in following:\n\nAs a result, I am not obtaining the residuals of the standard Cahn-Hilliard equation, which I believe is due to the second and third terms. Specifically, this issue arises from the kernels CHSplitFlux (second term) and CHSplitChemicalPotential (third term).\nCould you help me understand the logic behind this?\n\n\nIn the script Chemical Potential has been taken as equal to c. So Why in Kernal  CHSplitChemicalPotential c - u is calculated. u being the chemical potential\n\n\nRegarding CHSplitFlux, in the documentation it is written that this Kernal computes j\n\n\n\nso why this is a kernal in the first place as it should be auxkernal\nKindly help me in understanding these doubts.\nThankyou",
+          "url": "https://github.com/idaholab/moose/discussions/28726",
+          "updatedAt": "2024-10-01T15:14:43Z",
+          "publishedAt": "2024-09-29T11:59:13Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@laagesen",
+                  "url": "https://github.com/idaholab/moose/discussions/28726#discussioncomment-10788983",
+                  "updatedAt": "2024-09-29T13:02:06Z",
+                  "publishedAt": "2024-09-29T13:02:05Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "laagesen"
+                  },
+                  "bodyText": "Hi, welcome to the MOOSE framework! I think the confusion is resulting from the fact that in this split formulation, there is more than one nonlinear variable, more than just c. So, when you see _u[_qp] it is not always going to be c. You have to look at what is specified in variable =  in each block. For example, in the third term, for the kernel CHSplitChemicalPotential, we have variable = mu which means when you see _u[_qp] that means chemical potential (mu), not c. So what you are solving for in that term is that the nonlinear variable mu needs to be equal to the material property mu_prop\nThe following will be helpful to understand all the MOOSE framework phase-field module better:\nhttps://mooseframework.inl.gov/moose/modules/phase_field/index.html",
+                  "url": "https://github.com/idaholab/moose/discussions/28726#discussioncomment-10810464",
+                  "updatedAt": "2024-10-01T15:14:44Z",
+                  "publishedAt": "2024-10-01T15:14:43Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "overwrite default value of base class parameter within derived class",
+          "author": {
+            "login": "arndflatten"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nSome class A has an addRequiredParam(\"pName\",\"pDescr\") defined inside its A::validParams().\nMy subclass B wants to make this pName an optional parameter and set some default value for it, but I dont see how, despite there must be a simple solution?\nI tried\nInputParameters\nB::validParams()\n{\n  InputParameters params = A::validParams();\n  params.makeParamNotRequired(\"pName\");\n  if(!params.isParamSetByUser(\"pName\"))\n    //* no such thing as setParam(\"pName\", pValue) exists? So trying to add again:\n    params.addParam(\"pName\",newDefaultValue,\"pDescr\");\n  return params;\n}\n\nbut this doesn't take the newDefaultValue when i omit to define the pName in the input file. What am I missing out?",
+          "url": "https://github.com/idaholab/moose/discussions/28743",
+          "updatedAt": "2024-10-02T12:17:55Z",
+          "publishedAt": "2024-10-01T10:34:38Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "in the validParams, you can re-add the parameter with a valid value\nparams.addParam<param_type (same as before!)>(\"pName\", newDefaultvalue, \"Description\");\n\nThe if condition you have there should not be necessary.\nisParamSetByUser is not meant for use in validParams",
+                  "url": "https://github.com/idaholab/moose/discussions/28743#discussioncomment-10808873",
+                  "updatedAt": "2024-10-01T12:56:38Z",
+                  "publishedAt": "2024-10-01T12:55:56Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "arndflatten"
+                          },
+                          "bodyText": "Thank you. So, if i need to re-add the parameter again, also the  params.makeParamNotRequired(\"pName\") is not necessary, right?\nAnd is there a way, how I can retrieve the <param_type> and \"oldDescr\" from the original baseClass-parameter automatically?\nIs the re-adding approach the considered-best way to achieve something like i want, or, is there an alternative way like using some params.setDefaultValue(\"pName\",pDefaultValue) that I just overlooked?\nThanks again!",
+                          "url": "https://github.com/idaholab/moose/discussions/28743#discussioncomment-10809562",
+                          "updatedAt": "2024-10-01T13:58:17Z",
+                          "publishedAt": "2024-10-01T13:58:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I don't think there is a way to retrieve the parameter type.\nYou might be able to get the name by looping over the validParamsnof the base class",
+                          "url": "https://github.com/idaholab/moose/discussions/28743#discussioncomment-10810304",
+                          "updatedAt": "2024-10-01T15:01:26Z",
+                          "publishedAt": "2024-10-01T15:01:25Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "N/A",
+          "author": {
+            "login": "kurtenkera"
+          },
+          "bodyText": "",
+          "url": "https://github.com/idaholab/moose/discussions/28737",
+          "updatedAt": "2024-10-01T01:52:55Z",
+          "publishedAt": "2024-10-01T01:34:22Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": []
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Simulation time",
+          "author": {
+            "login": "alimostafavi24"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nHello,\nIs there a way to output the simulation time after each iteration? I know that PerfGraphOutput provides the total time for the entire simulation, but I would like to get timing information during the simulation. For example, if I have 100 steps, I want to know how long it takes to complete the 10th, 20th, ..., up to the 100th time step, not just the overall simulation time.",
+          "url": "https://github.com/idaholab/moose/discussions/28729",
+          "updatedAt": "2024-09-30T18:32:10Z",
+          "publishedAt": "2024-09-30T17:28:48Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYou can output specific items from the perf graph at every time step using this postprocessor\nhttps://mooseframework.inl.gov/source/postprocessors/PerfGraphData.html\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/28729#discussioncomment-10800989",
+                  "updatedAt": "2024-09-30T17:43:08Z",
+                  "publishedAt": "2024-09-30T17:43:07Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "travismui"
+                          },
+                          "bodyText": "Was just going to suggest this too, you could use something like this to output the current simulation time at each timestep and use that to determine how long each step took to simulate:\n[Postprocessors]\n  [run_time]\n    type = PerfGraphData\n    section_name = Root\n    data_type = TOTAL\n  []\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/28729#discussioncomment-10800998",
+                          "updatedAt": "2024-09-30T17:43:55Z",
+                          "publishedAt": "2024-09-30T17:43:54Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "alimostafavi24"
+                          },
+                          "bodyText": "Thanks for the suggestions @GiudGiud @travismui . This one works perfectly.",
+                          "url": "https://github.com/idaholab/moose/discussions/28729#discussioncomment-10801412",
+                          "updatedAt": "2024-09-30T18:32:10Z",
+                          "publishedAt": "2024-09-30T18:32:10Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "parallel error in HPC",
+          "author": {
+            "login": "eric199405"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nDear MOOSE team,\nI have installed moose in the hpc at Singapore (NSCC), using the conda framework.\nHowever, when I submit a parallel case, actually it doesn't work.\nParallelism:\n  Num Processors:          1\n  Num Threads:             1\n\nMy qsub file is as follow.\n#!/bin/bash\n#PBS -q normal\n#PBS -j oe\n#PBS -N p12_nognd\n#PBS -l select=1:ncpus=32:mpiprocs=32:mem=100GB\n#PBS -l walltime=24:00:00\n\nconda activate moose\n\n  srun -n 32 /scratch/users/nus/guozixu/scut/scut-opt -i /scratch/users/nus/guozixu/scut/run.i > /scratch/users/nus/guozixu/scut/p12_nognd.txt\n\nCould you give me some suggestions to address this issue?",
+          "url": "https://github.com/idaholab/moose/discussions/28715",
+          "updatedAt": "2024-09-30T13:37:13Z",
+          "publishedAt": "2024-09-26T16:58:23Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nFirst try this\n srun -n 32 hostname\n\nto make sure 32 processes are launched.\nIf so, then it's likely that the mpirun used under the hood is from a different MPI distribution than the one you used to compile moose.\nyou can use\nwhich mpicc\n\nwhen you compile and\nwhich mpirun\n\nwhen you run to compare",
+                  "url": "https://github.com/idaholab/moose/discussions/28715#discussioncomment-10766422",
+                  "updatedAt": "2024-09-26T17:19:38Z",
+                  "publishedAt": "2024-09-26T17:19:37Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "eric199405"
+                          },
+                          "bodyText": "Hi GiudGiud,\nThanks for your reply,\nWhen I run mpirun -n 32 hostname\uff0cit shows that asp2a-login-nus01\nasp2a-login-nus01\nasp2a-login-nus01\nasp2a-login-nus01\nasp2a-login-nus01\nasp2a-login-nus01\nasp2a-login-nus01\nasp2a-login-nus01\nasp2a-login-nus01\nasp2a-login-nus01\nasp2a-login-nus01\nasp2a-login-nus01\nasp2a-login-nus01\nasp2a-login-nus01\nasp2a-login-nus01\nasp2a-login-nus01\nasp2a-login-nus01\nasp2a-login-nus01\nasp2a-login-nus01\nasp2a-login-nus01\nasp2a-login-nus01\nasp2a-login-nus01\nasp2a-login-nus01\nasp2a-login-nus01\nasp2a-login-nus01\nasp2a-login-nus01\nasp2a-login-nus01\nasp2a-login-nus01\nasp2a-login-nus01\nasp2a-login-nus01\nasp2a-login-nus01\nasp2a-login-nus01\n\n\nif I run which mpicc and which mpirun, it shows that\n~/.conda/envs/moose/bin/mpicc ~/.conda/envs/moose/bin/mpirun.\nKindly note that the parallel file I used is\n#!/bin/bash\n#PBS -q normal\n#PBS -j oe\n#PBS -N p12_nognd\n#PBS -l select=1:ncpus=32:mpiprocs=32:mem=100GB\n#PBS -l walltime=24:00:00\n# cd /scratch/users/nus/guozixu/scut/\n# module load openmpi/4.1.2-hpe\nconda activate moose\n\n  mpirun -n 32 hostname\n\n  mpirun -n 32 /scratch/users/nus/guozixu/scut/scut-opt -i /scratch/users/nus/guozixu/scut/run.i > /scratch/users/nus/guozixu/scut/p12_nognd.txt\n\n\nThe issue still exist.",
+                          "url": "https://github.com/idaholab/moose/discussions/28715#discussioncomment-10769594",
+                          "updatedAt": "2024-09-27T01:39:09Z",
+                          "publishedAt": "2024-09-27T01:39:08Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nThere are a few issues here\nWhy are you using conda compilers on a computing cluster? This won't scale well.\nThen after compiling with the MPI from conda, you are likely using MPI from a module to run.\nwhich mpirun should be run inside a job to see what is being used then",
+                          "url": "https://github.com/idaholab/moose/discussions/28715#discussioncomment-10770118",
+                          "updatedAt": "2024-09-27T03:12:24Z",
+                          "publishedAt": "2024-09-27T03:12:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "eric199405"
+                          },
+                          "bodyText": "Thanks for the reply.\nI use conda to install MOOSE in HPC because the module ava in our HPC cannot support the normal installation.\nI have changed the job file:\n#!/bin/bash\n#PBS -q normal\n#PBS -j oe\n#PBS -N p12_nognd\n#PBS -l select=1:ncpus=32:mpiprocs=32:mem=100GB\n#PBS -l walltime=24:00:00\n\nconda init --all\n\nconda activate moose\n\n  mpirun -n 32 hostname\n  \n  which mpirun\n\n  mpirun -n 32 /scratch/users/nus/guozixu/scut/scut-opt -i /scratch/users/nus/guozixu/scut/run.i > /scratch/users/nus/guozixu/scut/p12_nognd.txt\n\nand the output is\nCondaError: Run 'conda init' before 'conda activate'\n\nx1001c2s0b0n0\nx1001c2s0b0n0\nx1001c2s0b0n0\nx1001c2s0b0n0\nx1001c2s0b0n0\nx1001c2s0b0n0\nx1001c2s0b0n0\nx1001c2s0b0n0\nx1001c2s0b0n0\nx1001c2s0b0n0\nx1001c2s0b0n0\nx1001c2s0b0n0\nx1001c2s0b0n0\nx1001c2s0b0n0\nx1001c2s0b0n0\nx1001c2s0b0n0\nx1001c2s0b0n0\nx1001c2s0b0n0\nx1001c2s0b0n0\nx1001c2s0b0n0\nx1001c2s0b0n0\nx1001c2s0b0n0\nx1001c2s0b0n0\nx1001c2s0b0n0\nx1001c2s0b0n0\nx1001c2s0b0n0\nx1001c2s0b0n0\nx1001c2s0b0n0\nx1001c2s0b0n0\nx1001c2s0b0n0\nx1001c2s0b0n0\nx1001c2s0b0n0\n/opt/cray/pe/pals/1.1.6/bin/mpirun\n\nseems that the '/opt/cray/pe/pals/1.1.6/bin/mpirun' differs with '~/.conda/envs/moose/bin/mpicc ~/.conda/envs/moose/bin/mpirun'.\nIs there any suggestions?",
+                          "url": "https://github.com/idaholab/moose/discussions/28715#discussioncomment-10770208",
+                          "updatedAt": "2024-09-27T03:29:31Z",
+                          "publishedAt": "2024-09-27T03:29:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "Can you try to activate the environment using an alternative method:\n#!/bin/bash\n#PBS -q normal\n#PBS -j oe\n#PBS -N p12_nognd\n#PBS -l select=1:ncpus=32:mpiprocs=32:mem=100GB\n#PBS -l walltime=24:00:00\n\n\n# alternative way to 'activate' a conda environment\n# see tip below why I don't use ~/\nexport PATH=/the/full/path/to/conda/bin:$PATH\nsource activate /the/full/path/to/.conda/envs/moose\n\nwhich mpirun\n\nsrun -n 32 /scratch/users/nus/guozixu/scut/scut-opt \\\n  -i /scratch/users/nus/guozixu/scut/run.i \\\n  > /scratch/users/nus/guozixu/scut/p12_nognd.txt\nTipuse /full/path/to/** paths instead of ~/.\nI've seen shorthand path to home, fail in job submission scripts. Best to use fully declared paths in scripts like these.\n\nI think srun is a SLURM job scheduler submitter. But I see PBS job scheduler attributes here (commonly used with qsub). Just throwing that out there. Not sure what is causing your error at the moment. But if you would try to activate Conda using the method above and try again/report back...\nAnd for completeness, here would be the SLURM equivalent to your above PBS submission script:\n#SBATCH --time=24:00:00      # walltime\n#SBATCH --ntasks-per-node=32 # number of processor cores (i.e. tasks)\n#SBATCH --nodes=1            # number of nodes\n#SBATCH -J \"p12_nognd\"       # job name\n#SBATCH -p normal            # queue",
+                          "url": "https://github.com/idaholab/moose/discussions/28715#discussioncomment-10775799",
+                          "updatedAt": "2024-09-27T13:21:55Z",
+                          "publishedAt": "2024-09-27T13:20:47Z",
+                          "isAnswer": true
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "eric199405"
+                          },
+                          "bodyText": "It works! Special thanks for your helps!",
+                          "url": "https://github.com/idaholab/moose/discussions/28715#discussioncomment-10776797",
+                          "updatedAt": "2024-09-27T14:41:03Z",
+                          "publishedAt": "2024-09-27T14:41:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "Welcome! We activate our Conda environments in the same manner on our buildfarm (https://civet.inl.gov). I find it's a cleaner, less intrusive way that does not modify nor rely on, your ~/.bashrc, ~/.bash_profile, etc profiles in order to work. I suspect when your SLURM job launches, it's probably ignoring some aspects of your shell profile (where/when Conda initializes).",
+                          "url": "https://github.com/idaholab/moose/discussions/28715#discussioncomment-10776910",
+                          "updatedAt": "2024-09-27T14:52:02Z",
+                          "publishedAt": "2024-09-27T14:52:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "eric199405"
+                          },
+                          "bodyText": "Thanks~\nMay I ask if use conda-based MOOSE in HPC, is there any potential computation efficiency lose?",
+                          "url": "https://github.com/idaholab/moose/discussions/28715#discussioncomment-10777144",
+                          "updatedAt": "2024-09-27T15:13:50Z",
+                          "publishedAt": "2024-09-27T15:13:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "There is a performance issue. The inter-node communication will not use any optimized communication network your HPC cluster team deployed (infiniband for example)\nOn a single node, you should be fine. It will still be slower because the architecture-specific optimizations are not turned on",
+                          "url": "https://github.com/idaholab/moose/discussions/28715#discussioncomment-10777173",
+                          "updatedAt": "2024-09-27T15:23:35Z",
+                          "publishedAt": "2024-09-27T15:16:21Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "eric199405"
+                          },
+                          "bodyText": "Correct!\nI have tried 2 nodes, and it's very very slow.",
+                          "url": "https://github.com/idaholab/moose/discussions/28715#discussioncomment-10777325",
+                          "updatedAt": "2024-09-27T15:30:01Z",
+                          "publishedAt": "2024-09-27T15:29:59Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "then you should work with your cluster team to install the correct way, using the MPI distribution they installed for you\nhttps://mooseframework.inl.gov/getting_started/installation/hpc_install_moose.html",
+                          "url": "https://github.com/idaholab/moose/discussions/28715#discussioncomment-10777391",
+                          "updatedAt": "2024-09-27T15:33:54Z",
+                          "publishedAt": "2024-09-27T15:33:53Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "The problem of Restart the simulation",
+          "author": {
+            "login": "PengWei97"
+          },
+          "bodyText": "Dear MOOSE experts,\nRecently, I added the Checkpoint module to the cases grain_growth_2D_graintracker.i and poly_grain_growth_2D_eldrforce.i respectively, and added the code as follows\uff0c\n[Out]\nType = Checkpoint\nInterval = 10 # The interval at which time steps are output to the solution file\nNum_files = 3 # Number of the Restart files to save\n[]\n\nFor grain_growth_2D_graintracker.i, Restart can be achieved , in other words *-opt -i grain_growth_2D_graintracker.i --reover, can continue the simulation successfully. #16447\nBut for poly_grain_growth_2D_eldrforce.i, I first set\nstart_time = 0,0 end_time = 100\nAfter the simulation is completed, modify it to start_time = 100 and end_time = 200. But it cannot be Restart , the error is displayed as\uff0c\n================================================= =================================\n= BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES\n= PID 587849 RUNNING AT pwmoose-Default-string\n= EXIT CODE: 139\n= CLEANING UP REMAINING PROCESSES\n= YOU CAN IGNORE THE BELOW CLEANUP MESSAGES\n================================================= =================================\nYOUR APPLICATION TERMINATED WITH THE EXIT STRING: Segmentation fault (signal 11)\nThis typically refers to a problem with your application.\nPlease see the FAQ page for debugging suggestions\n\nSo my question is, why do poly_grain_growth_2D_eldrforce.i perform Restart errors, and how should I solve it?\nAnd the information output to the terminal during the simulation process is shown in two  log files.\npoly_grain_growth_2D_eldrforce_init.log\npoly_grain_growth_2D_eldrforce_recover.log\nAny suggestions or recommendations to fix these problems would be greatly appreciated.\nThank you\nWei Peng",
+          "url": "https://github.com/idaholab/moose/discussions/16538",
+          "updatedAt": "2024-09-30T04:43:00Z",
+          "publishedAt": "2020-12-18T13:43:36Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "SudiptaBiswas"
+                  },
+                  "bodyText": "It seems to me you are using recover option instead of restart. There is a simpler way to restart the simulation. Look into the differences here, https://mooseframework.inl.gov/application_usage/restart_recover.html#!\nYou can also use the debugger to pinpoint the issue,\nhttps://mooseframework.inl.gov/application_development/debugging.html#!",
+                  "url": "https://github.com/idaholab/moose/discussions/16538#discussioncomment-224519",
+                  "updatedAt": "2022-06-12T18:57:47Z",
+                  "publishedAt": "2020-12-18T22:38:28Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "PengWei97"
+                          },
+                          "bodyText": "Thank you for your response. I have solved the problem.",
+                          "url": "https://github.com/idaholab/moose/discussions/16538#discussioncomment-226435",
+                          "updatedAt": "2022-06-12T18:57:47Z",
+                          "publishedAt": "2020-12-20T06:14:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "PengWei97"
+                          },
+                          "bodyText": "Hi @SudiptaBiswas, maybe this is a very old question, but as of now I still haven't solved it.\nI do use recover, i.e. the simulation needs to be recovered due to a failure or premature termination during the calculation.\nHere's how I did it, and I desperately need your help,\nFirst, I run ~/projects/luwu/luwu-opt -i poly_grain_growth_2D_eldrforce.i, then use ctrl+D to manually terminate it after four steps of calculation;\nNext, I use the command ~/projects/luwu/luwu-opt -i poly_grain_growth_2D_eldrforce.i --recover to use the recover function so that it can continue from the previous step, but the following error occurred,\n*** Warning ***\nMesh unchanged, skipping remaining steps...\n\nTime Step 5, time = 5.20912, dt = 1.45152\n\nGrain Tracker Status:\nGrains active index 0: 1 -> 1\nGrains active index 1: 1 -> 1\nGrains active index 2: 1 -> 1\nGrains active index 3: 1 -> 1\nGrains active index 4: 1 -> 1\n\nFinished inside of GrainTracker\n\nSegmentation fault (core dumped)\nFollowing your suggestion, I tried to use Debugging to find where the problem is, but in Debuggers I don't know how to use the recover function, even typing gdb --args ~/projects/luwu/luwu-dbg -i poly_grain_growth_2D_eldrforce.i --reover , it also starts from 0.\nSo my problem now is that while I now know the problem is in the graintraker, I don't know how to use the recover function in debug mode.\nAny suggestions or recommendations to fix these problems would be greatly appreciated.",
+                          "url": "https://github.com/idaholab/moose/discussions/16538#discussioncomment-2615957",
+                          "updatedAt": "2022-06-12T18:57:47Z",
+                          "publishedAt": "2022-04-22T14:10:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "#22450 got merged and should help with this restart",
+                          "url": "https://github.com/idaholab/moose/discussions/16538#discussioncomment-3944293",
+                          "updatedAt": "2022-10-23T15:21:54Z",
+                          "publishedAt": "2022-10-23T15:21:53Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "eric199405"
+                          },
+                          "bodyText": "Thank you for your response. I have solved the problem.\n\nHi Pengwei,\nThis is Zixu Guo from NUS.\nMay I ask how did you solve such problem, like restart and exit code 139.\nThanks,",
+                          "url": "https://github.com/idaholab/moose/discussions/16538#discussioncomment-10793306",
+                          "updatedAt": "2024-09-30T04:43:01Z",
+                          "publishedAt": "2024-09-30T04:43:00Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

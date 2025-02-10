@@ -1,0 +1,757 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMi0wNC0yMVQxMjoxOTo0MS0wNTowMM4APWXv"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Using AbaqusUMATStress with generalized plane strain",
+          "author": {
+            "login": "jessecarterMOOSE"
+          },
+          "bodyText": "This combo does not work as-is. Not sure if by design or just an oversight.\nIn poking around in the code for the generalized plane strain problem, it looks like the GeneralizedPlaneStrainUserObject requires an entry from the elasticity tensor to compute the Jacobian contribution for the out-of-plane scalar variable (see here). But the problem is that when using AbaqusUMATStress, a global elasticity tensor material does not always need to be built, and as such, MOOSE cannot access specific components of the tensor. The AbaqusUMATStress material does access the components of the tensor in UMAT-notation in order to contribute to the Jacobian for the displacement variables (I believe, here), but that information does not make it over to the GeneralizedPlaneStrainUserObject.\nSo it seems like the information that it needs to do generalized plane strain is available from the UMAT interface, I'm just not sure if there's an \"easy\" way to get at it from the GeneralizedPlaneStrainUserObject.",
+          "url": "https://github.com/idaholab/moose/discussions/20867",
+          "updatedAt": "2022-07-26T05:48:13Z",
+          "publishedAt": "2022-04-25T18:10:10Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "dschwen"
+                  },
+                  "bodyText": "It was not in the statement of work. As far as I can see the way forward would involve a new GeneralizedUMATPlainStrain object that calls the UMAT to obtain both stress and the Jacobian component. The elasticity tensor is \"secret\" and might not even exist as such in a general UMAT.",
+                  "url": "https://github.com/idaholab/moose/discussions/20867#discussioncomment-2634529",
+                  "updatedAt": "2022-07-26T05:48:13Z",
+                  "publishedAt": "2022-04-25T23:04:43Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jessecarterMOOSE"
+                          },
+                          "bodyText": "@dschwen Yeah it seems maybe we should have asked you for more :)\nAnyway, just so I understand things, the AbaqusUMATMaterial declares a Jacobian_mult property, which gets consumed by StressDivergence and GeneralizedPlaneStrainOffDiag kernels (and probably more). Does it make sense for GeneralizedPlaneStrainUserObject to also use this property? Right now it uses the elasticity tensor but there are a number of occasions (here and here) where the Jacobian_mult property is set equal to the elasticity tensor.\nGuess I'm just looking for the easy way out. Besides, the GeneralizedPlaneStrainUserObject only needs a single entry from the elasticity tensor to compute the Jacobian. Seems a bit overkill to create a new class just to get at a single value. I could be way off base here, so please let me know if I'm misunderstanding things.",
+                          "url": "https://github.com/idaholab/moose/discussions/20867#discussioncomment-2635051",
+                          "updatedAt": "2022-07-26T05:48:27Z",
+                          "publishedAt": "2022-04-26T01:37:55Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Error in moose when submission to cluster",
+          "author": {
+            "login": "DaijunHU"
+          },
+          "bodyText": "Dear all,\nI just re-install moose on the cluster of my institution and installed our own App for use.\nThe installation works fine and both moose and my app are good with the  ./run_tests.\nHowever, when I submit it to HPC PBS work, there shows error like:\n./c_pfor_am-opt: error while loading shared libraries: libsz.so.2: cannot open shared object file: No such file or directory\nSo I connect with IT and they copied the library libsz.so.2, then new error like:\n./c_pfor_am-opt: error while loading shared libraries: libglpk.so.36: cannot open shared object file: No such file or directory\nSo they add this lib file again. Then the error back to libsz.so.2 again.\nI feel getting stuck at it so I installed  libaec-1.0.4-1.el7.aarch64.rpm but it did not help.\nIs it lacking of some file or lib necesasry in the cluster?\nThe version in cluster is CentOS Linux release 7.9.2009.\nPlease let me know if you have any suggestions and thank you very much in advance.\nBest regards,\nDaijun",
+          "url": "https://github.com/idaholab/moose/discussions/20859",
+          "updatedAt": "2022-10-13T02:15:15Z",
+          "publishedAt": "2022-04-25T03:31:51Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "milljm"
+                  },
+                  "bodyText": "My advice is to build and run on one of your compute nodes in an interactive fashion (qsub -I). It sounds as if the compute nodes do not have the same libraries and headers being made available on the head node.",
+                  "url": "https://github.com/idaholab/moose/discussions/20859#discussioncomment-2629820",
+                  "updatedAt": "2022-10-13T02:15:15Z",
+                  "publishedAt": "2022-04-25T13:15:26Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to define DiracKernel that is a function in space and time",
+          "author": {
+            "login": "aaelmeli"
+          },
+          "bodyText": "Hi\nI am trying to simulate an ultrasound push inside soft tissue. The push spatial distribution and its variation in time are given. I used to use ReporterPointSource to define point sources distributed in space. Now, how can I define the variation in time of those sources?",
+          "url": "https://github.com/idaholab/moose/discussions/20838",
+          "updatedAt": "2022-07-21T15:15:21Z",
+          "publishedAt": "2022-04-21T17:02:48Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nTo make them vary in time you ll have to vary the reporter values.\nWhat kind of reporter are you using?\nI think you essentially need a vectoroffunctionpostprocessor but that doesnt exist rn. You can make one with this:\nhttps://mooseframework.inl.gov/source/postprocessors/FunctionValuePostprocessor.html\nhttps://mooseframework.inl.gov/source/vectorpostprocessors/VectorOfPostprocessors.html\nGuillaume\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20838#discussioncomment-2610438",
+                  "updatedAt": "2022-07-21T15:15:18Z",
+                  "publishedAt": "2022-04-21T17:18:35Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aaelmeli"
+                          },
+                          "bodyText": "Thanks, @GiudGiud\nI am using the CSVReader. I will look into those options.",
+                          "url": "https://github.com/idaholab/moose/discussions/20838#discussioncomment-2610531",
+                          "updatedAt": "2022-07-21T15:15:18Z",
+                          "publishedAt": "2022-04-21T17:33:33Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "CSVReader doesnt do time dependence sadly.",
+                          "url": "https://github.com/idaholab/moose/discussions/20838#discussioncomment-2611098",
+                          "updatedAt": "2022-07-21T15:15:18Z",
+                          "publishedAt": "2022-04-21T19:19:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aaelmeli"
+                          },
+                          "bodyText": "CSVReader doesnt do time dependence sadly.\n\nSo, generally, can we model a force that is varying in time and has user-defined spatial distribution through moose?\nThe force that I have is an impulse or a step function in time and has a spatial distribution that is given (at each node). Can we model this in moose?",
+                          "url": "https://github.com/idaholab/moose/discussions/20838#discussioncomment-2618086",
+                          "updatedAt": "2022-07-21T15:15:18Z",
+                          "publishedAt": "2022-04-22T19:45:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Do you have a parsed expression for the function? If so that's the easiest.\nHow many time steps is there? If a small number we can hack something together with parsed expressions (if(t<t1, use function_1, else if t<t2, etc) easily.\nDo you have the data only in a CSV format?\nOther options could be pre-loaded in an Exodus file.\nIn the CSV file can the data be easily separated in different files for each time step?",
+                          "url": "https://github.com/idaholab/moose/discussions/20838#discussioncomment-2618173",
+                          "updatedAt": "2022-07-22T09:17:38Z",
+                          "publishedAt": "2022-04-22T20:02:15Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aaelmeli"
+                          },
+                          "bodyText": "For the ideal case, a parsed expression for the spatial distribution is not available. But I can figure out a simplified version of the force so that I can have parsed expression for it.\nThe data is available on a grid produced by a matlab script. So, I think it can be written in different formats.\nYes, I can separate the data for each time step in the CSV file.",
+                          "url": "https://github.com/idaholab/moose/discussions/20838#discussioncomment-2618478",
+                          "updatedAt": "2022-07-22T09:17:59Z",
+                          "publishedAt": "2022-04-22T21:26:31Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Ok I need to sleuth for a bit through the docs to figure out what s the best option from CSV.\nI think easiest will be to read a CSV file on every time step",
+                          "url": "https://github.com/idaholab/moose/discussions/20838#discussioncomment-2619006",
+                          "updatedAt": "2022-07-22T09:17:59Z",
+                          "publishedAt": "2022-04-23T00:03:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Actually, these two functions can do time and space dependent CSV files\nhttps://mooseframework.inl.gov/source/functions/PiecewiseMultilinear.html\nhttps://mooseframework.inl.gov/source/functions/PiecewiseMulticonstant.html\nfrom there you d need to link them up to the Dirac Kernels.\nI think this one should work, but you ll need multiple of them\nhttps://mooseframework.inl.gov/source/dirackernels/FunctionDiracSource.html\nTo work with the ReporterPointSource,\nYou could:\n\nmodify FunctionDiracSource to have multiple points\nOR\nmodify FunctionValuePostprocessor to chose the point to evaluate the function at\nOR\nwrite a FunctionValuesVectpostprocessor to evaluate a given function at multiple points, specified in either a CSV file or with x/y/z vectors\n\nEither of these options would be good to add to MOOSE",
+                          "url": "https://github.com/idaholab/moose/discussions/20838#discussioncomment-2619046",
+                          "updatedAt": "2022-07-22T09:17:59Z",
+                          "publishedAt": "2022-04-23T00:22:40Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aaelmeli"
+                          },
+                          "bodyText": "Thanks @GiudGiud\nActually, I found this UserForcingFunctionNodalKernel\nhttps://mooseframework.inl.gov/source/nodalkernels/UserForcingFunctionNodalKernel.html\nwhich I think will work fine combined with PiecewiseMulticonstant functions. The only issue would be that the user has to define the force values on all grid points. For example, if the user wanted to model only one point source in one location (let's say in the middle of the domain), the user must set zero force to all other points in the grid.",
+                          "url": "https://github.com/idaholab/moose/discussions/20838#discussioncomment-2621854",
+                          "updatedAt": "2022-07-22T09:18:38Z",
+                          "publishedAt": "2022-04-23T19:29:57Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "This feels like a very different object, so I m not sure. But if you say so then I m glad you have what you need!",
+                          "url": "https://github.com/idaholab/moose/discussions/20838#discussioncomment-2622617",
+                          "updatedAt": "2022-07-22T09:18:48Z",
+                          "publishedAt": "2022-04-24T02:11:39Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Error message when change the input file in phase_field-mechanics$",
+          "author": {
+            "login": "zengfy-hust"
+          },
+          "bodyText": "Hello MOOSE workers \uff1a\nI recently find an module just suitable for my research ,phase_field-mechanics.which provide the input options of euler angles .howerer ,since there is a vacant in introduction documentation of combined modules .I wonder what input format  should I change to be suitable for grn_36_test_2D.tex .I change the file into grain file exported from OIM ,and the following errdor message occured > I attached the file I used in this module .\n*** ERROR ***\nThe following error occurred in the object \"hex_ic\", of type \"PolycrystalHex\".\nPolycrystalHex requires a square or cubic number depending on the mesh dimension\nStack frames: 16\n0: libMesh::print_trace(std::ostream&)\n1: moose::internal::mooseErrorRaw(std::__cxx11::basic_string<char, std::char_traits, std::allocator >, std::__cxx11::basic_string<char, std::char_traits, std::allocator >)\n2: callMooseErrorRaw(std::__cxx11::basic_string<char, std::char_traits, std::allocator >&, MooseApp*)\n3: /home/zengfanyi/projects/moose/modules/phase_field/lib/libphase_field-opt.so.0(+0x28ae74) [0x7f00a2f90e74]\n4: PolycrystalHex::precomputeGrainStructure()\n5: PolycrystalUserObjectBase::execute()\n6: FEProblemBase::joinAndFinalize(TheWarehouse::QueryCache<>, bool)\n7: FEProblemBase::computeUserObjectsInternal(MooseEnumItem const&, Moose::AuxGroup const&, TheWarehouse::QueryCache<>&)\n8: FEProblemBase::computeUserObjects(MooseEnumItem const&, Moose::AuxGroup const&)\n9: FEProblemBase::initialSetup()\n10: Transient::init()\n11: MooseApp::executeExecutioner()\n12: MooseApp::run()\n13: /home/zengfanyi/projects/moose/modules/combined/combined-opt(+0x527e) [0x561245c7127e]\n14: __libc_start_main\n15: /home/zengfanyi/projects/moose/modules/combined/combined-opt(+0x550d) [0x561245c7150d]\napplication called MPI_Abort(MPI_COMM_WORLD, 1) - process 0\n[unset]: write_line error; fd=-1 buf=:cmd=abort exitcode=1\n:\nsystem msg for write_line failure : Bad file descriptor\ncan  you help me fix this .\ntest.zip",
+          "url": "https://github.com/idaholab/moose/discussions/20842",
+          "updatedAt": "2022-06-17T11:16:16Z",
+          "publishedAt": "2021-05-19T03:57:49Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@zengfy-hust any update on this?\nIssues arent tracked the same way so we did not see this.\nYou re probably just missing a parameter here",
+                  "url": "https://github.com/idaholab/moose/discussions/20842#discussioncomment-2611914",
+                  "updatedAt": "2022-06-17T11:16:19Z",
+                  "publishedAt": "2022-04-21T22:39:39Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "laagesen"
+                          },
+                          "bodyText": "This IC tries to fit n x n hexagons in a 2D simulation, where n is an integer, or n x n x n in 3D. So, you need to supply a grain number that is a square of that integer for a 2D simulation or the cube of that integer for 3D. So, for a 2D simulation, you need to supply grain_num = 4, 9, 16 etc. to get 2 x 2, 3 x 3, 4 x 4 etc.",
+                          "url": "https://github.com/idaholab/moose/discussions/20842#discussioncomment-2618442",
+                          "updatedAt": "2022-06-17T11:16:19Z",
+                          "publishedAt": "2022-04-22T21:13:10Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Using RayTracing module to trace the transient position of particles in Fluid flow",
+          "author": {
+            "login": "sb50nemo"
+          },
+          "bodyText": "I am trying to trace ~ 100 - 1000 mass points inside a fluid flow. I have a UserOject that can update the position of each mass particle with time, however, I want to output the trajectory of those particles alongside the fluid simulation.\nI have checked the Ray Tracing module which has a RayTracingExodus where the trajectory of the rays are saved.\nIs it possible to use the same for saving the transient position of all the particles during the fluid flow? Or could you please suggest a better way to accomplish this?",
+          "url": "https://github.com/idaholab/moose/discussions/20846",
+          "updatedAt": "2022-06-13T10:48:42Z",
+          "publishedAt": "2022-04-22T09:11:39Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThe RayTracingExodus should be the rays/trajectories of these displacements. And you only want the positions ?\nAm I understanding this right?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20846#discussioncomment-2616907",
+                  "updatedAt": "2022-06-15T10:25:09Z",
+                  "publishedAt": "2022-04-22T16:23:15Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sb50nemo"
+                          },
+                          "bodyText": "Hi!\nYes, I want to store the trajectories of those particles using RayTracingExodus. Is it possible?",
+                          "url": "https://github.com/idaholab/moose/discussions/20846#discussioncomment-2616951",
+                          "updatedAt": "2022-06-15T10:25:09Z",
+                          "publishedAt": "2022-04-22T16:27:09Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "But you are not using the RayTracing module right now?\nIf not then no, the RayTracingExodus is meant for the RayTracing module. The good news is that if you rework your code to use ray tracing instead of the custom UO, then you get a TON of stuff working (mesh decomposition, asynchronous communication, output, integration capabilities etc)\nIf you are then it should just work and if it doesnt please let us know what you see in the output.",
+                          "url": "https://github.com/idaholab/moose/discussions/20846#discussioncomment-2617026",
+                          "updatedAt": "2022-06-15T10:25:11Z",
+                          "publishedAt": "2022-04-22T16:37:57Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "if you are not using RayTracing and want to persist using a UO, then you should look a building a custom vector postprocessor, saving the positions for each mass point, then write a lil python visualization tool to plot positions from a CSV file. I do not recommend that\nAre you doing this for the Material Point Method btw? We have had some progress looking at this with the RayTracing module, maybe we could share that with you",
+                          "url": "https://github.com/idaholab/moose/discussions/20846#discussioncomment-2617145",
+                          "updatedAt": "2022-06-15T10:25:17Z",
+                          "publishedAt": "2022-04-22T16:58:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sb50nemo"
+                          },
+                          "bodyText": "Thank you very much for your response. Our initial plan was to save the positions in CSV and use python to visualize the trajectories of each particle. However, as we have more than 1000 particles, it might not be as effective.\nWe are not using MPM, For the motion of those particles, we employ a kinematic equation based on Gaussian points. Could we use Ray Tracing kernels for implementing the kinematic equation?",
+                          "url": "https://github.com/idaholab/moose/discussions/20846#discussioncomment-2617371",
+                          "updatedAt": "2022-07-26T22:25:49Z",
+                          "publishedAt": "2022-04-22T17:43:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "How do you determine the acceleration of the particle?\nWhat comes into play? Local fields? Other particles?\nBy Gaussian points you mean you need to refer to a local elemental quadrature?",
+                          "url": "https://github.com/idaholab/moose/discussions/20846#discussioncomment-2617723",
+                          "updatedAt": "2022-07-26T22:25:55Z",
+                          "publishedAt": "2022-04-22T18:39:04Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to use positions in the mesh inside a function",
+          "author": {
+            "login": "MScKarl"
+          },
+          "bodyText": "Hi!\nI am using coord_type = RZ, for a polar mesh.\nI want to use an equation that is dependent on space coordinates r and \u03b8 in my mesh. Is there an easy way to reference the positions in a function, I am thinking ParsedMaterial?\nIf I need to use the absolute value and the sign function (separately), do I write them the same in moose as I would in a C++ code? Is there a handbook where I can search this thing, I couldn\u2019t find anything on Google or the website?\nBest regards\nKarl",
+          "url": "https://github.com/idaholab/moose/discussions/20848",
+          "updatedAt": "2022-05-31T04:46:53Z",
+          "publishedAt": "2022-04-22T15:29:20Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nSo RZ is RZ not Rtheta, we dont actually support Rtheta right now. Closest thing is actually 2D-XY really.\nFor positions, you can pass x, y, z in parsed expressions. In the parsed material it might not process it right but you can define a function, like a parsed function\nhttps://mooseframework.inl.gov/source/functions/MooseParsedFunction.html\nand then pass it in the parsed material.\nThe fparser documentation (the parser we use) is there: https://fparser.readthedocs.io/en/latest/\nAbsolute should be |x| I think. and sign might not be supported, if you can write : if(x<0,-1,1)\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20848#discussioncomment-2616837",
+                  "updatedAt": "2022-05-31T04:47:33Z",
+                  "publishedAt": "2022-04-22T16:13:32Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "also note in RZ, x is R and y is Z, so they should be referred as such in the parsed expressions",
+                          "url": "https://github.com/idaholab/moose/discussions/20848#discussioncomment-2616901",
+                          "updatedAt": "2022-05-31T04:47:35Z",
+                          "publishedAt": "2022-04-22T16:22:03Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Misorientation-dependent gb energy and gb mobility anisotropy",
+          "author": {
+            "login": "PengWei97"
+          },
+          "bodyText": "Dear MOOSE Experts,\nHere, I created a pull requests expecting to introduce grain boundary energy and grain boundary mobility anisotropy due to grain boundary misorientation in moose's grain growth simulation. But here are some questions to ask you.\nWhen I code the ComputePolycrystalGBAnisotropy material object to get the grain misorientation _delta_theta at each quadrature point, based on the Euler angles from file.\nThen, GBAnisotropyMisorientation was created to compute the model parameters $\\kappa(\\theta), L(\\theta), \\gamma(\\theta)$ and m in the multi-order phase field model, which refer to GBAnisotropy and B. Misorientation dependence in Nele Moelans' PRB.\nThe only difference between GBAnisotropyMisorientation and GBAnisotropy is that the gb energy $\\sigma_{gb}$ and gb mobility $\\mu_{gb}$ output by GBAnisotropyMisorientation are not based on the array[num_op, num_op] given in the file, but are calculated based on the misorientation $\\theta$ given by this quadrature point.\nNext, when I create an example, anisotropic_GB_100_N0load.i, based on grain_growth_2D_graintracker.i and add the following code in the material module,\n[Materials]\n  [./CuGrGr]\n    # Material properties\n    type = GBAnisotropyMisorientation # GBAnisotropyEvolutionBase GBEvolution GBAnisotropyMisorientation\n    T = 450 # Constant temperature of the simulation (for mobility calculation)\n    wGB = 14 # Width of the diffuse GB\n    GBmob0 = 2.5e-6 #m^4(Js) for copper from Schoenfelder1997\n    Q = 0.23 #eV for copper from Schoenfelder1997\n    GBenergy = 0.708 #J/m^2 from Schoenfelder1997\n    outputs = my_exodus\n    # output_properties = 'M_GB GBenergy' \n  [../]\n  [./GBMisorientation]\n    type = ComputePolycrystalGBAnisotropy\n    grain_tracker = grain_tracker\n    euler_angle_provider = euler_angle_file\n    outputs = my_exodus\n    output_properties = delta_theta\n  [../]\n[]\nBut here I have two problems,\nFirst, when I set $\\sigma_{gb}(\\theta)$ and $\\mu_{gb}(\\theta)$ are based on the expressions in the jianbao gao's article as follows,\n$$\n\\sigma(\\theta)=\\sigma_{H A B} \\frac{\\theta}{\\theta_{H A B}}\\left[1-\\ln \\left(\\frac{\\theta}{\\theta_{H A B}}\\right)\\right]\n$$\n$$\n\\mu(\\theta)=\\mu_{\\mathrm{HAB}}\\left(1-\\exp \\left[-B\\left(\\frac{\\theta}{\\hat{\\theta}_{\\mathrm{HAB}}}\\right)^{n}\\right]\\right)\n$$\nThe calculation does not converge directly, as shown below\nSolve failed, cutting timestep.\n\nTime Step 1, time = 1e-13, dt = 1e-13\nNonlinear solve did not converge due to DIVERGED_FNORM_NAN iterations 0\n\ufffd[31m Solve Did NOT Converge!\ufffd[39m\nAborting as solve did not converge\n\nSecond, when I refer to the setting method in the Ying Liu's article, add two constants to the above two formulas, and put $\\sigma_{gb,max}(\\delta \\theta) / \\sigma_{gb,min}(\\delta \\theta)$ and $\\mu_{gb.max}(\\delta \\theta) / \\mu_{gb, min}(\\delta \\theta)$ set to 5 can be calculated.\n$$\n\\sigma(\\theta)=4\\sigma_{H A B} \\frac{\\theta}{\\theta_{H A B}}\\left[1-\\ln \\left(\\frac{\\theta}{\\theta_{H A B}}\\right)\\right]+\\sigma_{H A B}\n$$\n$$\n\\mu(\\theta)=4\\mu_{\\mathrm{HAB}}\\left(1-\\exp \\left[-B\\left(\\frac{\\theta}{\\hat{\\theta}{\\mathrm{HAB}}}\\right)^{n}\\right]\\right)+\\mu{\\mathrm{HAB}}\n$$\nThe figure below is the output material parameters,\n\nBy the way, in the phase field model adopted in jianbao gao's article and Ying Liu's article, grain boundary energy and grain boundary mobility are directly related to the phase field free energy functional. In Nele Moelans' PRB, the phase field model we adopt is indirectly related to these two parameters.\nHowever, the migration of gb during the simulation process is very strange. Specifically, there are three points: a) high-angle grain boundaries do not have smooth grain boundaries, and b) inappropriately, the movement of grain boundaries is somewhat similar to the reciprocation of water waves movement, c) The width of the grain boundary does not maintain a constant size, please watch the gif animation I uploaded for details,\n\nSo what I want to ask is if my modeling way of setting high grain boundary energy and grain boundary mobility at the grain boundary is itself a mistake. In other words, how should the grain boundary energy and grain boundary mobility anisotropy due to grain boundary misorientation be added to the multi-order parameter phase field model developed by Nele Moelans properly constructed, and expected to reproduce in Ying Liu's paper phenomenon of abnormal grain growth.\nAny suggestions or recommendations to fix these problems would be greatly appreciated.\nThank you\nWei Peng",
+          "url": "https://github.com/idaholab/moose/discussions/20570",
+          "updatedAt": "2022-06-09T07:46:55Z",
+          "publishedAt": "2022-03-16T02:29:48Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@SudiptaBiswas @laagesen",
+                  "url": "https://github.com/idaholab/moose/discussions/20570#discussioncomment-2504965",
+                  "updatedAt": "2022-06-09T07:47:02Z",
+                  "publishedAt": "2022-04-05T03:18:37Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "laagesen"
+                          },
+                          "bodyText": "It is definitely expected that when you chance GB energy the GB width will also change in the Moelans 2008 grain growth model. The lack of smoothness in the grain boundaries and the jerky motion may be caused by the fact that you need to add more elements through the interfaces to make sure that you still are adequately resolving the diffuse interfaces. Make sure there are still about 3 elements through the interface.",
+                          "url": "https://github.com/idaholab/moose/discussions/20570#discussioncomment-2511011",
+                          "updatedAt": "2022-06-09T07:47:05Z",
+                          "publishedAt": "2022-04-05T20:14:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "PengWei97"
+                          },
+                          "bodyText": "Hi @laagesen, thank you very much for your reply.\nThe problem described above was solved by replacing the formula about the misorientation with the following form,\n\nThis may be a numerical problem, and the input grain boundary energy and grain boundary mobility cannot be set to 0.",
+                          "url": "https://github.com/idaholab/moose/discussions/20570#discussioncomment-2538829",
+                          "updatedAt": "2022-06-09T07:47:04Z",
+                          "publishedAt": "2022-04-10T11:04:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "PengWei97"
+                          },
+                          "bodyText": "But I have a new problem and look forward to your guidance. Before asking my question, I would like to do my best to show my understanding of grain boundary energy or grain boundary mobility modeling based on grain boundary misorientation. My idea of modifying GBAnisotropy is to set mob_ij according to the misorientation, and the same for sigma_ij.\nWhen only considering the grain boundary mobility anisotropy, for a grain boundary containing only two order parameters, I use the order parameter mobility L after GBAnisotropy as shown in the figure,\n\nUsing the same conditions as above, I use the GBAnisotropyGrainGrowth written by myself. Its principle is to traverse whether there are two grain IDs that are not equal to FeatureFloodCount::invalid_id for each elem. If so, set delta_euler to 3 , otherwise set to 0. The result is shown in the figure,\n\nAnd, I plot the two presented results on a graph as follows,\n\nI found that L covers much wider than delta_theta  in the grain boundary region (identified in the picture). This is because only one grain ID is valid in the area identified by the red double arrow, so set delta_theta to 0 in GBAnisotropyGrainGrowth.\nSo the question now is whether it is valid to have two grain IDs at the same time in the area marked by the red snake arrow, instead of only one grain ID being valid at present.  This makes it possible to make the range of misorientation effect effective in the entire grain boundary region.\nThe above are the problems I have encountered so far, any suggestions or recommendations to fix these problems would be greatly appreciated.\nwei",
+                          "url": "https://github.com/idaholab/moose/discussions/20570#discussioncomment-2539231",
+                          "updatedAt": "2022-06-09T07:47:05Z",
+                          "publishedAt": "2022-04-10T12:22:50Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@laagesen",
+                          "url": "https://github.com/idaholab/moose/discussions/20570#discussioncomment-2587344",
+                          "updatedAt": "2022-06-09T07:47:17Z",
+                          "publishedAt": "2022-04-18T17:42:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "laagesen"
+                          },
+                          "bodyText": "When you say \"is it valid to have two grain IDs at the same time...\" do you mean you want to change the behavior of how the grain ID's are assigned?",
+                          "url": "https://github.com/idaholab/moose/discussions/20570#discussioncomment-2588953",
+                          "updatedAt": "2022-06-09T07:47:17Z",
+                          "publishedAt": "2022-04-18T23:14:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "PengWei97"
+                          },
+                          "bodyText": "Hi @laagesen,  this problem was solved according to dschwen's suggestion.\n\nWhen you say \"is it valid to have two grain IDs at the same time...\" do you mean you want to change the behavior of how the grain ID's are assigned?\n\nMy real need is to extend the range of effective grain IDs in the grain boundary region. It is obtained by modifying connecting_threshold.",
+                          "url": "https://github.com/idaholab/moose/discussions/20570#discussioncomment-2616143",
+                          "updatedAt": "2022-06-09T07:47:17Z",
+                          "publishedAt": "2022-04-22T14:34:27Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to build a XDA file independently?",
+          "author": {
+            "login": "dd19990611"
+          },
+          "bodyText": "I hope to couple another program with MOOSE and I choose XDA format to transfer meshes and fields. But I don't know rules of fields data in XDA files. It looks as if fields are written by vectors in XDA files. Fields distribution on meshes is involved with the sequence of variables in fields vector.\nI want to know rules of fields distribution in XDA files. If I write a field on a mesh, how to decide the sequence of variables in field vectors?",
+          "url": "https://github.com/idaholab/moose/discussions/20843",
+          "updatedAt": "2022-06-21T21:15:31Z",
+          "publishedAt": "2021-05-07T13:52:29Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@dd19990611 is this resolved? Issues and discussions are tracked differently, so we missed this.\nXDA and XDR formats have their documentation here\nDescription of the XDA/XDR mesh format used in libMeshhttps://sourceforge.net \u203a mailman \u203a attachment",
+                  "url": "https://github.com/idaholab/moose/discussions/20843#discussioncomment-2611928",
+                  "updatedAt": "2022-06-21T21:15:31Z",
+                  "publishedAt": "2022-04-21T22:44:21Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "MaterialVectorPostprocesor issue with stress component",
+          "author": {
+            "login": "jessecarterMOOSE"
+          },
+          "bodyText": "If I am generating materials from the Tensor Mechanics Master Action, e.g. generate_output = 'stress_yy', I can't seem to get them to work with MaterialVectorPostprocessor. It's odd because I can get them to work with a regular Postprocesor, like ElementAvergeMaterialProperty, but not the VPP.\nFor instance, this input file will work, but if I enable that stress_yy_qps MaterialVectorPostprocessor that operates on stress_yy, I am met with the error: Unable to locate active object: stress_yy\nUpdate: If I create a new material with RankTwoCartesianComponent to grab that particular stress component, I can use the VPP on that new material, but still not the one generated by the Tensor Mechanics action. I don't understand why I need the intermediate step for the VPP.\n[GlobalParams]\n  displacements = 'disp_x disp_y'\n[]\n\n[Mesh]\n  [square]\n    type = GeneratedMeshGenerator\n    dim = 2\n    nx = 2\n    ny = 2\n  []\n[]\n\n[Modules/TensorMechanics/Master]\n  [all]\n    strain = SMALL\n    planar_formulation = PLANE_STRAIN\n    add_variables = true\n    generate_output = 'stress_xx stress_xy stress_yy stress_zz strain_xx strain_xy strain_yy strain_zz'\n  []\n[]\n\n[Functions]\n  [pull]\n    type = ParsedFunction\n    value ='0.01 * t'\n  []\n[]\n\n[BCs]\n  [rightx]\n    type = DirichletBC\n    boundary = 1\n    variable = disp_x\n    value = 0.0\n  []\n  [bottomy]\n    type = DirichletBC\n    boundary = 0\n    variable = disp_y\n    value = 0.0\n  []\n  [pull]\n    type = FunctionDirichletBC\n    boundary = 2\n    variable = disp_y\n    function = pull\n  []\n[]\n\n[Materials]\n  [linear_stress]\n    type = ComputeLinearElasticStress\n    block = 0\n  []\n  [elasticity_tensor]\n    type = ComputeIsotropicElasticityTensor\n    block = 0\n    poissons_ratio = 0.3\n    youngs_modulus = 1e10\n  []\n  [foo]\n    type = GenericConstantMaterial\n    prop_names = foo\n    prop_values = 42\n  []\n[]\n\n[Executioner]\n  type = Transient\n\n  solve_type = PJFNK\n  line_search = none\n\n  l_max_its = 100\n  l_tol = 1e-10\n  nl_max_its = 15\n  nl_rel_tol = 1e-12\n\n  start_time = 0.0\n  dt = 1.0\n  dtmin = 1.0\n  end_time = 5.0\n[]\n\n[Postprocessors]\n  [avg_stress_yy]\n    type = ElementAverageMaterialProperty\n    mat_prop = stress_yy\n  []\n  [avg_foo]\n    type = ElementAverageMaterialProperty\n    mat_prop = foo\n  []\n[]\n\n[VectorPostprocessors]\n  inactive = 'stress_yy_qps'\n  [stress_yy_qps]\n    type = MaterialVectorPostprocessor\n    material = stress_yy\n    elem_ids = '1 2'\n  []\n  [foo_qps]\n    type = MaterialVectorPostprocessor\n    material = foo\n    elem_ids = '1 2'\n  []\n[]\n\n[Outputs]\n  csv = true\n  exodus = true\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/20834",
+          "updatedAt": "2022-06-13T08:25:23Z",
+          "publishedAt": "2022-04-21T13:43:25Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "My hunch is that this has to do with the ordering of actions.\nVPPs might be created before the part of the TensorMechanicsAction that adds the material properties is ran.\nYou can add\n[Debug]\n  show_actions = true\n[]\n\nto see if this is true",
+                  "url": "https://github.com/idaholab/moose/discussions/20834#discussioncomment-2610235",
+                  "updatedAt": "2022-07-27T13:45:57Z",
+                  "publishedAt": "2022-04-21T16:42:59Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jessecarterMOOSE"
+                          },
+                          "bodyText": "OK I think I figured it out. Based on your suggestion, I also had it print out the material properties. Looks like it's a naming problem.\nDebug material property output looks like this:\n      Material Name:       stress_yy_all\n      Property Names:      \"stress_yy\" \n\nThe MaterialVectorPostprocessor uses getMaterialByName() rather than getMaterialProperty() (I'm used to seeing the latter). So if I use stress_yy_all, it works. You wouldn't know it was called that unless you use the debug output. Seems like a bug?",
+                          "url": "https://github.com/idaholab/moose/discussions/20834#discussioncomment-2610395",
+                          "updatedAt": "2022-07-27T13:45:58Z",
+                          "publishedAt": "2022-04-21T17:11:57Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@dschwen if you want to change that",
+                          "url": "https://github.com/idaholab/moose/discussions/20834#discussioncomment-2610460",
+                          "updatedAt": "2022-07-27T13:46:13Z",
+                          "publishedAt": "2022-04-21T17:21:17Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "\u201cMeshSideSetGenerator\" without \u201cSideSetsBetweenSubdomainsGenerator\u201d",
+          "author": {
+            "login": "styyokuda"
+          },
+          "bodyText": "All,\nI would like to set boundaries using \u201cMeshSideSetGenerator\u201d as seen from the example of test/tests/meshgenerators/mesh_side_set_generator/mesh_side_set_generator.i (please see below).\nI am trying to use the boundary name generated by Cubit for \"boundaries =\" in \u201cMeshSideSetGenerator\u201d so that I don\u2019t have to use \u201cSideSetsBetweenSubdomainsGenerator\u201d but it is \u201cnot\u201d working.\nDo I have to use \u201cSideSetsBetweenSubdomainsGenerator\u201d to generate the boundary (like \u201ccenter_side_set\u201d in mesh_side_set_generator.i below) which is inputted in \u201cMeshSideSetGenerator\u201d?\nPlease help.\nS. Thomas\n(test/tests/meshgenerators/mesh_side_set_generator/mesh_side_set_generator.i)\n[Mesh]\n.\n.\n.\n[./center_side_set]\ntype = SideSetsBetweenSubdomainsGenerator\ninput = right_block\nprimary_block = left_block\npaired_block = right_block\nnew_boundary = center_side_set\n[]\n[./center_mesh]\ntype = MeshSideSetGenerator\ninput = center_side_set\nboundaries = center_side_set\nblock_id = 10\nblock_name = center_mesh\n[]\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/20829",
+          "updatedAt": "2022-06-23T13:59:03Z",
+          "publishedAt": "2022-04-21T00:22:29Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nIf Cubit already added the sideset you shouldnt need to recreate it using MeshGenerators.\nIf you open your mesh file in Paraview, and click the advanced information parameters, do you see the sideset in your mesh?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20829#discussioncomment-2605334",
+                  "updatedAt": "2022-06-23T13:59:15Z",
+                  "publishedAt": "2022-04-21T00:36:59Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "styyokuda"
+                  },
+                  "bodyText": "Thank you very much Guillaume,\nIn \u201cInformation\u201d Tab in test/tests/meshgenerators/mesh_side_set_generator/mesh_side_set_generator_out.e,\nI see:\n\u201ccenter_mesh\u201d in Element Blocks,\n\u201ccenter_side_set\u201d in Side Sets,\n\u201cUnnamed set ID: 6 in Node Sets.\nSo, \u201ccenter_side_set\u201d in Side Sets was generated by SideSetsBetweenSubdomainsGenerator, and \u201ccenter_mesh\u201d in Element Blocks was generated by MeshSideSetGenerator.\nThe mesh generated by Cubit I have has only the mesh information in the Node Sets, not in Element Blocks nor Side Sets. So, that is the problem, isn\u2019t it?\nCan Cubit generate a mesh with like \u201ccenter_mesh\u201d in Element Blocks and \u201ccenter_side_set\u201d in Side Sets?\nPlease help.\nS. Thomas",
+                  "url": "https://github.com/idaholab/moose/discussions/20829#discussioncomment-2609040",
+                  "updatedAt": "2022-06-23T13:59:19Z",
+                  "publishedAt": "2022-04-21T13:48:25Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "So MOOSE will convert automatically node sets to side sets if you pass the right parameter to the Mesh block. See this page\nhttps://mooseframework.inl.gov/source/mesh/MooseMesh.html\nThen you can use the Cubit mesh and still have access to the sideset even though the cubit mesh only came with a node set",
+                          "url": "https://github.com/idaholab/moose/discussions/20829#discussioncomment-2609495",
+                          "updatedAt": "2022-06-23T13:59:26Z",
+                          "publishedAt": "2022-04-21T14:52:26Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "styyokuda"
+                          },
+                          "bodyText": "Thank you very much Guillaume,\nI don't know how to use\nconstruct_side_list_from_node_list=false\nWhat the MOOSE class is it in?\nDo you have an example?\nPlease help.\nS. Thomas",
+                          "url": "https://github.com/idaholab/moose/discussions/20829#discussioncomment-2609853",
+                          "updatedAt": "2022-06-23T13:59:27Z",
+                          "publishedAt": "2022-04-21T15:43:04Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "put it in the [Mesh] block\nlike this\n[Mesh]\n  construct_side_list_from_node_list = true\n  ...\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/20829#discussioncomment-2609917",
+                          "updatedAt": "2022-06-23T13:59:26Z",
+                          "publishedAt": "2022-04-21T15:54:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "styyokuda"
+                          },
+                          "bodyText": "Thank you very much Guillaume,\nNow I see Side sets.\nI believe that \"MeshSideSetGenerator\" still needs to be used because \"MeshSideSetGenerator\" generates \"blocks\" for a model as Side Sets are for boundaries.\nPlease help.\nS. Thomas",
+                          "url": "https://github.com/idaholab/moose/discussions/20829#discussioncomment-2610271",
+                          "updatedAt": "2022-12-13T22:07:53Z",
+                          "publishedAt": "2022-04-21T16:49:34Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "no you dont need to use that.\nThis is for a very narrow use where you want to solve on lower dimensional elements on sidesets. I ll try to rename this object if I m right",
+                          "url": "https://github.com/idaholab/moose/discussions/20829#discussioncomment-2610297",
+                          "updatedAt": "2022-12-13T22:07:53Z",
+                          "publishedAt": "2022-04-21T16:54:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "styyokuda"
+                          },
+                          "bodyText": "Thank you very much Guillaume,\nI got confused. To me, Side Sets are boundaries used to set boundary conditions and so on. \"MeshSideSetGenerator\" generates elements which are one dimension lower than other elements (one dimensional elements for 2D model). So, I can use these lower dimensional elements  for diffusion and heat equations with sources by assigning material properties.\nPlease hep.\nS. Thomas",
+                          "url": "https://github.com/idaholab/moose/discussions/20829#discussioncomment-2610427",
+                          "updatedAt": "2022-12-13T22:07:53Z",
+                          "publishedAt": "2022-04-21T17:16:28Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "no do not use this generator. This is for solving equations on the lower dimensional mesh. It's very poorly named.\nSidesets are used in the regular workflow for boundary conditions.",
+                          "url": "https://github.com/idaholab/moose/discussions/20829#discussioncomment-2610442",
+                          "updatedAt": "2022-12-13T22:07:54Z",
+                          "publishedAt": "2022-04-21T17:19:41Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

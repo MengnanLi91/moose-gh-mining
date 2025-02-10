@@ -1,0 +1,783 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMC0xMS0wNlQwMzoyNzo1OC0wNjowMM125Q=="
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "error: no match for call to '(std::vector<double>) (libMesh::Real)'",
+          "author": {
+            "login": "LiuPengPeter"
+          },
+          "bodyText": "Hello guys,\nI try to add a vector _M whose components are constant.\nIn the constructor function,\n_M(_etas_num*_etas_num, 0.0),\nfor (unsigned int i = 0; i < _etas_num; ++i)\n{\nfor (unsigned int j = 0; j < _etas_num; ++j)\n{\nif (0<i && i<_etas_num && j==_etas_num)\n_M(i*_etas_num+j)=1e-6;\nelse if (0<j && j<_etas_num && i==_etas_num)\n_M(i*_etas_num+j)=1e-6;\nelse\n_M(i*_etas_num+j)=7e-8;\n}\n}\nIn the .h file,\nstd::vector _M;\nIt shows such error:\nACMultiR1.C:39:25: error: no match for call to '(std::vector) (libMesh::Real)'\n_M(i_etas_num+j)=1e-6;*\nAnd another question:\nACMultiR1.C:39:25: error: no match for call to '(std::vector) (libMesh::Real)'\n_M(i_etas_num+j)=1e-6;*\nI have tried to correct it, but still failed. Could anyone help?\nACMultiR1.zip",
+          "url": "https://github.com/idaholab/moose/discussions/16139",
+          "updatedAt": "2022-08-15T08:32:58Z",
+          "publishedAt": "2020-11-10T14:18:20Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "aeslaughter"
+                  },
+                  "bodyText": "In the .h file,\nstd::vector _M;\n\nThis is not the correct definition of a vector: https://en.cppreference.com/w/cpp/container/vector\nI suggest you take some time to learn C++, we have some links on this page to some nice resources: https://mooseframework.inl.gov/getting_started/examples_and_tutorials/",
+                  "url": "https://github.com/idaholab/moose/discussions/16139#discussioncomment-125735",
+                  "updatedAt": "2022-08-15T08:33:04Z",
+                  "publishedAt": "2020-11-10T15:01:15Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "LiuPengPeter"
+                          },
+                          "bodyText": "Thank you for your reply.\nSorry. In my question, I ignored it. But that's std::vector _M in the attachment.\nAfter sleeping, I find the bug is that () was used when using vector's components...\nThere is still an error about another problem.\nCould you help me check it? Bugs are so suffering...\nSecond: ACMultiR1.C:77:21: error: invalid types 'libMesh::Real {aka double}[unsigned int]' for array subscript  sum += 2/_Np[_qp]_x[_index_var][_qp]_x[j][_qp]_M[_index_var_etas_num+j][_qp]_E[_index_var_etas_num+j][_qp]/2",
+                          "url": "https://github.com/idaholab/moose/discussions/16139#discussioncomment-126364",
+                          "updatedAt": "2022-08-15T08:33:12Z",
+                          "publishedAt": "2020-11-11T00:41:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aeslaughter"
+                          },
+                          "bodyText": "_M(i*_etas_num+j)=1e-6;\n\nstd::vectors use [] not (), which is very basic C++. Please spend some time going through some C++ tutorials.",
+                          "url": "https://github.com/idaholab/moose/discussions/16139#discussioncomment-126373",
+                          "updatedAt": "2022-08-15T08:33:15Z",
+                          "publishedAt": "2020-11-11T00:57:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "LiuPengPeter"
+                          },
+                          "bodyText": "Yeah. That's very basic. I wrote () and [] in the same file...\nI correct them, but there is still a problem about my Residual.\nhome/l/projects/park/src/Kernels/ACMultiR1.C:77:21: error: invalid types 'int[unsigned int]' for array subscript\nsum += 2/_Np[_qp]_x[_index_var][_qp]_x[j][_qp]_M[_index_var_etas_num+j][_qp]_E[_index_var_etas_num+j][_qp]/2*(_grad_u[_qp]-_grad_etas[j][_qp])_grad_test[_i][_qp];\n^\n/home/l/projects/park/src/Kernels/ACMultiR1.C:77:41: error: invalid types '__gnu_cxx::__alloc_traits<std::allocator >::value_type {aka int}[unsigned int]' for array subscript\nsum += 2/_Np[_qp]_x[_index_var][_qp]_x[j][_qp]_M[_index_var*_etas_num+j][_qp]_E[_index_var_etas_num+j][_qp]/2*(_grad_u[_qp]-_grad_etas[j][_qp])_grad_test[_i][_qp];\n^\n/home/l/projects/park/src/Kernels/ACMultiR1.C:77:52: error: invalid types '__gnu_cxx::__alloc_traits<std::allocator >::value_type {aka int}[unsigned int]' for array subscript\nsum += 2/_Np[_qp]_x[_index_var][_qp]_x[j][_qp]_M[_index_var*_etas_num+j][_qp]_E[_index_var_etas_num+j][_qp]/2*(_grad_u[_qp]-_grad_etas[j][_qp])_grad_test[_i][_qp];\n^\n/home/l/projects/park/src/Kernels/ACMultiR1.C:77:84: error: invalid types '__gnu_cxx::__alloc_traits<std::allocator >::value_type {aka double}[unsigned int]' for array subscript\nsum += 2/_Np[_qp]_x[_index_var][_qp]_x[j][_qp]_M[_index_var*_etas_num+j][_qp]_E[_index_var_etas_num+j][_qp]/2*(_grad_u[_qp]-_grad_etas[j][_qp])_grad_test[_i][_qp];\n^\n/home/l/projects/park/src/Kernels/ACMultiR1.C:77:116: error: invalid types '__gnu_cxx::__alloc_traits<std::allocator >::value_type {aka double}[unsigned int]' for array subscript\nsum += 2/_Np[_qp]_x[_index_var][_qp]_x[j][_qp]_M[_index_var*_etas_num+j][_qp]_E[_index_var_etas_num+j][_qp]/2*(_grad_u[_qp]-_grad_etas[j][_qp])*_grad_test[_i][_qp];\n^\nIn file included from /home/l/projects/park/build/unity_src/Kernels_Unity.C:2:0:\n/home/l/projects/park/src/Kernels/ACMultiR1.C:77:133: error: no match for 'operator-' (operand types are 'const libMesh::VectorValue' and 'const MooseArray<libMesh::VectorValue >')\nACMultiR1.zip",
+                          "url": "https://github.com/idaholab/moose/discussions/16139#discussioncomment-126414",
+                          "updatedAt": "2022-08-15T08:33:15Z",
+                          "publishedAt": "2020-11-11T02:15:24Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "LiuPengPeter"
+                  },
+                  "bodyText": "I delete some [_qp], then it works well.",
+                  "url": "https://github.com/idaholab/moose/discussions/16139#discussioncomment-126812",
+                  "updatedAt": "2022-08-15T08:33:23Z",
+                  "publishedAt": "2020-11-11T11:02:57Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "TensoMechanics variables definition",
+          "author": {
+            "login": "MonikaCarvajal"
+          },
+          "bodyText": "Hi all,\nI have little to non experience on C++ and I'm learning it on the fly while I use MOOSE.\nI have a material distributed in space that I would like to operate it with a simple function in the Material system. What type of variable do I have to define in the head file to store the result of this operation?\nMore precisely, the head file looks like this\nprotected:\nvirtual void computeQpElasticityTensor() override;\n/// Space distributed material\nconst VariableValue & _space_distribuited\n/// Storage the operation\nVariable type & _operation_result;\n};\nI hope this makes sense,\nMonika",
+          "url": "https://github.com/idaholab/moose/discussions/16086",
+          "updatedAt": "2022-06-13T08:44:58Z",
+          "publishedAt": "2020-11-05T10:46:52Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "aeslaughter"
+                  },
+                  "bodyText": "Can you provide more details regarding what you are trying to compute. You code indicates that you are using the tensor mechanics module and working on computing an elasticity tensor. Does the value you need to compute contribute to this tensor or are you computing something else?",
+                  "url": "https://github.com/idaholab/moose/discussions/16086#discussioncomment-125087",
+                  "updatedAt": "2022-06-13T08:44:59Z",
+                  "publishedAt": "2020-11-09T15:25:10Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "MonikaCarvajal"
+                          },
+                          "bodyText": "Hi @aeslaughter I solved this issue. It was quite simple hehe. Thanks anyways :)",
+                          "url": "https://github.com/idaholab/moose/discussions/16086#discussioncomment-126731",
+                          "updatedAt": "2022-06-13T08:44:59Z",
+                          "publishedAt": "2020-11-11T09:49:46Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Using RunException for testing mooseWarning",
+          "author": {
+            "login": "WilkAndy"
+          },
+          "bodyText": "Is it OK to use a RunException test to check that this type of warning is issued by MOOSE:\n  if (_s_lr <= _s_l_min)\n    mooseWarning(\"S_lr should usually be greater than S_l_min\");",
+          "url": "https://github.com/idaholab/moose/discussions/16146",
+          "updatedAt": "2023-12-14T08:38:50Z",
+          "publishedAt": "2020-11-11T03:36:29Z",
+          "category": {
+            "name": "Q&A Tools"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "loganharbour"
+                  },
+                  "bodyText": "Seems reasonable. I would add\ncli_args = '--error'\n\nat the minimum so it's treated as an error in testing.",
+                  "url": "https://github.com/idaholab/moose/discussions/16146#discussioncomment-126477",
+                  "updatedAt": "2020-11-11T05:19:27Z",
+                  "publishedAt": "2020-11-11T05:19:27Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Thanks @loganharbour",
+                          "url": "https://github.com/idaholab/moose/discussions/16146#discussioncomment-126484",
+                          "updatedAt": "2020-11-11T05:31:07Z",
+                          "publishedAt": "2020-11-11T05:31:07Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Problem using Crow App - '--json' exited with non zero status 1'",
+          "author": {
+            "login": "xingz711"
+          },
+          "bodyText": "Hi, all,\nI am copying the question from the google group. Problem occurs when I try to use Crow app.\nPeacock gives me this:\n_Warning\n.....projects/Crow/Crow-opt -options_left 0 --json' exited with non zero status 1.\nPlease make sure your application is built and able to execute the given arguments.\nERROR\nInvalid option 'SIMPLE' in MooseEnum. Valid options (not case-sensitive) are 'Dirichlet Neumann'_\nI test the peacock under Moose_DIR and it works fine with some simple examples.\nAndrew's suggestion:\ncd ~/projects/Crow\n./Crow-opt --json\ngives this:\n_(moose) [xingz][~/projects3/Crow]> ./Crow-opt --json\n*** ERROR ***\nInvalid option \"SIMPLE\" in MooseEnum.  Valid options (not case-sensitive) are \"Dirichlet Neumann\".\nStack frames: 13\n0: libMesh::print_trace(std::ostream&)\n1: moose::internal::mooseErrorRaw(std::__cxx11::basic_string<char, std::char_traits, std::allocator >, std::__cxx11::basic_string<char, std::char_traits, std::allocator >)\n2: MooseEnum::assign(std::__cxx11::basic_string<char, std::char_traits, std::allocator > const&)\n3: MooseEnum::operator=(std::__cxx11::basic_string<char, std::char_traits, std::allocator > const&)\n4: MooseEnum::MooseEnum(std::__cxx11::basic_string<char, std::char_traits, std::allocator >, std::__cxx11::basic_string<char, std::char_traits, std::allocator >, bool)\n5: InputParameters validParams()\n6: decltype (((callValidParamsInner)(0)),(emptyInputParameters())) moose::internal::callValidParams()\n7: Parser::buildJsonSyntaxTree(JsonSyntaxTree&) const\n8: MooseApp::setupOptions()\n9: MooseApp::run()\n10: ./Crow-opt(+0x51ec) [0x558ecbdc11ec]\n11: _libc_start_main\n12: ./Crow-opt(+0x54bf) [0x558ecbdc14bf]\napplication called MPI_Abort(MPI_COMM_WORLD, 1) - process 0\n[unset]: write_line error; fd=-1 buf=:cmd=abort exitcode=1\n:\nsystem msg for write_line failure : Bad file descriptor\nAny suggestions?",
+          "url": "https://github.com/idaholab/moose/discussions/16077",
+          "updatedAt": "2022-10-12T18:23:13Z",
+          "publishedAt": "2020-11-04T21:55:40Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "aeslaughter"
+                  },
+                  "bodyText": "Somewhere in Crow there is a MooseEnum parameter that is coded to use a value that doesn't exist. I would search for SIMPLE and see what you find.",
+                  "url": "https://github.com/idaholab/moose/discussions/16077#discussioncomment-121554",
+                  "updatedAt": "2022-10-12T18:23:15Z",
+                  "publishedAt": "2020-11-04T22:08:41Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xingz711"
+                          },
+                          "bodyText": "Hi, Andrew,\nGrep 'SIMPLE' and find the term in Crow/src/ElectricBCU\nMooseEnum bc_type (\"Dirichlet=0 Neumann\", \"SIMPLE\")\nSo I changed it to MooseEnum bc_type (\"Dirichlet=0 Neumann\", \"Dirichlet Neumann\").\nNow it is giving me this error: Invalid option \"Dirichlet Neumann\" in MooseEnum. Valid options (not case-sensitive) are \"Dirichlet Neumann\"\nI think I need to change it in another way? The content within the brackets looks weird.",
+                          "url": "https://github.com/idaholab/moose/discussions/16077#discussioncomment-122456",
+                          "updatedAt": "2022-10-12T18:23:15Z",
+                          "publishedAt": "2020-11-05T16:49:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aeslaughter"
+                          },
+                          "bodyText": "The part you changed is the default, so pick one of the two, for example.\nMooseEnum bc_type (\"Dirichlet=0 Neumann\", \"Dirichlet\").",
+                          "url": "https://github.com/idaholab/moose/discussions/16077#discussioncomment-122460",
+                          "updatedAt": "2022-10-12T18:23:52Z",
+                          "publishedAt": "2020-11-05T16:51:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xingz711"
+                          },
+                          "bodyText": "That fixed the problem!\nCheers,\nXing",
+                          "url": "https://github.com/idaholab/moose/discussions/16077#discussioncomment-122604",
+                          "updatedAt": "2022-10-12T18:23:52Z",
+                          "publishedAt": "2020-11-05T19:10:33Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "SudiptaBiswas"
+                          },
+                          "bodyText": "@xingz711  I see that this issue has been resolved. I just want to add here that please use the devel branch of Crow, it's maintained periodically.",
+                          "url": "https://github.com/idaholab/moose/discussions/16077#discussioncomment-126092",
+                          "updatedAt": "2022-10-12T18:24:58Z",
+                          "publishedAt": "2020-11-10T21:53:36Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Postprocessor for extracting surface concentration",
+          "author": {
+            "login": "KamalnathOSU"
+          },
+          "bodyText": "Hi Guys !\nI am doing phase field simulation with MOOSE ( KKS - two phase model).  During the simulation, I track the interface location by using FindValueOnLine postprocessor by setting \"target=0.5; v=eta\". It gives me the position of the interface. Now, I want to know the concentration at that point. What postprocessor can I use ?  I thought of using \"NodalVariableValue\" but my interface may not always be at a nodal point.\nRegards,\nKamal",
+          "url": "https://github.com/idaholab/moose/discussions/16114",
+          "updatedAt": "2022-07-20T20:01:36Z",
+          "publishedAt": "2020-11-07T16:33:55Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "aeslaughter"
+                  },
+                  "bodyText": "I am not an expert in the phase field module, but if you can't find an existing object to perform that calculation it might be necessary to create one based on FindValueOnLine. The new object could use the located point and preform the correct finite element interpolation to give you the value of concentration variable at that location.",
+                  "url": "https://github.com/idaholab/moose/discussions/16114#discussioncomment-125180",
+                  "updatedAt": "2022-07-20T20:01:36Z",
+                  "publishedAt": "2020-11-09T17:45:04Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "KamalnathOSU"
+                          },
+                          "bodyText": "Thank you Andrew ! I wrote a postprocessor based on FindValueOnLine which works for me.",
+                          "url": "https://github.com/idaholab/moose/discussions/16114#discussioncomment-125982",
+                          "updatedAt": "2022-07-20T20:01:36Z",
+                          "publishedAt": "2020-11-10T19:50:34Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "permcody"
+                  },
+                  "bodyText": "https://github.com/idaholab/moose/blob/next/framework/src/postprocessors/PointValue.C takes a point and a variable and performs an FE interpolation to give you the solution of a variable.",
+                  "url": "https://github.com/idaholab/moose/discussions/16114#discussioncomment-125232",
+                  "updatedAt": "2022-07-20T20:01:40Z",
+                  "publishedAt": "2020-11-09T18:56:12Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aeslaughter"
+                          },
+                          "bodyText": "This requires that you know the point, the point is moving for this case.",
+                          "url": "https://github.com/idaholab/moose/discussions/16114#discussioncomment-125239",
+                          "updatedAt": "2022-07-20T20:01:39Z",
+                          "publishedAt": "2020-11-09T19:08:20Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "KamalnathOSU"
+                  },
+                  "bodyText": "Got it . Thank you very much.\n-Kamal\n\u2026\n________________________________\nFrom: Cody Permann <notifications@github.com>\nSent: Monday, November 9, 2020 1:56 PM\nTo: idaholab/moose <moose@noreply.github.com>\nCc: Kadirvel, Kamal <kadirvel.1@buckeyemail.osu.edu>; Author <author@noreply.github.com>\nSubject: Re: [idaholab/moose] Postprocessor for extracting surface concentration (#16114)\n\n\nhttps://github.com/idaholab/moose/blob/next/framework/src/postprocessors/PointValue.C<https://urldefense.com/v3/__https://github.com/idaholab/moose/blob/next/framework/src/postprocessors/PointValue.C__;!!KGKeukY!k_HzBw6aCjL82r4hHbT7Oo5pmkYP4hNmK2p2ZYzXtfs3pP3MOxemSwFbQeZXzdlvWv1XwaIbYhA$> takes a point and a variable and performs an FE interpolation to give you the solution of a variable.\n\n\u2014\nYou are receiving this because you authored the thread.\nReply to this email directly, view it on GitHub<https://urldefense.com/v3/__https://github.com/idaholab/moose/discussions/16114*discussioncomment-125232__;Iw!!KGKeukY!k_HzBw6aCjL82r4hHbT7Oo5pmkYP4hNmK2p2ZYzXtfs3pP3MOxemSwFbQeZXzdlvWv1Xlxc_gzU$>, or unsubscribe<https://urldefense.com/v3/__https://github.com/notifications/unsubscribe-auth/AIUJ4LL4G66YRVZTWFV2R2DSPA3NVANCNFSM4TNX6GPQ__;!!KGKeukY!k_HzBw6aCjL82r4hHbT7Oo5pmkYP4hNmK2p2ZYzXtfs3pP3MOxemSwFbQeZXzdlvWv1XXTpqWkA$>.",
+                  "url": "https://github.com/idaholab/moose/discussions/16114#discussioncomment-125234",
+                  "updatedAt": "2022-07-20T20:01:39Z",
+                  "publishedAt": "2020-11-09T18:58:50Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "jessecarterMOOSE"
+                  },
+                  "bodyText": "While not what you asked for, what I have done for this is used the LineValueSampler VectorPostprocessor to sample both the concentration and order parameter with position, then post-process the output file(s) with python to interpolate. It's only a few lines if you use pandas and scipy.interpolate.",
+                  "url": "https://github.com/idaholab/moose/discussions/16114#discussioncomment-125282",
+                  "updatedAt": "2022-07-20T20:01:40Z",
+                  "publishedAt": "2020-11-09T20:25:08Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "volume integral of a variable over specified blocks",
+          "author": {
+            "login": "mcacace"
+          },
+          "bodyText": "Dear all,\nI would like to compute the volume integral of a certain value over a block of my input mesh.\nMy idea is:\na) compute the (volume integral) value of the variable over each element\nb) sum (a) over all elements of the block of interest\nNow, I know that (a) could be done relatively easily within existing PostProcessor (inheriting from elementIntegralValues). However, I don't seem to find any existing ones for (b) already implemented in the framework. I noticed that there is a SumNodalVar post processor, but I do not think it works properly for my specific case.\nWas wondering if anyone could help in this regard.\nThanks a lot in advance,\nmauro",
+          "url": "https://github.com/idaholab/moose/discussions/16138",
+          "updatedAt": "2022-08-09T07:53:59Z",
+          "publishedAt": "2020-11-10T10:00:57Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "aeslaughter"
+                  },
+                  "bodyText": "I think ElementAverageValue is what you need. You can use the 'block' parameter to limit it to subdomain\nhttps://mooseframework.inl.gov/source/postprocessors/ElementAverageValue.html",
+                  "url": "https://github.com/idaholab/moose/discussions/16138#discussioncomment-125737",
+                  "updatedAt": "2022-08-09T07:53:59Z",
+                  "publishedAt": "2020-11-10T15:04:09Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mcacace"
+                          },
+                          "bodyText": "ups, I missed it... It does read as the pp I was looking for. One question though: Does the average is done on all elements belonging to a block? In other words: value = sum(value_integral_over_element)/total_block_volume?\nThanks,\nmauro",
+                          "url": "https://github.com/idaholab/moose/discussions/16138#discussioncomment-125789",
+                          "updatedAt": "2022-08-09T07:54:32Z",
+                          "publishedAt": "2020-11-10T15:57:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aeslaughter"
+                          },
+                          "bodyText": "It computes the average forth the block volume, when the 'block' parameter is used.",
+                          "url": "https://github.com/idaholab/moose/discussions/16138#discussioncomment-125804",
+                          "updatedAt": "2022-08-09T07:54:33Z",
+                          "publishedAt": "2020-11-10T16:11:27Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "subdirs for headers in `header_symlinks`",
+          "author": {
+            "login": "RonRahaman"
+          },
+          "bodyText": "Hi all,\nI'm using MOOSE to with an external app and the header includes are getting all fouled up.\nMy problem (I think) is that, when the MOOSE build system creates header_symlinks, it flattens the subdirectories for my external app's headers.  For example, my external app has headers like fmt/locale.h and openmc/nuclide.h, but MOOSE just generates header_symlinks/locale.h and header_symlinks/nuclide.h.\nThis is a big problem for locale.h, in particular, since, when the build line adds header_symlinks as an include path, then header_symlinks/locale.h interferes with the C++ library's locale.h.  This wouldn't be a problem if the subdirectory structure was retained in header_symlinks.  For example, if MOOSE generated header_symlinks/fmt/locale.h, then I think things would be fine.\nIs there a way to hack MOOSE so that I get the subdirectory structure in header_symlinks?",
+          "url": "https://github.com/idaholab/moose/discussions/16070",
+          "updatedAt": "2020-11-09T18:10:25Z",
+          "publishedAt": "2020-11-04T16:21:09Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "RonRahaman"
+                  },
+                  "bodyText": "@aprilnovak",
+                  "url": "https://github.com/idaholab/moose/discussions/16070#discussioncomment-121347",
+                  "updatedAt": "2020-11-04T16:21:47Z",
+                  "publishedAt": "2020-11-04T16:21:47Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aeslaughter"
+                          },
+                          "bodyText": "@permcody @friedmud Can you take a look at this question, you probably know what to without digging around.",
+                          "url": "https://github.com/idaholab/moose/discussions/16070#discussioncomment-121353",
+                          "updatedAt": "2020-11-04T16:24:26Z",
+                          "publishedAt": "2020-11-04T16:24:26Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "friedmud"
+                  },
+                  "bodyText": "Had a meeting with @RonRahaman and @aprilnovak ... we talked about what's happening, and how to mitigate it.  Here is the breakdown:\n\nThey were dumping .h files into the include directory of their app by doing make install of another code to their app directory.  Resolution: don't do that \ud83d\ude1b\nIt was happening intermittently because their makefile was missing dependencies that was causing non-determinism in order of the build of their app and that other code.\nAs a temporary fix they can set MOOSE_HEADER_SYMLINKS=false in their environment to turn off header symlinking\n\n@RonRahaman let me know if I missed something on this",
+                  "url": "https://github.com/idaholab/moose/discussions/16070#discussioncomment-125193",
+                  "updatedAt": "2020-11-09T18:06:54Z",
+                  "publishedAt": "2020-11-09T18:06:54Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "RonRahaman"
+                          },
+                          "bodyText": "Yep, that's about it.  I've updated my build so our third-party apps don't put headers in include/, and it works fine now.",
+                          "url": "https://github.com/idaholab/moose/discussions/16070#discussioncomment-125196",
+                          "updatedAt": "2020-11-09T18:10:07Z",
+                          "publishedAt": "2020-11-09T18:10:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "RonRahaman"
+                          },
+                          "bodyText": "Thanks for your help!",
+                          "url": "https://github.com/idaholab/moose/discussions/16070#discussioncomment-125198",
+                          "updatedAt": "2020-11-09T18:10:25Z",
+                          "publishedAt": "2020-11-09T18:10:25Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Seeking to install of version of MOOSE on a PC with Windows-7 (64-bit) as the OS",
+          "author": {
+            "login": "steinfel00physicer"
+          },
+          "bodyText": "I wish to have my question answered. I see that a Windows 10 version of MOOSE is available to install.\nIs it possible to install MOOSE (windows-10 version) onto a Computer which has Windows-7 rather than Windows-10 for its O.S. ?        Or is a download of a Windows-7 version of MOOSE available to install ?",
+          "url": "https://github.com/idaholab/moose/discussions/16108",
+          "updatedAt": "2022-08-22T18:44:17Z",
+          "publishedAt": "2020-11-06T20:03:41Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "crswong888"
+                  },
+                  "bodyText": "I'm pretty sure our first ever PC package was for Windows 10. So I'm going to guess that there is no compatibility for any earlier versions. Give Ubuntu a try - it's free and super easy to use, although setting up the dual-boot tends to be tricky if you've never done that sort of thing before. But I could help with that if you need it.",
+                  "url": "https://github.com/idaholab/moose/discussions/16108#discussioncomment-123552",
+                  "updatedAt": "2022-08-22T18:44:25Z",
+                  "publishedAt": "2020-11-06T21:11:32Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "cticenhour"
+                  },
+                  "bodyText": "MOOSE on Windows currently relies on Windows Subsystem for Linux, which is a Windows 10-only feature. There are currently no plans to bring a native developer environment for MOOSE to Windows 7. There was some work to make a native executable for Windows 10 related to #14591, but as the developer in that issue stated, this is not suitable for a developer environment. If you wish to remain on Windows 7 (not recommended since you open yourself up to security risks now that it is no longer supported by Microsoft), you can use a virtual machine program (such as VirtualBox) to run Linux inside of your Windows instance.",
+                  "url": "https://github.com/idaholab/moose/discussions/16108#discussioncomment-123561",
+                  "updatedAt": "2022-08-22T18:44:40Z",
+                  "publishedAt": "2020-11-06T21:22:40Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "PorousFlow Temperature Boundary Conditions with p-h formulation",
+          "author": {
+            "login": "fparisio-zz"
+          },
+          "bodyText": "Dear all,\nI am new to Moose and, more specifically, I am interested in PorousFlow. I would like to simulate a 2 phase flow of pure water with phase change and I am using a pressure-enthalpy formulation. My question is: how can I apply a temperature boundary condition? In other words, how to constrain enthalpy at a boundary such that, when the pressure changes, the temperature remains constant (or changes according to a specified value)?\nThank you for your help,\nFrancesco",
+          "url": "https://github.com/idaholab/moose/discussions/16072",
+          "updatedAt": "2022-07-26T13:12:54Z",
+          "publishedAt": "2020-11-04T17:09:04Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "aeslaughter"
+                  },
+                  "bodyText": "@WilkAndy Do you have any insight you could provide?",
+                  "url": "https://github.com/idaholab/moose/discussions/16072#discussioncomment-121605",
+                  "updatedAt": "2022-07-26T13:13:15Z",
+                  "publishedAt": "2020-11-05T00:22:58Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Actually, i think @cpgr might be the expert here",
+                          "url": "https://github.com/idaholab/moose/discussions/16072#discussioncomment-121606",
+                          "updatedAt": "2022-07-26T13:13:16Z",
+                          "publishedAt": "2020-11-05T00:24:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cpgr"
+                          },
+                          "bodyText": "I'm not sure we can do this at the moment, but it wouldn't be hard to add and would definitely be useful.",
+                          "url": "https://github.com/idaholab/moose/discussions/16072#discussioncomment-121673",
+                          "updatedAt": "2022-07-26T13:13:16Z",
+                          "publishedAt": "2020-11-05T04:20:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "fparisio-zz"
+                          },
+                          "bodyText": "Thank you @aeslaughter @WilkAndy @cpgr ! Should I open a new issue on this?",
+                          "url": "https://github.com/idaholab/moose/discussions/16072#discussioncomment-121738",
+                          "updatedAt": "2022-07-26T13:13:16Z",
+                          "publishedAt": "2020-11-05T08:17:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aeslaughter"
+                          },
+                          "bodyText": "@fparisio You can create an issue if you want, it is up to you.",
+                          "url": "https://github.com/idaholab/moose/discussions/16072#discussioncomment-122463",
+                          "updatedAt": "2022-09-17T07:02:20Z",
+                          "publishedAt": "2020-11-05T16:53:59Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "cpgr"
+                  },
+                  "bodyText": "Hey @WilkAndy - didn't David create an enthalpy sink that should work here? I can't find it. Did it never make it into the repo?",
+                  "url": "https://github.com/idaholab/moose/discussions/16072#discussioncomment-122856",
+                  "updatedAt": "2022-07-26T13:13:26Z",
+                  "publishedAt": "2020-11-06T00:04:45Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "andrsd"
+                          },
+                          "bodyText": "The PR got stale, because I got dragged into other shenanigans. I still plan to revive it and push it into the module.",
+                          "url": "https://github.com/idaholab/moose/discussions/16072#discussioncomment-122877",
+                          "updatedAt": "2022-07-26T13:13:27Z",
+                          "publishedAt": "2020-11-06T00:38:20Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "WilkAndy"
+                  },
+                  "bodyText": "Yea, it might help here - i think @andrsd is still working on it.  In the case at hand, you have to change the enthalpy on the boundary as a function of porepressure.  As i recall, @andrsd was injecting a constant enthalpy source, which is a little different.",
+                  "url": "https://github.com/idaholab/moose/discussions/16072#discussioncomment-122860",
+                  "updatedAt": "2022-07-26T13:13:44Z",
+                  "publishedAt": "2020-11-06T00:09:59Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "andrsd"
+                          },
+                          "bodyText": "My BC was taking pressure and temperature and computing h via fluid property look up. So yes, it is not exactly what @fparisio wants.",
+                          "url": "https://github.com/idaholab/moose/discussions/16072#discussioncomment-122878",
+                          "updatedAt": "2022-07-26T13:13:56Z",
+                          "publishedAt": "2020-11-06T00:41:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "fparisio-zz"
+                          },
+                          "bodyText": "@andrsd that might actually do it if you can fix both p and T. I was thinking of something like PorousFlowFluidPropertyIC, where porepressure and temperature are used to compute enthalpy IC. One question: would that cause issues through phase change because of h jump?",
+                          "url": "https://github.com/idaholab/moose/discussions/16072#discussioncomment-123305",
+                          "updatedAt": "2022-07-26T13:13:57Z",
+                          "publishedAt": "2020-11-06T15:44:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "I can almost guarantee you'll get convergence problems around phase transitions - it always happens.  But that's just too bad if your system has phase transitions, and it should help that we've tried to make PorousFlow as robust as possible while still being fairly flexible.",
+                          "url": "https://github.com/idaholab/moose/discussions/16072#discussioncomment-123540",
+                          "updatedAt": "2022-07-26T13:14:07Z",
+                          "publishedAt": "2020-11-06T20:36:43Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Eigenstrain base",
+          "author": {
+            "login": "RossMech"
+          },
+          "bodyText": "Hello everyone,\nI have a question about the eigenstrain_base:\nhttps://mooseframework.inl.gov/source/materials/ComputeEigenstrain.html\nWhat is an order in eigenstrain_base vector to a second order tensor? I have a symmetric tensor, which includes tension-compression and shear strains in 2D and 3D. It would be also very handily to add this information to a documentation of software.\nBest regards,\nRostyslav Nizinkovskyi.",
+          "url": "https://github.com/idaholab/moose/discussions/16088",
+          "updatedAt": "2023-08-18T13:20:09Z",
+          "publishedAt": "2020-11-05T14:12:10Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "dschwen"
+                  },
+                  "bodyText": "If you specify 6 components the order is the Voigt notation. Other fill patterns can be seen here in the source code. I thought we had this in the docs, but I think I was remembering the RankFourTensor instead. We should add this.",
+                  "url": "https://github.com/idaholab/moose/discussions/16088#discussioncomment-122433",
+                  "updatedAt": "2023-08-18T13:20:10Z",
+                  "publishedAt": "2020-11-05T16:24:57Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "RossMech"
+                          },
+                          "bodyText": "Thank you for the answer!",
+                          "url": "https://github.com/idaholab/moose/discussions/16088#discussioncomment-123054",
+                          "updatedAt": "2023-08-18T13:20:10Z",
+                          "publishedAt": "2020-11-06T09:27:58Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,755 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMi0wMi0wN1QwNjo0MToxNi0wNjowMM4AOKlp"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Spatial condition on DirichletBC function",
+          "author": {
+            "login": "AdrienWehrle"
+          },
+          "bodyText": "Hi everyone,\nI recently started using MOOSE to do some elastic deformation. I would like to prescribe a short (in time) and localized (in space) change in the Dirichlet boundary condition on one of the sides of my domain. I used inline functions before to add temporal and spatial constraints to constant boundary conditions. A generic example:\n[BCs]\n  [BC_1]\n     type = FunctionDirichletBC\n      variable = my_variable\n      boundary = 'my_boundary'\n      function = 'if( (x>1.) & (x<2.) & (t>1.), 1., 0.)'\n  []\n[]\n\nBut now I have a forcing with values through time stored in a file that I load with a function:\n[Functions]\n  [forcing]\n    type = PiecewiseLinear\n    data_file = my_forcing.csv\n    scale_factor = 1.0\n    format = 'columns'\n  []\n[]\n\nAnd would like to apply it when specific spatial conditions are met. I initially thought the following could maybe be possible in BC_1:\nfunction = 'if( (x>1.) & (x<2.), forcing, 0) or function = 'if( (x>1.) & (x<2.), forcing(t), 0) but this is not the case.\nAll the input files are very useful and helped me a lot to setup my app but in this case I am struggling a bit to find the right strategy.\nMaybe the/a proper way to do it would be to, at the mesh generation step, give a different  blockID to the elements where I want to prescribe this forcing and then use block ids in the input file?\nAny help would be much appreciated! Thank you a lot in advance!\nP.S. I've been enjoying MOOSE a lot so far, being a Libmesh user this is making everything much easier and more efficient! Thank you a lot for all your work! \ud83d\udc4d",
+          "url": "https://github.com/idaholab/moose/discussions/20275",
+          "updatedAt": "2022-10-12T18:06:03Z",
+          "publishedAt": "2022-02-10T14:34:51Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "AdrienWehrle"
+                  },
+                  "bodyText": "So I think I found a solution: generate a new side set with a given id that I can then use in the different objects. Just like here:\n(see @GiudGiud's comment below with the different possible options!)\n\n  \n    \n      moose/test/tests/mesh_modifiers/add_side_sets_from_bounding_box/multiple_boundary_ids_3d.i\n    \n    \n        Lines 19 to 26\n      in\n      06bc1f7\n    \n  \n  \n    \n\n        \n          \n           [createNewSidesetTwo] \n        \n\n        \n          \n             type = SideSetsFromBoundingBoxGenerator \n        \n\n        \n          \n             input = createNewSidesetOne \n        \n\n        \n          \n             block_id = 0 \n        \n\n        \n          \n             boundary_id_old = 'right top back' \n        \n\n        \n          \n             boundary_id_new = 11 \n        \n\n        \n          \n             bottom_left = '0.6 0.7 0.8' \n        \n\n        \n          \n             top_right = '1.1 1.1 1.1' \n        \n    \n  \n\n\nHowever I'm still interesting to see if you think it's a good/the best solution?",
+                  "url": "https://github.com/idaholab/moose/discussions/20275#discussioncomment-2150865",
+                  "updatedAt": "2022-10-12T18:06:19Z",
+                  "publishedAt": "2022-02-10T16:07:39Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "For the space restriction, this is a good idea. Then do the time restriction with a function.\nThe best solution would be a ParsedDirichletBC (similar to ParsedAux or ParsedPostprocessor) in my opinion. We havent developed that one yet.",
+                          "url": "https://github.com/idaholab/moose/discussions/20275#discussioncomment-2151012",
+                          "updatedAt": "2022-02-10T16:30:15Z",
+                          "publishedAt": "2022-02-10T16:24:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "AdrienWehrle"
+                          },
+                          "bodyText": "Thank you a lot for your answer!",
+                          "url": "https://github.com/idaholab/moose/discussions/20275#discussioncomment-2151022",
+                          "updatedAt": "2022-02-10T16:25:26Z",
+                          "publishedAt": "2022-02-10T16:25:26Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "AdrienWehrle"
+                          },
+                          "bodyText": "For the time restriction, I'm not sure how to proceed since I already have a forcing function (hence a variable forcing with time). Like in my post but with x being time:\n\nAnd would like to apply it when specific spatial conditions are met. I initially thought the following could maybe be possible in BC_1:\nfunction = 'if( (x>1.) & (x<2.), forcing, 0) or function = 'if( (x>1.) & (x<2.), forcing(t), 0) but this is not the case.",
+                          "url": "https://github.com/idaholab/moose/discussions/20275#discussioncomment-2151067",
+                          "updatedAt": "2022-02-10T16:31:55Z",
+                          "publishedAt": "2022-02-10T16:31:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "x is time?\nSo the condition (in fake code) is:\nif( (t>1.) & (t<2.), forcing(t), 0)  ?",
+                          "url": "https://github.com/idaholab/moose/discussions/20275#discussioncomment-2151105",
+                          "updatedAt": "2022-10-12T18:06:20Z",
+                          "publishedAt": "2022-02-10T16:38:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "AdrienWehrle"
+                          },
+                          "bodyText": "Yes! That was my initial idea.",
+                          "url": "https://github.com/idaholab/moose/discussions/20275#discussioncomment-2151116",
+                          "updatedAt": "2022-10-12T18:06:20Z",
+                          "publishedAt": "2022-02-10T16:40:05Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "A few options:\n\n\nadd a scaling factor argument (currently does not exist) to the FunctionDirichletBC https://mooseframework.inl.gov/source/bcs/FunctionDirichletBC.html\n(This has a scale_factor in the code if you want an example: https://mooseframework.inl.gov/source/functions/CompositeFunction.html)\nthen use the Control system to modify it with the step function : https://mooseframework.inl.gov/source/controls/RealFunctionControl.html\n\n\nuse the RealFunctionContrl https://mooseframework.inl.gov/source/controls/RealFunctionControl.html directly with the Function to control a DirichletBC\nhttps://mooseframework.inl.gov/source/bcs/DirichletBC.html\n\n\nMake your own DirichletBC that loads the CSV and uses it, so merge PieceWiseLinear and DirichletBC for your app.\n\n\nUse a https://mooseframework.inl.gov/source/functions/CompositeFunction.html with a step function multiplier, for the FunctionDirichletBC\n\n\n2 and 4 are no-code",
+                          "url": "https://github.com/idaholab/moose/discussions/20275#discussioncomment-2151133",
+                          "updatedAt": "2022-10-12T18:06:20Z",
+                          "publishedAt": "2022-02-10T16:42:14Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "AdrienWehrle"
+                          },
+                          "bodyText": "Thank you a lot for all those options! At the end I decided to have the temporal conditions directly prescribed in my forcing csv file as they might get quite complicated at some point, and would result in very long temporal conditions. But I will for sure need the options you just listed in a short moment!\nIn parallel, more than controlling the value associated with a given DirichletBC, I would like to completely enable/disable a Dirichlet BC at given times (in my case, releasing the boundary over a short period of time). And for that I think I am really stuck now. Again, any tips would be much appreciated!\nThank you a lot for your help!",
+                          "url": "https://github.com/idaholab/moose/discussions/20275#discussioncomment-2156645",
+                          "updatedAt": "2022-10-12T18:07:14Z",
+                          "publishedAt": "2022-02-11T11:30:12Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "AdrienWehrle"
+                          },
+                          "bodyText": "In parallel, more than controlling the value associated with a given DirichletBC, I would like to completely enable/disable a Dirichlet BC  > at given times (in my case, releasing the boundary over a short period of time).\n\nI think the controls system is the/a way to go (as used e.g. here #20208). Do you agree?\nThank you a lot for your help!",
+                          "url": "https://github.com/idaholab/moose/discussions/20275#discussioncomment-2157772",
+                          "updatedAt": "2022-10-12T18:07:14Z",
+                          "publishedAt": "2022-02-11T14:26:31Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Control system is the way to go here. Should work fine on a DirichletBC\n\u2026\n Le 11 f\u00e9vr. 2022 \u00e0 07:26, Adrien Wehrl\u00e9 ***@***.***> a \u00e9crit :\n\n \ufeff\n In parallel, more than controlling the value associated with a given DirichletBC, I would like to completely enable/disable a Dirichlet BC > at given times (in my case, releasing the boundary over a short period of time).\n\n I think the controls system is the/a way to go (as used e.g. here #20208). Do you agree?\n\n \u2014\n Reply to this email directly, view it on GitHub, or unsubscribe.\n Triage notifications on the go with GitHub Mobile for iOS or Android.\n You are receiving this because you commented.",
+                  "url": "https://github.com/idaholab/moose/discussions/20275#discussioncomment-2157949",
+                  "updatedAt": "2022-10-12T18:07:16Z",
+                  "publishedAt": "2022-02-11T14:49:44Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "AdrienWehrle"
+                          },
+                          "bodyText": "Thank you a lot!",
+                          "url": "https://github.com/idaholab/moose/discussions/20275#discussioncomment-2158087",
+                          "updatedAt": "2022-10-12T18:07:16Z",
+                          "publishedAt": "2022-02-11T15:04:02Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Undefined symbols for architecture arm64 linking libmoose-opt.la",
+          "author": {
+            "login": "Jacobfaib"
+          },
+          "bodyText": "See #20276",
+          "url": "https://github.com/idaholab/moose/discussions/20264",
+          "updatedAt": "2023-02-22T00:59:31Z",
+          "publishedAt": "2022-02-09T19:28:40Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "cticenhour"
+                  },
+                  "bodyText": "FYI to those who come across this thread later - Discussions can be converted to issues (and vice versa), without needing to redo or copy anything over. @Jacobfaib I will put a response in #20276",
+                  "url": "https://github.com/idaholab/moose/discussions/20264#discussioncomment-2153439",
+                  "updatedAt": "2023-02-22T00:59:31Z",
+                  "publishedAt": "2022-02-10T22:09:45Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Three Network material model PolyUMod",
+          "author": {
+            "login": "tstepan333"
+          },
+          "bodyText": "Hello,\nIs it possible to import Three Network material model from PolyUMod to Moose? Or can I implement the Three Network model directly in Moose?\nThanks,\nTatiana",
+          "url": "https://github.com/idaholab/moose/discussions/20245",
+          "updatedAt": "2022-06-26T09:11:50Z",
+          "publishedAt": "2022-02-07T20:14:12Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@jiangwen84 @hugary1995  do you know about this PolyUMod?",
+                  "url": "https://github.com/idaholab/moose/discussions/20245#discussioncomment-2151579",
+                  "updatedAt": "2022-06-26T09:11:53Z",
+                  "publishedAt": "2022-02-10T17:28:04Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "I doubt it can be directly imported to MOOSE, but you should be able to implement in MOOSE's TensorMechanics module. You can consider to use this new Lagrangian Mechanics staff, see #17475",
+                          "url": "https://github.com/idaholab/moose/discussions/20245#discussioncomment-2151644",
+                          "updatedAt": "2022-06-26T09:11:54Z",
+                          "publishedAt": "2022-02-10T17:35:16Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to create random circles in a specific region",
+          "author": {
+            "login": "patte103"
+          },
+          "bodyText": "Hello!\nI am currently using \"MultiSmoothCircleIC\" to create circles in my generated mesh. Once I increase the size of my mesh domain and create a smaller subdomain with \"SubdomainBoundingBoxGenerator\" where I want the circles to be generated, the \"MultiSmoothCircleIC\" keeps generating the circles outside of the subdomain. Is there a way to generate random circles within a specified region? Or is it better to just use \"SpecifiedSmoothCircleIC\"?\nThanks!",
+          "url": "https://github.com/idaholab/moose/discussions/20216",
+          "updatedAt": "2022-09-28T07:32:16Z",
+          "publishedAt": "2022-02-02T20:51:33Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "SudiptaBiswas"
+                  },
+                  "bodyText": "You have to block restrict your initial condition to generate circles within the subdomain. Try specifying block=#subdomain_id in your initial condition.",
+                  "url": "https://github.com/idaholab/moose/discussions/20216#discussioncomment-2145500",
+                  "updatedAt": "2022-09-28T07:32:23Z",
+                  "publishedAt": "2022-02-09T23:37:02Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Negative jacobian error",
+          "author": {
+            "login": "avtarsinghh1991"
+          },
+          "bodyText": "Hey MOOSE Experts\nI am trying to import a mesh file generated by iso2mesh open-source package. This package basically takes the stack file generated from the series of 2d images and gives the tetrahedral mesh model or data.\nHowever, when I am importing the file, the following error appears:\n  Elem Information\n   id()=63, unique_id()=288, processor_id()=0\n   type()=TET4\n   dim()=3\n   n_nodes()=4\n   mapping=LAGRANGE_MAP\n    0  Node id()=7, processor_id()=0, Point=(x,y,z)=(0.566968, 0.434533, 0.384061)\n    DoFs=\n    1  Node id()=25, processor_id()=0, Point=(x,y,z)=(0.580051, 0.482012, 0.344232)\n    DoFs=\n    2  Node id()=26, processor_id()=0, Point=(x,y,z)=(0.648769,  0.46092, 0.327418)\n    DoFs=\n    3  Node id()=27, processor_id()=0, Point=(x,y,z)=(0.652712,  0.48181, 0.430415)\n    DoFs=\n   n_sides()=4\n    neighbor(0)=54\n    neighbor(1)=64\n    neighbor(2)=183\n    neighbor(3)=57\n   hmin()=0.0633378, hmax()=0.112726\n   volume()=-7.05834e-05\n   active()=1, ancestor()=0, subactive()=0, has_children()=0\n   parent()=nullptr\n   level()=0, p_level()=0\n   refinement_flag()=DO_NOTHING\n   p_refinement_flag()=DO_NOTHING\n   DoFs=\nERROR: negative Jacobian -0.000423501 at point (x,y,z)=(0.581988, 0.447102, 0.368166) in element 63\n[0] ../src/fe/fe_map.C, line 1171, compiled Dec 16 2021 at 14:15:26\n  Elem Information\n   id()=52, unique_id()=277, processor_id()=3\n   type()=TET4\n   dim()=3\n   n_nodes()=4\n   mapping=LAGRANGE_MAP\n    0  Node id()=7, processor_id()=0, Point=(x,y,z)=(0.566968, 0.434533, 0.384061)\n    DoFs=\n    1  Node id()=21, processor_id()=2, Point=(x,y,z)=(0.555315, 0.432359, 0.315249)\n    DoFs=\n    2  Node id()=3, processor_id()=2, Point=(x,y,z)=(0.540991, 0.366828,  0.27691)\n    DoFs=\n    3  Node id()=24, processor_id()=3, Point=(x,y,z)=(0.654859, 0.433908, 0.229658)\n    DoFs=\n   n_sides()=4\n    neighbor(0)=39\n    neighbor(1)=55\n    neighbor(2)=97\n    neighbor(3)=56\n   hmin()=0.0698248, hmax()=0.177666\n   volume()=-8.37394e-05\n   active()=1, ancestor()=0, subactive()=0, has_children()=0\n   parent()=nullptr\n   level()=0, p_level()=0\n   refinement_flag()=DO_NOTHING\n   p_refinement_flag()=DO_NOTHING\n   DoFs=\nERROR: negative Jacobian -0.000502437 at point (x,y,z)=(0.560859, 0.423647,  0.35516) in element 52\n[3] ../src/fe/fe_map.C, line 1171, compiled Dec 16 2021 at 14:15:26\n\n\n*** ERROR ***\nERROR: negative Jacobian -0.000502437 at point (x,y,z)=(0.560859, 0.423647,  0.35516) in element 52\n\n\n\n*** ERROR ***\nERROR: negative Jacobian -0.000423501 at point (x,y,z)=(0.581988, 0.447102, 0.368166) in element 63\n\nI am getting the following information with --mesh-only option\n Mesh Information:\n  elem_dimensions()={3}\n  spatial_dimension()=3\n  n_nodes()=225\n    n_local_nodes()=81\n  n_elem()=970\n    n_local_elem()=242\n    n_active_elem()=970\n  n_subdomains()=1\n  n_partitions()=4\n  n_processors()=4\n  n_threads()=1\n  processor_id()=0\n  is_prepared()=true\n  is_replicated()=true\n\n Mesh Bounding Box:\n  Minimum: (x,y,z)=(       0,        0,        0)\n  Maximum: (x,y,z)=( 1.04684, 0.970131,        1)\n  Delta:   (x,y,z)=( 1.04684, 0.970131,        1)\n\n Mesh Element Type(s):\n  TET4\n\n Mesh Nodesets:\n  Nodeset 0, 225 nodes\n   Bounding box minimum: (x,y,z)=(       0,        0,        0)\n   Bounding box maximum: (x,y,z)=(0.721701, 0.550191, 0.599457)\n   Bounding box delta: (x,y,z)=(0.721701, 0.550191, 0.599457)\n\n Mesh Sidesets:\n  None\n\n Mesh Edgesets:\n  None\n\n Mesh Subdomains:\n  Subdomain 0 (MeshTetra0_TET4): 970 elems (TET4, 970 active), 225 active nodes\n   Volume: 0.00188098\n   Bounding box minimum: (x,y,z)=(       0,        0,        0)\n   Bounding box maximum: (x,y,z)=( 1.04684, 0.970131,        1)\n   Bounding box delta: (x,y,z)=( 1.04684, 0.970131,        1)\n  Global mesh volume = 0.00188098\n\nI have tried the refined mesh but still, the error is there.\nPlease let me know any suggestions.\nAlso, Is there any possibility that MOOSE can generate the mesh from the stack of 2d images?\nBest\nAvtar",
+          "url": "https://github.com/idaholab/moose/discussions/20237",
+          "updatedAt": "2022-07-14T18:49:36Z",
+          "publishedAt": "2022-02-06T05:10:39Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "ykvishal"
+                  },
+                  "bodyText": "Also, Is there any possibility that MOOSE can generate the mesh from the stack of 2d images?\n\nYou can try  ImageFunction.",
+                  "url": "https://github.com/idaholab/moose/discussions/20237#discussioncomment-2118896",
+                  "updatedAt": "2022-07-14T18:49:39Z",
+                  "publishedAt": "2022-02-06T05:48:35Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "avtarsinghh1991"
+                          },
+                          "bodyText": "I have tried but it's not working for me. I have a number of grains in the geometry. Imagefunction is failing.",
+                          "url": "https://github.com/idaholab/moose/discussions/20237#discussioncomment-2128792",
+                          "updatedAt": "2022-07-14T18:49:39Z",
+                          "publishedAt": "2022-02-07T21:31:30Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nSeems like several elements are inverted.\nWhat is the output of iso2mesh? Can you fix the mesh from there?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20237#discussioncomment-2122704",
+                  "updatedAt": "2022-07-14T18:49:42Z",
+                  "publishedAt": "2022-02-07T05:01:02Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "avtarsinghh1991"
+                          },
+                          "bodyText": "Hello\nOutput from the ISO2MESH is nodes, connectivity, and faces. They have some inbuilt functions for Abaqus file output. I am using that to get the Abaqus file and importing that to MOOSE.\nI have tried the MESHQUALITY and CELLSIZE filter in the PARAVIEW and didn't get the -ve volume for any of the mesh elements.\nAny other suggestions?\nUPDATE:\nI tried to open the abaqus file given by iso2mesh in ABAQUS. Its something like shown in the image.",
+                          "url": "https://github.com/idaholab/moose/discussions/20237#discussioncomment-2128777",
+                          "updatedAt": "2022-07-21T18:46:40Z",
+                          "publishedAt": "2022-02-07T21:28:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "is this supposed to be a 2D mesh or a 3D mesh?\nIf 3D, how is this generated from a 2D image?",
+                          "url": "https://github.com/idaholab/moose/discussions/20237#discussioncomment-2130420",
+                          "updatedAt": "2022-07-21T18:46:58Z",
+                          "publishedAt": "2022-02-08T04:17:52Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Outputting Total Gibbs Free Energy in Phase Field Simulations",
+          "author": {
+            "login": "ppandit95"
+          },
+          "bodyText": "Dear MOOSE Comunity\nI am working with the martensite transformation test input deck which I have modified as per the requirements but I wish to get the values of gibbs energy at each time step so that II can verify my simulation from the results in the literature.Any headers in this regard will prove beneficial.\nMany Thanks\nPushkar",
+          "url": "https://github.com/idaholab/moose/discussions/20241",
+          "updatedAt": "2022-07-06T09:28:57Z",
+          "publishedAt": "2022-02-07T11:29:26Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "ykvishal"
+                  },
+                  "bodyText": "Check this TotalFreeEnergy. More options are available on AuxKernels System page.",
+                  "url": "https://github.com/idaholab/moose/discussions/20241#discussioncomment-2127063",
+                  "updatedAt": "2022-07-06T09:28:57Z",
+                  "publishedAt": "2022-02-07T17:03:12Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ppandit95"
+                          },
+                          "bodyText": "Thanks @ykvishal for directing to the relevent webpage",
+                          "url": "https://github.com/idaholab/moose/discussions/20241#discussioncomment-2130359",
+                          "updatedAt": "2022-07-06T09:28:58Z",
+                          "publishedAt": "2022-02-08T03:59:33Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "MOOSE Conda Packages Now Compatible with Xcode > 12.4",
+          "author": {
+            "login": "cticenhour"
+          },
+          "bodyText": "Conda package updates for moose-mpich, moose-petsc, and moose-libmesh were merged today in #19230, and enable full MacOS Big Sur compatibility for previously unsupported Xcode and Command Line Tools versions 12.5, 13, and 13.1. This update also enables support for MacOS Monterey. The Clang compiler has also been updated to 12.0.1.\nNote that this update only applies to Intel Macs. Official M1 Apple Silicon support is on the way! Track the MOOSE issue #18954 if interested in new developments.\nTo download the new packages, please activate your MOOSE conda environment and perform the following command:\nconda update --all\n\nwhere the appropriate versions and build in the update output should be:\nPackage                  Version            Build\n=====================================================\nmoose-libmesh            2021.10.27         build_1\nmoose-mpich              3.3.2              build_8\nmoose-petsc              3.15.1             build_3\n\nNOTE that if you do not see build_1 with your libmesh package update, check your python version. If you are using 3.8 or 3.9, you will need to update instead by doing the following:\nconda install moose-libmesh moose-tools python=3.7\n\ndue to a current lack of PyQt availability in conda for Python 3.8 and 3.9.\nIf any issues with the new packages are experienced, please open a new Discussions post!",
+          "url": "https://github.com/idaholab/moose/discussions/19289",
+          "updatedAt": "2022-07-02T19:25:31Z",
+          "publishedAt": "2021-11-04T02:46:48Z",
+          "category": {
+            "name": "News"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "cticenhour"
+                  },
+                  "bodyText": "@tophmatthews",
+                  "url": "https://github.com/idaholab/moose/discussions/19289#discussioncomment-1586079",
+                  "updatedAt": "2022-07-02T19:25:54Z",
+                  "publishedAt": "2021-11-04T03:14:43Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lynnmunday"
+                          },
+                          "bodyText": "@cticenhour would this update allow us to use xcode as a gui for lldb?  I've never tried xcode but I would like to find a gui for lldb.",
+                          "url": "https://github.com/idaholab/moose/discussions/19289#discussioncomment-1864221",
+                          "updatedAt": "2022-07-02T19:26:44Z",
+                          "publishedAt": "2021-12-23T16:17:45Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cticenhour"
+                          },
+                          "bodyText": "This update ensures compatibility with the new versions of Xcode, which should mean that the built-in LLDB is compatible. As I use LLDB on the command line, I haven't yet tried to do this.\n@loganharbour @lindsayad @friedmud have any of you used the visual LLDB within Xcode on a MOOSE-based project? Or can ping someone who might have?",
+                          "url": "https://github.com/idaholab/moose/discussions/19289#discussioncomment-1864239",
+                          "updatedAt": "2022-07-02T19:26:45Z",
+                          "publishedAt": "2021-12-23T16:21:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lynnmunday"
+                          },
+                          "bodyText": "@dewenyushu used it a few years ago.  I don't know if she has tried again since this update.",
+                          "url": "https://github.com/idaholab/moose/discussions/19289#discussioncomment-1864255",
+                          "updatedAt": "2022-07-02T19:26:48Z",
+                          "publishedAt": "2021-12-23T16:25:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dewenyushu"
+                          },
+                          "bodyText": "I tried using Xcode for debugging about two years ago before switching to conda. It worked fine with the 'external build system'.  After switching to conda, I could not run it with the same setting. I recall that the issue was no being able to find some python script(s), but I do not remember the exact name.\nNow I am mainly using the command line. Not sure if it would work again with the update. But here is my notes for setting up the debugger in Xcode (two years ago), if you maybe interested\nDebug with Xcode.pdf",
+                          "url": "https://github.com/idaholab/moose/discussions/19289#discussioncomment-1864510",
+                          "updatedAt": "2022-09-21T18:24:30Z",
+                          "publishedAt": "2021-12-23T17:20:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "friedmud"
+                          },
+                          "bodyText": "No - I've never used the visual debugging capability in XCode.  Command-line forever ;-)",
+                          "url": "https://github.com/idaholab/moose/discussions/19289#discussioncomment-2128968",
+                          "updatedAt": "2022-09-21T18:24:31Z",
+                          "publishedAt": "2022-02-07T22:09:41Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "lindsayad"
+                  },
+                  "bodyText": "I\u2019ve only ever used the command line\n\u2026\n On Dec 23, 2021, at 8:25 AM, Lynn Munday ***@***.***> wrote:\n\n \ufeff\n @dewenyushu used it a few years ago. I don't know if she has tried again since this update.\n\n \u2014\n Reply to this email directly, view it on GitHub, or unsubscribe.\n Triage notifications on the go with GitHub Mobile for iOS or Android.\n You are receiving this because you were mentioned.",
+                  "url": "https://github.com/idaholab/moose/discussions/19289#discussioncomment-1864280",
+                  "updatedAt": "2022-07-02T19:28:06Z",
+                  "publishedAt": "2021-12-23T16:29:45Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "MultiApp Performance Graph",
+          "author": {
+            "login": "rtaylo45"
+          },
+          "bodyText": "Hello,\nI have a few questions about performance graphs for when running MultiApps and performance graphs in general. The following is my performance graph when running my application (main) as a loosely coupled MultiApp:\nPerformance Graph:\n--------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n|                                Section                               | Calls |   Self(s)  |   Avg(s)   |    %   | Mem(MB) |  Total(s)  |   Avg(s)   |    %   | Mem(MB) |\n--------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n| moleTestApp (main)                                                   |     1 |      0.032 |      0.032 |   0.12 |       1 |     26.602 |     26.602 | 100.00 |      63 |\n|   Action::SetupMeshAction::Mesh::SetupMeshAction::act::setup_mesh    |     1 |      0.001 |      0.001 |   0.00 |       0 |      0.001 |      0.001 |   0.00 |       0 |\n|   Action::SetupMeshAction::Mesh::SetupMeshAction::act::set_mesh_base |     2 |      0.000 |      0.000 |   0.00 |       0 |      0.001 |      0.001 |   0.01 |       0 |\n|   FEProblem::outputStep                                              |   101 |      0.010 |      0.000 |   0.04 |       0 |      0.660 |      0.007 |   2.48 |       3 |\n|     Exodus::outputStep                                               |   101 |      0.485 |      0.005 |   1.82 |       3 |      0.485 |      0.005 |   1.82 |       3 |\n|   Transient::PicardSolve                                             |   100 |      0.052 |      0.001 |   0.20 |       0 |     25.163 |      0.252 |  94.59 |       3 |\n|     FEProblem::computeUserObjects                                    |   100 |      0.001 |      0.000 |   0.00 |       0 |      0.001 |      0.000 |   0.00 |       0 |\n|     FEProblem::outputStep                                            |   100 |      0.005 |      0.000 |   0.02 |       0 |      0.005 |      0.000 |   0.02 |       0 |\n|     FEProblem::execMultiApps                                         |   100 |      0.006 |      0.000 |   0.02 |       0 |     13.849 |      0.138 |  52.06 |       2 |\n|     FEProblem::solve                                                 |   100 |      0.107 |      0.001 |   0.40 |       0 |     10.855 |      0.109 |  40.80 |       1 |\n|       FEProblem::computeResidualInternal                             |   100 |      0.002 |      0.000 |   0.01 |       0 |      1.524 |      0.015 |   5.73 |       0 |\n|       FEProblem::computeResidualInternal                             |   340 |      0.007 |      0.000 |   0.03 |       0 |      5.129 |      0.015 |  19.28 |       0 |\n|       FEProblem::computeJacobianInternal                             |    80 |      0.002 |      0.000 |   0.01 |       0 |      4.073 |      0.051 |  15.31 |       1 |\n|     FEProblem::execMultiAppTransfers                                 |   100 |      0.228 |      0.002 |   0.86 |       0 |      0.228 |      0.002 |   0.86 |       0 |\n|   Transient::final                                                   |     1 |      0.001 |      0.001 |   0.00 |       0 |      0.001 |      0.001 |   0.00 |       0 |\n|     FEProblem::outputStep                                            |     1 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n--------------------------------------------------------------------------------------------------------------------------------------------------------------------------\nFinished Executing                                                                       [ 25.90 s] [    9 MB]\n\nand my application when i populate the my loosely coupled AuxVarriables using constant values:\nPerformance Graph:\n--------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n|                                Section                               | Calls |   Self(s)  |   Avg(s)   |    %   | Mem(MB) |  Total(s)  |   Avg(s)   |    %   | Mem(MB) |\n--------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n| moleTestApp (main)                                                   |     1 |      0.033 |      0.033 |   0.47 |       1 |      7.035 |      7.035 | 100.00 |      37 |\n|   Action::SetupMeshAction::Mesh::SetupMeshAction::act::setup_mesh    |     1 |      0.001 |      0.001 |   0.01 |       0 |      0.001 |      0.001 |   0.01 |       0 |\n|   Action::SetupMeshAction::Mesh::SetupMeshAction::act::set_mesh_base |     2 |      0.000 |      0.000 |   0.00 |       1 |      0.001 |      0.001 |   0.02 |       1 |\n|   FEProblem::outputStep                                              |   101 |      0.012 |      0.000 |   0.16 |       0 |      1.573 |      0.016 |  22.36 |       3 |\n|     Exodus::outputStep                                               |   101 |      1.361 |      0.013 |  19.34 |       3 |      1.361 |      0.013 |  19.34 |       3 |\n|   Transient::PicardSolve                                             |   100 |      0.050 |      0.001 |   0.72 |       0 |      5.074 |      0.051 |  72.12 |       3 |\n|     FEProblem::outputStep                                            |   100 |      0.006 |      0.000 |   0.08 |       0 |      0.007 |      0.000 |   0.09 |       0 |\n|     FEProblem::solve                                                 |   100 |      0.061 |      0.001 |   0.86 |       2 |      5.011 |      0.050 |  71.22 |       3 |\n|       FEProblem::computeResidualInternal                             |   100 |      0.003 |      0.000 |   0.04 |       0 |      1.988 |      0.020 |  28.26 |       0 |\n|       FEProblem::computeResidualInternal                             |   124 |      0.003 |      0.000 |   0.05 |       0 |      2.409 |      0.019 |  34.25 |       0 |\n|       FEProblem::computeJacobianInternal                             |     8 |      0.000 |      0.000 |   0.00 |       0 |      0.537 |      0.067 |   7.64 |       1 |\n|     FEProblem::computeUserObjects                                    |   100 |      0.001 |      0.000 |   0.02 |       0 |      0.001 |      0.000 |   0.02 |       0 |\n|   Transient::final                                                   |     1 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|     FEProblem::outputStep                                            |     1 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n--------------------------------------------------------------------------------------------------------------------------------------------------------------------------\nFinished Executing                                                                       [  6.70 s] [    7 MB]\n\n\nLooking at total Mem(MB) of moleTestApp (main) the memory usage increased from 37 mb to 63 mb seems like a lot, does this include the memory usage of the subApp or is all that memory increase from variable transfer?\nThe finished executing line shows a time and what i assume to be memory usage, why is are these values different from the Total(s) seconds and Mem(MB) column for moleTestApp (main)? Adding up the first child rows in the performance graph leads to the memory usage value on the Finished Executing line and not the Performance Graph output.\nIf i print out a Performance Graph of the main and sub applications, are they the true runtime and memory usage for each individual application?\n\nI have looked at the documentation of the performance graphs before asking these questions.\nThanks,\nZack",
+          "url": "https://github.com/idaholab/moose/discussions/20210",
+          "updatedAt": "2022-11-24T16:08:36Z",
+          "publishedAt": "2022-02-02T15:34:29Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@friedmud",
+                  "url": "https://github.com/idaholab/moose/discussions/20210#discussioncomment-2097032",
+                  "updatedAt": "2023-04-09T10:08:25Z",
+                  "publishedAt": "2022-02-02T15:58:44Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "friedmud"
+                  },
+                  "bodyText": "The memory and runtime are \"nested\" within the main app - so the difference you're seeing there is because of the sub-app.  As a way to think about it - the main app creates the sub-app within it.\nThe executing timer is timing just the execute() method of the App object.  The App object timer includes everything (setup, etc.).  The memory is always a memory increment.  Therefore the memory that was actually created within execute() and still around when execute() finishes is only 7MB... but the whole app object is holding 37MB.\nThe PerfGraph for each app is its own... except that the memory and execution time of sub-apps is included within the parent app (as seen here) at a \"high\" level.  The details of that execution time and memory you can get from the sub-app's PerfGraph.",
+                  "url": "https://github.com/idaholab/moose/discussions/20210#discussioncomment-2128564",
+                  "updatedAt": "2023-04-09T10:08:25Z",
+                  "publishedAt": "2022-02-07T20:52:46Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Auxvariable vs non-linear variable for chemical potential-driven diffusion coupling",
+          "author": {
+            "login": "LukeFisherUKAEA"
+          },
+          "bodyText": "Hello,\nI'm looking to implement a chemical potential-driven diffusion model, with the following governing equations:\n(1)    dC/dt = ( (DC) / (RT) ) * d^2mu / dx^2\n(2)    mu = mu_0 + RTln ( C / C_max )\nMy understanding is that for equation (1) we can use an ADTimeDerivative with variable C, and an ADMatDiffusion with variable = mu coupled to v = C.  An ADParsedMaterial block calculates the coefficient.\nI'm not completely clear whether variables linked to kernels must in all cases be non-linear, rather than auxiliary?  It seems that a 'nice' way of setting this problem up would be to set mu as an auxvariable function, which is calculated on every timestep by equation (2) in a ParsedAux block.  Alternatively, mu could be assigned as a non-linear variable and equation (2) evaluated as a material property and mu calculated through a ADMatCoupledForce block.  This seems more difficult.\nWhich is the best way of doing this, and is it the case that auxvariables can never be linked to kernel calculations?  Thanks.",
+          "url": "https://github.com/idaholab/moose/discussions/20160",
+          "updatedAt": "2022-08-04T16:53:21Z",
+          "publishedAt": "2022-01-28T10:17:47Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nWell it really depends what you want your numerical / time integration scheme to be.\nIf you want to be implicit in C and mu, then use an implicit time scheme and make both non-linear variables.\nIf you want to be implicit in C and explicit in mu, then use an implicit time scheme and make C a non-linear variable. Then you can choose whether mu should be computed at the beginning or the end of a time step (matters especially for first time step), based on the execute_on of the auxkernel that computes it.\nBy the way, ADMatDiffusion doesnt do what you think here, because setting the variable to mu does compute the right term, but it places it in the wrong equation.\nYou have to think of the variable parameter as two things:\n\nit's what goes in the formula for computing that term.\nit's the name of equation (equation for C, equation for mu) that you add that term to (that term is part of the residual)\n\nSo for that kernel:\nv = mu\nvariable = C\nis more correct. You will still need to capture the C-dependency in the diffusivity material property.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20160#discussioncomment-2067437",
+                  "updatedAt": "2022-08-04T16:53:21Z",
+                  "publishedAt": "2022-01-28T15:48:29Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "LukeFisherUKAEA"
+                          },
+                          "bodyText": "Thank you for the advice and the pointer on setting variables to the correct identifier inside kernels - this has cleared up some confusion!  I've gone with the implicit C/explicit mu approach.  I'm finding that the use of a natural log expression in a ParsedAux block is causing an invalid function error.  The same error does not occur when I replace the natural log with a base 10 log (a sanity check to see if other mathematical functions could be used here).  Could you advise on whether the natural log function is supported in the ParsedAux auxkernel?  Many thanks again for the help with this.",
+                          "url": "https://github.com/idaholab/moose/discussions/20160#discussioncomment-2125077",
+                          "updatedAt": "2022-11-15T10:25:12Z",
+                          "publishedAt": "2022-02-07T12:44:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "According to the documentation for the parser, it should be supported.\nAre you writing it ln() or log()? Should be the latter\nhttp://warp.povusers.org/FunctionParser/fparser.html",
+                          "url": "https://github.com/idaholab/moose/discussions/20160#discussioncomment-2126051",
+                          "updatedAt": "2022-11-15T10:25:13Z",
+                          "publishedAt": "2022-02-07T15:05:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "LukeFisherUKAEA"
+                          },
+                          "bodyText": "Ah, that's the issue.  I was using the former.  Thanks for the link to the documentation.",
+                          "url": "https://github.com/idaholab/moose/discussions/20160#discussioncomment-2126103",
+                          "updatedAt": "2022-11-15T10:25:14Z",
+                          "publishedAt": "2022-02-07T15:12:35Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Interfacial energy at Grand Potential model",
+          "author": {
+            "login": "RossMech"
+          },
+          "bodyText": "Hallo everyone,\nI am trying to describe equilibrium precipitation morphology in both twinned and untwinned state. In this purpose I use grand-potential like model. The relevant interfacial properties are:\n\nMatrix-precipitate interfacial energy lies approx. at 0.4 aJ/nm2,\ncoherent twin interfacial energy is equal to 0.09 aJ/nm2\ninterfacial width should lie around 0.3 nm\n\nBecause of difference in magnitude of the interfacial energies, it is seems to be unpossible to find the values for gradient multiplicator kappa, double-well height omega and correspondent coeffecients gamma.\nThe GrandPotentialAction gives negative value for the first gamma coefficient. More details under link:\n[(https://mooseframework.inl.gov/source/materials/GrandPotentialInterface.html#AagesenGP2018)]\nThe matlab script, attached to the link seems to solve the problem, but with various gradient coefficients kappa_ij. But I can not understand, how to implement such kernels, which would take different values of gradient coefficient at different interfaces.\nThe question is then:\n\nIs it possible to find such a set of parameters to describe following interfacial properties using grand-potential model with the same gradient constant?\nIf it is not, what would you suggest how to implement the gradient prefactors from matlab scipt or how to modify the model?\n\nThank in advance for your suggestions!",
+          "url": "https://github.com/idaholab/moose/discussions/19507",
+          "updatedAt": "2022-06-17T08:11:31Z",
+          "publishedAt": "2021-11-30T15:32:23Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "simopier"
+                  },
+                  "bodyText": "Hi,\nI ran into a similar issue in 2017 with a system that did not have such a large difference between the interfacial energies. Let me gather my notes and I will come back to you with some suggestions and answers.\nIn the meantime, let me know if you have any updates.\nBest,\nPC",
+                  "url": "https://github.com/idaholab/moose/discussions/19507#discussioncomment-1776498",
+                  "updatedAt": "2022-06-17T08:11:36Z",
+                  "publishedAt": "2021-12-09T03:06:33Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "RossMech"
+                          },
+                          "bodyText": "Hi,\nthank you for the answer. I've tried to implement following features to expand possible interfacial energies:\n\nDifferent kappa values for different phase fields. The interfacial energy can be reached, but a different width for two phases occur at the interface. I use Lagrange multiplier, which is localized on interface. If the interface of one phase overlaps with bulk of another one, then model becomes unbounded in [0..1] domain.\nThe coefficient interpolation, as in the following paper of Moelans et al. https://journals.aps.org/prb/abstract/10.1103/PhysRevB.78.024113. The problem is, that i can't get the solver converged into a physical meaningfull solution.\n\nI have tried both to introduce some small value into denominator to avoid zero values. As an alternative, I used condition to track a zero denominator and substitude the value of parameter with some small one.",
+                          "url": "https://github.com/idaholab/moose/discussions/19507#discussioncomment-1779295",
+                          "updatedAt": "2022-06-17T08:11:38Z",
+                          "publishedAt": "2021-12-09T14:09:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "simopier"
+                          },
+                          "bodyText": "@RossMech, I apologize for the delay. Below is a description of the problem and two approaches that you can use to solve it. The description is general, but I apply the first method to your system at the end. Please make sure to double check all the math and derivations, as this has not be checked by anyone or anything except my best intentions.\nNote: The notations used here will correspond to those used in the Physical Review B 2008 paper from Moelans et al. and the Physical Review E paper 2018 paper from Aagesen et al.\nGoals: When selecting the parameters of a grand potential model, one aims at defining the parameters m, ,  to obtain the desired (or close to desired) values for the interfacial energy  and interfacial thickness .\nIntroduction: It is first important to state that from the Physical Review B 2008 paper from Moelans et al.,  and  are given by\n(1).   for \n(2).  \nwith  a dimensionless function, which can be approximated as\n(3).  \nfor  values around 1.5 (tabulated values also exists), and\n(4).   (tabulated values also exists).\nThese equations can be reversed to obtain m and as functions of  and , as\n(5).  \n(6).  \nNote that  and  are not being simplified using Eqs. (3,4) to keep these equations as general as possible.\nIt is also possible, using Eq. (1) and Eq. (3) (Valid only for  values around 1.5) to define  as\n(7).  .\nAs you described above, there are mostly two different ways to define the parameters of a grand potential model. One in which all the different interfaces use the same , another one where each interface ij has a corresponding  value. We will cover both approaches and their limitations below.\nApproach 1:  is a constant for every phase and every interface\n\nThe interfacial energies  are either provided by the literature or values are assumed by the user.\nA specific interface i1j1 is selected by the user.\nThe interfacial length for this interface  is fixed by the user.\n is also fixed by the user (1.5 is a good first guess).\n is calculated using Eq. (4) or tabulated values.\n is calculated using Eq. (3) or tabulated values.\n and m can be derived using Eqs. (5,6) with , , and .\nThe remaining  and  can be derived for the remaining interfaces using Eqs. (2,7). Note that every interface is expected to have different interfacial length and  values.\n and  values can vary a lot for each interface depending on the system, sometimes making it impossible to use. It is important to check that all the values of  and  are useable. For example, if , then Eq. (1) is not valid and the parameterization is incorrect. If  and  values are not satisfactory, the user should go back to step 4, 3 or maybe even step 2 of this process until reasonable values are found (not guaranteed).\n\nThis approach is the simplest, but cannot necessarily lead to useable parameters, depending on the system. In which case the second approach can be an option. It should be possible to write a python code that tests different values of parameters and follow this process to find reasonable parameters.\nApproach 2:  depends on the interface\n\nThe interfacial energies  are either provided by the literature or values are assumed by the user.\nA specific interface i1j1 is selected by the user.\nThe interfacial length for this interface is fixed by the user.\n is fixed by the user around 1.5.\nm can be derived using Eq. (6).\nNow that m is fixed, one can:\na. Fix  values within [0.53,2.5] and derive the corresponding  and  values, which would be unique to each interface. In that case, the user should make sure that the  values are reasonable.\nb. Or fix the  values and derive the  values and  values. In that case, the user should make sure that the  values obtained at the end are within a range that keep the equations valid. For example, if Eq. (5) is used to derive , then  should be within [0.53,2.5].\nc. Or fix  and derive  and  (Same comment than for b).\n\nWhen using this approach, it is important to check if the final values are reasonable and within a range in which the equations are valid. If not, then the process should restart at step 6, 4, 3, or 2. Another thing to keep in mind is that, to my knowledge, there are currently no kernel in MOOSE to use different  values for each interface. Using this approach would require the user to write their own kernel.\nApplication of approach 1 to your system\nNow, let's apply the first approach to your system, with 1-2 the matrix-precipitate interface, and 2-2 the precipitate-precipitate interface.\n\nYou provided =0.4 (matrix ) and =0.09.\nLet's select the interface 12 (matrix-precipitate).\nYou provided =0.3.\nLet's define  =1.5.\nf_o^{inter}( )=0.125.\ng( )=0.4714.\n=0.09 and m=8.\n=0.3 and  =0.516.\nUnfortunately,   is too small for the equations to be valid. we need to find another set of parameters. You will find that changing   in step 4  will not help, neither will  in step 3. However, doing this process again from step 2 by selecting interface 22 and defining =0.3 and  =1.5 provides =0.02025, m=1.8, =0.3, and  =1.125, which fall within acceptable values.\n\nLet me know if you have any questions or concerns. Again, do not hesitate to re-do all the derivations before using these values.\nI hope that helped! If it did, feel free to mark this answer as a solution.",
+                          "url": "https://github.com/idaholab/moose/discussions/19507#discussioncomment-2019181",
+                          "updatedAt": "2022-06-17T08:11:45Z",
+                          "publishedAt": "2022-01-21T21:57:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "simopier"
+                          },
+                          "bodyText": "PS: you might not see the equations if using the dark mode. Use the light mode to see this page.",
+                          "url": "https://github.com/idaholab/moose/discussions/19507#discussioncomment-2019188",
+                          "updatedAt": "2022-06-17T08:11:57Z",
+                          "publishedAt": "2022-01-21T21:59:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "RossMech"
+                          },
+                          "bodyText": "Hello @simopier,\nThank you for a very detailed answer. I have tried to implement both of the schemes.\nI had the following problems:\n\nFor the case of the constant kappa parameter, the difference in the diffuse interface widths was significant.\nFor the case of the variable kappa parameter, it was problematic to get a physically meaningful solution, especially in the triple point problem. I have thought that it can lie on the denominator stabilization. But it was not only the case. Also, I have checked a condition number and tried to improve the model to decrease it. It also did not help.\n\nHighly possible it lies in the not stable behavior of the kappa derivative in the Allen-Cahn equation, see\nhttps://journals.aps.org/prb/abstract/10.1103/PhysRevB.78.024113\nFinally, it is to mention that a new preprint is published regarding this discussion. I found it very useful. The link is below\nhttps://www.researchgate.net/publication/357580272_Comparison_of_three_different_strategies_to_introduce_anisotropic_interface_properties_in_a_multi-phase-field_model\nSo I would choose to use the first algorithm (with constant kappa parameter). It should be more expensive regarding memory usage, but it seems to converge better to the solution, especially at triple points.",
+                          "url": "https://github.com/idaholab/moose/discussions/19507#discussioncomment-2096970",
+                          "updatedAt": "2022-06-21T09:28:32Z",
+                          "publishedAt": "2022-02-02T15:52:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "simopier"
+                          },
+                          "bodyText": "Hi @RossMech,\nThank you for the update and for the link to the preprint.\nWere the diffuse interface widths really different?\nIn my answer:\n\nApplication of approach 1 to your system\nNow, let's apply the first approach to your system, with 1-2 the matrix-precipitate interface, and 2-2 the precipitate-precipitate interface.\n\nYou provided =0.4 (matrix ) and =0.09.\nLet's select the interface 12 (matrix-precipitate).\nYou provided =0.3.\nLet's define  =1.5.\nf_o^{inter}( )=0.125.\ng( )=0.4714.\n=0.09 and m=8.\n=0.3 and  =0.516.\nUnfortunately,   is too small for the equations to be valid. we need to find another set of parameters. You will find that changing   in step 4  will not help, neither will  in step 3. However, doing this process again from step 2 by selecting interface 22 and defining =0.3 and  =1.5 provides =0.02025, m=1.8, =0.3, and  =1.125, which fall within acceptable values.\n\n\nI obtained the same diffuse interfacial width (0.3) for both. Were my calculations wrong?\nBest,\nPC",
+                          "url": "https://github.com/idaholab/moose/discussions/19507#discussioncomment-2117327",
+                          "updatedAt": "2022-06-21T09:28:34Z",
+                          "publishedAt": "2022-02-05T17:35:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "RossMech"
+                          },
+                          "bodyText": "@simopier\nIt seems, that the calculations were a little bit of.\nIf one takes the sigma_12 = 0.09 and gamma_12 = 1.5 (for coherent twin energy), then at my calculations we have matching values for kappa = 0.02025 and m = 1.8. But I had used not equation (7) but the equation solver for interfacial energy from equation (1) and also plotted the interfacial energy as function of gamma at constant kappa and m. For gamma_12 = 1.5 solver did not converge and the plot was following\n\nThen I changed the gamma_12 = 0.53 and the plot had a following form\n\nA suitable set of parameters was found as\nkappa = 0.0203\nm = 30.9\ngamma_12 = 0.53 (twin interface)\ngamma_13 = 1.85 (precipitate-matrix interface)\nThe corresponding width was estimated as:\nl_12 = 0.3 (twin interface)\nl_13 = 0.0675 (precipitate-matrix interface)",
+                          "url": "https://github.com/idaholab/moose/discussions/19507#discussioncomment-2125055",
+                          "updatedAt": "2022-06-21T09:33:06Z",
+                          "publishedAt": "2022-02-07T12:41:16Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

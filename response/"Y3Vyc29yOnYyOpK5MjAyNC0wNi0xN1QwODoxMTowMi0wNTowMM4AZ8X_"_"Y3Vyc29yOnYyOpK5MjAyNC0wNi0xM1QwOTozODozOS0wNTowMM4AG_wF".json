@@ -1,0 +1,1041 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyNC0wNi0xM1QwOTozODozOS0wNTowMM4AG_wF"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Input spatial data of \"alpha\" into Van Genuchten capillary model",
+          "author": {
+            "login": "zhx999"
+          },
+          "bodyText": "Hi there,\nIn PorousFlow module, the Van Genuchten capillarity model is defined with two coefficients \"alpha\" and \"m\".\n\nI understand that in the scripts \"PorousFlowCapillaryPressureVG.h\" and \"PorousFlowCapillaryPressureVG.C\" under UserObject, the alpha is set to be a single value as input.\nIf I want to include a file which contains the spatial data of alpha, like the heterogeneous permeability. Is there any simple way to include it?",
+          "url": "https://github.com/idaholab/moose/discussions/27911",
+          "updatedAt": "2024-06-17T08:01:40Z",
+          "publishedAt": "2024-06-16T20:08:41Z",
+          "category": {
+            "name": "Q&A Modules: Porous Flow"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYou can modify the source code to use alpha as a function or as an auxiliary variable.\nThis should not be too difficult if you have followed the tutorial and created your own object once\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/27911#discussioncomment-9788354",
+                  "updatedAt": "2024-06-16T20:15:29Z",
+                  "publishedAt": "2024-06-16T20:15:29Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "zhx999"
+                          },
+                          "bodyText": "Hi Guillaume,\nThank you very much for your quick answer.\nI am tring to redefine the two scripts \"PorousFlowCapillaryPressureVG.h\" and \"PorousFlowCapillaryPressureVG.C\", by changing the alpha taking method from \"_alpha(getParam(\"alpha\"))\" to be \"_alpha(coupledValue(\"alpha\"))\", using the \"VariableValue\" type instead of \"Real\".\nPorousFlowCapillaryPressureVG.h\n#pragma once\n\n#include \"PorousFlowCapillaryPressure.h\"\n\n/**\n * van Genuchten form of capillary pressure.\n *\n * From van Genuchten, M. Th., A closed for equation for predicting the\n * hydraulic conductivity of unsaturated soils, Soil Sci. Soc., 44, 892-898 (1980)\n */\nclass PorousFlowCapillaryPressureVG_alpha : public PorousFlowCapillaryPressure\n{\npublic:\n  static InputParameters validParams();\n\n  PorousFlowCapillaryPressureVG_alpha(const InputParameters & parameters);\n\n  virtual Real capillaryPressureCurve(Real saturation, unsigned qp = 0) const override;\n  virtual Real dCapillaryPressureCurve(Real saturation, unsigned qp = 0) const override;\n  virtual Real d2CapillaryPressureCurve(Real saturation, unsigned qp = 0) const override;\n\n  virtual Real effectiveSaturation(Real pc, unsigned qp = 0) const override;\n  virtual Real dEffectiveSaturation(Real pc, unsigned qp = 0) const override;\n  virtual Real d2EffectiveSaturation(Real pc, unsigned qp = 0) const override;\n\nprotected:\n  /// van Genuchten exponent m\n  const Real _m;\n\n  /// van Genuchten capillary coefficient alpha\n  // % Original code\n  // const Real _alpha;\n  // * Modified code: Provide a constant value of alpha. This can be specified by either a constant\n  // * value in the input file, or taken from an aux variable.\n  // const MaterialProperty<Real> & _alpha;\n  const VariableValue & _alpha;\n\n  /// Capillary pressure = f(Seff * s_scale) - pc_sscale, where f is the van Genuchten function.  For almost all simulations s_scale=1 will be appropriate\n  const Real _s_scale;\n  /// pc_sscale = f(s_scale), where f is the van Genuchten function\n  // const Real _pc_sscale;\n};\n\n\nPorousFlowCapillaryPressureVG.h\n\n#include \"PorousFlowCapillaryPressureVG_alpha.h\"\n#include \"PorousFlowVanGenuchten.h\"\n#include \"MaterialProperty.h\"\n\nregisterMooseObject(\"PorousFlowApp\", PorousFlowCapillaryPressureVG_alpha);\nInputParameters\nPorousFlowCapillaryPressureVG_alpha::validParams()\n{\n  InputParameters params = PorousFlowCapillaryPressure::validParams();\n  params.addRequiredRangeCheckedParam<Real>(\n      \"m\",\n      \"m >= 0 & m <= 1\",\n      \"van Genuchten exponent m. Must be between 0 and 1, and optimally should be set to >0.5\");\n  // * Cancel the data format check (maybe the function can only check the scalar value instead of a\n  // matrix)\n  // params.addRequiredRangeCheckedParam<Real>(\n  //     \"alpha\", \"alpha > 0\", \"van Genuchten parameter alpha. Must be positive\");\n  // Change alpha to be a required material property\n  params.addRequiredCoupledVar(\n      \"alpha\", \"Name of the material property providing the spatially varying alpha\");\n  params.addRangeCheckedParam<Real>(\"s_scale\",\n                                    1.0,\n                                    \"s_scale > 0.0 & s_scale <= 1.0\",\n                                    \"CapillaryPressure = f(Seff * s_scale) - \"\n                                    \"f(s_scale), where f is the van Genuchten \"\n                                    \"expression.  Setting s_scale<1 is unusual \"\n                                    \"but sometimes helps fully saturated, \"\n                                    \"2-phase PP simulations converge as the \"\n                                    \"zero derivative (1/f'(S=1)=0) is removed\");\n  params.addClassDescription(\"van Genuchten capillary pressure\");\n  return params;\n}\n\nPorousFlowCapillaryPressureVG_alpha::PorousFlowCapillaryPressureVG_alpha(\n    const InputParameters & parameters)\n  : PorousFlowCapillaryPressure(parameters),\n    _m(getParam<Real>(\"m\")),\n    // _alpha(getParam<Real>(\"alpha\")),\n    _alpha(coupledValue(\"alpha\")),\n    _s_scale(getParam<Real>(\"s_scale\"))\n// _pc_sscale(PorousFlowVanGenuchten::capillaryPressure(_s_scale, _alpha[0], _m, _pc_max))\n{\n}\n\nReal\nPorousFlowCapillaryPressureVG_alpha::capillaryPressureCurve(Real saturation, unsigned qp) const\n{\n  const Real seff = effectiveSaturationFromSaturation(saturation) * _s_scale;\n  return PorousFlowVanGenuchten::capillaryPressure(seff, _alpha[qp], _m, _pc_max) -\n         PorousFlowVanGenuchten::capillaryPressure(_s_scale, _alpha[qp], _m, _pc_max);\n}\n\nReal\nPorousFlowCapillaryPressureVG_alpha::dCapillaryPressureCurve(Real saturation, unsigned qp) const\n{\n  const Real seff = effectiveSaturationFromSaturation(saturation) * _s_scale;\n  return PorousFlowVanGenuchten::dCapillaryPressure(seff, _alpha[qp], _m, _pc_max) * _dseff_ds *\n         _s_scale;\n}\n\nReal\nPorousFlowCapillaryPressureVG_alpha::d2CapillaryPressureCurve(Real saturation, unsigned qp) const\n{\n  const Real seff = effectiveSaturationFromSaturation(saturation) * _s_scale;\n  return PorousFlowVanGenuchten::d2CapillaryPressure(seff, _alpha[qp], _m, _pc_max) * _dseff_ds *\n         _dseff_ds * _s_scale * _s_scale;\n}\n\nReal\nPorousFlowCapillaryPressureVG_alpha::effectiveSaturation(Real pc, unsigned qp) const\n{\n  return (1.0 / _s_scale) *\n         PorousFlowVanGenuchten::effectiveSaturation(\n             pc - PorousFlowVanGenuchten::capillaryPressure(_s_scale, _alpha[qp], _m, _pc_max),\n             _alpha[qp],\n             _m);\n}\n\nReal\nPorousFlowCapillaryPressureVG_alpha::dEffectiveSaturation(Real pc, unsigned qp) const\n{\n  return (1.0 / _s_scale) *\n         PorousFlowVanGenuchten::dEffectiveSaturation(\n             pc - PorousFlowVanGenuchten::capillaryPressure(_s_scale, _alpha[qp], _m, _pc_max),\n             _alpha[qp],\n             _m);\n}\n\nReal\nPorousFlowCapillaryPressureVG_alpha::d2EffectiveSaturation(Real pc, unsigned qp) const\n{\n  return (1.0 / _s_scale) *\n         PorousFlowVanGenuchten::d2EffectiveSaturation(\n             pc - PorousFlowVanGenuchten::capillaryPressure(_s_scale, _alpha[qp], _m, _pc_max),\n             _alpha[qp],\n             _m);\n}\n\nAnd I am trying to couple the alpha as an AuxVariable with the capillary model, in the input file:\n[AuxVariables]\n  [entry_p]\n    family = MONOMIAL\n    order = CONSTANT\n    initial_from_file_var = alpha\n  []\n[]\n\nHowever, when I compiled the code and try to run the input script. It shows error message \"zsh: segmentation fault\". Should I use another inputparameter type for the alpha array?\nThanks!",
+                          "url": "https://github.com/idaholab/moose/discussions/27911#discussioncomment-9788572",
+                          "updatedAt": "2024-06-16T21:33:35Z",
+                          "publishedAt": "2024-06-16T21:33:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "[AuxVariables]\n  [entry_p]\n    family = MONOMIAL\n    order = CONSTANT\n    initial_from_file_var = alpha\n  []\n[]\n\nthis does not create an alpha variable you can use in PorousFlowCapillaryPressureVG_alpha\nunless you set the parameter alpha = entry_p\n\nIt shows error message \"zsh: segmentation fault\". Should I use another inputparameter type for the alpha array?\n\nI would be worried about _alpha being used outside of an element loop. For example in the base classes of PorousFlowCapillaryPressureVG_alpha.\nYou would need to check if that happens and prevent it.\nFor example you commented out this line in the constructor, which would have caused a segfault:\n// _pc_sscale(PorousFlowVanGenuchten::capillaryPressure(_s_scale, _alpha[0], _m, _pc_max))\n\nTo find instances of a call outside of the expected execution, you can use these instructions and look at the backtrace\nhttps://mooseframework.inl.gov/application_development/debugging.html",
+                          "url": "https://github.com/idaholab/moose/discussions/27911#discussioncomment-9788603",
+                          "updatedAt": "2024-06-16T21:47:28Z",
+                          "publishedAt": "2024-06-16T21:47:27Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "zhx999"
+                          },
+                          "bodyText": "Thank you for your quick reply!\n\n[AuxVariables]\n  [entry_p]\n    family = MONOMIAL\n    order = CONSTANT\n    initial_from_file_var = alpha\n  []\n[]\n\nthis does not create an alpha variable you can use in PorousFlowCapillaryPressureVG_alpha unless you set the parameter alpha = entry_p\n\nYep, I assigned the \"entry_p\" to the \"alpha\"\n[UserObjects]\n  [pc] # Capillary pressure\n    type = PorousFlowCapillaryPressureVG_alpha\n    alpha = entry_p # [Pa^-1]\n    m = 0.6\n  []\n[]\n\n\n\nIt shows error message \"zsh: segmentation fault\". Should I use another inputparameter type for the alpha array?\n\nI would be worried about _alpha being used outside of an element loop. For example in the base classes of PorousFlowCapillaryPressureVG_alpha. You would need to check if that happens and prevent it. For example you commented out this line in the constructor, which would have caused a segfault:\n// _pc_sscale(PorousFlowVanGenuchten::capillaryPressure(_s_scale, _alpha[0], _m, _pc_max))\n\n\nI think you are right, that the alpha may be used outside of an element loop. I am wondering is there anyway to take the alpha like the saturation variable, maybe the issue could be fixed. Currently I am using the qp to locate alpha in each mesh element.\nThe commented line was used directly in the capillary curve function, which replaced the original _pc_sscale:\nReal\nPorousFlowCapillaryPressureVG_alpha::capillaryPressureCurve(Real saturation, unsigned qp) const\n{\n  const Real seff = effectiveSaturationFromSaturation(saturation) * _s_scale;\n  return PorousFlowVanGenuchten::capillaryPressure(seff, _alpha[qp], _m, _pc_max) -\n         PorousFlowVanGenuchten::capillaryPressure(_s_scale, _alpha[qp], _m, _pc_max);\n}\n\n\nTo find instances of a call outside of the expected execution, you can use these instructions and look at the backtrace https://mooseframework.inl.gov/application_development/debugging.html\n\nI will do a try about this debugger.\nThanks again for your answer!",
+                          "url": "https://github.com/idaholab/moose/discussions/27911#discussioncomment-9788644",
+                          "updatedAt": "2024-06-16T22:01:02Z",
+                          "publishedAt": "2024-06-16T22:00:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cpgr"
+                          },
+                          "bodyText": "Check out https://github.com/idaholab/moose/blob/next/modules/porous_flow/src/userobjects/PorousFlowCapillaryPressureBC.C for an example where the entry pressure pe can be a variable or a Real.",
+                          "url": "https://github.com/idaholab/moose/discussions/27911#discussioncomment-9788715",
+                          "updatedAt": "2024-06-16T22:26:15Z",
+                          "publishedAt": "2024-06-16T22:26:15Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cpgr"
+                          },
+                          "bodyText": "Sorry - scratch that! I mustn't have pushed that change but have it locally somewhere. I'll try and find it \ud83d\ude04",
+                          "url": "https://github.com/idaholab/moose/discussions/27911#discussioncomment-9788725",
+                          "updatedAt": "2024-06-16T22:28:08Z",
+                          "publishedAt": "2024-06-16T22:28:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "zhx999"
+                          },
+                          "bodyText": "Sorry - scratch that! I mustn't have pushed that change but have it locally somewhere. I'll try and find it \ud83d\ude04\n\nLooking forward to the commit. Thanks again for the discussion, very helpful!",
+                          "url": "https://github.com/idaholab/moose/discussions/27911#discussioncomment-9788743",
+                          "updatedAt": "2024-06-16T22:33:21Z",
+                          "publishedAt": "2024-06-16T22:33:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cpgr"
+                          },
+                          "bodyText": "So, what I had done is basically what you have here. I copied your code, compiled and ran a test and it seems to work ok.\n[Mesh]\n  type = GeneratedMesh\n  dim = 1\n  nx = 100\n[]\n\n[GlobalParams]\n  PorousFlowDictator = dictator\n[]\n\n[Variables]\n  [p0]\n    initial_condition = 1e6\n  []\n  [s1]\n  []\n[]\n\n[AuxVariables]\n  [s0aux]\n    family = MONOMIAL\n    order = CONSTANT\n  []\n  [s1aux]\n    family = MONOMIAL\n    order = CONSTANT\n  []\n  [p0aux]\n    family = MONOMIAL\n    order = CONSTANT\n  []\n  [p1aux]\n    family = MONOMIAL\n    order = CONSTANT\n  []\n  [alpha]\n    family = MONOMIAL\n    order = CONSTANT\n  []\n[]\n\n[AuxKernels]\n  [s0]\n    type = PorousFlowPropertyAux\n    property = saturation\n    phase = 0\n    variable = s0aux\n  []\n  [s1]\n    type = PorousFlowPropertyAux\n    property = saturation\n    phase = 1\n    variable = s1aux\n  []\n  [p0]\n    type = PorousFlowPropertyAux\n    property = pressure\n    phase = 0\n    variable = p0aux\n  []\n  [p1]\n    type = PorousFlowPropertyAux\n    property = pressure\n    phase = 1\n    variable = p1aux\n  []\n[]\n\n[ICs]\n  [alpha]\n    type = RandomIC\n    variable = alpha\n    min = 1e-5\n    max = 1e-4\n  []\n[]\n\n[Kernels]\n  [p0]\n    type = Diffusion\n    variable = p0\n  []\n  [s1]\n    type = Diffusion\n    variable = s1\n  []\n[]\n\n[UserObjects]\n  [dictator]\n    type = PorousFlowDictator\n    porous_flow_vars = 'p0 s1'\n    number_fluid_phases = 2\n    number_fluid_components = 2\n  []\n  [pc]\n    type = PorousFlowCapillaryPressureVG_alpha\n    alpha = alpha\n    m = 0.5\n    sat_lr = 0.1\n    log_extension = false\n  []\n[]\n\n[Materials]\n  [temperature]\n    type = PorousFlowTemperature\n  []\n  [ppss]\n    type = PorousFlow2PhasePS\n    phase0_porepressure = p0\n    phase1_saturation = s1\n    capillary_pressure = pc\n  []\n  [kr0]\n    type = PorousFlowRelativePermeabilityVG\n    phase = 0\n    m = 0.5\n  []\n  [kr1]\n    type = PorousFlowRelativePermeabilityCorey\n    phase = 1\n    n = 2\n  []\n[]\n\n[VectorPostprocessors]\n  [vpp]\n    type = ElementValueSampler\n    variable = 's0aux s1aux p0aux p1aux alpha'\n    sort_by = id\n  []\n[]\n\n[Executioner]\n  type = Steady\n  solve_type = NEWTON\n  nl_abs_tol = 1e-6\n[]\n\n[BCs]\n  [sleft]\n    type = DirichletBC\n    variable = s1\n    value = 0\n    boundary = left\n  []\n  [sright]\n    type = DirichletBC\n    variable = s1\n    value = 1\n    boundary = right\n  []\n[]\n\n[Outputs]\n  csv = true\n  execute_on = timestep_end\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/27911#discussioncomment-9790009",
+                          "updatedAt": "2024-06-17T04:13:33Z",
+                          "publishedAt": "2024-06-17T04:13:32Z",
+                          "isAnswer": true
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "zhx999"
+                          },
+                          "bodyText": "Hello,\nThank you for the great insight.\nI realize that I forgot to set one optional parameter log_extension = false.\n  [pc]\n    type = PorousFlowCapillaryPressureVG_alpha\n    alpha = alpha\n    m = 0.5\n    sat_lr = 0.1\n    log_extension = false\n  []\n\nWhich already stated in the document:\n\nSince it's optional parameter so I didn't pay attention to it. Now the simulation can run properly.\nThanks a lot!",
+                          "url": "https://github.com/idaholab/moose/discussions/27911#discussioncomment-9790772",
+                          "updatedAt": "2024-06-17T06:52:18Z",
+                          "publishedAt": "2024-06-17T06:52:17Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Navier Stokes over multiple blocks",
+          "author": {
+            "login": "oh304"
+          },
+          "bodyText": "I was wondering if there was a way to combine temperatures in an auxkernel? I have more than one temperature variable, as a result of using navier stokes, and was wondering if there was a way to combine them into one master variable T so the simulation can be read more easily in paraview. Thanks :)",
+          "url": "https://github.com/idaholab/moose/discussions/27817",
+          "updatedAt": "2024-06-14T15:08:34Z",
+          "publishedAt": "2024-06-07T11:59:08Z",
+          "category": {
+            "name": "Q&A Modules: Navier-Stokes"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYou can use two ProjectionAux for that.\nhttps://mooseframework.inl.gov/source/auxkernels/ProjectionAux.html\nCreate a 3rd auxiliary temperature variable like \"temp_out\" and use two projectionAux to copy T_fluid and T_solid into it.\nThis is strictly for output purposes. For using in the nonlinear system, we do not recommend lagging variable values / losing derivative information by using the auxiliary system.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/27817#discussioncomment-9711106",
+                  "updatedAt": "2024-06-08T06:52:20Z",
+                  "publishedAt": "2024-06-08T06:52:20Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "oh304"
+                          },
+                          "bodyText": "Thank you!!",
+                          "url": "https://github.com/idaholab/moose/discussions/27817#discussioncomment-9775972",
+                          "updatedAt": "2024-06-14T15:08:35Z",
+                          "publishedAt": "2024-06-14T15:08:34Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "ExtraNodesetGenerator with more nodes should be _id node - 1_",
+          "author": {
+            "login": "RotmanC"
+          },
+          "bodyText": "Hello.\nI need to create a selection of nodes (more than 600), so I made this steps:\n\ngenerate the mesh with gmsh\nrun the moose script with --mesh-only\nopen the *_in.e file it in paraview\ncopy the id nodes from the set of nodes (nodelist_7) by spreadsheet view\nmade ExtraNodesetGenerator  block into the mesh section\nrun again the moose script with --mesh-only to obtain the set of nodes\n\n\nRed dots are the set that moose gave after run the step 6.\nGreen light are the nodes that I want and I obtained after realize that the selection of nodes is: id_node -1\nNodes that I want to select and create the group of nodes (set)\nBlock_Name\tPoint_ID\tids\tPoints_0\tPoints_1\tPoints_2\nnodelist_7\t\t0\t9734\t5597.89\t\t8118.03\t\t-6000\nnodelist_7\t\t1\t9737\t5717.99\t\t8407.98\t\t-6000\nnodelist_7\t\t2\t9745\t5881.97\t\t8675.57\t\t-6000\nnodelist_7\t\t3\t9770\t8118.03\t\t5597.89\t\t-6000\nnodelist_7\t\t4\t9773\t7812.87\t\t5524.62\t\t-6000\nnodelist_7\t\t5\t9781\t7500\t\t5500\t\t-6000\n\nNodes that moose gave me after run step 6\nBlock_Name\tPoint_ID\tids\t\tPoints_0\tPoints_1\tPoints_2\nnew\t\t0\t\t9735\t\t5301.25\t\t8407.83\t\t-6000\nnew\t\t1\t\t9738\t\t5004.62\t\t8697.63\t\t-5875\nnew\t\t2\t\t9746\t\t5712.52\t\t9252.03\t\t-5875\nnew\t\t3\t\t9771\t\t8054.07\t\t5188.86\t\t-6000\nnew\t\t4\t\t9774\t\t7990.1\t\t4779.82\t\t-5875\nnew\t\t5\t\t9782\t\t7112.11\t\t5026.31\t\t-5875\n\nId's that I include in the ExtraNodesetGenerator   (Id that I want - 1)\n9733\n9736\n9744\n9769\n9772\n9780\n\nIt gives me the Id's that I want\n\n\nI didn't test with less selected nodes (e.g. to include a BC in an injection, the common selection is a single node or a few).\nMay be it could be specified in the ExtraNodesetGenerator website to avoid future issues.",
+          "url": "https://github.com/idaholab/moose/discussions/27884",
+          "updatedAt": "2024-06-14T14:06:36Z",
+          "publishedAt": "2024-06-12T19:13:10Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nI think there's an offset of 1 between the numbering in paraview and the numbering in libmesh. This is a good suggestion though, I ll add a reminder there.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/27884#discussioncomment-9757849",
+                  "updatedAt": "2024-06-13T01:35:57Z",
+                  "publishedAt": "2024-06-13T01:35:56Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "RotmanC"
+                  },
+                  "bodyText": "Thanks @GiudGiud\nBy the way.... is there another option or methodology to do that?\nAll these steps were done because I need to assign a heat BC in a volume in a PorousFlow problem, so I created this group of nodes inside the volume that I want to....",
+                  "url": "https://github.com/idaholab/moose/discussions/27884#discussioncomment-9759773",
+                  "updatedAt": "2024-06-13T07:00:56Z",
+                  "publishedAt": "2024-06-13T07:00:55Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nAs long as these nodes / sides share a common geometrical characteristic, then there are plenty of ways to do this.\nOne of the most general is to use the ParsedGenerateSideset and specify the equation that these sides satisfy.\nIf you need the nodes, there is a sideset to nodeset converter in moose\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/27884#discussioncomment-9765108",
+                          "updatedAt": "2024-06-13T15:40:46Z",
+                          "publishedAt": "2024-06-13T15:40:45Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "RotmanC"
+                  },
+                  "bodyText": "Thanks @GiudGiud !\nI will consider it in future to avoid problems using different mesh management tools.\nRotman",
+                  "url": "https://github.com/idaholab/moose/discussions/27884#discussioncomment-9775256",
+                  "updatedAt": "2024-06-14T14:06:37Z",
+                  "publishedAt": "2024-06-14T14:06:36Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Avoid calculating material properties need only for Jacobian",
+          "author": {
+            "login": "dzheng26"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nFor one nonlinear iteration, the method computeProperties of the material classes is called at least 2 times, once for calculating the residual and once for calculating the Jacobian.\nSome properties generated by computeProperties are actually for calculating Jacobian only, for example the pk1_jacobian in solid mechanics. When computeProperties is called for calculating the residual, the calculation for pk1_jacobian is not really needed. For complicate material model, the calculation for pk1_jacobian maybe relatively heavy and slows down the simulation.\nSo my question is:\nIs there a way to know in computeProperies if it is used for calculating the residual or the jacobian, or both (for Executioner/residual_and_jacobian_together=1)? If it is known, user can skip the properties which are used for the Jacobian only when computeProperties is called not for calculation the Jacobian.",
+          "url": "https://github.com/idaholab/moose/discussions/27892",
+          "updatedAt": "2024-06-14T07:52:03Z",
+          "publishedAt": "2024-06-13T12:25:12Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYes there is a way. You can check the problem with \"currentlyComputingJacobian\"\n_fe_problem.currentlyComputingJacobian()\n\nreturns a boolean.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/27892#discussioncomment-9764115",
+                  "updatedAt": "2024-06-13T14:23:22Z",
+                  "publishedAt": "2024-06-13T14:23:21Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dzheng26"
+                          },
+                          "bodyText": "Thanks for the quick answer. I will try it.",
+                          "url": "https://github.com/idaholab/moose/discussions/27892#discussioncomment-9771706",
+                          "updatedAt": "2024-06-14T07:52:03Z",
+                          "publishedAt": "2024-06-14T07:52:03Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "theory/implementation of stress divergence kernel (Jacobian)",
+          "author": {
+            "login": "kteferra2"
+          },
+          "bodyText": "Hi,\nWould anyone be able to provide reference to either an old paper, textbook, or theory manual that best describes the implementation of the finite deformation updated Lagrangian formulation? Specifically, I'm looking to understand the theory and implementation details for the function \"StressDivergenceTensors::computeFiniteDeformJacobian()\". I would greatly appreciate it if anyone can point me in the right direction. Thanks!\nkt",
+          "url": "https://github.com/idaholab/moose/discussions/27900",
+          "updatedAt": "2024-06-14T01:46:58Z",
+          "publishedAt": "2024-06-14T01:30:53Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Maybe look for technical reports on OSTI produced by the NEAMS program in mechanics / fuels recently\notherwise @hugary1995 will know",
+                  "url": "https://github.com/idaholab/moose/discussions/27900#discussioncomment-9769180",
+                  "updatedAt": "2024-06-14T01:35:21Z",
+                  "publishedAt": "2024-06-14T01:35:12Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "IIRC the old solid mechanics implementation for the \"incremental\" formulation was following Malvern's textbook \"Introduction to the Mechanics of a Continuous Medium\". I think some schools still use that textbook, but it's becoming less popular. The StressDivergenceTensors::computeFiniteDeformJacobian() predates me, and I suppose @bwspenc would know the context of that function.\nFor the new system (i.e. with new_system = true), there is a journal article under review.",
+                          "url": "https://github.com/idaholab/moose/discussions/27900#discussioncomment-9769247",
+                          "updatedAt": "2024-06-14T01:46:59Z",
+                          "publishedAt": "2024-06-14T01:46:58Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Phase separation in block copolymers",
+          "author": {
+            "login": "rnpratoori"
+          },
+          "bodyText": "Hello team,\nI am new to MOOSE and C++. I want to simulate phase separation in block copolymers. For, that I want to change the split formulation to reflect these equations -\n\nEssentially, there is one extra term in the residual of chemical potential.\nI have created an auxkernel based modifying SplitCHResBase.h. Here are the new *.h and *.C files I created - SplitCHPhaseSep.zip. Is this the right way to do it? Is there a better way?\nWhen I compile with these files, I get the error -\nerror: no match for 'operator+=' (operand types are 'libMesh::Real' {aka 'double'} and 'libMesh::boostcopy::enable_if_c<true, libMesh::TypeVector<double> >::type' {aka 'libMesh::TypeVector<double>'})\nThis error appears in computeQpResidual, computeQpWJacobian and computeQpOffDiagJacobian.\nCan anyone help me identify what mistake I might be making?\nThanks in advance,\nRaghu.",
+          "url": "https://github.com/idaholab/moose/discussions/27827",
+          "updatedAt": "2024-06-20T17:35:54Z",
+          "publishedAt": "2024-06-07T16:56:40Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nerror: no match for 'operator+=' (operand types are 'libMesh::Real' {aka 'double'} and 'libMesh::boostcopy::enable_if_c<true, libMesh::TypeVector<double> >::type' {aka 'libMesh::TypeVector<double>'})\n\nmeans you are summing a vector and a double. You have to use a loop to do that or maybe you do not want this?\n  residual += _mob[_qp] * _alpha[_qp] * _kappa[_qp] * (_c[_qp] - _bar_c) * _grad_test[_i][_qp]; //Second term\n\nresidual is a real.\nThe other term is a real times a vector (gradient of the i-th test function at quadrature point qp)\nmaybe you mean to use _test instead?",
+                  "url": "https://github.com/idaholab/moose/discussions/27827#discussioncomment-9711052",
+                  "updatedAt": "2024-06-08T06:42:28Z",
+                  "publishedAt": "2024-06-08T06:42:28Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rnpratoori"
+                          },
+                          "bodyText": "Hello @GiudGiud for your reply. What you are saying makes sense, but I am wondering why I am not getting the same error in the first term where I use\nReal residual = _mob[_qp] * _grad_w[_qp] * _grad_test[_i][_qp]; //First term\nThis is also the same expression for computeQpResidual of SplitCHWResBase.h. Hence I believe it should be _grad_test and not just _test. Can you clarify this for me?",
+                          "url": "https://github.com/idaholab/moose/discussions/27827#discussioncomment-9729289",
+                          "updatedAt": "2024-06-10T16:06:18Z",
+                          "publishedAt": "2024-06-10T16:06:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Because in that first term you have a grad_w vector term, that causes a dot product with grad_test and you end up with a real.",
+                          "url": "https://github.com/idaholab/moose/discussions/27827#discussioncomment-9729824",
+                          "updatedAt": "2024-06-10T17:00:57Z",
+                          "publishedAt": "2024-06-10T17:00:56Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rnpratoori"
+                          },
+                          "bodyText": "This makes perfect sense and fixed the errors. Thank you.\nBut, using this in the input file gives a new error -\nTask add_aux_kernel is not registered to build Kernel derived objects\nI am unsure if I am using the AuxKernel I developed correctly. Here is the input file (only the relevant parts) -\n[Variables]\n    # difference in the volume fractions of the 2 phases\n    [./u]\n        order = FIRST\n        family = LAGRANGE\n        [./InitialCondition]\n            type = RandomIC\n            seed = 123\n            min = -0.1\n            max =  0.1\n        [../]\n    [../]\n    # Chemical potential (J/mol)\n    [./w]\n        order = FIRST\n        family = LAGRANGE\n    [../]\n[]\n  \n[AuxVariables]\n    # polymer volume fraction\n    [./pvf]\n        # order = FIRST\n        # family = LAGRANGE\n    [../]\n[]\n  \n[Kernels]\n    [./w_dot]\n        type = CoupledTimeDerivative\n        variable = w\n        v = u\n    [../]\n[]\n  \n[AuxKernels]\n    # calculate polymer volume fraction from difference in volume fractions\n    [./pvf]\n        type = ParsedAux\n        variable = pvf\n        coupled_variables = 'u'\n        expression = '(u+1)/2'\n    [../]\n    # adding nonlocal term to the energy\n    [./coupled_res]\n        type = SplitCHPhaseSep\n        variable = w\n        mob_name = M\n        c = u\n        alpha_name = alpha\n        kappa_name = kappa\n    [../]\n[]\n[Materials]\n    # Units of M are m^2 mol / (J s)\n    # Units of kappa are J m^2 / mol\n    # consider adding a scaling factor in the future\n    [./mat]\n        type = GenericConstantMaterial\n        prop_names  = 'M   kappa    alpha'\n        prop_values = '1e-02    5e-03   1e-01'\n                        # M*mum_m^2/eV_J\n                        # kappa*eV_J*mu_m^2\n    [../]\n[]\n\nCan you point to what I might be missing or any example problem that deals with a similar thing?",
+                          "url": "https://github.com/idaholab/moose/discussions/27827#discussioncomment-9730916",
+                          "updatedAt": "2024-06-10T19:08:57Z",
+                          "publishedAt": "2024-06-10T19:08:57Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "You are adding a kernel in the auxkernel block.\nKernels should go in the [Kernels] block . They are meant to contribute to the residual and Jacobian\nAuxkernels are meant to set auxiliary variables.",
+                          "url": "https://github.com/idaholab/moose/discussions/27827#discussioncomment-9731011",
+                          "updatedAt": "2024-06-10T19:21:15Z",
+                          "publishedAt": "2024-06-10T19:21:15Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rnpratoori"
+                          },
+                          "bodyText": "Thank you @GiudGiud, this worked.\nI am trying to calculate the element average value of a variable in my Kernel. What is the best way to do it? I do not need to output it.\n\nShould I use something like QBase::n_points() and do a sum/n_points, or\nuse ElementAverageValue or ElementIntegralPostprocessor to calculate it",
+                          "url": "https://github.com/idaholab/moose/discussions/27827#discussioncomment-9741817",
+                          "updatedAt": "2024-06-11T17:08:17Z",
+                          "publishedAt": "2024-06-11T17:08:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Do you need an average over a single element?\nOr an average over the entire mesh?\nAre you using automatic differentiation? (AD)\n\nShould I use something like QBase::n_points() and do a sum/n_points, or\n\nThis would be for computing the average on each element. There are other options too\n\nuse ElementAverageValue or ElementIntegralPostprocessor to calculate it\n\nThis would be for computing the average over a larger region of the mesh like a subdomain",
+                          "url": "https://github.com/idaholab/moose/discussions/27827#discussioncomment-9741900",
+                          "updatedAt": "2024-06-11T17:18:11Z",
+                          "publishedAt": "2024-06-11T17:18:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rnpratoori"
+                          },
+                          "bodyText": "I am looking for an average for each element. I am not using AD - I defined the Jacobian that needs to be calculated. Can you tell me what options I have to calculate this? I need to use it in calculating the residual -\nresidual += _mob[_qp] * _alpha[_qp] * _kappa[_qp] * (_c[_qp] - _bar_c) * _test[_i][_qp];\n_bar_c is the average value of _c[_qp] over an element.",
+                          "url": "https://github.com/idaholab/moose/discussions/27827#discussioncomment-9742008",
+                          "updatedAt": "2024-06-11T17:32:03Z",
+                          "publishedAt": "2024-06-11T17:32:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "If you are not using AD, then you could create an auxiliary variable bar_c of type CONSTANT MONOMIAL.\nThen use the ProjectionAux to project c onto bar_c on every linear iterations. This computes bar_c as the average of c on each element",
+                          "url": "https://github.com/idaholab/moose/discussions/27827#discussioncomment-9742041",
+                          "updatedAt": "2024-06-11T17:38:43Z",
+                          "publishedAt": "2024-06-11T17:36:31Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rnpratoori"
+                          },
+                          "bodyText": "That is an interesting way! Can you tell me how to initialize the _bar_c variable now?\nI know I have to use - _bar_c(coupledValue()),, but unsure of what should be the variable name to be used in coupledValue",
+                          "url": "https://github.com/idaholab/moose/discussions/27827#discussioncomment-9743533",
+                          "updatedAt": "2024-06-11T20:34:48Z",
+                          "publishedAt": "2024-06-11T20:34:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "in the object, add:\nparams.addCoupledVar(\"bar_c\", ...); \n\nto the validParams\nthen you can use\n...,\n_bar_c(coupledValue(\"bar_c\")),\n\nin the initializer's list of the constructor of your object",
+                          "url": "https://github.com/idaholab/moose/discussions/27827#discussioncomment-9743566",
+                          "updatedAt": "2024-06-11T20:38:24Z",
+                          "publishedAt": "2024-06-11T20:38:23Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Error during Linking of MOOSE during OFFLINE INSTALL of MOOSE",
+          "author": {
+            "login": "vikramroybarc"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A Getting Started is the most appropriate category for my question (trouble installing, beginner user, ...)\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (avoid screenshots if possible, triple back quotes before/after pasted text, etc)\n\nIssue or question about MOOSE\nI am trying to offline install moose but getting errors during the linking stage:\nLinking Library /home/vikramr/projects/moose/test/lib/libmoose_test-opt.la...\nLinking Executable /home/vikramr/projects/moose/test/moose_test-opt...\n/usr/bin/ld: /home/vikramr/projects/moose/framework/libmoose-opt.so: undefined reference to `typeinfo for NullExecutor'\n/usr/bin/ld: /home/vikramr/projects/moose/framework/libmoose-opt.so: undefined reference to `ExecutorInterface::ExecutorInterface(MooseObject const*)'\n/usr/bin/ld: /home/vikramr/projects/moose/test/lib/libmoose_test-opt.so: undefined reference to `ExecutorInterface::getExecutor(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) const'\ncollect2: error: ld returned 1 exit status\nmake: *** [/home/vikramr/projects/moose/framework/app.mk:457: /home/vikramr/projects/moose/test/moose_test-opt] Error 1\nI have also verified that all  necessary libraries are installed using following command & install all mentioned\nldd /home/vikramr/projects/moose/framework/libmoose-opt.so\nbut still I am getting the above error\nKindly suggest what can be the cause of the above error and methods to resolve it\nDiagnostics for MOOSE installation issues\n##################################################################################################\nInfluential Environment Variables\n\nCC=mpicc\nCONDA_CHANNEL=https://conda.software.inl.gov/public\nCURL_CA_BUNDLE=\nCXX=mpicxx\nF77=mpif77\nF90=mpif90\nFC=mpif90\nMOOSE_JOBS=6\nPATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/lib/wsl/lib:/mnt/c/Users/91957/AppData/Local/LAMMPS 64-bit 2Aug2023-MSMPI/bin:/mnt/c/Program Files/Microsoft MPI/Bin/:/mnt/c/Program Files/CodeBlocks/MinGW/bin:/mnt/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.1/libnvvp:/mnt/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.1/bin:/mnt/c/Program Files (x86)/Intel/oneAPI/mpi/latest/bin/:/mnt/c/Program Files (x86)/Intel/oneAPI/mpi/latest/bin/release/:/mnt/c/Program Files (x86)/Intel/oneAPI/mpi/latest/libfabric/bin/:/mnt/c/Program Files (x86)/Intel/oneAPI/mpi/latest/libfabric/bin/utils/:/mnt/c/Program Files (x86)/Intel/oneAPI/tbb/latest/redist/intel64/vc_mt/:/mnt/c/Program Files (x86)/Intel/oneAPI/tbb/latest/redist/ia32/vc_mt/:/mnt/c/SIMULIA/Commands:/mnt/c/Program Files/AdoptOpenJDK/jdk-11.0.10.9-openj9/bin:/mnt/c/Program Files/Common Files/Oracle/Java/javapath:/mnt/c/Program Files (x86)/Common Files/Intel/Shared Libraries/redist/ia32_win/mpirt:/mnt/c/Program Files (x86)/Common Files/Intel/Shared Libraries/redist/ia32_win/compiler:/mnt/c/Program Files (x86)/Common Files/Intel/Shared Libraries/redist/intel64_win/mpirt:/mnt/c/Program Files (x86)/Common Files/Intel/Shared Libraries/redist/intel64_win/compiler:/mnt/c/Win32App/INGR/SPLM/bin:/mnt/c/windows/system32:/mnt/c/windows:/mnt/c/windows/System32/Wbem:/mnt/c/windows/System32/WindowsPowerShell/v1.0/:/mnt/c/windows/System32/OpenSSH/:/mnt/c/Program Files (x86)/NVIDIA Corporation/PhysX/Common:/mnt/c/Program Files/MATLAB/MATLAB Runtime/v98/runtime/win64:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Program Files/Microsoft SQL Server/150/Tools/Binn/:/mnt/c/Program Files/dotnet/:/mnt/c/Program Files/Microsoft SQL Server/130/Tools/Binn/:/mnt/c/Program Files (x86)/Intel/oneAPI/compiler/2023.1.0/env:/mnt/c/Program Files/NVIDIA Corporation/NVIDIA NvDLISR:/mnt/c/Program Files (x86)/Incredibuild:/mnt/c/Program Files/Microsoft Visual Studio/2022/Community/VC/Auxiliary/Build:/mnt/c/Program Files/Git/cmd:/mnt/c/Program Files/IDM Computer Solutions/UltraEdit:/mnt/c/Program Files (x86)/Microsoft SQL Server/90/Tools/binn/:/mnt/c/Program Files (x86)/Atomsk:/mnt/c/Program Files/NVIDIA Corporation/Nsight Compute 2023.2.1/:/mnt/c/Program Files/gnuplot/bin:/mnt/c/Program Files/HP/HP One Agent:/mnt/c/Users/91957/AppData/Local/Programs/Python/Python310/Scripts/:/mnt/c/Users/91957/AppData/Local/Programs/Python/Python310/:/mnt/c/Users/91957/AppData/Local/Microsoft/WindowsApps:/mnt/c/Program Files/JetBrains/PyCharm Community Edition 2022.1.2/bin:/mnt/c/Users/91957/AppData/Local/Programs/Microsoft VS Code/bin:/mnt/c/Users/91957/AppData/Local/Programs/MiKTeX/miktex/bin/x64/:/snap/bin\nREQUESTS_CA_BUNDLE=\nSSL_CERT_FILE=\n\n##################################################################################################\nCompiler(s) (CC CXX FC F77 F90):\n\nCC=/usr/bin/mpicc\nCC -show:\ngcc -I/usr/lib/x86_64-linux-gnu/openmpi/include -I/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi -L/usr/lib/x86_64-linux-gnu/openmpi/lib -lmpi\nCC version:     gcc (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0\n\nCXX=/usr/bin/mpicxx\nCXX -show:\ng++ -I/usr/lib/x86_64-linux-gnu/openmpi/include -I/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi -L/usr/lib/x86_64-linux-gnu/openmpi/lib -lmpi_cxx -lmpi\nCXX version:    g++ (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0\n\nFC=/usr/bin/mpif90\nFC -show:\ngfortran -I/usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi -I/usr/lib/x86_64-linux-gnu/openmpi/lib -L/usr/lib/x86_64-linux-gnu/openmpi/lib/fortran/gfortran -lmpi_usempif08 -lmpi_usempi_ignore_tkr -lmpi_mpifh -lmpi -lopen-rte -lopen-pal -lhwloc -levent_core -levent_pthreads -lm -lz\nFC version:     GNU Fortran (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0\n\nF77=/usr/bin/mpif77\nF77 -show:\ngfortran -I/usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi -I/usr/lib/x86_64-linux-gnu/openmpi/lib -L/usr/lib/x86_64-linux-gnu/openmpi/lib/fortran/gfortran -lmpi_usempif08 -lmpi_usempi_ignore_tkr -lmpi_mpifh -lmpi -lopen-rte -lopen-pal -lhwloc -levent_core -levent_pthreads -lm -lz\nF77 version:    GNU Fortran (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0\n\nF90=/usr/bin/mpif90\nF90 -show:\ngfortran -I/usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi -I/usr/lib/x86_64-linux-gnu/openmpi/lib -L/usr/lib/x86_64-linux-gnu/openmpi/lib/fortran/gfortran -lmpi_usempif08 -lmpi_usempi_ignore_tkr -lmpi_mpifh -lmpi -lopen-rte -lopen-pal -lhwloc -levent_core -levent_pthreads -lm -lz\nF90 version:    GNU Fortran (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0\n\nOK\n\n##################################################################################################\nPython Sanity Checks\n\nVerify `/usr/bin/env python3 --version` (reporting as: Python 3.10.12),\nmatches versions for: `which python3 && which python`\n\n\nWARNING: `python` does not exist\nThis does not mean there will be a failure, but some shebangs in some python\nfiles may still be relying on calling: `/usr/bin/env python` (Python 2.x era)\nOK\n\n##################################################################################################\nPython Modules (TestHarness, run-ability)",
+          "url": "https://github.com/idaholab/moose/discussions/27896",
+          "updatedAt": "2024-06-13T19:04:47Z",
+          "publishedAt": "2024-06-13T17:40:01Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "milljm"
+                  },
+                  "bodyText": "What does ldd /home/vikramr/projects/moose/framework/libmoose-opt.so report back?\nAlso, might be helpful to ask what some of the other libraries are linking to:\nldd /home/vikramr/projects/moose/libmesh/installed/lib/libmesh_opt.so",
+                  "url": "https://github.com/idaholab/moose/discussions/27896#discussioncomment-9766581",
+                  "updatedAt": "2024-06-13T18:27:03Z",
+                  "publishedAt": "2024-06-13T18:27:02Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "vikramroybarc"
+                          },
+                          "bodyText": "Hi\nThank  for your reply\nIt replies the following\nvikramr@DESKTOP-PTRDFFL:~$ ldd /home/vikramr/projects/moose/libmesh/installed/lib/libmesh_opt.so\n        linux-vdso.so.1 (0x00007ffc5cb65000)\n        libnetcdf.so.13 => /home/vikramr/projects/moose/scripts/../libmesh/installed/lib/libnetcdf.so.13 (0x00007f0fbdfe7000)\n        libtimpi_opt.so.11 => /home/vikramr/projects/moose/scripts/../libmesh/installed/lib/libtimpi_opt.so.11 (0x00007f0fbdfc6000)\n        libslepc.so.3.20 => /home/vikramr/projects/moose/petsc/arch-moose/lib/libslepc.so.3.20 (0x00007f0fbdc3b000)\n        libpetsc.so.3.20 => /home/vikramr/projects/moose/petsc/arch-moose/lib/libpetsc.so.3.20 (0x00007f0fbc29a000)\n        libHYPRE-2.29.0.so => /home/vikramr/projects/moose/petsc/arch-moose/lib/libHYPRE-2.29.0.so (0x00007f0fbbe70000)\n        libstrumpack.so.7.1 => /home/vikramr/projects/moose/petsc/arch-moose/lib/libstrumpack.so.7.1 (0x00007f0fbaf39000)\n        libparmetis.so => /home/vikramr/projects/moose/petsc/arch-moose/lib/libparmetis.so (0x00007f0fbaef4000)\n        libmetis.so => /home/vikramr/projects/moose/petsc/arch-moose/lib/libmetis.so (0x00007f0fbae8c000)\n        libhdf5.so.200 => /home/vikramr/projects/moose/petsc/arch-moose/lib/libhdf5.so.200 (0x00007f0fba9e7000)\n        libz.so.1 => /lib/x86_64-linux-gnu/libz.so.1 (0x00007f0fba9bd000)\n        libgfortran.so.5 => /lib/x86_64-linux-gnu/libgfortran.so.5 (0x00007f0fba6e0000)\n        libtirpc.so.3 => /lib/x86_64-linux-gnu/libtirpc.so.3 (0x00007f0fba6b2000)\n        libmpi_cxx.so.40 => /lib/x86_64-linux-gnu/libmpi_cxx.so.40 (0x00007f0fba698000)\n        libmpi.so.40 => /lib/x86_64-linux-gnu/libmpi.so.40 (0x00007f0fba561000)\n        libstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x00007f0fba335000)\n        libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007f0fba24e000)\n        libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f0fba023000)\n        /lib64/ld-linux-x86-64.so.2 (0x00007f0fbf566000)\n        libgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007f0fba003000)\n        libgomp.so.1 => /lib/x86_64-linux-gnu/libgomp.so.1 (0x00007f0fb9fb9000)\n        libhdf5_hl.so.200 => /home/vikramr/projects/moose/petsc/arch-moose/lib/libhdf5_hl.so.200 (0x00007f0fb9f92000)\n        libscalapack.so.2.2 => /home/vikramr/projects/moose/scripts/../petsc/arch-moose/lib/libscalapack.so.2.2 (0x00007f0fb9973000)\n        libsuperlu_dist.so.8 => /home/vikramr/projects/moose/petsc/arch-moose/lib/libsuperlu_dist.so.8 (0x00007f0fb9809000)\n        libX11.so.6 => /lib/x86_64-linux-gnu/libX11.so.6 (0x00007f0fb96c9000)\n        libmpi_mpifh.so.40 => /lib/x86_64-linux-gnu/libmpi_mpifh.so.40 (0x00007f0fb9663000)\n        libquadmath.so.0 => /lib/x86_64-linux-gnu/libquadmath.so.0 (0x00007f0fb961b000)\n        libgssapi_krb5.so.2 => /lib/x86_64-linux-gnu/libgssapi_krb5.so.2 (0x00007f0fb95c7000)\n        libopen-pal.so.40 => /lib/x86_64-linux-gnu/libopen-pal.so.40 (0x00007f0fb9512000)\n        libopen-rte.so.40 => /lib/x86_64-linux-gnu/libopen-rte.so.40 (0x00007f0fb9455000)\n        libhwloc.so.15 => /lib/x86_64-linux-gnu/libhwloc.so.15 (0x00007f0fb93f9000)\n        libxcb.so.1 => /lib/x86_64-linux-gnu/libxcb.so.1 (0x00007f0fb93cf000)\n        libkrb5.so.3 => /lib/x86_64-linux-gnu/libkrb5.so.3 (0x00007f0fb9304000)\n        libk5crypto.so.3 => /lib/x86_64-linux-gnu/libk5crypto.so.3 (0x00007f0fb92d3000)\n        libcom_err.so.2 => /lib/x86_64-linux-gnu/libcom_err.so.2 (0x00007f0fb92cd000)\n        libkrb5support.so.0 => /lib/x86_64-linux-gnu/libkrb5support.so.0 (0x00007f0fb92bf000)\n        libevent_core-2.1.so.7 => /lib/x86_64-linux-gnu/libevent_core-2.1.so.7 (0x00007f0fb928a000)\n        libevent_pthreads-2.1.so.7 => /lib/x86_64-linux-gnu/libevent_pthreads-2.1.so.7 (0x00007f0fb9285000)\n        libudev.so.1 => /lib/x86_64-linux-gnu/libudev.so.1 (0x00007f0fb925b000)\n        libXau.so.6 => /lib/x86_64-linux-gnu/libXau.so.6 (0x00007f0fb9253000)\n        libXdmcp.so.6 => /lib/x86_64-linux-gnu/libXdmcp.so.6 (0x00007f0fb924b000)\n        libkeyutils.so.1 => /lib/x86_64-linux-gnu/libkeyutils.so.1 (0x00007f0fb9244000)\n        libresolv.so.2 => /lib/x86_64-linux-gnu/libresolv.so.2 (0x00007f0fb9230000)\n        libbsd.so.0 => /lib/x86_64-linux-gnu/libbsd.so.0 (0x00007f0fb9218000)\n        libmd.so.0 => /lib/x86_64-linux-gnu/libmd.so.0 (0x00007f0fb9209000)",
+                          "url": "https://github.com/idaholab/moose/discussions/27896#discussioncomment-9766650",
+                          "updatedAt": "2024-06-13T18:40:34Z",
+                          "publishedAt": "2024-06-13T18:35:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "What about libmoose-opt.so? I am attempting to see how these two libraries line up (that they match).\nIf they do, the only next thing I can think of is some strange introduction of an older faulty build or some such... Did you have a clean build all the way up to the error you provided? Or did you try some things and attempt to build again and then report?",
+                          "url": "https://github.com/idaholab/moose/discussions/27896#discussioncomment-9766878",
+                          "updatedAt": "2024-06-13T19:04:03Z",
+                          "publishedAt": "2024-06-13T19:04:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I think old build is very likely here\n/usr/bin/ld: /home/vikramr/projects/moose/framework/libmoose-opt.so: undefined reference to `ExecutorInterface::ExecutorInterface(MooseObject const*)'\n\nseems like you have some old code that was compiled that did not define this routine",
+                          "url": "https://github.com/idaholab/moose/discussions/27896#discussioncomment-9766885",
+                          "updatedAt": "2024-06-13T19:04:47Z",
+                          "publishedAt": "2024-06-13T19:04:47Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Utilizing Block Restriction To Generate Two GlobalStrain Objects",
+          "author": {
+            "login": "lkuna24"
+          },
+          "bodyText": "Hi All,\nI am trying to carry out a simulation of a thin film with an applied epitaxy in the form of an eigenstrain.  In the simulation the thin film sits on top of a substrate which imposes a uniform mismatch strain throughout the film (so long as the film is sufficiently thin).  The domain (both film and substrate) is periodic in the x and y direction.  Applying GlobalStrain to both the film and substrate with just the epitaxy (in the form of an eigenstrain) acting on the film yields some unexpected results, but block restricting and applying GlobalStrain to only the film with the epitaxy applied gives the expected result.  I wanted to attempt to separate out GlobalStrain utilizing block restriction as shown in the input file below, but I get the error:\n*** ERROR ***\nThe following error occurred in the Problem 'MOOSE Problem' of type FEProblem.\n\nMaterial property 'global_strain_film', requested by 'Ferroelectric_SM_strain' is not defined on block 0\nMaterial property 'global_strain_sub', requested by 'Substrate_SM_strain' is not defined on block 1\n\nAs I need the whole domain to be periodic, I believe I need a GlobalStrain on both blocks.  According to the documentation here GlobalStrain, it seems as though I should be able to separate GlobalStrain Objects utilizing block restriction, or is this actually not possible?\nUltimately there will be another eigenstrain contributing to the thin film which will be coupled to the evolution of polarization throughout the volume of the film.  But for now, I am just trying to see if I can establish the mechanical properties of the film and substrate.\nThanks for you time.\n[Mesh]\n  [gen]\n    type = GeneratedMeshGenerator\n    dim = 3\n    nx = 10\n    ny = 10\n    nz = 20\n    xmin = -10.0\n    xmax = 10.0\n    ymin = -10.0\n    ymax = 10.0\n    zmin = -10.0\n    zmax = 10.0\n    elem_type = HEX8\n  []\n  [./cnode]\n    input = gen\n    type = ExtraNodesetGenerator\n    coord = '-10.0 -10.0 -10.0'\n    new_boundary = 100\n  [../]\n\n  [subdomains]\n    type = SubdomainBoundingBoxGenerator\n    input = cnode\n    bottom_left = '-10.0 -10.0 -10.0'\n    block_id = 1\n    top_right = '10.0 10.0 0.0'\n    location = INSIDE\n  []\n  [film_interface]\n    type = SideSetsBetweenSubdomainsGenerator\n    input = subdomains\n    primary_block = 0\n    paired_block = 1\n    new_boundary = 52\n  []\n[]\n\n[GlobalParams]\n  displacements = 'u_x u_y u_z'\n[]\n\n[Variables]\n  [./global_strain_film]\n    order = SIXTH\n    family = SCALAR\n    block = '0'\n  [../]\n\n  [./global_strain_substrate]\n    order = SIXTH\n    family = SCALAR\n    block = '1'\n  [../]\n\n  [./u_x]\n    order = FIRST\n    family = LAGRANGE\n    block = '0 1'\n  [../]\n  [./u_y]\n    order = FIRST\n    family = LAGRANGE\n    block = '1 0'\n  [../]\n  [./u_z]\n    order = FIRST\n    family = LAGRANGE\n    block = '1 0'\n  [../]\n[]\n\n\n[Materials]\n\n  [./eigen_strain]\n    type = ComputeEigenstrain\n    #    eigen_base = 'x y z yz xz xy'\n    eigen_base = '0.005 0.005 0.003725 0 0 0'\n    eigenstrain_name = epitaxy\n    block = '1 0'\n  [../]\n\n  [./elasticity_tensor_1]\n    type = ComputeElasticityTensor\n    fill_method = symmetric9\n    C_ijkl = '179.073 66.71 66.71 179.073 66.71 179.073 82.6446 82.6446 82.6446'\n  [../]\n\n  [./stress_1]\n    type = ComputeLinearElasticStress\n  [../]\n[]\n\n[Physics]\n  [SolidMechanics]\n    [QuasiStatic]\n      [./Ferroelectric_SM]\n        strain = SMALL\n        add_variables = true\n        incremental = false\n        global_strain = global_strain_film\n        eigenstrain_names = 'epitaxy'\n        generate_output = 'strain_xx strain_xy strain_xz strain_yy strain_yz strain_zz vonmises_stress'\n\t       block = '0'\n      [../]\n\n      [./Substrate_SM]\n        strain = SMALL\n        add_variables = true\n        global_strain = global_strain_substrate\n  #      eigenstrain_names = 'epitaxy'\n        incremental = false\n        generate_output = 'strain_xx strain_xy strain_xz strain_yy strain_yz strain_zz vonmises_stress'\n        block = '1'\n      [../]\n    []\n\n    [./GlobalStrain]\n      [./global_strain_film]\n        scalar_global_strain = global_strain_film\n        displacements = 'u_x u_y u_z'\n        auxiliary_displacements = 'disp_x disp_y disp_z'\n        global_displacements = 'ug_x ug_y ug_z'\n        block = '0'\n      [../]\n      [./global_strain_sub]\n        scalar_global_strain = global_strain_substrate\n        displacements = 'u_x u_y u_z'\n        auxiliary_displacements = 'disps_x disps_y disps_z'\n        global_displacements = 'ugs_x ugs_y ugs_z'\n        block = '1'\n      [../]\n    [../]\n  []\n[]\n\n[BCs]\n  [./Periodic]\n    [./xy]\n      auto_direction = 'x y'\n      variable = 'u_x u_y u_z'\n    [../]\n  [../]\n  [./centerfix_x]\n    type = DirichletBC\n    boundary = 100\n    variable = u_x\n    value = 0\n  [../]\n  [./centerfix_y]\n    type = DirichletBC\n    boundary = 100\n    variable = u_y\n    value = 0\n  [../]\n  [./centerfix_z]\n    type = DirichletBC\n    boundary = 100\n    variable = u_z\n    value = 0\n  [../]\n[]\n\n[Preconditioning]\n  [./smp]\n    type = SMP\n    full = true\n    petsc_options = '-snes_ksp_ew'\n    petsc_options_iname = '-ksp_gmres_restart -snes_atol -snes_rtol -ksp_rtol -pc_type'\n    petsc_options_value = '    160             1e-8        1e-6      1e-5        bjacobi'\n  [../]\n[]\n\n[Executioner]\n  type = Transient\n  solve_type = 'PJFNK'\n  scheme = 'implicit-euler'\n  dtmin = 1e-13\n  dtmax = 2.0\n  end_time = 10\n  l_max_its = 200\n  automatic_scaling = true\n  [./TimeStepper]\n    type = IterationAdaptiveDT\n    optimal_iterations = 8\n    growth_factor = 1.1\n    cutback_factor = 0.8\n    linear_iteration_ratio = 1000\n    dt = 0.5\n  [../]\n  verbose = true\n  nl_max_its = 16\n[]\n\n[Outputs]\n  print_linear_residuals = false\n  perf_graph = false\n  [./out]\n    type = Exodus\n    file_base = out_GS_Test\n    interval = 2\n  [../]\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/27885",
+          "updatedAt": "2024-06-13T16:02:31Z",
+          "publishedAt": "2024-06-12T19:49:36Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@SudiptaBiswas\nBlock restriction seems to be implemented so this looks like the expected syntax\nUse Debug/show_material_props to see what names are being used for the global strain material property when they are being declared. Then adapt the input to use the correct names",
+                  "url": "https://github.com/idaholab/moose/discussions/27885#discussioncomment-9757915",
+                  "updatedAt": "2024-06-13T01:46:05Z",
+                  "publishedAt": "2024-06-13T01:46:04Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "mangerij"
+                  },
+                  "bodyText": "@lkuna24 your zz epitaxy should be minus :)\nI just want to (re)iterate that this is part of a long standing issue within Ferret of computing ferroelectric thin film phase diagrams:\nSee\nAppl. Phys. Lett. 78, 3878\u20133880 (2001)\nhttps://doi.org/10.1063/1.1377855\nWe get many requests (approx 1-2/month) to be able to solve this problem and I think its time we finally pin this down.\nWe are slowly refactoring things to make them use more MOOSE systems but we still can't find what is going on. As soon as we throw in a second eigenstrain (proportional to the square of the phase field variable), we find that it dominates the calculation whereas instead we expect that at the end of the solve, the global strain of the film block should be very much equal to the eigenstrain \"epitaxy\" that we apply above.\nAs such, the epitaxial condition (eigenstrain) coupling to the phase field problem is only a weak influence.",
+                  "url": "https://github.com/idaholab/moose/discussions/27885#discussioncomment-9759267",
+                  "updatedAt": "2024-06-13T06:49:05Z",
+                  "publishedAt": "2024-06-13T05:56:42Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "hi @mangerij\nmaybe @bwspenc will know who to bring in on this",
+                          "url": "https://github.com/idaholab/moose/discussions/27885#discussioncomment-9765333",
+                          "updatedAt": "2024-06-13T16:02:31Z",
+                          "publishedAt": "2024-06-13T16:02:30Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How can I get the material property in ADNodalBC?",
+          "author": {
+            "login": "Always-kimi"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nHi there,\nI have some puzzle about ADNodalBC and ADIntergratedBC.\nIn my application, I need add some material properties or functions to calculate residual, in the ADIntergratedBC, I can easily call the getADMaterialProperty<Real>(\"mu\") method.\nHowever when I used the getADMaterialProperty<Real>(\"mu\") method in the ADNodalBC, the compiler show the error:\nCreating Unity /home/kimi/projects/validation/build/unity_src/bcs_Unity.C\nCompiling C++ (in opt mode) /home/kimi/projects/validation/build/unity_src/bcs_Unity.C...\nIn file included from /home/kimi/projects/validation/build/unity_src/bcs_Unity.C:3:\n/home/kimi/projects/validation/src/bcs/MassBC.C: In constructor 'MassBC::MassBC(const InputParameters&)':\n/home/kimi/projects/validation/src/bcs/MassBC.C:39:9: error: 'getADMaterialProperty' was not declared in this scope; did you mean 'ADMaterialProperty'?\n   39 |     _mu(getADMaterialProperty<Real>(\"mu\"))\n      |         ^~~~~~~~~~~~~~~~~~~~~\n      |         ADMaterialProperty\n/home/kimi/projects/validation/src/bcs/MassBC.C:39:35: error: expected primary-expression before '>' token\n   39 |     _mu(getADMaterialProperty<Real>(\"mu\"))\n      |                                   ^\nmake: *** [/home/kimi/projects/moose/framework/build.mk:151: /home/kimi/projects/validation/build/unity_src/bcs_Unity.x86_64-conda-linux-gnu.opt.lo] Error 1\n\nmy .h file and .C file were listed below:\n\n#pragma once\n\n#include \"ADNodalBC.h\"\n\n/**\n * Increments the boundary displacement by the product of the surface velocity and the change in\n * time through an implicit Euler disretization\n */\nclass MassBC : public ADNodalBC\n{\npublic:\n  static InputParameters validParams();\n\n  MassBC(const InputParameters & parameters);\n\nprotected:\n  virtual ADReal computeQpResidual() override;\n\n  /// The velocity\n  const Moose::Functor<ADRealVectorValue> & _velocity;\n\n  /// The previous timestep value of the displacement\n  const Real & _u_old;\n\n  /// What component of velocity/displacement this object is acting on\n  const unsigned short _component;\n\n  /// The subdomain ID along which the boundary nodeset, that this object is acting on, is\n  /// associated with\n  const SubdomainID _sub_id;\n\n  const MooseArray<ADPoint> & _ad_normals;\n\n  ADMaterialProperty<Real> & _mu;\n};\n\n\n#include \"MassBC.h\"\n#include \"SystemBase.h\"\n#include \"ImplicitEuler.h\"\n\nregisterMooseObject(\"ValidationApp\", MassBC);\n\nInputParameters\nMassBC::validParams()\n{\n  InputParameters params = ADNodalBC::validParams();\n  params.addClassDescription(\"Boundary condition for displacing a boundary\");\n  params.addRequiredParam<MooseFunctorName>(\"velocity\", \"The velocity at which to displace\");\n  params.addRequiredParam<unsigned short>(\n      \"component\", \"What component of velocity/displacement this object is acting on.\");\n  params.addRequiredParam<SubdomainName>(\n      \"associated_subdomain\",\n      \"The subdomain that the boundary nodeset is associated with. This will be passed to the \"\n      \"coupled functor for unambigious evaluation (e.g. at the edge of the node-patch where we \"\n      \"might run into the intersection of subdomains\");\n  return params;\n}\n\nMassBC::MassBC(const InputParameters & parameters)\n  : ADNodalBC(parameters),\n    _velocity(getFunctor<ADRealVectorValue>(\"velocity\")),\n    _u_old(_var.nodalValueOld()),\n    _component(getParam<unsigned short>(\"component\")),\n    _sub_id(_mesh.getSubdomainID(getParam<SubdomainName>(\"associated_subdomain\"))),\n    _ad_normals(_assembly.adNormals()),\n    _mu(getADMaterialProperty<Real>(\"mu\"))\n{\n  if (!dynamic_cast<ImplicitEuler *>(_sys.getTimeIntegrator()))\n    mooseError(\"This boundary condition hard-codes a displacement update with the form of an \"\n               \"implicit Euler discretization. Consequently please use the default time \"\n               \"integrator, ImplicitEuler.\");\n}\n\nADReal\nMassBC::computeQpResidual()\n{\n  const Moose::NodeArg nd{_current_node, _sub_id};\n  return _u - (_u_old + this->_dt * (_velocity(nd, determineState())(_component) - _mu[_qp] * _ad_normals[_qp](_component)));\n}\n\n\nHow can I get the material property correctly in ADNodalBC?",
+          "url": "https://github.com/idaholab/moose/discussions/27879",
+          "updatedAt": "2024-06-13T16:00:15Z",
+          "publishedAt": "2024-06-12T12:34:19Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThere are no \"nodal\" material property with the traditional material property system, because we cannot know which block's definition of a material property to use at a node at the boundary between two blocks\nYou could use the functor materials, a new type of material properties that get evaluated on-the-fly, instead. This will require converting your material properties to the new system.",
+                  "url": "https://github.com/idaholab/moose/discussions/27879#discussioncomment-9751259",
+                  "updatedAt": "2024-06-12T12:37:02Z",
+                  "publishedAt": "2024-06-12T12:37:01Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Always-kimi"
+                          },
+                          "bodyText": "Thank you! I got it. Actually, I try to imported the function system to ADNodalBC for calculate but it also show some errors. Is there any example or page I can learn from in developing ADNodalBC?",
+                          "url": "https://github.com/idaholab/moose/discussions/27879#discussioncomment-9751534",
+                          "updatedAt": "2024-06-12T13:01:17Z",
+                          "publishedAt": "2024-06-12T13:01:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "we dont have a dedicated tutorial for nodal BCs\nhowever the doxygen should be very helpful, listing all the examples of that type of BC and listing all the APIs you can use\nhttps://mooseframework.inl.gov/docs/doxygen/moose/classGenericNodalBC_3_01true_01_4.html\nthe examples can be found through \"grep\" in the src folders actually, seems the doxygen isnt listing them",
+                          "url": "https://github.com/idaholab/moose/discussions/27879#discussioncomment-9751639",
+                          "updatedAt": "2024-06-12T13:09:22Z",
+                          "publishedAt": "2024-06-12T13:09:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Always-kimi"
+                          },
+                          "bodyText": "Thank you very much!",
+                          "url": "https://github.com/idaholab/moose/discussions/27879#discussioncomment-9751941",
+                          "updatedAt": "2024-06-12T13:32:40Z",
+                          "publishedAt": "2024-06-12T13:32:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Always-kimi"
+                          },
+                          "bodyText": "Hi Guillaume,\n@GiudGiud Sorry to bother you again! At your suggestion, I built my own functor materials. Despite my best efforts, however, I ended up getting stuck on getting the nodal coordinates. My source file of the functor material was listed as follow:\n\n#include \"MassAdditionFunctorMaterial.h\"\n#include \"Function.h\"\n\nregisterMooseObject(\"ValidationApp\", MassAdditionFunctorMaterial);\n\nInputParameters\nMassAdditionFunctorMaterial::validParams()\n{\n  InputParameters params = FunctorMaterial::validParams();\n  params.addClassDescription(\"Calculates the boundary condition residual contribution of the powder \"\n                             \"flux of a Gaussian laser powder impinging on a surface.\");\n  params.addRequiredParam<Real>(\"eta\",\n                                \"The effective radius describing the radial distribution of the \"\n                                \"powder energy. This should be non-dimensional.\");\n  params.addRequiredParam<Real>(\"M0\", \"The average heat flux of the laser\");\n  params.addRequiredParam<Real>(\"R\", \"The powder radius\");\n  params.addParam<FunctionName>(\"x_powder_coord\", 0, \"The x coordinate of the center of the powder\");\n  params.addParam<FunctionName>(\"y_powder_coord\", 0, \"The y coordinate of the center of the powder\");\n  params.addParam<FunctionName>(\"z_powder_coord\", 0, \"The z coordinate of the center of the powder\");\n  return params;\n}\n\nMassAdditionFunctorMaterial::MassAdditionFunctorMaterial(const InputParameters & params)\n  : FunctorMaterial(params),\n    _eta(getParam<Real>(\"eta\")),\n    _M0(getParam<Real>(\"M0\")),\n    _R(getParam<Real>(\"R\")),\n    _x_powder_coord(getFunction(\"x_powder_coord\")),\n    _y_powder_coord(getFunction(\"y_powder_coord\")),\n    _z_powder_coord(getFunction(\"z_powder_coord\"))\n{\n  addFunctorProperty<ADReal>(\n      \"mass_flow\",\n      [this](const auto & r, const auto & t)\n      {\n        RealVectorValue powder_coords{_x_powder_coord(r, t),\n                                      _y_powder_coord(r, t),\n                                      _z_powder_coord(r, t)};\n        auto R = (_q_point[_qp] - powder_coords).norm();  \n        return 2. * _eta * _M0 * std::exp(-_eta * R * R / (_R * _R));\n      });\n}\n\nThe file can be compile and there is nothing warning. At first the simulation is enable executing, but then the error message come out with Segmentation fault (core dumped):\n(moose) kimi@DESKTOP-7APSM1S:~/projects/validation/problems$ ../validation-opt -i 3d_mass_flux.i\nThe following total 1 aux variables:\n  mu\nare added for automatic output by MaterialOutputAction.\nFramework Information:\nMOOSE Version:           git commit f3d6fc1a05 on 2024-05-25\nLibMesh Version:\nPETSc Version:           3.20.3\nSLEPc Version:           3.20.1\nCurrent Time:            Thu Jun 13 14:49:32 2024\nExecutable Timestamp:    Thu Jun 13 14:49:03 2024\n\nParallelism:\n  Num Processors:          1\n  Num Threads:             1\n\nMesh:\n  Parallel Type:           replicated\n  Mesh Dimension:          3\n  Spatial Dimension:       3\n  Nodes:                   729\n  Elems:                   512\n  Num Subdomains:          1\n\nNonlinear System:\n  Num DOFs:                5832\n  Num Local DOFs:          5832\n  Variables:               \"vel\" { \"T\" \"p\" \"disp_x\" \"disp_y\" \"disp_z\" }\n  Finite Element Types:    \"LAGRANGE_VEC\" \"LAGRANGE\"\n  Approximation Orders:    \"FIRST\" \"FIRST\"\n\nAuxiliary System:\n  Num DOFs:                3072\n  Num Local DOFs:          3072\n  Variables:               { \"error_T\" \"error_dispz\" \"errorfrac_T\" \"errorfrac_dispz\" \"combo\" \"mu\" }\n  Finite Element Types:    \"MONOMIAL\"\n  Approximation Orders:    \"CONSTANT\"\n\nExecution Information:\n  Executioner:             Transient\n  TimeStepper:             IterationAdaptiveDT\n  TimeIntegrator:          ImplicitEuler\n  Solver Mode:             NEWTON\n  PETSc Preconditioner:    lu\n  MOOSE Preconditioner:    SMP\n\n\nTime Step 0, time = 0\n\nPostprocessor Values:\n+----------------+----------------+----------------+----------------+\n| time           | nl             | num_dofs       | tot_nl         |\n+----------------+----------------+----------------+----------------+\n|   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |\n+----------------+----------------+----------------+----------------+\n\n\nTime Step 1, time = 6e-06, dt = 6e-06\nSegmentation fault (core dumped)\n\nAfter testing my codes, the problem seems to be with the second last code auto R = (_q_point[_qp] - powder_coords).norm(); and I cannot to get the correct _q_point[_qp]. If I remove the _q_point[_qp] code, the simulation is well executing. Do you know how to solve this problem?",
+                          "url": "https://github.com/idaholab/moose/discussions/27879#discussioncomment-9760400",
+                          "updatedAt": "2024-06-13T15:13:35Z",
+                          "publishedAt": "2024-06-13T08:02:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "_q_point should not be used here.\nuse r (the spatial argument) instread.\nYou can see the list of spatial arguments in MooseFunctorArguments.h.\nFrom there, you can add code like in the FunctorSmoother to specialize how you retrieve the location to each spatial argument",
+                          "url": "https://github.com/idaholab/moose/discussions/27879#discussioncomment-9765310",
+                          "updatedAt": "2024-06-13T16:00:16Z",
+                          "publishedAt": "2024-06-13T16:00:15Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Polycrystalline simulation with crystal plasticity",
+          "author": {
+            "login": "PengWei97"
+          },
+          "bodyText": "Hello all,\nI am trying to build and run a polycrystalline crystal plasticity model, which uses Voronoi tesslation to establish the initial crystal structure. But there are no examples of polycrystalline modeling in the folder of cp_uer_object or other crystal plasticity examples.\nSo what I want to ask is, would you share me the  input file related to it?\nAny help would be greatly appreciated!\nThanks,\nWei Peng",
+          "url": "https://github.com/idaholab/moose/discussions/16716",
+          "updatedAt": "2024-06-13T14:38:39Z",
+          "publishedAt": "2021-01-17T05:41:59Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "jiangwen84"
+                  },
+                  "bodyText": "Two options:\n\nassign each grain with a block id, and use read_type = block in the following block. The input file can be found at modules/tensor_mechanics/test/tests/cp_user_object/prop_block_read.i\n\n[UserObjects]\n[./prop_read]\ntype = ElementPropertyReadFile\nprop_file_name = 'euler_ang_file.txt'\n# Enter file data as prop#1, prop#2, .., prop#nprop\nnprop = 3\nread_type = block\nnblock= 2\n[../]\n[]\n\nuse ElementPropertyReadFile to perform voronoi tessellation.\n\n[UserObjects]\n[./prop_read]\ntype = ElementPropertyReadFile\nprop_file_name = 'euler_ang_file.txt'\n# Enter file data as prop#1, prop#2, .., prop#nprop\nnprop = 3\nread_type = grain\nngrain= 2\n[../]\n[]",
+                  "url": "https://github.com/idaholab/moose/discussions/16716#discussioncomment-289047",
+                  "updatedAt": "2022-06-15T14:12:29Z",
+                  "publishedAt": "2021-01-17T16:56:38Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "PengWei97"
+                          },
+                          "bodyText": "Dear @jiangwen84,\nThanks for your reply. I have understood the first option you mentioned. But for the second option, I have a question that needs your answer. If I use voronoi tessellation to generate the initial polycrystalline structure, is the object used is the PolycrystalVoronoi built in moose, or do I need to import the initial polycrystalline structure from an external file?\nFinally, could you please provide the input file in this regard for me to solve this problem, thank you very much to jiangwen84 for your help.\nKind regards,\nWei",
+                          "url": "https://github.com/idaholab/moose/discussions/16716#discussioncomment-295011",
+                          "updatedAt": "2022-06-15T14:12:32Z",
+                          "publishedAt": "2021-01-20T03:55:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "For the second approach, you need  a mesh generator software, such as Cubit, Gmsh, Neper etc, to generate a mesh of polycrystalline. Each grain will be assigned a block id. Once you make such mesh, you can use FileMeshGenerator to read in the mesh, and use the  ElementPropertyReadFile to assign Euler angles to each block.\nYou might want to start with simple case,  i.e. two blocks, and get familiar with the usage.",
+                          "url": "https://github.com/idaholab/moose/discussions/16716#discussioncomment-297558",
+                          "updatedAt": "2022-06-15T14:12:36Z",
+                          "publishedAt": "2021-01-20T23:27:24Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "ngrilli"
+                  },
+                  "bodyText": "Dear @PengWei97\nI use neper to generate the polycrystal mesh and then I read the mesh file .msh with MOOSE.\nYou can find an example with instructions in my repository:\nhttps://github.com/ngrilli/c_pfor_am/tree/main/test/tests/polycrystal\nBest Regards,\nNicol\u00f2 Grilli\nNational University of Singapore",
+                  "url": "https://github.com/idaholab/moose/discussions/16716#discussioncomment-290907",
+                  "updatedAt": "2022-06-15T14:12:32Z",
+                  "publishedAt": "2021-01-18T14:18:51Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "PengWei97"
+                          },
+                          "bodyText": "Hi @ngrilli ,\nThank you very much for your response. I see polycrystal_out.e, but it is not a polycrystalline structure produced by voronoi tessellation. Maybe my question is not clear. What I want is to generate a polycrystalline model similar to the figure below to simulate crystal plasticity. If you could provide relevant documents in this regard, I really appreciate it..",
+                          "url": "https://github.com/idaholab/moose/discussions/16716#discussioncomment-294998",
+                          "updatedAt": "2022-06-15T14:12:32Z",
+                          "publishedAt": "2021-01-20T03:43:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ngrilli"
+                          },
+                          "bodyText": "Dear @PengWei97\nI think my file was produced using the \"grain growth model\" available in neper.\nVoronoi is the default option in neper.\nFor instance, the following set of commands will produce a Voronoi tessellation:\nneper -T -n 2 -id 1 -domain \"cube(3,3,3)\"\nneper -M n2-id1.tess -elttype 'hex' -cl 1.0\nwhile the following set of commands produce a grain growth tessellation:\nneper -T -n 2 -id 1 -domain \"cube(3,3,3)\" -morpho 'gg'\nneper -M n2-id1.tess -elttype 'hex' -cl 1.0\nFinally, grain growth tessellation is usually preferred to Voronoi,\nbecause it produces more realistic microstructures.\nBest Regards,\nNicol\u00f2 Grilli\nNational University of Singapore",
+                          "url": "https://github.com/idaholab/moose/discussions/16716#discussioncomment-297939",
+                          "updatedAt": "2022-06-17T20:15:38Z",
+                          "publishedAt": "2021-01-21T02:48:21Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ngrilli"
+                          },
+                          "bodyText": "Please check the neper manual for all tessellation options",
+                          "url": "https://github.com/idaholab/moose/discussions/16716#discussioncomment-297940",
+                          "updatedAt": "2022-06-17T20:15:39Z",
+                          "publishedAt": "2021-01-21T02:48:44Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "PengWei97"
+                          },
+                          "bodyText": "Thank you very much for your careful guidance. I will read them carefully.",
+                          "url": "https://github.com/idaholab/moose/discussions/16716#discussioncomment-326779",
+                          "updatedAt": "2022-06-24T13:44:13Z",
+                          "publishedAt": "2021-02-01T09:46:03Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "p-antonioni"
+                  },
+                  "bodyText": "Hello, everyone.\nI'm trying to simulate the plasticity of polycrystals. For this reason, I used Neper to construct a voronoi tasselation, which I then imported using FileMeshGenerator. Because I need to incorporate Euler angles, so I created a UserObject that read attributes from a  .csv file using voronoi read_type. Then I utilized the object within Compute Elasticity Tensor CP.\nThe csv file has six columns: three for voronoi tessellation positions (use_random_voronoi = false) and three for Euler angles.\nThe issue is that the tessellation positions are set as Euler angles.\nAm I doing something wrong?\nI saw issue #16716 and was wondering if it was feasible to complete this type of operation using simply PropertyReadFile.\n[UserObjects]\n  [red_prop]\n    type = PropertyReadFile #Running says to use PropertyReadFile instead of elementPropertyReadFile\n    prop_file_name = 'threecry.csv'\n    use_random_voronoi = false\n    read_type = 'voronoi'\n    nvoronoi = 3\n    nprop = 6\n  []\n[]\n\n[Materials]\n  [elasticity_tensor]\n    type = ComputeElasticityTensorCP\n    C_ijkl = '1.684e5 1.214e5 1.214e5 1.684e5 1.214e5 1.684e5 0.754e5 0.754e5 0.754e5'\n    fill_method = symmetric9\n    read_prop_user_object = red_prop\n  []\n\nThanks,\nPaolo Antonioni",
+                  "url": "https://github.com/idaholab/moose/discussions/16716#discussioncomment-8318969",
+                  "updatedAt": "2024-01-31T16:45:17Z",
+                  "publishedAt": "2024-01-31T11:54:08Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nI think the thing to do here is simply to ouput the material properties (there s a parameter on every material object for that) and check that the distributions are as expected.\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/16716#discussioncomment-8323357",
+                          "updatedAt": "2024-01-31T16:46:55Z",
+                          "publishedAt": "2024-01-31T16:46:54Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "p-antonioni"
+                          },
+                          "bodyText": "Thanks Guillaume for your answer.\nDo you mean to use the output_properties parameter in Compute Elasticity Tensor CP ?\nIf yes, is there a way to extract all of them without providing a list?\nFor a single crystal simulation I provided the euler angles directly using euler_angle_ number parameters.\nFor a polycrystal, I provided a file with x,y,z,euler_angle1,euler_angle2,euler_angle3.\nI saw from Paraview that the value of x was assigned to euler_angle_1 and similarly for other grains as well.\nDid I miss some steps? Do I need to create some further material object?\nThanks,\nPaolo",
+                          "url": "https://github.com/idaholab/moose/discussions/16716#discussioncomment-8333959",
+                          "updatedAt": "2024-02-01T11:35:00Z",
+                          "publishedAt": "2024-02-01T11:34:59Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "If yes, is there a way to extract all of them without providing a list?\n\nnot sure. Does setting outputs = 'name of the output exodus' suffice?",
+                          "url": "https://github.com/idaholab/moose/discussions/16716#discussioncomment-8336594",
+                          "updatedAt": "2024-02-01T15:58:31Z",
+                          "publishedAt": "2024-02-01T15:58:31Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I saw from Paraview that the value of x was assigned to euler_angle_1 and similarly for other grains as well.\n\nSo the property read file is accessing the wrong column?\nWe'd have to check the implementation of ComputeElasticityTensorCP\nFor now I would suggest shuffling columns around to just make it work.",
+                          "url": "https://github.com/idaholab/moose/discussions/16716#discussioncomment-8337729",
+                          "updatedAt": "2024-02-01T17:28:22Z",
+                          "publishedAt": "2024-02-01T17:28:21Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "p-antonioni"
+                          },
+                          "bodyText": "I was not able to use it, I think I am making mistake.\nI have the following error message:\nunused parameter 'Materials/elasticity_tensor/output'\nI have also defined updated euler angles in AuxVariables and Postsprocessors\nIf you prefer, I can share my input file.",
+                          "url": "https://github.com/idaholab/moose/discussions/16716#discussioncomment-8337943",
+                          "updatedAt": "2024-02-01T17:47:29Z",
+                          "publishedAt": "2024-02-01T17:47:28Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "outputs\nyou can check the object parameters there:\nhttps://mooseframework.inl.gov/source/materials/crystal_plasticity/ComputeElasticityTensorCP.html",
+                          "url": "https://github.com/idaholab/moose/discussions/16716#discussioncomment-8337989",
+                          "updatedAt": "2024-02-01T17:52:19Z",
+                          "publishedAt": "2024-02-01T17:52:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "p-antonioni"
+                          },
+                          "bodyText": "Thanks for your help and patience.\nI am rather new to MOOSE and I am not getting how to use outputs and output_properties to output the material properties in this case.\nCould you suggest me how to modify the input file to be able to do this:\npolycrystal.txt\nThe x,y,z coordinates that i use in the csv file are what neper calls seed coordinates.",
+                          "url": "https://github.com/idaholab/moose/discussions/16716#discussioncomment-8339131",
+                          "updatedAt": "2024-02-01T20:18:58Z",
+                          "publishedAt": "2024-02-01T20:18:57Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Use Debug/show_material_props=true to see the names of the material properties.\nthen in the material you can have output_material_properties = .... (the names from the debug log)",
+                          "url": "https://github.com/idaholab/moose/discussions/16716#discussioncomment-8339298",
+                          "updatedAt": "2024-02-01T20:41:43Z",
+                          "publishedAt": "2024-02-01T20:41:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "p-antonioni"
+                          },
+                          "bodyText": "Thanks again.\nIt appears that the x, y, and z coordinates in the csv file are utilized as both Voronoi tessellation coordinates and Euler angle values.\nI've included a picture.\nIn this scenario, the tessellation appears to have been successfully recreated, but the euler_angles_1 values are the three grains' x-coordinates.",
+                          "url": "https://github.com/idaholab/moose/discussions/16716#discussioncomment-8345399",
+                          "updatedAt": "2024-02-02T11:08:12Z",
+                          "publishedAt": "2024-02-02T11:08:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "It will take a little modification in the material to access the right column then.\nI can look at it Monday i m on travel right now. Maybe someone else on the forum can check this though",
+                          "url": "https://github.com/idaholab/moose/discussions/16716#discussioncomment-8349749",
+                          "updatedAt": "2024-02-02T18:35:27Z",
+                          "publishedAt": "2024-02-02T18:35:27Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "ngrilli"
+                  },
+                  "bodyText": "@p-antonioni  I am not aware of the need to use 6 columns,\nif you want to read the Euler angles by grains, meaning each row of the Euler angles file represent one grain,\nthen you only need three columns with the Euler angles, you can see a test case here:\nhttps://github.com/ngrilli/c_pfor_am/blob/main/test/tests/neper/polycrystalneper.i\nI am not familiar with the option of inputting the voronoi tessellation positions,\nI would normally create the polycrystal with neper and then input the ready mesh as described above.",
+                  "url": "https://github.com/idaholab/moose/discussions/16716#discussioncomment-8324379",
+                  "updatedAt": "2024-01-31T17:38:54Z",
+                  "publishedAt": "2024-01-31T17:38:54Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "p-antonioni"
+                          },
+                          "bodyText": "Thanks Nicol\u00f2 for your answer.\nI saw this procdure in the PropertyReadFile documentation which states:\n\"In grain/voronoi mode, a Voronoi tessellation with \"nvoronoi\" random centers is either created randomly or read from the first columns of the CSV file, depending on the \"use_random_voronoi\". The file read should still contain [\"nprop\"] columns, even though 1-3 columns may be used for the Voronoi tessellation positions.\"\nThanks a lot for sharing your examples codes which work and were really useful to understand the procedure you use.\nBest regards,\nPaolo",
+                          "url": "https://github.com/idaholab/moose/discussions/16716#discussioncomment-8335238",
+                          "updatedAt": "2024-02-01T13:54:03Z",
+                          "publishedAt": "2024-02-01T13:54:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "amassaf"
+                          },
+                          "bodyText": "@p-antonioni I am not aware of the need to use 6 columns, if you want to read the Euler angles by grains, meaning each row of the Euler angles file represent one grain, then you only need three columns with the Euler angles, you can see a test case here: https://github.com/ngrilli/c_pfor_am/blob/main/test/tests/neper/polycrystalneper.i\nI am not familiar with the option of inputting the voronoi tessellation positions, I would normally create the polycrystal with neper and then input the ready mesh as described above.\n\nHi @ngrilli I followed your instructions for neper mesh with ComputeElasticityTensorCPGrain and GrainPropertyReadFile but when I try to output the elasticity tensor components all of the grains of the polycrystal show the same value though they do show different values for the euler angles. Does this show that the rotation wasn't taken into consideration for the calculation or is it just an output error?thanks!",
+                          "url": "https://github.com/idaholab/moose/discussions/16716#discussioncomment-9764332",
+                          "updatedAt": "2024-06-13T14:38:39Z",
+                          "publishedAt": "2024-06-13T14:38:38Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

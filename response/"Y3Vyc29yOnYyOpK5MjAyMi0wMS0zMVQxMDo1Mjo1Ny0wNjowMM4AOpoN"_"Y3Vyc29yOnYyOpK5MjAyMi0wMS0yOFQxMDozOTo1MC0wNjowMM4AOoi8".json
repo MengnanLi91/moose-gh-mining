@@ -1,0 +1,696 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMi0wMS0yOFQxMDozOTo1MC0wNjowMM4AOoi8"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Finite Volume - FVDiffusion, ADGenericFunctorMaterial Error",
+          "author": {
+            "login": "czadeh"
+          },
+          "bodyText": "Hi,\nI was reading the page about FVKernels and tried the first example (pasted below).\n[Mesh]\n  type = GeneratedMesh\n  dim = 2\n  nx = 10\n  ny = 10\n[]\n\n[Variables]\n  [v]\n    family = MONOMIAL\n    order = CONSTANT\n    fv = true\n    initial_condition = 7\n  []\n[]\n\n[Kernels]\n[]\n\n[FVKernels]\n  [./time]\n    type = FVTimeKernel\n    variable = v\n  [../]\n  [diff]\n    type = FVDiffusion\n    variable = v\n    coeff = coeff\n  []\n[]\n\n[FVBCs]\n  [left]\n    type = FVDirichletBC\n    variable = v\n    boundary = left\n    value = 7\n  []\n  [right]\n    type = FVDirichletBC\n    variable = v\n    boundary = right\n    value = 42\n  []\n[]\n\n[Materials]\n  [diff]\n    type = ADGenericFunctionMaterial\n    prop_names = 'coeff'\n    prop_values = '.2'\n  []\n[]\n\n[Executioner]\n  type = Transient\n  solve_type = 'PJFNK'\n  petsc_options_iname = '-pc_type -pc_hypre_type'\n  petsc_options_value = 'hypre boomeramg'\n  num_steps = 20\n  dt = 0.1\n[]\n\n[Outputs]\n  exodus = true\n[]\n\nI made a new project to try this out and just updated conda and MOOSE. However, when I try to execute with this input file I receive the following error:\n*** ERROR ***\nThe following error occurred in the object \"MOOSE Problem\", of type \"FEProblem\".\n\nFunctor coeff, requested by diff, does not exist in our subproblem.\n\nStack frames: 11\n0: libMesh::print_trace(std::ostream&)\n1: moose::internal::mooseErrorRaw(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >)\n2: callMooseErrorRaw(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&, MooseApp*)\n3: SubProblem::initialSetup()\n4: FEProblemBase::initialSetup()\n5: Transient::init()\n6: MooseApp::executeExecutioner()\n7: MooseApp::run()\n8: ../fox-opt(+0x3163) [0x5571e0306163]\n9: __libc_start_main\n10: ../fox-opt(+0x33ea) [0x5571e03063ea]\napplication called MPI_Abort(MPI_COMM_WORLD, 1) - process 0\n[unset]: write_line error; fd=-1 buf=:cmd=abort exitcode=1\n:\nsystem msg for write_line failure : Bad file descriptor\n\nI do not know why this error occurs because 'coeff' is defined under ADGenericFunctorMaterial.\nI would appreciate your help in understanding this problem and how to move forward.\nThank you,\nCameron",
+          "url": "https://github.com/idaholab/moose/discussions/20180",
+          "updatedAt": "2022-06-16T12:48:29Z",
+          "publishedAt": "2022-01-31T16:35:44Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nWe have updated the finite volume system to use functors over material properties. Functors can be functions, variables, auxvariables or functor material properties, but not regular material properties.\nPlease use this block instead:\n[Materials]\n  [diff]\n    type = ADGenericFunctorMaterial\n    prop_names = 'coeff'\n    prop_values = '.2'\n  []\n[]\n\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20180#discussioncomment-2082882",
+                  "updatedAt": "2022-06-16T12:48:36Z",
+                  "publishedAt": "2022-01-31T16:41:11Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "czadeh"
+                          },
+                          "bodyText": "Thank you.",
+                          "url": "https://github.com/idaholab/moose/discussions/20180#discussioncomment-2082921",
+                          "updatedAt": "2022-06-16T12:48:43Z",
+                          "publishedAt": "2022-01-31T16:47:31Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Implicit to Explicit TimeIntegrator in the middle of a run",
+          "author": {
+            "login": "maxnezdyur"
+          },
+          "bodyText": "Is there a way to switch from an implicit to an explicit time integrator in the middle of a simulation? I have a situation where I need to run a simulation to a specific time that I cannot shorten. Then at a particular time when I know the explicit solver would handle the problem better, I want to switch to it.",
+          "url": "https://github.com/idaholab/moose/discussions/20179",
+          "updatedAt": "2023-02-22T04:22:53Z",
+          "publishedAt": "2022-01-31T14:25:49Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nCurrently the only option is to use the restart or recover system:\nhttps://mooseframework.inl.gov/application_usage/restart_recover.html\nYou could also write your own time integrator.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20179#discussioncomment-2082124",
+                  "updatedAt": "2023-02-22T04:22:53Z",
+                  "publishedAt": "2022-01-31T14:59:22Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Localized noise?",
+          "author": {
+            "login": "mangerij"
+          },
+          "bodyText": "Hi,\nI want to use something like ConservedNormalNoise but for only a specific part of my mesh (say between 0 < x < 10). Is there an easy way to do this?\nI suppose I could modify the ConservedLangevinNoise::computeQpResidual() to be multiplied by a static variable that is only nonzero in this region but that seems like a bit of a hack.\nAre there any easy examples to do this without the hack?\nThanks!",
+          "url": "https://github.com/idaholab/moose/discussions/20135",
+          "updatedAt": "2023-07-13T21:05:00Z",
+          "publishedAt": "2022-01-26T09:33:34Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYou can use the block parameter for that.\nMake sure part of your mesh has a defined subdomain ID, using the moose mesh generators (https://mooseframework.inl.gov/syntax/Mesh/index.html) if necessary to assign it, then set block = 'that subdomain ID' in the ConservedNormalNoise UO parameters.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20135#discussioncomment-2050949",
+                  "updatedAt": "2023-07-13T21:05:00Z",
+                  "publishedAt": "2022-01-26T13:37:21Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mangerij"
+                          },
+                          "bodyText": "Hmm, I had thought about that. I guess I could try it. I was hoping this could be a general approach, I think this would only be restricted to hex elements.\nThanks!",
+                          "url": "https://github.com/idaholab/moose/discussions/20135#discussioncomment-2058427",
+                          "updatedAt": "2023-07-13T21:05:00Z",
+                          "publishedAt": "2022-01-27T12:48:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I think blocks cannot be composed of mixed element types. Do you think that ll preclude this approach?",
+                          "url": "https://github.com/idaholab/moose/discussions/20135#discussioncomment-2059598",
+                          "updatedAt": "2023-07-13T21:05:00Z",
+                          "publishedAt": "2022-01-27T15:20:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mangerij"
+                          },
+                          "bodyText": "I think the better way is to define a function such that the Kernel for noise overrides with\n_function[_qp]*ConservedLangevinNoise::computeQpResidual()\nwhere _function[_qp] = 1 by default but could in principle be a localized gaussian, cosine, sinc(), etc perturbation. This could also depend on time too which can be useful.\nI went ahead with this approach and it works quite nicely :)",
+                          "url": "https://github.com/idaholab/moose/discussions/20135#discussioncomment-2079504",
+                          "updatedAt": "2023-07-13T21:05:12Z",
+                          "publishedAt": "2022-01-31T07:53:15Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "[PorousFlowPiecewiseLinearSink] want to dig deeper into the drain BCs for mining application",
+          "author": {
+            "login": "Traiwit"
+          },
+          "bodyText": "Hi guys, so I did some tests on draining the water out of the excavated block (similar to https://mooseframework.inl.gov/modules/porous_flow/coal_mining.html done by @WilkAndy)\nBelow are the geometries, I have 2 versions, first illustrates the case where the excavated block is removed and second illustrates the case where the excavated block's properties are changed\n\nThe flow action is PorousFlowUnsaturated, and here is my PorousFlowPiecewiseLinearSink block (only allow for outflow)\n   [./drain_face]\n         type = PorousFlowPiecewiseLinearSinkTC\n       variable = porepressure\n       boundary = 'drain'\n       pt_vals = '0 1e9' # x coordinates defining g\n       multipliers = '0 1e9' # y coordinates defining g\n       flux_function =  1e5 #1e5 # Variable C\n       v = min\n       use_mobility = true\n       fluid_phase = 0\n       use_relperm = true\n    [../]\n\nSo below are the 3 test cases\n\nThe first version (drain only at the right BC)\nThe stitched model  (2nd case) with no change in permeability of the excavated block (drain the whole block)\nThe stitched model (2nd case) with change in permeability of the excavated block to extremely high [*1e6] (drain the whole block)\n\nbelow are the results, when I put all the phreatic surfaces together\n\nFrom top to bottom: no drain > The first version > The stitched model  (2nd case) with no change in permeability > The stitched model (2nd case) with change in permeability\n\n\n\nTheoretically, I thought the first case and the last case should produce the same results, did I miss anything? could you please explain what MOOSE does here so the results are different\nKind regards,\nTraiwit",
+          "url": "https://github.com/idaholab/moose/discussions/19651",
+          "updatedAt": "2022-07-26T12:02:03Z",
+          "publishedAt": "2021-12-16T08:49:52Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "Traiwit"
+                  },
+                  "bodyText": "@GiudGiud do you know any expert on this topic? thanks!",
+                  "url": "https://github.com/idaholab/moose/discussions/19651#discussioncomment-1844573",
+                  "updatedAt": "2022-07-26T12:04:00Z",
+                  "publishedAt": "2021-12-20T00:43:14Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Only expert I know is tagged already on the post.",
+                          "url": "https://github.com/idaholab/moose/discussions/19651#discussioncomment-1844611",
+                          "updatedAt": "2022-07-26T12:04:06Z",
+                          "publishedAt": "2021-12-20T01:05:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "noted thanks!",
+                          "url": "https://github.com/idaholab/moose/discussions/19651#discussioncomment-1844629",
+                          "updatedAt": "2022-07-26T12:04:06Z",
+                          "publishedAt": "2021-12-20T01:13:10Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "JerryLiu2023"
+                  },
+                  "bodyText": "Traiwit:  I don't think you miss anything. Yes. When you set an extremely large permeability for the excavated block, theoretically, the first and third cases are the same. However, numerically, they are not. For those nodes on the right boundary for the first case, their nodal permeabilities (in permeability matrix in finite elements) are only contributed from left elements having lower permeabilities. Furthermore, these nodes are applied by prescribed flux.  In the third case, these nodes are now on the interface of two blocks having different permeabilities. Eventually, nodal permeabilies on these nodes are dominated by the right elements (extremely high perm). Furthermore, these nodes in the third case are interior nodes which are not applied by the prescribed flux. Consequently, pore pressure nearby (on the left side elements) numerically diffuses faster than the first case. If you use fine elements or higher-order elements, or hexa, their solutions are expected to be closer. Not only the permeability matrix but also the mass matrix in finite elements are different. I assume all your three cases are single fluid flow. If you have coupled solid mechanics field, the first and the third cases are totally different.  Hopefully, this helps.",
+                  "url": "https://github.com/idaholab/moose/discussions/19651#discussioncomment-1864145",
+                  "updatedAt": "2022-07-26T12:04:09Z",
+                  "publishedAt": "2021-12-23T16:00:27Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Thank you for answering @RLiu2020 .  I'm on holiday",
+                          "url": "https://github.com/idaholab/moose/discussions/19651#discussioncomment-1902049",
+                          "updatedAt": "2022-07-26T12:04:15Z",
+                          "publishedAt": "2022-01-03T20:08:26Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "Thank you @RLiu2020, yes these cases are single fluid flow with no mechanics coupling.\nI'm wondering if there is a way to mimic the removal of the blocks without having to actually remove the blocks?\nRemoving the blocks disturbs our framework significantly as it renumbers the elements/nodes.\n@WilkAndy I see that you changed the excav_perm to 0 in your mining example without having to remove the block, not sure if this is the case?\nKind regards,\nTraiwit",
+                          "url": "https://github.com/idaholab/moose/discussions/19651#discussioncomment-1902797",
+                          "updatedAt": "2022-07-26T12:04:15Z",
+                          "publishedAt": "2022-01-03T23:32:40Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Sure, you can change the permeability in an element so no fluid flow happens there.  Whether that's a sensible thing to do depends on your boundary conditions!  The advantage to setting perm=0 is that no fluid will flow out of that block, which is good since it's not really there.",
+                          "url": "https://github.com/idaholab/moose/discussions/19651#discussioncomment-1903486",
+                          "updatedAt": "2022-07-26T12:04:58Z",
+                          "publishedAt": "2022-01-04T02:50:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "Hi @WilkAndy\nWhen I set-BC around the excavated block, I'd expect my pwp and the phreatic surface (water table) to be like this figure:\n\ninstead, the phreatic surface just wraps around the excavated block\n     [./drain_DRAINSRF_CUMSRFSET_Y2012]\n     type = PorousFlowPiecewiseLinearSinkTC\n     variable = porepressure\n     boundary = 'DRAINSRF_CUMSRFSET_Y2012'\n     pt_vals = '0 1e9'\n     multipliers = '0 1e9'\n     flux_function = 1e8\n     v = min\n      use_mobility = true\n      fluid_phase = 0\n     [../]\n\nNot sure if I've missed anything here\nKind regards,\nTraiwit",
+                          "url": "https://github.com/idaholab/moose/discussions/19651#discussioncomment-1937013",
+                          "updatedAt": "2024-04-18T05:56:15Z",
+                          "publishedAt": "2022-01-09T23:02:54Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Your drain_DRAINSRF_CUMSRFSET_Y2012 BC is draining if the porepressure is positive, but will remove zero water if the porepressure is negative.   Does this answer your question?",
+                          "url": "https://github.com/idaholab/moose/discussions/19651#discussioncomment-1937040",
+                          "updatedAt": "2024-04-18T05:56:27Z",
+                          "publishedAt": "2022-01-09T23:17:27Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "Hi @WilkAndy, yes , I was doing \"only allow for outflow\", as I thought water should not be re-entered to the geometry from the excavated blocks. Not sure if this is incorrect?\nso here is from the real geometry, I was expecting the phreatic surface to follow the red line, but instead, it wraps tightly around the excavated blocks.",
+                          "url": "https://github.com/idaholab/moose/discussions/19651#discussioncomment-1937089",
+                          "updatedAt": "2022-09-15T13:30:40Z",
+                          "publishedAt": "2022-01-09T23:35:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "You are correct: water should not enter the unexcavated rock from the excavated rock.  However, what about if porepressure = -1E4 Pa in the rock?  Should it exit?  Usually, people answer:\n(1) \"yes, through capillarity and evaporation\"\n(2) \"i don't care: i just care about the fully-saturated zone\"\nPerhaps this is a complete red-herring, but i just mention it because it may be important when attempting to accurately predict the water table.\nProbably in your case, your insitu permeability is too low.  If you increase it, more water will flow to the excavation and lower the phreatic surface.\nBy the way, your flux_function is very high.  With use_mobility = true, i'd use something like flux_function = 1\na",
+                          "url": "https://github.com/idaholab/moose/discussions/19651#discussioncomment-1937125",
+                          "updatedAt": "2022-09-15T13:30:42Z",
+                          "publishedAt": "2022-01-10T00:03:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "@WilkAndy Thank you very much, I will try to work around things you suggested and get back to you.\nKind regards,\nTraiwit",
+                          "url": "https://github.com/idaholab/moose/discussions/19651#discussioncomment-1937145",
+                          "updatedAt": "2022-09-15T13:32:33Z",
+                          "publishedAt": "2022-01-10T00:08:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Did you resolve this, @Traiwit ?",
+                          "url": "https://github.com/idaholab/moose/discussions/19651#discussioncomment-2077717",
+                          "updatedAt": "2022-09-15T13:32:33Z",
+                          "publishedAt": "2022-01-30T20:41:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "yep all good now, thanks!",
+                          "url": "https://github.com/idaholab/moose/discussions/19651#discussioncomment-2078275",
+                          "updatedAt": "2022-09-15T13:32:34Z",
+                          "publishedAt": "2022-01-30T23:24:46Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Change the sign of flux value upon reaching the certain average value on the surface of the domain",
+          "author": {
+            "login": "avtarsinghh1991"
+          },
+          "bodyText": "Hello MOOSE Experts\nI have been working on the thermo-mechanical model. I want to change the value of flux upon reaching a certain average value of temperature on the surface. Basically, I want to make it cyclic flux.\nI am using Neumann BC for applying flux and for calculating the average temperature on the surface using the \"SideAverageValue\" postprocessor module is considered.\nLet's say, Initial value of Temp = 0, then apply flux and the average temperature reaches 100. At that point, I want to change the flux from +ve to -ve, keeping the magnitude the same. Again if it reaches 0, I want to change the flux value from -ve to +ve, while keeping the magnitude the same.\nCan you please suggest to me the best way to do it?\nI shall be very thankful.\nBest\nAvtar",
+          "url": "https://github.com/idaholab/moose/discussions/20178",
+          "updatedAt": "2023-02-07T06:48:21Z",
+          "publishedAt": "2022-01-30T04:26:54Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYou should leverage the Control system to modify the flux value in the NeumannBC, when a given postprocessor reaches a certain value.\nhttps://mooseframework.inl.gov/syntax/Controls/index.html\nYou can create your own control off of the PID control to make a control that sets a value based on a postprocessor\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20178#discussioncomment-2074863",
+                  "updatedAt": "2023-02-07T06:48:47Z",
+                  "publishedAt": "2022-01-30T04:40:47Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Solving phase-field fracture for chemo-mechanical problem with only thermal loading",
+          "author": {
+            "login": "avtarsinghh1991"
+          },
+          "bodyText": "Hello MOOSE experts\nI am trying to solve the phase-field fracture for a chemo-mechanical environment with only flux loading.\nI found that the following module doesn't include the Eigen strain due to which the stresses are not developing and fracture is not evolving due to the lack of sufficient driving force.\nCan you please suggest any alternative to calculate all the following parameters while including the effect of Eigen strain? I shall be very thankful.\n   type = ComputeLinearElasticPFFractureStress\n    c = damage\n    E_name = 'elastic_energy'\n    D_name = 'degradation'\n    F_name = 'local_fracture_energy'\n    decomposition_type = stress_spectral  \n#    decomposition_type = strain_vol_dev\n    use_snes_vi_solver = true\n  [../]\n\nBest\nAvtar",
+          "url": "https://github.com/idaholab/moose/discussions/20119",
+          "updatedAt": "2022-09-06T18:12:56Z",
+          "publishedAt": "2022-01-24T19:36:48Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "I doubt if stress-free configurations lead to fracture in the first place.\nBeside that, you can use strain based decompositions in this case, so that the fracture driving force isn't zero. Since stress-free thermal eigenstrains should lead to nonzero mechanical strains.",
+                  "url": "https://github.com/idaholab/moose/discussions/20119#discussioncomment-2038280",
+                  "updatedAt": "2022-09-06T18:12:58Z",
+                  "publishedAt": "2022-01-24T22:07:46Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "avtarsinghh1991"
+                          },
+                          "bodyText": "Thank you very much.\nActually, stress itself is coming out to be zero.\nI tried strain decomposition as well. It's not working.\nBest\nAvtar",
+                          "url": "https://github.com/idaholab/moose/discussions/20119#discussioncomment-2039197",
+                          "updatedAt": "2022-09-06T18:12:58Z",
+                          "publishedAt": "2022-01-25T00:39:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Could you elaborate on what isn't working? For example, does it fail to converge? Does it result in no fracture? If it's the latter case, you may want to examine the state of the mechanical strain.",
+                          "url": "https://github.com/idaholab/moose/discussions/20119#discussioncomment-2039341",
+                          "updatedAt": "2022-09-06T18:13:03Z",
+                          "publishedAt": "2022-01-25T01:10:05Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "avtarsinghh1991"
+                          },
+                          "bodyText": "Hello @hugary1995\nI am trying to solve phase-field fracture in a chemo-mechanical environment. The diffusion is working absolutely fine. However, upon using the following module, the attendant stresses are found to be zero means stresses are not evolving even after taking into account the Eigen strain. As the stresses are zero, there is no driving force that evolves the fracture. Hence, the damage is also not evolving.\nMy concern is how can I take care of Eigen strain using the \"ComputeLinearElasticPFFractureStress\"?\nLets say in case of small strain\nelastic_strain = total_strain - eigen_strain\nIt seems this part is somehow missing. How can I update the elastic_strain?\n  [./elasticity_tensor]\n    type = ComputeElasticityTensor\n    C_ijkl = '121.15e9 80.769e9'\n    fill_method = symmetric_isotropic\n  [../]\n    [./eigen_strain_prefactor]\n    type = DerivativeParsedMaterial\n    args = diffused\n    f_name = eigen_strain_prefactor\n    constant_names = 'c_ref'\n    constant_expressions = '30000.0'\n    function = (diffused-c_ref)/3.0\n  [../]\n  [./eigenstrain]\n    type = ComputeVariableEigenstrain\n    args = diffused\n    eigen_base = '3.496e-6 0 0 0 3.496e-6 0 0 0 3.496e-6'\n    prefactor = eigen_strain_prefactor\n    eigenstrain_name = eigenstrain\n  [../]\n\n  [./define_mobility]\n    type = ParsedMaterial\n    material_property_names = 'gc_prop visco'\n    f_name = L\n    function = '1.0/(gc_prop * visco)'\n  [../]\n  [./define_kappa]\n    type = ParsedMaterial\n    material_property_names = 'gc_prop l'\n    f_name = kappa_op\n    function = 'gc_prop * l'\n  [../]\n  [./damage_stress]\n    type = ComputeLinearElasticPFFractureStress\n    c = damage\n    E_name = 'elastic_energy'\n    D_name = 'degradation'\n    F_name = 'local_fracture_energy'\n    decomposition_type = strain_spectral  \n#    decomposition_type = strain_vol_dev\n    use_snes_vi_solver = true\n  [../]\n  [./degradation]\n    type = DerivativeParsedMaterial\n    f_name = degradation\n    args = 'damage'\n    function = '(1.0-damage)^2*(1.0 - eta) + eta'\n    constant_names       = 'eta'\n    constant_expressions = '1.0e-5'\n    derivative_order = 2\n  [../]\n  [./local_fracture_energy]\n    type = DerivativeParsedMaterial\n    f_name = local_fracture_energy\n    args = 'damage'\n    material_property_names = 'gc_prop l'\n    function = 'damage^2 * gc_prop / 2 / l'\n    derivative_order = 2\n  [../]\n  [./fracture_driving_energy]\n    type = DerivativeSumMaterial\n    args = damage\n    sum_materials = 'elastic_energy local_fracture_energy'\n    derivative_order = 2\n    f_name = F\n  [../] \n\nBest\nAvtar",
+                          "url": "https://github.com/idaholab/moose/discussions/20119#discussioncomment-2039394",
+                          "updatedAt": "2022-09-06T18:13:03Z",
+                          "publishedAt": "2022-01-25T01:28:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "My concern is how can I take care of Eigen strain using the \"ComputeLinearElasticPFFractureStress\"?\n\nComputeLinearElasticPFFractureStress does take into account eigenstrain if you use a strain based decomposition. If you do have non-zero elastic strain, and the elastic strain isn't in contraction state, there will be a fracture driving force. So again, could you examine the state of the elastic strain output from your simulation?",
+                          "url": "https://github.com/idaholab/moose/discussions/20119#discussioncomment-2039508",
+                          "updatedAt": "2022-09-06T18:13:08Z",
+                          "publishedAt": "2022-01-25T01:53:12Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "avtarsinghh1991"
+                  },
+                  "bodyText": "Thank you very much. It has been resolved.",
+                  "url": "https://github.com/idaholab/moose/discussions/20119#discussioncomment-2074842",
+                  "updatedAt": "2022-09-06T18:13:08Z",
+                  "publishedAt": "2022-01-30T04:28:27Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "heat conduction betwwen blocks",
+          "author": {
+            "login": "PJohnYu"
+          },
+          "bodyText": "Hi, I am trying to simulate a heat conduction bettwen two blocks.\nI found the example file at /moose/modules/heat_conduction/test/tests/sideset_heat_transfer/cfem_gap.i and referred the InterfaceKernel/gap_01 in my file. When I  run it, I got the error: Variable and neighbor variable are the same, but they are not elemental variables.\nI don't kown why, beacause the variables in example file are also nodal variables.\nHere is my file:\n[Mesh]\n  file = inputmesh1.e\n[]\n\n[Variables]\n  [./temp]\n    family = LAGRANGE\n    order = FIRST\n    initial_condition = 0\n  [../]\n[]\n\n[Kernels]\n\n  [hc]\n    type = HeatConduction\n    variable = temp\n  []\n  [time_derivative]\n    type = HeatConductionTimeDerivative\n    variable = temp\n  []\n\n  [./diff]\n    type = Diffusion\n    variable = temp\n  [../]\n\n[]\n\n[InterfaceKernels]\n  # Side set kernel to represent heat transfer across blocks\n  # Automatically uses the materials defined in SideSetHeatTransferMaterial\n  [gap_01]\n    type = SideSetHeatTransferKernel\n    # This variable defined on a given block must match the primary_block given when the side set was generated\n    variable = temp\n    # This variable defined on a given block must match the paired_block given when the side set was generated\n    neighbor_var = temp\n    boundary = interface\n  []\n[]\n[BCs]\n  [./right]\n    type = DirichletBC\n    variable = temp\n    boundary = right\n    value = 40\n  [../]\n  [hbc]\n    type = HeatConductionBC\n    boundary = right\n    variable = temp\n  []\n[]\n\n[Materials]\n  [hcm]\n    type = HeatConductionMaterial\n    specific_heat = 1\n    thermal_conductivity = 1\n  []\n\n  [density]\n    type = GenericConstantMaterial\n    prop_names = 'density'\n    prop_values = '680'\n  []\n  [gap_mat]\n    type = SideSetHeatTransferMaterial\n    boundary = interface\n    conductivity = 1\n    gap_length = 0.002\n    Tbulk = 750\n    h_primary = 3000\n    h_neighbor = 3000\n    emissivity_primary = 0.85\n    emissivity_neighbor = 0.85\n  []\n\n[]\n\n\n[Executioner]\n  type = Transient\n  start_time = 0\n  dt = 1\n  num_steps = 10\n  solve_type = 'PJFNK'\n  petsc_options_iname = '-pc_type -pc_hypre_type'\n  petsc_options_value = 'hypre boomeramg'\n[]\n\n[Outputs]\n  exodus = true\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/20173",
+          "updatedAt": "2022-06-10T07:58:54Z",
+          "publishedAt": "2022-01-29T05:41:15Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nFirst, are you trying to model heat transfer across a gap? If there is no gap you dont need this interface kernel.\nIf you are, then use MONOMIAL instead of LAGRANGE, as in the example.\nA nodal variable cannot be discontinuous between two elements, since it can only have a single value on each node shared by the two elements.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20173#discussioncomment-2070766",
+                  "updatedAt": "2022-06-10T07:59:14Z",
+                  "publishedAt": "2022-01-29T05:47:04Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "PJohnYu"
+                  },
+                  "bodyText": "In fact, there is no gap. Do you mean remove the interfacekernel? I did it, but the result looks not normal.",
+                  "url": "https://github.com/idaholab/moose/discussions/20173#discussioncomment-2070787",
+                  "updatedAt": "2022-06-10T07:59:16Z",
+                  "publishedAt": "2022-01-29T06:00:27Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "PJohnYu"
+                  },
+                  "bodyText": "I found the reason. All boundaries are need to be set HeatConductionBC.\nThank you",
+                  "url": "https://github.com/idaholab/moose/discussions/20173#discussioncomment-2071299",
+                  "updatedAt": "2022-06-10T08:13:12Z",
+                  "publishedAt": "2022-01-29T09:57:30Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "about heat conduction transfer boundary",
+          "author": {
+            "login": "amosaha"
+          },
+          "bodyText": "Hi, I made a heat transfer model. The result is shown in the figure. I used the boundary condition of heatcondutionBC between the two layers of materials. I wonder if it is reasonable. Since my heat transfer result is not ideal, I wonder if I need to add other conditions? For example, there seems to be no heat transfer in the internal pellets. Also, what is the difference between ADHeat Conduction and HeatConduction\uff1f",
+          "url": "https://github.com/idaholab/moose/discussions/20162",
+          "updatedAt": "2022-06-10T07:41:32Z",
+          "publishedAt": "2022-01-28T15:19:08Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nIt looks weird? The temperature seems to be oscillating.\nDo you need a BC in between the two layers? If you wanted to model a special interface / a thin heat resistance from the contact between the two layers, I would use an interface kernel.\nIf you just want to model regular thermal conduction, then there is a no need for a boundary condition, the kernels already apply the right equation at the boundary between the two materials.\nThe difference between ADHeatConduction and HeatConduction is automatic differentiation (AD) in the first one. AD is used to compute numerically perfect derivatives for the Jacobian, especially with complex material properties (heat conductivity here).\nSee more information here:\nhttps://mooseframework.inl.gov/moose/modules/phase_field/FunctionMaterials/AutomaticDifferentiation.html\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20162#discussioncomment-2067364",
+                  "updatedAt": "2022-06-10T07:41:32Z",
+                  "publishedAt": "2022-01-28T15:41:25Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "amosaha"
+                  },
+                  "bodyText": "Thank you. I have another question. Why is there a negative value in heat transfer? That doesn't seem to fit the laws of physics.\n\n\n\n\n\n\n\u53d1\u81ea\u6211\u7684iPhone\n\u2026\n------------------ Original ------------------\nFrom: Guillaume Giudicelli ***@***.***&gt;\nDate: Fri,Jan 28,2022 11:41 PM\nTo: idaholab/moose ***@***.***&gt;\nCc: amosaha ***@***.***&gt;, Author ***@***.***&gt;\nSubject: Re: [idaholab/moose] about heat conduction transfer boundary(Discussion #20162)\n\n\n\n\n\n\nHello\n\nIt looks weird? The temperature seems to be oscillating.\n Do you need a BC in between the two layers? If you wanted to model a special interface / a thin heat resistance from the contact between the two layers, I would use an interface kernel.\n If you just want to model regular thermal conduction, then there is a no need for a boundary condition, the kernels already apply the right equation.\n\nThe difference between ADHeatConduction and HeatConduction is automatic differentiation (AD) in the first one. AD is used to compute numerically perfect derivatives for the Jacobian, especially with complex material properties (heat conductivity here).\n See more information here:\n https://mooseframework.inl.gov/moose/modules/phase_field/FunctionMaterials/AutomaticDifferentiation.html\n\nGuillaume\n\n\u2014\nReply to this email directly, view it on GitHub, or unsubscribe.\nTriage notifications on the go with GitHub Mobile for iOS or Android.\nYou are receiving this because you authored the thread.Message ID: ***@***.***&gt;",
+                  "url": "https://github.com/idaholab/moose/discussions/20162#discussioncomment-2070551",
+                  "updatedAt": "2022-06-10T07:42:25Z",
+                  "publishedAt": "2022-01-29T03:23:13Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "The problem is probably not correctly defined. The solution solves the equations that it is being fed, if there's issues with them the solution can be unphysical.",
+                          "url": "https://github.com/idaholab/moose/discussions/20162#discussioncomment-2070585",
+                          "updatedAt": "2022-06-12T05:04:43Z",
+                          "publishedAt": "2022-01-29T03:46:16Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Use previous simulation result for next time step",
+          "author": {
+            "login": "hokonkim"
+          },
+          "bodyText": "Hello, I would like to know a way to use previous simulation result for the next time step.\nHere is the situation that I have\nTransient: 0 -> 0.1 -> 0.2 -> 0.4, can be done in just one simulation\nSteady: 0 -> 0.1 /  0.1 -> 0.2 / 0.2 -> 0.4, can bedone in \"Three\" simulations\nI want to know how to inherit previous simulation status for the new(next) simulation.\nIn other words, how to initialize variables and conditions by using previous simulation result?",
+          "url": "https://github.com/idaholab/moose/discussions/20169",
+          "updatedAt": "2022-06-14T02:44:38Z",
+          "publishedAt": "2022-01-28T22:12:34Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "ykvishal"
+                  },
+                  "bodyText": "Have a look at SolutionUserObject. Also, see Restarting and recovering from previous simulations page.  There will be some posts on this topic.",
+                  "url": "https://github.com/idaholab/moose/discussions/20169#discussioncomment-2070179",
+                  "updatedAt": "2022-06-14T02:44:44Z",
+                  "publishedAt": "2022-01-29T01:12:00Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Postprocessor for Local Values",
+          "author": {
+            "login": "rl3fz"
+          },
+          "bodyText": "Hello everyone!\nIs there a way to record and display the value of a variable or material property at a certain location on the domain? It seems that I can record the mean value across the domain through the ElementAverageValue and ElementAverageMaterial Property postprocessors, or I can record the sum through the ElementIntegralVariablePostprocessor and ElementIntegralMaterialProperty postprocessors, but I'm trying to track precise values at specific points. Thank you for all that you do!",
+          "url": "https://github.com/idaholab/moose/discussions/20142",
+          "updatedAt": "2022-09-15T01:42:21Z",
+          "publishedAt": "2022-01-26T20:31:51Z",
+          "category": {
+            "name": "Q&A Tools"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "ykvishal"
+                  },
+                  "bodyText": "You can check VectorPostprocessors System.\n  PointValueSampler may be useful",
+                  "url": "https://github.com/idaholab/moose/discussions/20142#discussioncomment-2054024",
+                  "updatedAt": "2022-09-15T01:42:21Z",
+                  "publishedAt": "2022-01-26T20:57:35Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rl3fz"
+                          },
+                          "bodyText": "This is exactly what I need, thank you!",
+                          "url": "https://github.com/idaholab/moose/discussions/20142#discussioncomment-2067803",
+                          "updatedAt": "2022-09-15T01:51:26Z",
+                          "publishedAt": "2022-01-28T16:39:50Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

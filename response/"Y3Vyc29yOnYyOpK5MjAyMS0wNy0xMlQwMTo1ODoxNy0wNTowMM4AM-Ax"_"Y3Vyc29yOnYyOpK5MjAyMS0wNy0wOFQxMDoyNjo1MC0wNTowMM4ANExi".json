@@ -1,0 +1,1128 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMS0wNy0wOFQxMDoyNjo1MC0wNTowMM4ANExi"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "SolutionUserObject and SolutionFunction for part of mesh",
+          "author": {
+            "login": "hsheldon"
+          },
+          "bodyText": "I have a situation where I need to read values (e.g. porosity) from an exodus file that covers only part of the simulated domain, using SolutionUserObject and SolutionFunction. Currently this results in an error because MOOSE is trying to read values from a region that doesn't exist in the exodus file. Am I missing some way of getting round this? If not it would be useful to have the option to do this, with the ability to specify a default value where none exists.",
+          "url": "https://github.com/idaholab/moose/discussions/18250",
+          "updatedAt": "2022-07-26T13:18:13Z",
+          "publishedAt": "2021-07-04T21:46:25Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nhappy 4th of July!\nthe way of getting around this is to reload the variable in a multi app with the same mesh as the previous solution, then use a transfer to move the porosity to your simulation. You can execute this multi app at INITIAL, just once\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/18250#discussioncomment-964073",
+                  "updatedAt": "2022-07-26T13:18:27Z",
+                  "publishedAt": "2021-07-05T03:46:11Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Ha, clever!",
+                          "url": "https://github.com/idaholab/moose/discussions/18250#discussioncomment-964085",
+                          "updatedAt": "2022-07-26T13:18:31Z",
+                          "publishedAt": "2021-07-05T03:51:31Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hsheldon"
+                          },
+                          "bodyText": "Interesting. Don't suppose there's an example somewhere that would give me some idea how to do this? I haven't played with multi apps before.",
+                          "url": "https://github.com/idaholab/moose/discussions/18250#discussioncomment-964244",
+                          "updatedAt": "2022-07-26T13:18:32Z",
+                          "publishedAt": "2021-07-05T05:28:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Create an input file that just reads the previous solution into an AuxVariable called phi_from_exodus.  This probably doesn't need to have any PorousFlow stuff in it.  Call this input file \"subapp.i\"\nThen, in your regular input file (the one that does the PorousFlow simulation) have an AuxVariable called porosity_aux, and simply include the following at the bottom of the file:\n[MultiApps]\n  [define_porosity]\n    type = TransientMultiApp\n    input_files = subapp.i\n    execute_on = INITIAL\n  []\n[]\n\n[Transfers]\n  [populate_porosity]\n    type = MultiAppInterpolationTransfer\n    direction = from_multiapp\n    multi_app = define_porosity\n    source_variable = phi_from_exodus\n    variable = porosity_aux\n  []\n[]\n\nThe MultiAppInterpolationTransfer has some other options you might like to use (see the doco)",
+                          "url": "https://github.com/idaholab/moose/discussions/18250#discussioncomment-964278",
+                          "updatedAt": "2022-07-26T13:18:35Z",
+                          "publishedAt": "2021-07-05T05:46:48Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "There s a dedicated multi app example on the mooseframeworks doc website. (I think, it got merged 2 weeks ago iirc). Should be in the main tabs\nIn the subapp input file, you can add solve=false and kernel_coverage_check=false in the Problems block to reduce the number of things to provide to make it a valid input file.",
+                          "url": "https://github.com/idaholab/moose/discussions/18250#discussioncomment-964288",
+                          "updatedAt": "2023-05-09T18:59:49Z",
+                          "publishedAt": "2021-07-05T05:51:14Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hsheldon"
+                          },
+                          "bodyText": "I got it working with MultiAppMeshFunctionTransfer. Thanks for your help!",
+                          "url": "https://github.com/idaholab/moose/discussions/18250#discussioncomment-991814",
+                          "updatedAt": "2023-05-09T19:00:12Z",
+                          "publishedAt": "2021-07-12T03:55:15Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hsheldon"
+                          },
+                          "bodyText": "It is a bit of a messy solution though. It would be sooo much simpler if SolutionFunction could handle a partial mesh.",
+                          "url": "https://github.com/idaholab/moose/discussions/18250#discussioncomment-991818",
+                          "updatedAt": "2023-05-09T19:01:04Z",
+                          "publishedAt": "2021-07-12T03:58:08Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "sideset cannot generate from nodeset",
+          "author": {
+            "login": "BoZeng1997"
+          },
+          "bodyText": "Hi,\nI have a strip with a meshed-in crack on the left in the centerline. I first defined two pieces of mesh for the top and bottom half and then stitched them together in the middle outside the crack. Then I want to redefine the two boundaries at the crack to have a closed sideset for later use. I have set construct_side_list_from_node_list = true, but there is no side sets generated from new boundaries. Please tell me what to do.\n[Mesh]\n  [top_half]\n    type = GeneratedMeshGenerator\n    dim = 2\n    nx = 94 #750/8\n    ny = 16 #125\n    xmax = 30 #30\n    ymin = 0\n    ymax = 5 #5\n    boundary_id_offset = 0\n    boundary_name_prefix = top_half\n  []\n  [top_nonstitch]\n    type = BoundingBoxNodeSetGenerator\n    input = top_half\n    new_boundary = top_nonstitch\n    bottom_left = '0 0 0' #5\n    top_right = '5 0 0' #30\n    show_info = true\n  []\n  [top_stitch]\n    type = BoundingBoxNodeSetGenerator\n    input = top_nonstitch\n    new_boundary = top_stitch\n    bottom_left = '5 0 0' #5\n    top_right = '30 0 0' #30\n    show_info = true\n  []\n  [bottom_half]\n    type = GeneratedMeshGenerator\n    dim = 2\n    nx = 94 #0\n    ny = 16 #5\n    xmax = 30 #0\n    ymin = -5\n    ymax = 0\n    boundary_id_offset = 7\n    boundary_name_prefix = bottom_half\n  []\n  [bottom_nonstitch]\n    type = BoundingBoxNodeSetGenerator\n    input = bottom_half\n    new_boundary = bottom_nonstitch\n    bottom_left = '0 0 0'\n    top_right = '5 0 0'\n    show_info = true\n  []\n  [bottom_stitch]\n    type = BoundingBoxNodeSetGenerator\n    input = bottom_nonstitch\n    new_boundary = bottom_stitch\n    bottom_left = '5 0 0'\n    top_right = '30 0 0'\n    show_info = true\n  []\n  [stitch]\n    type = StitchedMeshGenerator\n    inputs = 'top_stitch bottom_stitch'\n    stitch_boundaries_pairs = 'top_stitch bottom_stitch'\n    show_info = true\n  []\n  construct_side_list_from_node_list = true\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/18298",
+          "updatedAt": "2022-07-20T19:08:27Z",
+          "publishedAt": "2021-07-09T22:52:16Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\ncan you add show_info = true to the last mesh generator in the chain?\nThat will show what sidesets are being created\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/18298#discussioncomment-987038",
+                  "updatedAt": "2022-07-20T19:08:39Z",
+                  "publishedAt": "2021-07-09T23:02:25Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "BoZeng1997"
+                          },
+                          "bodyText": "I think I did. It is in '[stitch]'. Or is that not the last generator?",
+                          "url": "https://github.com/idaholab/moose/discussions/18298#discussioncomment-987047",
+                          "updatedAt": "2022-07-20T19:08:40Z",
+                          "publishedAt": "2021-07-09T23:06:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "oh can you paste the output then please",
+                          "url": "https://github.com/idaholab/moose/discussions/18298#discussioncomment-987068",
+                          "updatedAt": "2022-07-20T19:08:40Z",
+                          "publishedAt": "2021-07-09T23:18:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "BoZeng1997"
+                          },
+                          "bodyText": "\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m Mesh Information:\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  elem_dimensions()={2}\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  spatial_dimension()=2\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  n_nodes()=3151\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m    n_local_nodes()=3151\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  n_elem()=3008\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m    n_local_elem()=3008\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m    n_active_elem()=3008\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  n_subdomains()=1\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  n_partitions()=1\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  n_processors()=1\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  n_threads()=1\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  processor_id()=0\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  is_prepared()=true\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  is_replicated()=true\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m Mesh Bounding Box:\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  Minimum: (x,y,z)=(       0,       -5,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  Maximum: (x,y,z)=(      30,        5,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  Delta:   (x,y,z)=(      30,       10,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m Mesh Element Type(s):\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  QUAD4\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m Mesh Nodesets:\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  Nodeset 0 (top_half_bottom), 95 nodes\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box minimum: (x,y,z)=(       0,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box maximum: (x,y,z)=(      30,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box delta: (x,y,z)=(      30,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  Nodeset 1 (top_half_right), 17 nodes\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box minimum: (x,y,z)=(      30,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box maximum: (x,y,z)=(      30,        5,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box delta: (x,y,z)=(       0,        5,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  Nodeset 2 (top_half_top), 95 nodes\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box minimum: (x,y,z)=(       0,        5,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box maximum: (x,y,z)=(      30,        5,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box delta: (x,y,z)=(      30,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  Nodeset 3 (top_half_left), 17 nodes\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box minimum: (x,y,z)=(       0,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box maximum: (x,y,z)=(       0,        5,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box delta: (x,y,z)=(       0,        5,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  Nodeset 4, 16 nodes\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box minimum: (x,y,z)=(       0,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box maximum: (x,y,z)=( 4.78723,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box delta: (x,y,z)=( 4.78723,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  Nodeset 5, 79 nodes\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box minimum: (x,y,z)=( 5.10638,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box maximum: (x,y,z)=(      30,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box delta: (x,y,z)=( 24.8936,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  Nodeset 7 (bottom_half_bottom), 95 nodes\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box minimum: (x,y,z)=(       0,       -5,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box maximum: (x,y,z)=(      30,       -5,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box delta: (x,y,z)=(      30,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  Nodeset 8 (bottom_half_right), 17 nodes\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box minimum: (x,y,z)=(      30,       -5,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box maximum: (x,y,z)=(      30,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box delta: (x,y,z)=(       0,        5,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  Nodeset 9 (bottom_half_top), 95 nodes\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box minimum: (x,y,z)=(       0,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box maximum: (x,y,z)=(      30,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box delta: (x,y,z)=(      30,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  Nodeset 10 (bottom_half_left), 17 nodes\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box minimum: (x,y,z)=(       0,       -5,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box maximum: (x,y,z)=(       0,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box delta: (x,y,z)=(       0,        5,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  Nodeset 11, 16 nodes\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box minimum: (x,y,z)=(       0,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box maximum: (x,y,z)=( 4.78723,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box delta: (x,y,z)=( 4.78723,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  Nodeset 12, 79 nodes\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box minimum: (x,y,z)=( 5.10638,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box maximum: (x,y,z)=(      30,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box delta: (x,y,z)=( 24.8936,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m Mesh Sidesets:\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  Sideset 0 (top_half_bottom), 94 sides (EDGE2), 94 elems (QUAD4), 95 nodes\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Side volume: 30\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box minimum: (x,y,z)=(       0,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box maximum: (x,y,z)=(      30,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box delta: (x,y,z)=(      30,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  Sideset 1 (top_half_right), 16 sides (EDGE2), 16 elems (QUAD4), 17 nodes\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Side volume: 5\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box minimum: (x,y,z)=(      30,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box maximum: (x,y,z)=(      30,        5,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box delta: (x,y,z)=(       0,        5,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  Sideset 2 (top_half_top), 94 sides (EDGE2), 94 elems (QUAD4), 95 nodes\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Side volume: 30\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box minimum: (x,y,z)=(       0,        5,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box maximum: (x,y,z)=(      30,        5,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box delta: (x,y,z)=(      30,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  Sideset 3 (top_half_left), 16 sides (EDGE2), 16 elems (QUAD4), 17 nodes\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Side volume: 5\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box minimum: (x,y,z)=(       0,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box maximum: (x,y,z)=(       0,        5,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box delta: (x,y,z)=(       0,        5,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  Sideset 7 (bottom_half_bottom), 94 sides (EDGE2), 94 elems (QUAD4), 95 nodes\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Side volume: 30\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box minimum: (x,y,z)=(       0,       -5,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box maximum: (x,y,z)=(      30,       -5,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box delta: (x,y,z)=(      30,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  Sideset 8 (bottom_half_right), 16 sides (EDGE2), 16 elems (QUAD4), 17 nodes\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Side volume: 5\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box minimum: (x,y,z)=(      30,       -5,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box maximum: (x,y,z)=(      30,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box delta: (x,y,z)=(       0,        5,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  Sideset 9 (bottom_half_top), 94 sides (EDGE2), 94 elems (QUAD4), 95 nodes\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Side volume: 30\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box minimum: (x,y,z)=(       0,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box maximum: (x,y,z)=(      30,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box delta: (x,y,z)=(      30,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  Sideset 10 (bottom_half_left), 16 sides (EDGE2), 16 elems (QUAD4), 17 nodes\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Side volume: 5\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box minimum: (x,y,z)=(       0,       -5,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box maximum: (x,y,z)=(       0,        0,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box delta: (x,y,z)=(       0,        5,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m Mesh Edgesets:\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  None\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m Mesh Subdomains:\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  Subdomain 0: 3008 elems (QUAD4, 3008 active), 3151 active nodes\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Volume: 300\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box minimum: (x,y,z)=(       0,       -5,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box maximum: (x,y,z)=(      30,        5,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m   Bounding box delta: (x,y,z)=(      30,       10,        0)\n\ufffd[36mStitchedMeshGenerator 'stitch': \ufffd[39m  Global mesh volume = 300",
+                          "url": "https://github.com/idaholab/moose/discussions/18298#discussioncomment-987083",
+                          "updatedAt": "2022-07-20T19:08:41Z",
+                          "publishedAt": "2021-07-09T23:26:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "so none of the desired sidesets are generated it seems?\nAre they generated before the stitch and destroyed by the stitch or are they never generated? (place show_info in an earlier generator to check)",
+                          "url": "https://github.com/idaholab/moose/discussions/18298#discussioncomment-989285",
+                          "updatedAt": "2024-01-23T05:00:53Z",
+                          "publishedAt": "2021-07-10T23:02:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "BoZeng1997"
+                          },
+                          "bodyText": "here is what happened in [top_nonstitch], an object before [stitch]",
+                          "url": "https://github.com/idaholab/moose/discussions/18298#discussioncomment-991051",
+                          "updatedAt": "2024-01-23T05:00:53Z",
+                          "publishedAt": "2021-07-11T20:08:51Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "BoZeng1997"
+                          },
+                          "bodyText": "\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m Mesh Information:\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m  elem_dimensions()={2}\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m  spatial_dimension()=2\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m  n_nodes()=1615\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m    n_local_nodes()=1615\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m  n_elem()=1504\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m    n_local_elem()=1504\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m    n_active_elem()=1504\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m  n_subdomains()=1\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m  n_partitions()=1\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m  n_processors()=1\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m  n_threads()=1\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m  processor_id()=0\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m  is_prepared()=true\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m  is_replicated()=true\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m Mesh Bounding Box:\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m  Minimum: (x,y,z)=(       0,        0,        0)\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m  Maximum: (x,y,z)=(      30,        5,        0)\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m  Delta:   (x,y,z)=(      30,        5,        0)\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m Mesh Element Type(s):\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m  QUAD4\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m Mesh Nodesets:\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m  Nodeset 0 (top_half_bottom), 95 nodes\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Bounding box minimum: (x,y,z)=(       0,        0,        0)\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Bounding box maximum: (x,y,z)=(      30,        0,        0)\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Bounding box delta: (x,y,z)=(      30,        0,        0)\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m  Nodeset 1 (top_half_right), 17 nodes\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Bounding box minimum: (x,y,z)=(      30,        0,        0)\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Bounding box maximum: (x,y,z)=(      30,        5,        0)\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Bounding box delta: (x,y,z)=(       0,        5,        0)\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m  Nodeset 2 (top_half_top), 95 nodes\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Bounding box minimum: (x,y,z)=(       0,        5,        0)\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Bounding box maximum: (x,y,z)=(      30,        5,        0)\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Bounding box delta: (x,y,z)=(      30,        0,        0)\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m  Nodeset 3 (top_half_left), 17 nodes\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Bounding box minimum: (x,y,z)=(       0,        0,        0)\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Bounding box maximum: (x,y,z)=(       0,        5,        0)\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Bounding box delta: (x,y,z)=(       0,        5,        0)\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m  Nodeset 4, 16 nodes\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Bounding box minimum: (x,y,z)=(       0,        0,        0)\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Bounding box maximum: (x,y,z)=( 4.78723,        0,        0)\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Bounding box delta: (x,y,z)=( 4.78723,        0,        0)\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m Mesh Sidesets:\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m  Sideset 0 (top_half_bottom), 94 sides (EDGE2), 94 elems (QUAD4), 95 nodes\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Side volume: 30\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Bounding box minimum: (x,y,z)=(       0,        0,        0)\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Bounding box maximum: (x,y,z)=(      30,        0,        0)\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Bounding box delta: (x,y,z)=(      30,        0,        0)\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m  Sideset 1 (top_half_right), 16 sides (EDGE2), 16 elems (QUAD4), 17 nodes\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Side volume: 5\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Bounding box minimum: (x,y,z)=(      30,        0,        0)\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Bounding box maximum: (x,y,z)=(      30,        5,        0)\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Bounding box delta: (x,y,z)=(       0,        5,        0)\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m  Sideset 2 (top_half_top), 94 sides (EDGE2), 94 elems (QUAD4), 95 nodes\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Side volume: 30\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Bounding box minimum: (x,y,z)=(       0,        5,        0)\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Bounding box maximum: (x,y,z)=(      30,        5,        0)\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Bounding box delta: (x,y,z)=(      30,        0,        0)\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m  Sideset 3 (top_half_left), 16 sides (EDGE2), 16 elems (QUAD4), 17 nodes\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Side volume: 5\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Bounding box minimum: (x,y,z)=(       0,        0,        0)\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Bounding box maximum: (x,y,z)=(       0,        5,        0)\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Bounding box delta: (x,y,z)=(       0,        5,        0)\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m Mesh Edgesets:\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m  None\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m Mesh Subdomains:\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m  Subdomain 0: 1504 elems (QUAD4, 1504 active), 1615 active nodes\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Volume: 150\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Bounding box minimum: (x,y,z)=(       0,        0,        0)\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Bounding box maximum: (x,y,z)=(      30,        5,        0)\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m   Bounding box delta: (x,y,z)=(      30,        5,        0)\n\ufffd[36mBoundingBoxNodeSetGenerator 'top_nonstitch': \ufffd[39m  Global mesh volume = 150",
+                          "url": "https://github.com/idaholab/moose/discussions/18298#discussioncomment-991053",
+                          "updatedAt": "2024-01-23T05:00:53Z",
+                          "publishedAt": "2021-07-11T20:09:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "BoZeng1997"
+                          },
+                          "bodyText": "from the output it seems like the sidesets were never generated. but when I apply boundary condition to these new boundaries, it was successful.",
+                          "url": "https://github.com/idaholab/moose/discussions/18298#discussioncomment-991055",
+                          "updatedAt": "2022-09-14T15:49:52Z",
+                          "publishedAt": "2021-07-11T20:13:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "BoZeng1997"
+                          },
+                          "bodyText": "[bottom_y]\n    type = FunctionDirichletBC\n    variable = disp_y\n    boundary = bottom_half_bottom\n    function = bc_func\n  []",
+                          "url": "https://github.com/idaholab/moose/discussions/18298#discussioncomment-991058",
+                          "updatedAt": "2022-09-14T15:49:55Z",
+                          "publishedAt": "2021-07-11T20:13:52Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "I'm guessing that's because the construct_side_list_from_node_list step is not applied until all mesh generators are done. You can't assume those nodesets to be sidesets in mesh generators.\n@GiudGiud It's probably not a bad idea to add a ConstructSidesetsFromNodesetsGenerator.",
+                          "url": "https://github.com/idaholab/moose/discussions/18298#discussioncomment-991095",
+                          "updatedAt": "2022-09-14T15:49:55Z",
+                          "publishedAt": "2021-07-11T20:32:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@hugary1995 I think that is a potential bug yeah. Though the nodesets are present after the final mesh generators, so the sidesets should have been created??\nThe boundaries reported for sideset 4 are odd though. I think there is some finite precision comparison failures going on there. Like I would expect to see 5 0 0 as the maximum\nCould you please try generating those sidesets another way?\nEither of these, SideSetsBetweenSubdomainsGenerator\nSideSetsFromBoundingBoxGenerator\nSideSetsFromNormalsGenerator\nSideSetsFromPointsGenerator\ncould do the trick in my opinion\nNote: the boundary condition you pasted worked fine because it depends on the output of a GeneratedMeshGenerator, not on any of the nodesets created",
+                          "url": "https://github.com/idaholab/moose/discussions/18298#discussioncomment-991630",
+                          "updatedAt": "2022-09-14T15:49:55Z",
+                          "publishedAt": "2021-07-12T02:04:52Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Stiffness tensor of void or bubble when coupling elastic energy",
+          "author": {
+            "login": "wenpeng231024"
+          },
+          "bodyText": "Dear MOOSE group,\nI try to add elastic energy in our model of void or bubble evolution in the matrix as Aagesen's paper (Aagesen, 2017, Quantifying elastic energy effects on interfacial energy in the Kim-Kim-Suzuki phase-field model with different interpolation schemes).\nhttps://www.sciencedirect.com/science/article/pii/S0927025617304111\nHowever, I am a little confused about how to set the void/bubble stiffness tensor. I found most papers assuming the stiffness tensor of gas bubbles is the same as the matrix. Does this make sense? The stress due to the eigenstrain is constant. But the elastic strain should be different on the interface using different stiffness tensors of gas bubbles. And the stress in the matrix caused by the void/bubble should be also different.\nSo my question is that how to select the stiffness tensor of void/bubble when we use eigenstrain to develop stress in the matrix caused by the void/bubble?\nI also show some relevant papers here.\nLi, Nuclear Instruments and Methods in Physics Research B 303 (2013) 62\u201367.\nHu, Journal of Nuclear Materials 392 (2009) 292\u2013300.\nXiao, Computational Materials Science 184 (2020) 109867.\nThanks,\nPeng",
+          "url": "https://github.com/idaholab/moose/discussions/18288",
+          "updatedAt": "2022-06-11T08:50:06Z",
+          "publishedAt": "2021-07-08T13:32:09Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@laagesen",
+                  "url": "https://github.com/idaholab/moose/discussions/18288#discussioncomment-980803",
+                  "updatedAt": "2022-06-11T08:50:33Z",
+                  "publishedAt": "2021-07-08T18:01:12Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "laagesen"
+                          },
+                          "bodyText": "Hi Peng, to use the eigenstrain approach to simulate gas bubble pressure, I think it's fine to use the bubble stiffness tensor to be the same as the matrix. What you are doing is using an inclusion to mimic the effect of the gas pressure, which can result in a non-zero stress experienced by the matrix outside of the bubble. (The pressure felt outside the bubble is actually given by the difference between the gas bubble pressure and the surface tension. This is not considered in either of the two earlier works you mentioned, but it is considered in the 2020 paper.) So using the eigenstrain approach will allow you to consider a bubble with a fixed overpressure or underpressure relative to surface tension. (For an equilbrium bubble, or a bubble whose pressure is exactly balanced by surface tension, there is no stress felt outside the bubble.) So the bubble phase elastic constant do not physically represent the actual elastic constants of the gas phase; this is sort of a trick to mimic the effect of the gas pressure on the surrounding matrix. This approach has some disadvantages, such as inaccurate response to applied loads.",
+                          "url": "https://github.com/idaholab/moose/discussions/18288#discussioncomment-981828",
+                          "updatedAt": "2022-06-11T08:50:34Z",
+                          "publishedAt": "2021-07-09T00:00:09Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "wenpeng231024"
+                          },
+                          "bodyText": "Hi Larry,\nThanks so much for your reply. If I understand correctly, that means the calculated total stress or elastic stress inside the bubble is meaningless. Because we just care about the stress in the matrix around the bubble.\nActually, I try to test using different elastic constants of gas bubble. I found when I use VTS interpolation scheme (assuming the total strain is the same for both phases on the interface) to add the elastic energy, a larger elastic stress is obtained in the matrix around the bubble using a smaller elastic constants of gas bubble. Because, although the pressure in the bubble is a constant. But a larger total strain (Total strain = elastic strain - eigenstrain) for bubble is obtained when using a smaller stiffness of gas bubble. (For gas, it seems more reasonable to use a smaller elastic modulus.) This larger total strain in the bubble leads to a larger strain in the matrix through the interface due to the continuum assumption.\nSo how can we remove this stress difference in the matrix due to the selected of the stiffness of gas bubble? Maybe it's better to use KHS scheme? Because it assume the stress is the same for both phases on the interface. Or we can ignore this effect if this difference is not very large.\nYou mentioned this approach is inaccurate response to applied stress in the matrix. This is exactly what I am doing. Can you show more about this? I use \"ADPressure\" boundary conditions to add applied stress in the matrix. Then, I compared the stress in the matrix around the bubble between adding applied stress case and no applied stress case. Their difference is approximately the applied stress. Does this indicate the eigenstrain approach works for applied loading?\nMany thanks,\nPeng",
+                          "url": "https://github.com/idaholab/moose/discussions/18288#discussioncomment-982003",
+                          "updatedAt": "2022-06-11T08:50:35Z",
+                          "publishedAt": "2021-07-09T01:27:51Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "laagesen"
+                          },
+                          "bodyText": "Hm that is interesting. I do think that seems reasonable for the applied stress case, for what you are looking at (the stress in the matrix). I was thinking more about applying a load and looking at the total displacement in response to that load, for example. If you apply a fixed load, for the case of a void, physically there is nothing to resist the applied load, so you would expect a larger total displacement than for the simulations where you mimic the effect of a void with the eigenstrain approach, because the void is represented by a region of material that has the same elastic constant as the matrix and therefore significantly resists the applied load.",
+                          "url": "https://github.com/idaholab/moose/discussions/18288#discussioncomment-987005",
+                          "updatedAt": "2022-06-11T08:51:01Z",
+                          "publishedAt": "2021-07-09T22:41:04Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "wenpeng231024"
+                          },
+                          "bodyText": "Yes, I agree with you about the void.\nI think the elastic constants of void/bubble should affect the stress in the matrix. And the applied loading maybe enlarge this effect.\nThanks,\nPeng",
+                          "url": "https://github.com/idaholab/moose/discussions/18288#discussioncomment-991065",
+                          "updatedAt": "2022-06-11T08:51:15Z",
+                          "publishedAt": "2021-07-11T20:18:01Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Frictional contact",
+          "author": {
+            "login": "samyogshr"
+          },
+          "bodyText": "Hi Moose users,\nI am modeling a 3D structural dynamics problem (using Hex8 elements) with frictional contact (penalty formulation) in MOOSE. The analysis converges and displacements look fine. But, there are spikes (high frequency oscillation at few time-steps) in acceleration output at some nodes in the slave and master surfaces (specially prominent at corners). I came across a few parameters in the contact block that were previously suggested in previous discussions, e.g., tangential_tolerance, normal_smooting_distance etc.\nHas anybody else experienced similar problem? Does anybody know if using these parameters will help?\nI also couldn't find information on what it means by defining tangential_tolerance = 1e-5 compared to 1e-3 for example. Could somebody please explain or provide a good reference?\nThank you,\nSamyog",
+          "url": "https://github.com/idaholab/moose/discussions/17264",
+          "updatedAt": "2022-11-07T13:11:46Z",
+          "publishedAt": "2021-03-09T22:13:06Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "dzheng26"
+                  },
+                  "bodyText": "@samyogshr , I cannot really help you since I'm also trying to use the 3D frictional contact. I cannot even get it converge for my example. Could you post your .i file here so that it may help me get my example converged first. Many Thanks.",
+                  "url": "https://github.com/idaholab/moose/discussions/17264#discussioncomment-484582",
+                  "updatedAt": "2022-11-07T13:11:46Z",
+                  "publishedAt": "2021-03-15T15:49:44Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "samyogshr"
+                          },
+                          "bodyText": "@dzheng-conti , hope you have resolved it by now. Sorry for late reply.\nContact block in my input file. I have 5 surfaces in contact and using 8-noded brick elements.\n[Contact]\n[./base]\nsecondary = 10006\nprimary = 105\nmodel = coulomb\nformulation = penalty\nnormalize_penalty = true\nfriction_coefficient = 0.2\ntangential_tolerance = 1e-5\npenalty = 1e4\nnormal_smoothing_distance = 0.1\n[../]\n[./side2]\nsecondary = 10008\nprimary = 107\nmodel = coulomb\nformulation = penalty\nnormalize_penalty = true\nfriction_coefficient = 0.2\ntangential_tolerance = 1e-5\npenalty = 1e4\nnormal_smoothing_distance = 0.1\n[../]\n[./side3]\nsecondary = 10010\nprimary = 109\nmodel = coulomb\nformulation = penalty\nnormalize_penalty = true\nfriction_coefficient = 0.2\ntangential_tolerance = 1e-5\npenalty = 1e4\nnormal_smoothing_distance = 0.1\n[../]\n[./side4]\nsecondary = 10012\nprimary = 111\nmodel = coulomb\nformulation = penalty\nnormalize_penalty = true\nfriction_coefficient = 0.2\ntangential_tolerance = 1e-5\npenalty = 1e4\nnormal_smoothing_distance = 0.1\n[../]\n[./side5]\nsecondary = 10014\nprimary = 113\nmodel = coulomb\nformulation = penalty\nnormalize_penalty = true\nfriction_coefficient = 0.2\ntangential_tolerance = 1e-5\npenalty = 1e4\nnormal_smoothing_distance = 0.1\n[../]\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/17264#discussioncomment-578031",
+                          "updatedAt": "2022-11-07T13:11:46Z",
+                          "publishedAt": "2021-04-07T05:32:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dzheng26"
+                          },
+                          "bodyText": "Thanks for your help. I got my problem somewhat resolved. It converged but slowly. The contact works better with lower friction coefficient. In my case, the friction coefficient is 1.0",
+                          "url": "https://github.com/idaholab/moose/discussions/17264#discussioncomment-687161",
+                          "updatedAt": "2022-11-07T13:11:54Z",
+                          "publishedAt": "2021-05-03T09:40:26Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@bwspenc should be able to help",
+                  "url": "https://github.com/idaholab/moose/discussions/17264#discussioncomment-495527",
+                  "updatedAt": "2022-11-07T13:11:54Z",
+                  "publishedAt": "2021-03-17T20:13:18Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "samyogshr"
+                          },
+                          "bodyText": "@bwspenc Could you please share your thoughts on this, thank you.",
+                          "url": "https://github.com/idaholab/moose/discussions/17264#discussioncomment-578035",
+                          "updatedAt": "2022-11-07T13:11:54Z",
+                          "publishedAt": "2021-04-07T05:36:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "bwspenc"
+                          },
+                          "bodyText": "Sorry for coming into this way too late!  The tangential_tolerance parameter controls the distance (in the physical coordinates of your model) that the face is virtually extended beyond the edge. This helps in problems where you have two blocks that are in contact right along their edges. I'm not sure whether that would help your particular problem.\nTo prevent high-frequency noise, anything you can do to smooth the behavior of contact will help. normal_smoothing_distance should help somewhat with that, as would a lower friction coefficient, as you already found.",
+                          "url": "https://github.com/idaholab/moose/discussions/17264#discussioncomment-987124",
+                          "updatedAt": "2022-11-07T13:11:54Z",
+                          "publishedAt": "2021-07-09T23:52:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "In addition to Ben's suggestions, you could also incorporate Rayleigh damping. You can use a higher damping coefficient near the contact surfaces.",
+                          "url": "https://github.com/idaholab/moose/discussions/17264#discussioncomment-987254",
+                          "updatedAt": "2022-11-07T13:11:55Z",
+                          "publishedAt": "2021-07-10T01:34:27Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Populating aux. variable from a function",
+          "author": {
+            "login": "am-tc01"
+          },
+          "bodyText": "Hi,\nI want to update an auxiliary variable (T) using a function that is dependent on a variable I am solving for (u). The function should point to an input data file that has two columns, values of u in the first column and T in the second. Furthermore, I want to get the values on nodal points and not a volume-averaged value on elemental level. Is there a straightforward way to do it?\nThanks!",
+          "url": "https://github.com/idaholab/moose/discussions/18292",
+          "updatedAt": "2022-07-07T04:43:44Z",
+          "publishedAt": "2021-07-08T15:02:39Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYou should look into AuxKernels to do this.\nIf the function from u to T is simple, you can use a ParsedAux\nIf not, you should modify derive from the SelfAux for your class. You will have to create your own as there are none that do this tabulation you need afaik.\nIf the AuxVariable is a nodal variable and so is u, that should not be a problem.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/18292#discussioncomment-980142",
+                  "updatedAt": "2022-07-07T04:43:44Z",
+                  "publishedAt": "2021-07-08T15:23:07Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "am-tc01"
+                          },
+                          "bodyText": "Hi Guillaume\nThanks for the reply. Yes, I've been looking into Auxkernels but couldn't find any kernel that I could just use off-the-shelf. FunctionAux could be one but then I can only have a function of x,y,z or t. Also, the function form u to T is not simple so I have to read in the data from an input file.\nThanks!",
+                          "url": "https://github.com/idaholab/moose/discussions/18292#discussioncomment-982839",
+                          "updatedAt": "2022-07-07T04:43:46Z",
+                          "publishedAt": "2021-07-09T07:52:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "FunctionAux could work with a ParsedFunction for your application, but if the function is not simple then that would not work because you have to be able to write down the expression for it in the input file. If you are ok with a really long input file, you could use python to write the table in a functionalized 'if u in this interval etc' form.\nI think you've identified a need. If you want to implement this capability, I could see it either as an AuxKernel, something like PiecewiseConstantAux OR more naturally as an extension of the Piecewise-... functions, which would let you specify a variable in addition to the axis eg x,y,z,t",
+                          "url": "https://github.com/idaholab/moose/discussions/18292#discussioncomment-985619",
+                          "updatedAt": "2022-07-07T04:43:46Z",
+                          "publishedAt": "2021-07-09T14:43:20Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "PorousFlow - Strain",
+          "author": {
+            "login": "MatiasAllay"
+          },
+          "bodyText": "Hi,\nWhy my RZ PorousFlow model converges nicely when the strain is computed with ComputeSmallStrain, but it does not with ComputeAxisymmetricRZSmallStrain? Is it correct to use ComputeSmallStrain with cylindrical coordinates? If not, how can I help MOOSE to converge using ComputeAxisymmetricRZSmallStrain?\nThanks again!\nMatias",
+          "url": "https://github.com/idaholab/moose/discussions/18290",
+          "updatedAt": "2023-02-05T14:41:05Z",
+          "publishedAt": "2021-07-08T14:59:54Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "WilkAndy"
+                  },
+                  "bodyText": "You must use ComputeAxisymmetricRZSmallStrain .   You've possibly omitted another \"RZ\" thing, or maybe your BCs are wrong.   Inspect the test files that have \"RZ\" in them and compare with yours.  I'd start with\n.test/tests/thm_rehbinder/fixed_outer_rz.i\nexamples/tutorial/11_2D. i\n\na",
+                  "url": "https://github.com/idaholab/moose/discussions/18290#discussioncomment-981527",
+                  "updatedAt": "2023-02-05T14:41:05Z",
+                  "publishedAt": "2021-07-08T21:40:41Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "MatiasAllay"
+                          },
+                          "bodyText": "Thanks once again!",
+                          "url": "https://github.com/idaholab/moose/discussions/18290#discussioncomment-982682",
+                          "updatedAt": "2023-02-05T14:41:05Z",
+                          "publishedAt": "2021-07-09T07:08:47Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Appropriate mesh file created in gmsh",
+          "author": {
+            "login": "Ali1990dashti"
+          },
+          "bodyText": "Dear community,\nI am new in using moose and want to import my mesh into moose. I am using an open source code developed on top of moose (called Tiger) to change my mesh from .msh file into a exodus file to visualize it in paraview. I created my mesh using gmsh. Then I used a syntax of Tiger to change the mesh (--mesh-only) but the result which I am seeing in paraview is completely different from what I created in gmsh. My mesh has two blocks and 7 surfaces (uploaded fig). I want to do THM modelling using mentioned code (Tiger) on the uploaded mesh file but I can see the mesh I created. I have no idea what is the problem of my mesh. How can I check if my mesh is correctly prepared for moose? I do appreciate any help in advance.\n\nmesh.zip",
+          "url": "https://github.com/idaholab/moose/discussions/18106",
+          "updatedAt": "2022-06-18T18:48:36Z",
+          "publishedAt": "2021-06-17T09:57:50Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "ajacquey"
+                  },
+                  "bodyText": "Hi Ali,\nIt would help if you share your .geo file you used to create the mesh with gmsh.\nWithout it, I can only give you some hints to check.\nFirst, did you set the physical blocks in the .geo file?\nIt is usually done with:\nPhysical Volume(0) = {1};\nPhysical Volume(1) = {2};\n\nwith 1 and 2 being the volume you creates and 0 and 1 being the block number that you can use in the moose input file.\nThen, you can do the same with the boundary surfaces:\nPhysical Surface(\"bottom\") = {1};\n\nHope it helps.",
+                  "url": "https://github.com/idaholab/moose/discussions/18106#discussioncomment-883377",
+                  "updatedAt": "2022-06-18T18:48:59Z",
+                  "publishedAt": "2021-06-17T13:37:45Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Ali1990dashti"
+                          },
+                          "bodyText": "Dear @ajacquey, I do not use .geo files to create my mesh. I am using python API of gmsh and my syntax is in python. If you open my msh file with gmsh, volumes and surfaces look fine, but I have no idea why moose is not reading them. If you have look at my mesh, you can see that I have  defined both my 2d and 3d Physical Names.",
+                          "url": "https://github.com/idaholab/moose/discussions/18106#discussioncomment-883402",
+                          "updatedAt": "2022-06-18T18:49:13Z",
+                          "publishedAt": "2021-06-17T13:43:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ajacquey"
+                          },
+                          "bodyText": "Hi @Ali1990dashti ,\nYes, I can indeed see that the mesh has physical volumes and surfaces. The log message from moose reads fine when using the --mesh-only option.\nFrom paraview, I can only see the bottom part of your model in a volume representation. Any other representation yields nothing.\n\nMaybe there is something wrong in the top part of your model. I have never experienced this issue so I'm not sure I will be of any help.",
+                          "url": "https://github.com/idaholab/moose/discussions/18106#discussioncomment-883473",
+                          "updatedAt": "2022-06-18T18:49:12Z",
+                          "publishedAt": "2021-06-17T13:58:21Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ajacquey"
+                          },
+                          "bodyText": "My bad, I think it's the top part of your model (block unit_3).\nThe issue might come from the basement block",
+                          "url": "https://github.com/idaholab/moose/discussions/18106#discussioncomment-883483",
+                          "updatedAt": "2022-06-18T18:49:31Z",
+                          "publishedAt": "2021-06-17T13:59:48Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Ali1990dashti"
+                          },
+                          "bodyText": "@ajacquey , Thanks for your help. Visualized section is the basement block. At least in my mesh it is the basement block. Another problem is that it does not read my surfaces. Strange thing is that I can convert it without any error but when I visualize it, it looks different.",
+                          "url": "https://github.com/idaholab/moose/discussions/18106#discussioncomment-883504",
+                          "updatedAt": "2024-03-26T05:54:29Z",
+                          "publishedAt": "2021-06-17T14:04:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ajacquey"
+                          },
+                          "bodyText": "I can also load and display the physical surfaces properly.\nHowever, they all have really large values of ObjectId (around 7000-9000,  physical surface ID).\nCould you try to set these values to something closer to unity?",
+                          "url": "https://github.com/idaholab/moose/discussions/18106#discussioncomment-883516",
+                          "updatedAt": "2024-03-26T05:54:29Z",
+                          "publishedAt": "2021-06-17T14:05:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ajacquey"
+                          },
+                          "bodyText": "This is what I mean with the ObjectId values.",
+                          "url": "https://github.com/idaholab/moose/discussions/18106#discussioncomment-883527",
+                          "updatedAt": "2022-10-26T13:54:02Z",
+                          "publishedAt": "2021-06-17T14:08:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Ali1990dashti"
+                          },
+                          "bodyText": "@ajacquey do you mean the tag number of surfaces and volumes should be reduced and be for example less than 100?",
+                          "url": "https://github.com/idaholab/moose/discussions/18106#discussioncomment-883532",
+                          "updatedAt": "2022-10-27T21:52:00Z",
+                          "publishedAt": "2021-06-17T14:10:54Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ajacquey"
+                          },
+                          "bodyText": "Yes,\nYour 2 subdomains have now 7406 (unit_3) and 9290 (basement) as IDs.\nAnd your sidesets 9291-9296.\nWhen I first opened the exodus file in Paraview, I got a warning about large numbers but I think I clicked on 'Ok, don't show again' so I cannot see this warning anymore.\nI don't know how your python gmsh API works but can you try to set the IDs directly instead of giving names for your physical volumes and surfaces?",
+                          "url": "https://github.com/idaholab/moose/discussions/18106#discussioncomment-883617",
+                          "updatedAt": "2022-10-27T21:52:00Z",
+                          "publishedAt": "2021-06-17T14:23:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ajacquey"
+                          },
+                          "bodyText": "FYI, I have the same issue with peacock",
+                          "url": "https://github.com/idaholab/moose/discussions/18106#discussioncomment-883647",
+                          "updatedAt": "2022-10-27T21:52:00Z",
+                          "publishedAt": "2021-06-17T14:27:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@ajacquey @Ali1990dashti any news on this?",
+                          "url": "https://github.com/idaholab/moose/discussions/18106#discussioncomment-979989",
+                          "updatedAt": "2022-10-27T21:52:00Z",
+                          "publishedAt": "2021-07-08T14:49:41Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "Ali1990dashti"
+                  },
+                  "bodyText": "@ajacquey , I changed the mesh but still I cannot see any result in paraview. I installed the last version of moose and also use paraview 5.9.\nChanged_mesh.zip",
+                  "url": "https://github.com/idaholab/moose/discussions/18106#discussioncomment-883668",
+                  "updatedAt": "2022-06-18T18:49:33Z",
+                  "publishedAt": "2021-06-17T14:30:34Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Ali1990dashti"
+                          },
+                          "bodyText": "@ajacquey , Can I ask which version of paraview and conda are you using? I am seeing different things (almost nothing!!!) in my paraview. For moose also I installed it just two days ago. It has some problems with anaconda and I used following lines to install moose:\nconda create -n moose -q -y\nconda activate moose\nconda install moose-tools\nconda install moose-libmesh",
+                          "url": "https://github.com/idaholab/moose/discussions/18106#discussioncomment-883854",
+                          "updatedAt": "2022-06-18T18:49:39Z",
+                          "publishedAt": "2021-06-17T15:01:26Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ajacquey"
+                          },
+                          "bodyText": "@Ali1990dashti\nI have Paraview 5.9.1\nI updated moose and conda in May:\ngit commit 5cda0d3 on 2021-05-10",
+                          "url": "https://github.com/idaholab/moose/discussions/18106#discussioncomment-883875",
+                          "updatedAt": "2022-06-18T18:49:39Z",
+                          "publishedAt": "2021-06-17T15:05:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Ali1990dashti"
+                          },
+                          "bodyText": "@ajacquey, problem was my mesh. I was creating physical groups for blocks of my mesh but because of a mistake in a for loop, these physical groups were creating two times. Thanks for all your support. Sorry for my late feedback.",
+                          "url": "https://github.com/idaholab/moose/discussions/18106#discussioncomment-982653",
+                          "updatedAt": "2022-06-18T18:49:39Z",
+                          "publishedAt": "2021-07-09T07:00:32Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "3D Finite volume flow around a sphere",
+          "author": {
+            "login": "adfboyd"
+          },
+          "bodyText": "Hello, as a new user, I'm trying to work out how to simulate flow moving around a sphere, using finite volume incompressible flow in 3D.  I have looked at the examples for finite volume (channel flow especially), but how to convert to 3D and add the sphere object in is proving difficult. Any advice on where to look/what to do would be much appreciated!",
+          "url": "https://github.com/idaholab/moose/discussions/17470",
+          "updatedAt": "2022-07-26T02:26:31Z",
+          "publishedAt": "2021-03-31T12:37:55Z",
+          "category": {
+            "name": "Q&A Modules: Navier-Stokes"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYou will need meshing software to create your geometry as moose cant mesh the outside of a 3D sphere as far as I know.\nIf you are a student / in academia you can use the student version of cubit.\nOnce you have a mesh, setting up the problem in finite volume INS should not be too bad and we can help you with that too.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/17470#discussioncomment-554723",
+                  "updatedAt": "2022-07-26T02:26:31Z",
+                  "publishedAt": "2021-03-31T20:52:30Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "permcody"
+                          },
+                          "bodyText": "I believe @dschwen has done this. He can probably provide a few pointers.",
+                          "url": "https://github.com/idaholab/moose/discussions/17470#discussioncomment-560219",
+                          "updatedAt": "2022-07-26T02:26:31Z",
+                          "publishedAt": "2021-04-01T21:18:43Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "permcody"
+                          },
+                          "bodyText": "Here it is:\nhttps://mooseframework.inl.gov/source/meshgenerators/SphereSurfaceMeshGenerator.html\nI don't see a sample input file, but from the source it looks like the inputs are straightforward:\n\n  \n    \n      moose/modules/phase_field/src/meshgenerators/SphereSurfaceMeshGenerator.C\n    \n    \n        Lines 29 to 32\n      in\n      f6e5d67\n    \n  \n  \n    \n\n        \n          \n           params.addParam<Real>(\"radius\", 1.0, \"Sphere radius\"); \n        \n\n        \n          \n           params.addParam<Point>(\"center\", Point(0, 0, 0), \"Center of the sphere\"); \n        \n\n        \n          \n           params.addParam<unsigned int>( \n        \n\n        \n          \n               \"depth\", 3, \"Iteration steps in the triangle bisection construction\");",
+                          "url": "https://github.com/idaholab/moose/discussions/17470#discussioncomment-560321",
+                          "updatedAt": "2022-07-26T02:26:32Z",
+                          "publishedAt": "2021-04-01T21:46:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "adfboyd"
+                          },
+                          "bodyText": "Thank you very much! I am a student, and this is very helpful! I may come back to ask about setting up the flow once I've tried it.",
+                          "url": "https://github.com/idaholab/moose/discussions/17470#discussioncomment-561999",
+                          "updatedAt": "2022-07-26T02:26:36Z",
+                          "publishedAt": "2021-04-02T10:51:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "adfboyd"
+                          },
+                          "bodyText": "Now that the sphere can be generated, I'm afraid I'm still not sure how to set up a 3D flow and insert the sphere into it, are there any 3D examples for finite volume that I could look at? Thanks again!",
+                          "url": "https://github.com/idaholab/moose/discussions/17470#discussioncomment-576411",
+                          "updatedAt": "2022-07-26T02:29:13Z",
+                          "publishedAt": "2021-04-06T18:42:56Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Are you using the SphereSurfaceMeshGenerator? Can you post a picture of the mesh?\nThere's no 3D examples but it should be very straightforward to extend 2D cases to 3D. Just add a w variable and use the same kernels.",
+                          "url": "https://github.com/idaholab/moose/discussions/17470#discussioncomment-576476",
+                          "updatedAt": "2022-07-26T02:29:13Z",
+                          "publishedAt": "2021-04-06T19:02:21Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "adfboyd"
+                          },
+                          "bodyText": "I'm not sure how to use the SphereSurfaceMeshGenerator in order to actually generate an object, I'm afraid. I guess I'm also asking where I'm meant to do that. Is it done in the same application as the flow sim, or should it be used beforehand to make a file?\nThank you for your help again!",
+                          "url": "https://github.com/idaholab/moose/discussions/17470#discussioncomment-576511",
+                          "updatedAt": "2022-07-26T02:29:13Z",
+                          "publishedAt": "2021-04-06T19:09:05Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "It's a mesh generator. So you would use it in the mesh block, in the same input file as the flow sim.\nI'm not convinced this is what you need though, but we ll see.\nHow about you start by creating a 3D channel with no sphere in it and we can advise you again once you have that working.",
+                          "url": "https://github.com/idaholab/moose/discussions/17470#discussioncomment-576531",
+                          "updatedAt": "2022-07-26T02:29:13Z",
+                          "publishedAt": "2021-04-06T19:14:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "adfboyd"
+                          },
+                          "bodyText": "Thank you, that makes sense. I'll get that going.",
+                          "url": "https://github.com/idaholab/moose/discussions/17470#discussioncomment-576621",
+                          "updatedAt": "2022-07-26T02:29:16Z",
+                          "publishedAt": "2021-04-06T19:32:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "adfboyd"
+                          },
+                          "bodyText": "I've edited the .i file for channel flow so that it should be suitable for 3D, however I'm afraid I'm not sure which kernels I should be linking to in order to run it. (I will test that the 2D example case runs first once I have this before seeking more help). Any help is much appreciated. Thanks",
+                          "url": "https://github.com/idaholab/moose/discussions/17470#discussioncomment-631143",
+                          "updatedAt": "2022-07-26T02:29:16Z",
+                          "publishedAt": "2021-04-19T16:14:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I'm adding a 3D test to INSFV. It wont be merged very soon but you'll find it in #17088 in like an hour",
+                          "url": "https://github.com/idaholab/moose/discussions/17470#discussioncomment-638161",
+                          "updatedAt": "2022-07-26T02:29:21Z",
+                          "publishedAt": "2021-04-21T05:03:14Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Which code can we refer to if  phase field simulation of selective laser melting",
+          "author": {
+            "login": "mikejwg"
+          },
+          "bodyText": "Dear everyone,\nAnyone can share me the example similar to phase field simulation of selective laser melting, in which cooling rate and temperature gradient should be considered.\nI found  the examples in the phase field directory can not consider  cooling rate and temperature gradient.\nthanks.\nWG",
+          "url": "https://github.com/idaholab/moose/discussions/16554",
+          "updatedAt": "2022-06-17T08:04:09Z",
+          "publishedAt": "2020-12-21T12:44:23Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "laagesen"
+                  },
+                  "bodyText": "Hi, we currently don't have an example in the repository for directional solidification. We are doing some work in this area and are hoping to add an input file as an example in the next few months.",
+                  "url": "https://github.com/idaholab/moose/discussions/16554#discussioncomment-231497",
+                  "updatedAt": "2022-06-17T08:04:09Z",
+                  "publishedAt": "2020-12-21T21:01:53Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mikejwg"
+                          },
+                          "bodyText": "Thanks for your reply.  Look forward to the work.  Hope the input file can consider rapid solidification because the cooling rate is  greater than 1e5 K/s and the temperature gradient is greater than  1e5 K/m during SLM process.",
+                          "url": "https://github.com/idaholab/moose/discussions/16554#discussioncomment-232687",
+                          "updatedAt": "2022-06-17T08:04:12Z",
+                          "publishedAt": "2020-12-22T00:01:24Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "SudiptaBiswas"
+                          },
+                          "bodyText": "@mikejwg The following could be a starting point for what you need,\nhttps://github.com/idaholab/moose/blob/next/modules/phase_field/examples/anisotropic_interfaces/GrandPotentialPlanarGrowth.i",
+                          "url": "https://github.com/idaholab/moose/discussions/16554#discussioncomment-238646",
+                          "updatedAt": "2022-06-17T08:04:13Z",
+                          "publishedAt": "2020-12-23T22:20:24Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mikejwg"
+                          },
+                          "bodyText": "Thanks. Could you show me which keywords respect to temperature gradient and cooling rate we should revise in this example for our purpose?",
+                          "url": "https://github.com/idaholab/moose/discussions/16554#discussioncomment-240920",
+                          "updatedAt": "2022-06-17T08:04:13Z",
+                          "publishedAt": "2020-12-25T06:31:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "SudiptaBiswas"
+                          },
+                          "bodyText": "You will have to modify the following line for the temperature function, https://github.com/idaholab/moose/blob/next/modules/phase_field/examples/anisotropic_interfaces/GrandPotentialPlanarGrowth.i#L46",
+                          "url": "https://github.com/idaholab/moose/discussions/16554#discussioncomment-253328",
+                          "updatedAt": "2022-06-17T08:04:33Z",
+                          "publishedAt": "2020-12-30T20:22:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rl3fz"
+                          },
+                          "bodyText": "Hello, I hope it's okay if I ask a follow-up here:\n@SudiptaBiswas, could you please tell me why you recommend GrandPotentialPlanarGrowth.i here, as opposed to GrandPotentialSolidification.i?\nI am trying to simulate solidification from powder bed fusion, a type of selective laser melting, and saw that you recommended these examples in a related issue (#17689), but I chose to use the Solidification model file based only on its name.",
+                          "url": "https://github.com/idaholab/moose/discussions/16554#discussioncomment-907500",
+                          "updatedAt": "2022-06-17T08:04:32Z",
+                          "publishedAt": "2021-06-22T23:32:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "SudiptaBiswas"
+                          },
+                          "bodyText": "GrandPotentialPlanarGrowth.i is for directional solidification whereas GrandPotentialSolidification.i is for isothermal solidification. Both use the same kernels and materials, only the initial condition and thermal field are different.",
+                          "url": "https://github.com/idaholab/moose/discussions/16554#discussioncomment-953229",
+                          "updatedAt": "2022-06-17T08:04:33Z",
+                          "publishedAt": "2021-07-01T20:32:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rl3fz"
+                          },
+                          "bodyText": "That makes sense, thank you!",
+                          "url": "https://github.com/idaholab/moose/discussions/16554#discussioncomment-980178",
+                          "updatedAt": "2022-06-17T08:04:37Z",
+                          "publishedAt": "2021-07-08T15:28:36Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "ngrilli"
+                  },
+                  "bodyText": "@mikejwg\nI am not working on phase field, but just simulating the selecting laser melting\ncoupled with crystal plasticity model.\nYou can find some code and examples here:\nhttps://github.com/ngrilli/c_pfor_am\nBest Regards,\nNicol\u00f2 Grilli\nNational University of Singapore",
+                  "url": "https://github.com/idaholab/moose/discussions/16554#discussioncomment-256171",
+                  "updatedAt": "2022-06-17T08:04:19Z",
+                  "publishedAt": "2021-01-02T02:44:42Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mikejwg"
+                          },
+                          "bodyText": "Thanks very much for your kindness.  Could you share me one completed SLM example (input file)?  Anyway, thanks  a  lot for the codes.\nBest regards,\njiangwugui@gmail.com",
+                          "url": "https://github.com/idaholab/moose/discussions/16554#discussioncomment-258149",
+                          "updatedAt": "2022-06-17T08:05:05Z",
+                          "publishedAt": "2021-01-03T12:39:19Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Temperature Variable in Solidification",
+          "author": {
+            "login": "rl3fz"
+          },
+          "bodyText": "Hello everyone,\nIs there a way to incorporate both undercooling and a thermal gradient in solidification modeling? I'm tinkering with GrandPotentialPlanarGrowth.i and GrandPotentialSolidification.i as a start, but I'm not sure which is more appropriate.\nAny advice would be greatly appreciated!\n(Edit: For reference https://github.com/idaholab/moose/tree/next/modules/phase_field/examples/anisotropic_interfaces)",
+          "url": "https://github.com/idaholab/moose/discussions/18159",
+          "updatedAt": "2022-06-17T08:08:51Z",
+          "publishedAt": "2021-06-23T22:34:00Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "laagesen"
+                  },
+                  "bodyText": "Hi there, it sounds like you are interested in alloy solidification rather than pure material solidification. In alloy solidification, typically solute diffuses much more slowly than heat, so temperature can be considered fixed by constraints external to the system and the latent heat of solidification can be neglected.\nIn that case, a fixed amount of undercooling (solidification at a constant temperature) can be accounted by setting the free energies for the solid and liquid phases to the appropriate values based on the system temperature. A temperature gradient can be included by making the free energies of the solid and liquid phases a function of position along the solidification direction- so the thermal gradient determines the temperature profile, which we do not solve for as a field variable. Instead we take that temperature as a function of position and modify the free energy of the solid and liquid phases as a function of temperature. To implement this, you could create an AuxVariable for temperature, and use a Function to set the temperature as a function of position. Then you could use a DerivativeParsedMaterial to make the solid and liquid phase free energies a function of the temperature (and if you are using one of the grand potential models, you'll need to convert from free energy density to grand potential density).",
+                  "url": "https://github.com/idaholab/moose/discussions/18159#discussioncomment-940230",
+                  "updatedAt": "2022-06-17T08:08:51Z",
+                  "publishedAt": "2021-06-29T20:46:16Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rl3fz"
+                          },
+                          "bodyText": "I'll try this, thank you!",
+                          "url": "https://github.com/idaholab/moose/discussions/18159#discussioncomment-980168",
+                          "updatedAt": "2022-06-17T08:09:02Z",
+                          "publishedAt": "2021-07-08T15:26:49Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

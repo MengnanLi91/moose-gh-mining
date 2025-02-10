@@ -1,0 +1,1128 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyNC0xMS0xMlQwNTowOTozNS0wNjowMM4AceOi"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Gap Distance Calculation Issue.",
+          "author": {
+            "login": "lucuo"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nHello, Moose developers. I am performing heat transfer and mechanical calculations for two 3D blocks, with coupled gap distance heat transfer calculation set on two surfaces. These two surfaces have a certain curvature, and the initial gap distance is equal (the two surfaces can be viewed as arcs in the xy-plane, stretched in the z-direction).\nThe initial gap distance is correct; however, when one block undergoes displacement in the z-direction, the gap distance calculation produces errors at certain locations, with the gap nearly exceeding the distance limit. The positions where this occurs are distributed in a ring-like pattern, perpendicular to the z-axis.\nI used NearestNodeDistanceAux to output the gap distance between the two surfaces, but this problem still exists.\nHere are my mesh Settings\n  patch_size = 150\n  patch_update_strategy = iteration\n  partitioner = centroid \n  centroid_partitioner_direction = z\n\nand ThermalContact\n  quadrature = true\n  gap_geometry_type = CYLINDER\n  cylinder_axis_point_1 = '0 0 0'\n  cylinder_axis_point_2 = '0 0 1'\n\nand Executioner\n  type = Transient\n  solve_type = 'PJFNK'\n  petsc_options_iname = '-ksp_gmres_restart -pc_type -pc_hypre_type -pc_hypre_boomeramg_max_iter'\n  petsc_options_value = '201    hypre   boomeramg    4'\n  line_search = 'none'\n  automatic_scaling = true\n  start_time = 0.0\n  end_time = 10\n  dtmax = 1\n\nand contact\n    primary = 1\n    secondary = 2\n    penalty = 1e8\n    formulation = PENALTY\n    model = frictionless\n\nIs there any mistake in my setup or something that needs improvement?",
+          "url": "https://github.com/idaholab/moose/discussions/29059",
+          "updatedAt": "2024-11-13T14:23:33Z",
+          "publishedAt": "2024-11-12T16:43:45Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nDo you have a figure to show what is happening? I m having trouble conceptualizing it\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/29059#discussioncomment-11229827",
+                  "updatedAt": "2024-11-12T17:32:16Z",
+                  "publishedAt": "2024-11-12T17:32:15Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lucuo"
+                          },
+                          "bodyText": "I use NearestNodeDistanceAux to output the distance between the two surfaces, which is a cloud map of the distance between one surface (with paraview scaling 10:1 in the z direction).\nThere is no problem in the initial calculation, but once a surface is displaced in the z direction, the calculation becomes problematic\n\nAt the same time, when I use thermalcontact to calculate the heat transfer between the two surfaces, I also have problems because of the wrong gap distance.",
+                          "url": "https://github.com/idaholab/moose/discussions/29059#discussioncomment-11239923",
+                          "updatedAt": "2024-11-13T13:15:02Z",
+                          "publishedAt": "2024-11-13T13:15:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "in the NearestNodeAux, did you set use_displaced_mesh = true ?\n\nAt the same time, when I use thermalcontact to calculate the heat transfer between the two surfaces, I also have problems because of the wrong gap distance\n\nIs this one computing its own distance?\nWhat syntax are you using? (block as well as parameters)",
+                          "url": "https://github.com/idaholab/moose/discussions/29059#discussioncomment-11240032",
+                          "updatedAt": "2024-11-13T14:07:01Z",
+                          "publishedAt": "2024-11-13T13:24:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lucuo"
+                          },
+                          "bodyText": "NearestNodeDistanceAux::validParams()\n{\n  InputParameters params = AuxKernel::validParams();\n  params.addClassDescription(\n      \"Stores the distance between a block and boundary or between two boundaries.\");\n  params.addRequiredParam<BoundaryName>(\"paired_boundary\", \"The boundary to find the distance to.\");\n  params.set<bool>(\"use_displaced_mesh\") = true;\n  return params;\n}\n\nThe default setting for NearestNodeDistanceAux is use_displaced_mesh = true, which I used",
+                          "url": "https://github.com/idaholab/moose/discussions/29059#discussioncomment-11240277",
+                          "updatedAt": "2024-11-13T13:44:34Z",
+                          "publishedAt": "2024-11-13T13:44:33Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lucuo"
+                          },
+                          "bodyText": "ThermalContactAction.C has params.set<std::vector<VariableName>>(\"gap_distance\") = {\"penetration\"}; I use gap_distance to calculate the gap heat transfer coefficient and update the heat transfer coefficient.",
+                          "url": "https://github.com/idaholab/moose/discussions/29059#discussioncomment-11240367",
+                          "updatedAt": "2024-11-13T13:52:59Z",
+                          "publishedAt": "2024-11-13T13:52:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "params.set<std::vector>(\"gap_distance\") = {\"penetration\"};\n\nThis means we use the penetration auxvariable to compute the gap distance.\nYou should be able to output it the same way you output the nearest-node distance (is that one used in the calculation?)\nAre you running this in parallel?\nAny reason you are splitting the domain in Z using the centroid partitioner?",
+                          "url": "https://github.com/idaholab/moose/discussions/29059#discussioncomment-11240926",
+                          "updatedAt": "2024-11-13T14:23:34Z",
+                          "publishedAt": "2024-11-13T14:23:33Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Create a new kernel with time derivative of the gradient of coupled variables, such as strain rate.",
+          "author": {
+            "login": "Yaode-Yin"
+          },
+          "bodyText": "Hello MOOSE expert,\nI'm try to couple solid mechanics and the heat conduction. And some coupled terms should be added in the governing equation of heat transfer.\nIn the new heat equation, I have new terms related to the strain rate. So I think I need a new kernel for this term. So how can I create a new kernel with time derivative of the gradient of coupled variables, such as strain rate or the rate of order parameter?",
+          "url": "https://github.com/idaholab/moose/discussions/29029",
+          "updatedAt": "2024-11-13T14:04:46Z",
+          "publishedAt": "2024-11-08T03:17:17Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nHave you followed the tutorial ? There is an example on how to create a new kernel.\nThe derivative of the gradient of the kernel can be obtained using the Coupleable interface\nhttps://mooseframework.inl.gov/source/interfaces/Coupleable.html\nbut only for variables. An order parameter is a variable. The strain might be a material property?",
+                  "url": "https://github.com/idaholab/moose/discussions/29029#discussioncomment-11190329",
+                  "updatedAt": "2024-11-08T15:20:00Z",
+                  "publishedAt": "2024-11-08T15:19:59Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Yaode-Yin"
+                          },
+                          "bodyText": "Hi, GiudGiud. Thanks for your reply. I have followed the tutorial of creating a Diffusion kernel. But I still cannot solve my problem.\nI'm try to solve a three-field coupled problem, and there are three nonlinear variables: displacements u =[ux uy uz], temperature T and order parameter c.\nIn the scenario, the displacements and order parameter has added additional terms in heat conduction equation. For the order parameter, it has added the following term in heat equation:  c0 * T * grad(c)* dgrad(c)dt , where c0 is a material property.  And the weak form of this term should be c0 * T * grad(c) * dgrad(c)dt * test_function.\nAnd in MOOSE kernel file, the residual should be _c0[_qp] * _phi[_qp] *_u[_qp] *_grad_v[_qp]*_grad_v_dot[_qp]*_test[_qp]. I'm not sure whether the expression is right or not.",
+                          "url": "https://github.com/idaholab/moose/discussions/29029#discussioncomment-11190802",
+                          "updatedAt": "2024-11-08T16:03:42Z",
+                          "publishedAt": "2024-11-08T16:03:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "c0 * T * grad(c) * dgrad(c)dt * test_function.\n\nshould translate to\n_c0[_qp] *_u[_qp] *_grad_v[_qp]*_grad_v_dot[_qp]*_test[_qp]\n\nif:\n\nT is the variable so _u is actually T\ngrad_c has been coupled in using coupledGradient(\"c\") to set grad_v\nsame for dot\n\nI recommend you upload your code to a git repository so you can share links here rather than paste extracts",
+                          "url": "https://github.com/idaholab/moose/discussions/29029#discussioncomment-11190882",
+                          "updatedAt": "2024-11-08T16:09:20Z",
+                          "publishedAt": "2024-11-08T16:09:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Yaode-Yin"
+                          },
+                          "bodyText": "Thank you very much for your reply. My code has not finished yet. I'll upload it latter.\nI still have question on how to add a strain rate terms.   In my problem, the displacements also introduce additional term in heat equation, like:\n c1 * sigma : depsilondt\nwhere c1 is a material property, sigma is a second-order tensor, epsilon is the small deformation strain, depsilondt is its rate.\nI have no idea how to implement the term like this in MOOSE kernel system.",
+                          "url": "https://github.com/idaholab/moose/discussions/29029#discussioncomment-11191096",
+                          "updatedAt": "2024-11-08T16:31:34Z",
+                          "publishedAt": "2024-11-08T16:31:12Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "c1 can be retrieved using getMaterialProperty, see any \"Mat\"Something kernel for an example\nsigma can be a RealTensorValue. Is it going to be a material property or a constant?\nepsilon, are you defining that one yourself or are you using the strain from the solid mechanics module?",
+                          "url": "https://github.com/idaholab/moose/discussions/29029#discussioncomment-11191237",
+                          "updatedAt": "2024-11-08T16:44:02Z",
+                          "publishedAt": "2024-11-08T16:44:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Yaode-Yin"
+                          },
+                          "bodyText": "I think sigma should be a material property, because it is calculated with all the three field variables. Epsilon is the small deformation strain from the solid mechanics module.",
+                          "url": "https://github.com/idaholab/moose/discussions/29029#discussioncomment-11191441",
+                          "updatedAt": "2024-11-08T17:02:39Z",
+                          "publishedAt": "2024-11-08T17:02:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "You can define tensors as material properties. So I think you can follow existing tensor material property examples to make it for now",
+                          "url": "https://github.com/idaholab/moose/discussions/29029#discussioncomment-11191471",
+                          "updatedAt": "2024-11-08T17:06:21Z",
+                          "publishedAt": "2024-11-08T17:06:21Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Yaode-Yin"
+                          },
+                          "bodyText": "So do you mean I can create a kernel like c1* c2* c3 * test_function, and treat sigma and depsilondt as material properties? If so, do you have any example material property containing strain rate?",
+                          "url": "https://github.com/idaholab/moose/discussions/29029#discussioncomment-11191534",
+                          "updatedAt": "2024-11-08T17:12:19Z",
+                          "publishedAt": "2024-11-08T17:12:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I d look in the solid mechanics module for examples",
+                          "url": "https://github.com/idaholab/moose/discussions/29029#discussioncomment-11191759",
+                          "updatedAt": "2024-11-08T17:37:59Z",
+                          "publishedAt": "2024-11-08T17:37:57Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Yaode-Yin"
+                          },
+                          "bodyText": "Hi, GiudGiud. I'm very new to crate moose kernel and struggling to implement the CoupledGradientTimeDerivative. It should be in the MOOSE framework, and computes the time derivative of the gradient of a coupled variable. I tried to implement this kernel based on the existing kernel CoupledTimeDerivative, but failed.  My code can be seen from https://github.com/Yaode-Yin/MOOSE_10_11_2024",
+                          "url": "https://github.com/idaholab/moose/discussions/29029#discussioncomment-11204530",
+                          "updatedAt": "2024-11-10T14:48:23Z",
+                          "publishedAt": "2024-11-10T14:46:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "How did it fail? Is it not compiling or are you getting an error at runtime?",
+                          "url": "https://github.com/idaholab/moose/discussions/29029#discussioncomment-11205752",
+                          "updatedAt": "2024-11-10T18:15:30Z",
+                          "publishedAt": "2024-11-10T18:15:29Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "CONDA style MOOSE installation issue in HPC",
+          "author": {
+            "login": "mdh23rct"
+          },
+          "bodyText": "Dear all,\nI have installed Conda MOOSE Environment in our HPC cluster. However, when I run the slurm script, it gives the error \"error while loading shared libraries: libwaspcore.so.04: cannot open shared object file: No such file or directory\"\nI looked at the projects/moose/conda/wasp/ directory. I am not seeing any libwaspcore.so.04 file in the wasp folder. What I can do now?\nDuring cloning and making the moose folder I did not see any error, though.\nI would appreciate if you could manage time to reply.\nThanks.",
+          "url": "https://github.com/idaholab/moose/discussions/28906",
+          "updatedAt": "2024-11-13T04:00:26Z",
+          "publishedAt": "2024-10-22T18:13:11Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "milljm"
+                  },
+                  "bodyText": "While working within an HPC enclave, it is best to use that clusters vetted compiler stack, rather than install ours via Conda.\nYou should instead be following these instructions: https://mooseframework.inl.gov/getting_started/installation/hpc_install_moose.html\nThe error you are receiving is likely a result of building with one set of compilers while attempting to use another (HPC modules verses our Conda packages).\nThe location you are describing moose/conda/wasp/ is the location containing the recipes necessary to build the Conda moose-wasp package used for redistribution on our https://conda.software.inl.gov/public channel. Basically, nothing you need concern yourself with.",
+                  "url": "https://github.com/idaholab/moose/discussions/28906#discussioncomment-11020621",
+                  "updatedAt": "2024-10-22T18:23:16Z",
+                  "publishedAt": "2024-10-22T18:23:15Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mdh23rct"
+                          },
+                          "bodyText": "@milljm I understand. But, when I run a standalone simulation using ./ex01-opt -i   ex01.i, the simulation runs!! The error appears only if using the slurm script. why?",
+                          "url": "https://github.com/idaholab/moose/discussions/28906#discussioncomment-11020698",
+                          "updatedAt": "2024-10-22T18:34:01Z",
+                          "publishedAt": "2024-10-22T18:33:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "Can you post your SLURM batch file?\nWhat we will have to do, is run several commands in this batch file to make a determination about the environment, something like:\n#!/bin/bash\n#SBATCH --time=1:00:00 # walltime\n#SBATCH --ntasks-per-node=1 # number of processor cores (i.e. tasks)\n#SBATCH --nodes=1 # number of nodes\n#SBATCH -J \"my_job_name\" # job name\n\nenv | sort                          # shows everything set\ncd /home/you/projects/moose/scripts\n./diagnostics.sh                    # will grant us a wide range of helpful information\nmodule list                         # perhaps some MPI modules are pre-loaded\n\ncd /path/to/ex01-opt\n./ex01-opt -i ex01.i\nWith this information we can see why or what, is conflicting (if anything).",
+                          "url": "https://github.com/idaholab/moose/discussions/28906#discussioncomment-11021426",
+                          "updatedAt": "2024-10-22T19:50:59Z",
+                          "publishedAt": "2024-10-22T19:50:59Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mdh23rct"
+                          },
+                          "bodyText": "@milljm please have the slurm script:\n#!/bin/bash\n#SBATCH --job-name=Recrystallization_original\n#SBATCH --nodes=1\n#SBATCH --ntasks-per-node=128\n#SBATCH --cpus-per-task=1\n#SBATCH --time=0:5:0\n#SBATCH --account=e882\n#SBATCH --partition=standard\n#SBATCH --qos=standard\nexport OMP_NUM_THREADS=1\nexport SRUN_CPUS_PER_TASK=$SLURM_CPUS_PER_TASK\nsrun --distribution=block:block --hint=nomultithread /mnt/lustre/a2fs-work4/work/e882/e882/mdh23rct/projects/recryss/recryss-opt -i Recrystallization_original.i\ndate\nAnything wrong in the script?\nThanks.",
+                          "url": "https://github.com/idaholab/moose/discussions/28906#discussioncomment-11021708",
+                          "updatedAt": "2024-10-22T20:28:30Z",
+                          "publishedAt": "2024-10-22T20:28:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mdh23rct"
+                          },
+                          "bodyText": "@milljm I ran the slurm script you have suggested. Please have the slurm output showing a lot of information with the same error\n\"./recryss-opt: error while loading shared libraries: libwaspcore.so.04: cannot open shared object file: No such file or directory\"\nslurm-output.txt\nPlease help. Thanks.",
+                          "url": "https://github.com/idaholab/moose/discussions/28906#discussioncomment-11021965",
+                          "updatedAt": "2024-10-22T21:02:48Z",
+                          "publishedAt": "2024-10-22T21:02:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "can you report the output of ldd recryss-opt",
+                          "url": "https://github.com/idaholab/moose/discussions/28906#discussioncomment-11022874",
+                          "updatedAt": "2024-10-22T23:51:25Z",
+                          "publishedAt": "2024-10-22T23:51:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "I would be interested in seeing ldd recryss-opt as well.\nOne glaring concern of mine, is that recryss-opt was built using Conda compilers, yet Conda is no where to be found in your SLURM batch environment right before the binary is run.",
+                          "url": "https://github.com/idaholab/moose/discussions/28906#discussioncomment-11029050",
+                          "updatedAt": "2024-10-23T12:52:16Z",
+                          "publishedAt": "2024-10-23T12:52:15Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "One glaring concern of mine, is that recryss-opt was built using Conda compilers, yet Conda is no where to be found in your SLURM batch environment right before the binary is run.\n\nyeah I agree.\nLet's conda activate moose right before the srun comand if you are going to be using a conda-build on this cluster (not usually recommended)",
+                          "url": "https://github.com/idaholab/moose/discussions/28906#discussioncomment-11029103",
+                          "updatedAt": "2024-10-23T12:55:30Z",
+                          "publishedAt": "2024-10-23T12:55:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "I don't see conda anywhere in the output. Not in the env | sort, and not in PATH... I am not so sure a conda activate will work in our case now that I think about it.\nStrangely, the only mentioning of Conda, is our public channel. Hmm... actually, I think that is being set by our diagnostic script.\n@mdh23rct, if you can re-run the ./diagnostic.sh script manually, and report those results again, that may prove helpful. By manually, I mean, not via a SLURM job submission.",
+                          "url": "https://github.com/idaholab/moose/discussions/28906#discussioncomment-11029259",
+                          "updatedAt": "2024-10-23T13:11:06Z",
+                          "publishedAt": "2024-10-23T13:11:05Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "mdh23rct"
+                  },
+                  "bodyText": "@GiudGiud @milljm Hi both, finally, I have been able to build MOOSE in our cluster with some failed tests. Since the XDR output is not supported in our cluster, it has been removed from the libmesh.sh script. I am not familiar with other failed tests. I have attached the slurm output file here. Would you be kind have a look into it and let me know if those failed tests will affect my simulations using the phase-field module?\nslurm-output.txt\nThanks.",
+                  "url": "https://github.com/idaholab/moose/discussions/28906#discussioncomment-11126295",
+                  "updatedAt": "2024-11-01T21:53:10Z",
+                  "publishedAt": "2024-11-01T21:53:09Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "so you have a bunch from missing XDR. This is our bad, we should not be running these tests with no XDR. I ll create a patch for MOOSE now.\nMissing XDR\noutputs/format.xdr_output \ufffd[90m................................................\ufffd[0m \ufffd[31m[FINISHED]\ufffd[0m \ufffd[31mFAILED (ERRMSG)\ufffd[0m [39.28s]\noutputs/xda_xdr.both_xda_and_xdr \ufffd[90m....................................................\ufffd[0m \ufffd[31mFAILED (ERRMSG)\ufffd[0m [6.636s]\noutputs/xda.group/xdr \ufffd[90m....................................................\ufffd[0m \ufffd[31m[FINISHED]\ufffd[0m \ufffd[31mFAILED (ERRMSG)\ufffd[0m [14.57s]\nmesh/checkpoint.test_2a_generate_split \ufffd[90m..............................................\ufffd[0m \ufffd[31mFAILED (ERRMSG)\ufffd[0m [3.614s]\nauxkernels/solution_aux.aux_nonlinear_solution/build \ufffd[90m................................\ufffd[0m \ufffd[31mFAILED (ERRMSG)\ufffd[0m [19.04s]\npostprocessors/num_elems.test_split \ufffd[90m....................................\ufffd[0m \ufffd[31m[min_cpus=4]\ufffd[0m \ufffd[31mFAILED (ERRMSG)\ufffd[0m [4.870s]\npostprocessors/num_nodes.test_split \ufffd[90m....................................\ufffd[0m \ufffd[31m[min_cpus=4]\ufffd[0m \ufffd[31mFAILED (ERRMSG)\ufffd[0m [1.372s]\n\nIncorrect Jacobian by so little it's just numerical precision\nkernels/vector_fe.jacobian \ufffd[90m..............................................\ufffd[0m \ufffd[31mFAILED (INCORRECT JACOBIAN)\ufffd[0m [5.714s]\nwith\n\ufffd[31mkernels/vector_fe.jacobian: \ufffd[0m  ||J - Jfd||_F/||J||_F = 1.10599e-07, ||J - Jfd||_F = 2.20048e-07\n\nYour cluster does not use mpirun and we want to catch people who are missing MPI alltogether on this test\nmisc/mpi_setup.basic_mpirun_works \ufffd[90m.........................................\ufffd[0m \ufffd[31mFAILED (TESTER EXCEPTION)\ufffd[0m [0.000s]\n\nThese tests are known to be brittle with numerical precision\ngeomsearch/3d_moving_penetration.pl_test4 \ufffd[90m..........................................\ufffd[0m \ufffd[33mFAILED (EXODIFF)\ufffd[0m [17.38s]\ngeomsearch/3d_moving_penetration.pl_test4q \ufffd[90m.........................................\ufffd[0m \ufffd[33mFAILED (EXODIFF)\ufffd[0m [6.783s]\ngeomsearch/3d_moving_penetration.pl_test4tt \ufffd[90m........................................\ufffd[0m \ufffd[33mFAILED (EXODIFF)\ufffd[0m [2.827s]\nmeshgenerators/xy_delaunay_generator.xydelaunay/area_func \ufffd[90m..........................\ufffd[0m \ufffd[33mFAILED (EXODIFF)\ufffd[0m [0.486s]\nmeshgenerators/xy_delaunay_generator.xydelaunay/auto_area_func \ufffd[90m.....................\ufffd[0m \ufffd[33mFAILED (CSVDIFF)\ufffd[0m [17.77s]\n\nThe penetration stuff is a little brittle (to test) because it makes decisions on which element to pair to which node based on the \"nearest\" one. That can be ill-defined if there are two.\nThe XY triangulation is using a downstream library and we have seen different triangulation be output based on floating point precision issues.\nI dont know but I suspect a \"nearest-point\" indetermination.\nvectorpostprocessors/nearest_point_integral.points_from_uo \ufffd[90m.........................\ufffd[0m \ufffd[33mFAILED (CSVDIFF)\ufffd[0m [25.73s]\n\nNot sure. If someone wants to investigate please do.\nkernels/vector_fe.coupled_electrostatics/tet14 \ufffd[90m.....................................\ufffd[0m \ufffd[33mFAILED (EXODIFF)\ufffd[0m [4.828s]",
+                          "url": "https://github.com/idaholab/moose/discussions/28906#discussioncomment-11126390",
+                          "updatedAt": "2024-11-01T22:14:08Z",
+                          "publishedAt": "2024-11-01T22:14:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mdh23rct"
+                          },
+                          "bodyText": "@GiudGiud What is the solution for missing XDR now? Can we run moose without it?",
+                          "url": "https://github.com/idaholab/moose/discussions/28906#discussioncomment-11207013",
+                          "updatedAt": "2024-11-10T22:02:17Z",
+                          "publishedAt": "2024-11-10T22:02:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Absolutely. There are very easy workarounds for using checkpoints without xdr",
+                          "url": "https://github.com/idaholab/moose/discussions/28906#discussioncomment-11208796",
+                          "updatedAt": "2024-11-10T23:26:00Z",
+                          "publishedAt": "2024-11-10T23:25:59Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mdh23rct"
+                          },
+                          "bodyText": "@GiudGiud what do you mean by checkpoints? does it mean somesort of firewall logs?",
+                          "url": "https://github.com/idaholab/moose/discussions/28906#discussioncomment-11208808",
+                          "updatedAt": "2024-11-10T23:45:50Z",
+                          "publishedAt": "2024-11-10T23:28:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Checkpoint is a type of output to save the current state of a run to be able to restart from it later",
+                          "url": "https://github.com/idaholab/moose/discussions/28906#discussioncomment-11208933",
+                          "updatedAt": "2024-11-11T00:08:48Z",
+                          "publishedAt": "2024-11-11T00:08:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mdh23rct"
+                          },
+                          "bodyText": "@GiudGiud I have generated a MOOSE application in our HPC cluster. However, there is a strange problem appearing in the application folder.\n\nThe app-opt executable is inside the app folder after the app folder is generated using ./moose/scripts/stork.sh app.\nI change the modules to \"yes\" (PHASE_FIELD                 := yes) inside the makefile.\nNow give command: make clobberall, and the app-opt executable disappears permanently from the app folder.\n\nDo you know any reason why it is happening? I have not seen something like this before.\nThanks.",
+                          "url": "https://github.com/idaholab/moose/discussions/28906#discussioncomment-11217965",
+                          "updatedAt": "2024-11-11T18:52:58Z",
+                          "publishedAt": "2024-11-11T18:52:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "When you make clobberall it cleans the repository. So it s normal that it deletes the executable",
+                          "url": "https://github.com/idaholab/moose/discussions/28906#discussioncomment-11218094",
+                          "updatedAt": "2024-11-11T19:09:33Z",
+                          "publishedAt": "2024-11-11T19:09:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mdh23rct"
+                          },
+                          "bodyText": "@GiudGiud however, after that if I run the command make -j 6, the executable does not appear at all. Why? any reason?",
+                          "url": "https://github.com/idaholab/moose/discussions/28906#discussioncomment-11218130",
+                          "updatedAt": "2024-11-11T19:12:44Z",
+                          "publishedAt": "2024-11-11T19:12:43Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "it should appear/ what does it say?",
+                          "url": "https://github.com/idaholab/moose/discussions/28906#discussioncomment-11218246",
+                          "updatedAt": "2024-11-11T19:27:20Z",
+                          "publishedAt": "2024-11-11T19:27:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mdh23rct"
+                          },
+                          "bodyText": "@GiudGiud First, staying in the app directory /work/e882/e882/mdh23rct/projects/recryss/\nAfter make clobberall\nmake -j 6 shows me the error:\n***ERROR***\nWASP does not seem to be available.\nMake sure to either run scripts/update_and_rebuild_wasp.sh in your MOOSE directory,\nor set WASP_DIR to a valid WASP install\nmake: *** [/work/e882/e882/mdh23rct/projects/moose/framework/moose.mk:392: wasp_submodule_status] Error 1\nmake: *** Waiting for unfinished jobs....\nRebuilding symlinks in /work/e882/e882/mdh23rct/projects/moose/framework/build/header_symlinks\n**********************************************************************************\nFollowing that I run the script\n./update_and_rebuild_wasp.sh \nfrom the moose directory\n/work/e882/e882/mdh23rct/projects/moose/scripts\n\nNext, make -j 6 command from /work/e882/e882/mdh23rct/projects/recryss/   directory works but does not generate the executable.\nDo you have any guess why it is happening?\nI can ensue you the moose directory has been built properly using the scripts:\n./update_and_rebuild_petsc.sh CC=cc CXX=CC FC=ftn\n./update_and_rebuild_libmesh.sh CC=cc CXX=CC FC=ftn\n./update_and_rebuild_wasp.sh\n\nAny solution will be appreciated.\nThanks.",
+                          "url": "https://github.com/idaholab/moose/discussions/28906#discussioncomment-11219046",
+                          "updatedAt": "2024-11-11T21:31:09Z",
+                          "publishedAt": "2024-11-11T21:23:33Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "spatially uniform distribution Grains",
+          "author": {
+            "login": "ashishdhole"
+          },
+          "bodyText": "Hello,\nIs there a way I can generate spatially uniform distribution grain structure. Voronoi type user object gives wide range of grain sizes and shapes.\nThank you",
+          "url": "https://github.com/idaholab/moose/discussions/29061",
+          "updatedAt": "2024-11-13T02:42:24Z",
+          "publishedAt": "2024-11-13T02:42:23Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": []
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Multiple tests types using same input file",
+          "author": {
+            "login": "jessecarterMOOSE"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nWhat's a good way to do multiple tests on the output from a single input file? Example: I want to do an Exodiff and CSVdiff. Or maybe 2 CSVdiffs at different time steps. The only way I know is to put multiple tests in the tests spec but then the same problem gets run twice which seems inefficient (and potentially problematic if running in parallel where outputs could collide).",
+          "url": "https://github.com/idaholab/moose/discussions/29057",
+          "updatedAt": "2024-11-12T17:09:05Z",
+          "publishedAt": "2024-11-12T14:57:29Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\n\nand potentially problematic if running in parallel where outputs could collide).\n\nYou can set prereq= in the tests spec to avoid this\nI would instead use Outputs/file_base to make sure the outputs of each test are different. Then they can all run in parallel.\nYou add this in the test spec using cli_args = Outputs/file_base=test_1_",
+                  "url": "https://github.com/idaholab/moose/discussions/29057#discussioncomment-11227761",
+                  "updatedAt": "2024-11-12T15:00:11Z",
+                  "publishedAt": "2024-11-12T15:00:11Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jessecarterMOOSE"
+                          },
+                          "bodyText": "Thanks. So if I want to multiple tests on the output from a single input file (Exodiff and CSVdiff for example), is there a better way than making a test for each test type and doing redundant runs?",
+                          "url": "https://github.com/idaholab/moose/discussions/29057#discussioncomment-11227808",
+                          "updatedAt": "2024-11-12T15:04:16Z",
+                          "publishedAt": "2024-11-12T15:04:15Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "so the PPs are automatically included in the exodus file so you must be doing this for checking a VPP?\nYou could do this\n[exo]\n  type = Exodiff\n  input = test.i\n  ...\n[]\n[csv]\n  type = CSVDiff\n  input = 'no_op.i' # dummy file doing nothing\n  prereq = exo\n  csvdiff = 'test_out.csv'\n  ..\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/29057#discussioncomment-11227882",
+                          "updatedAt": "2024-11-12T15:10:58Z",
+                          "publishedAt": "2024-11-12T15:10:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "To expand on @GiudGiud answer, you also want to enable parallel_schedulding, if you truly want to enable tests 'b' and 'c' to run in parallel (assuming you also pass enough cores to run all tests at the same time (./run_tests -j 2).\n[Tests]\n  parallel_scheduling = true\n  [./a]\n    type = RunApp\n    input = foo.i\n  [../]\n  [./b]\n    type = RunApp\n    input = foo.i\n    cli_args = Outputs/file_base=test_1_\n    prereq = 'a'\n  [../]\n  [./c]\n    type = RunApp\n    input = foo.i\n    cli_args = Outputs/file_base=test_2_\n    prereq = 'a'\n  [../]\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/29057#discussioncomment-11227887",
+                          "updatedAt": "2024-11-12T15:11:02Z",
+                          "publishedAt": "2024-11-12T15:11:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jessecarterMOOSE"
+                          },
+                          "bodyText": "@milljm I only want to run the input file once and then do lots of tests on the output.\n@GiudGiud The example of doing Exodiff and CSVdiff is just an example. I have PP's and VPP's and exodus and want to check them all.",
+                          "url": "https://github.com/idaholab/moose/discussions/29057#discussioncomment-11227937",
+                          "updatedAt": "2024-11-12T15:16:15Z",
+                          "publishedAt": "2024-11-12T15:16:14Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "@milljm I only want to run the input file once and then do lots of tests on the output.\n\nYou'll still want this:\n  parallel_scheduling = true\n\nto be able to do\n\nand then do lots of tests on the output.",
+                          "url": "https://github.com/idaholab/moose/discussions/29057#discussioncomment-11227944",
+                          "updatedAt": "2024-11-12T15:17:43Z",
+                          "publishedAt": "2024-11-12T15:17:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "To emphasize this behavior:\n$ ./run_tests -i testing_test -j 10 -t\n[8.002s]       OK tests/test_harness.a\n[2.002s]       OK tests/test_harness.b\n[2.002s]       OK tests/test_harness.c\n[2.002s]       OK tests/test_harness.d\n[2.002s]       OK tests/test_harness.e\n[2.002s]       OK tests/test_harness.f\n[2.003s]       OK tests/test_harness.g\n[2.003s]       OK tests/test_harness.h\n[2.002s]       OK tests/test_harness.i\n[2.002s]       OK tests/test_harness.j\n-------------------------------------------------------------------------------------------\nRan 10 tests in 26.3 seconds. Average test time 2.6 seconds, maximum test time 8.0 seconds.\n10 passed, 0 skipped, 0 failed\n\nEach test is launched in serial, resulting in 26 seconds.\nBut when we add parallel_scheduling = true:\n@@ -1,4 +1,5 @@\n [Tests]\n+  parallel_scheduling = true\n   [a]\n     type = RunCommand\n     command = \"sleep 8\"\n$ ./run_tests -i testing_test -j 10 -t\n[8.002s]       OK tests/test_harness.a\n[1.998s]       OK tests/test_harness.e\n[1.998s]       OK tests/test_harness.g\n[1.983s]       OK tests/test_harness.h\n[1.994s]       OK tests/test_harness.d\n[1.993s]       OK tests/test_harness.j\n[1.998s]       OK tests/test_harness.f\n[1.998s]       OK tests/test_harness.c\n[2.002s]       OK tests/test_harness.i\n[2.002s]       OK tests/test_harness.b\n-------------------------------------------------------------------------------------------\nRan 10 tests in 10.2 seconds. Average test time 2.6 seconds, maximum test time 8.0 seconds.\n10 passed, 0 skipped, 0 failed\n\nall tests after the initial pre_preq are launched concurrently. Resulting in 10 seconds total test group completion.",
+                          "url": "https://github.com/idaholab/moose/discussions/29057#discussioncomment-11228212",
+                          "updatedAt": "2024-11-12T15:38:18Z",
+                          "publishedAt": "2024-11-12T15:38:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jessecarterMOOSE"
+                          },
+                          "bodyText": "What if each of my tests is a CSVdiff? Doesn't each one re-run the problem? That's what I was trying to avoid.",
+                          "url": "https://github.com/idaholab/moose/discussions/29057#discussioncomment-11228878",
+                          "updatedAt": "2024-11-12T16:25:06Z",
+                          "publishedAt": "2024-11-12T16:25:05Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "You can use the attribute:\nshould_execute = false\n\nThis allows the postProcessing step to commence, without running RunApp.\nSee https://github.com/idaholab/moose/blob/next/test/tests/test_harness/should_execute for detailed information on how this test spec file would work.",
+                          "url": "https://github.com/idaholab/moose/discussions/29057#discussioncomment-11229540",
+                          "updatedAt": "2024-11-12T17:09:06Z",
+                          "publishedAt": "2024-11-12T17:09:05Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Basic Phase Field Equations",
+          "author": {
+            "login": "vermaprk"
+          },
+          "bodyText": "Hi I am trying to introduce a additive concentration variable (c_add) in a grand potential phase field system\nThe equation of c_add is:\ndc_add/dt = Div [ (D_eff* grad C_add) + mu_eff* c grad phi ]\nwhere, D_eff is the effective diffusion coefficient = (1-h)*D and mu is the effective mobility defined similarly.\nI am assuming no effect of c_add on my phase field variables i.e. order parameter (eta) and grand potential (pot) because of its relatively small concentration and it does not takes part in phase formation. Initially, c_add is only present in (1-eta) phase and diffused at the interface.\nThe major concern in my result is the non-zero value of c_add in the phase eta after the phase has evolved for sometime. Since dc_add/dt becomes zero in the evolved phase eta, the evolution of c_add becomes zero. However, c_add is non-zero.\nPlease suggest the modification required in my equation. Currently c_add is not coupled with phase field variables. I have found some literatures where c_add is simply multiplied with 1-h to do so but this is rather forcing c_add to zero than some kind of transport.\nThanks\n@laagesen @dschwen @GiudGiud",
+          "url": "https://github.com/idaholab/moose/discussions/25561",
+          "updatedAt": "2024-11-12T14:29:59Z",
+          "publishedAt": "2023-09-23T07:25:53Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nso the concern is that c_add is going to zero? or that it is not going to zero?\nIt seems c_add is mostly diffused. If the source term is 0, it should stabilize to some spatially constant value unless the boundary conditions are removing c_add?\ndoes c_add start at 0 concentration?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/25561#discussioncomment-7091550",
+                  "updatedAt": "2023-09-24T01:50:01Z",
+                  "publishedAt": "2023-09-24T01:50:00Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "vermaprk"
+                  },
+                  "bodyText": "Initially c_add is zero for eta =1. However, since eta is evolving with\ntime, I expect c_add to become zero in the newly evolved eta=1. But my\nequation only reduces to dc_add/dt = 0 in eta=1 region and not c_add=0 . I\nneed both conditions to satisfy.\n\nMy concern is to make c_add=0 I will have to add some reaction term which\nwill model the consumption that will be function of my order parameter (\ntypical cahn Hilliard equation). But since my additive doesn't gets\nconsumed, it just moves along with interface how should I model it.\n\u2026\nOn Sun, 24 Sep, 2023, 7:20 am Guillaume Giudicelli, < ***@***.***> wrote:\n Hello\n\n so the concern is that c_add is going to zero? or that it is not going to\n zero?\n It seems c_add is mostly diffused. If the source term is 0, it should\n stabilize to some spatially constant value unless the boundary conditions\n are removing c_add?\n\n does c_add start at 0 concentration?\n\n Guillaume\n\n \u2014\n Reply to this email directly, view it on GitHub\n <#25561 (comment)>,\n or unsubscribe\n <https://github.com/notifications/unsubscribe-auth/AQQMFGZERF5L4M36TCVUIG3X36GVHANCNFSM6AAAAAA5EALZLY>\n .\n You are receiving this because you authored the thread.Message ID:\n ***@***.***>",
+                  "url": "https://github.com/idaholab/moose/discussions/25561#discussioncomment-7091814",
+                  "updatedAt": "2023-09-24T03:59:27Z",
+                  "publishedAt": "2023-09-24T03:59:27Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "A 'consumption' term is typically a sink, which you can model with the BodyForce, Reaction or CoupledForce kernels depending on what the sink depends on.\nWhat is the equation for the reaction rate of c_add?",
+                          "url": "https://github.com/idaholab/moose/discussions/25561#discussioncomment-7093101",
+                          "updatedAt": "2023-09-24T10:59:59Z",
+                          "publishedAt": "2023-09-24T10:59:59Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "vermaprk"
+                  },
+                  "bodyText": "No, actually there is no reaction or consumption of c_add. It has to drift\naway from from the interface in such a manner that c_add becomes zero on\nthe left of the interface (eta=1).\nIn general as per my understanding in phase field equations the\nconcentration field gets consumed as the material is required for phase\nformation. But my case is different, C_add doesn't takes part in phase\nformation therefore is not consumed.\nMay be some kind of convection term has to be there which I am not sure of.\n\nThanks\n\u2026\nOn Sun, 24 Sep, 2023, 4:30 pm Guillaume Giudicelli, < ***@***.***> wrote:\n A 'consumption' term is typically a sink, which you can model with the\n BodyForce, Reaction or CoupledForce kernels depending on what the sink\n depends on.\n What is the equation for the reaction rate of c_add?\n\n \u2014\n Reply to this email directly, view it on GitHub\n <#25561 (reply in thread)>,\n or unsubscribe\n <https://github.com/notifications/unsubscribe-auth/AQQMFG7E47EG6CBJI627OYLX4AHDTANCNFSM6AAAAAA5EALZLY>\n .\n You are receiving this because you authored the thread.Message ID:\n ***@***.***>",
+                  "url": "https://github.com/idaholab/moose/discussions/25561#discussioncomment-7093218",
+                  "updatedAt": "2023-09-24T11:26:36Z",
+                  "publishedAt": "2023-09-24T11:26:35Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Convection does seem closer to what you are describing in terms of physics.\nThe diffusion term you have right now does not do what you describe. The first one is typical diffusion, e.g. it moves concentration from high value regions to low value regions at a rate dependent on the gradient of the concentration)",
+                          "url": "https://github.com/idaholab/moose/discussions/25561#discussioncomment-7095758",
+                          "updatedAt": "2023-09-24T22:55:10Z",
+                          "publishedAt": "2023-09-24T22:01:04Z",
+                          "isAnswer": true
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "awaoz"
+                  },
+                  "bodyText": "Hello, I have encountered the same problem. I used the CHInterface kernel, but the results were not ideal.How did you solve it?Thanks",
+                  "url": "https://github.com/idaholab/moose/discussions/25561#discussioncomment-11214759",
+                  "updatedAt": "2024-11-11T13:30:59Z",
+                  "publishedAt": "2024-11-11T13:30:57Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "vermaprk"
+                          },
+                          "bodyText": "I had to declare a new chemical potential variable for the additive and had to embed it's contribution into the grand potential density. The chemical potential for this variable has diffusive and migration flux but no source/sink term.",
+                          "url": "https://github.com/idaholab/moose/discussions/25561#discussioncomment-11221394",
+                          "updatedAt": "2024-11-12T05:03:45Z",
+                          "publishedAt": "2024-11-12T05:03:45Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "awaoz"
+                          },
+                          "bodyText": "Thank you for your answer",
+                          "url": "https://github.com/idaholab/moose/discussions/25561#discussioncomment-11227382",
+                          "updatedAt": "2024-11-12T14:30:00Z",
+                          "publishedAt": "2024-11-12T14:29:59Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Axisymmetry on New Lagrangian Kernels",
+          "author": {
+            "login": "richmondodufisan"
+          },
+          "bodyText": "I saw this: #20712\nWhere it seems to have been implemented. But I still got the error:\n*** ERROR ***\n/home/richmond98/projects/purple/Cornea_Linear_Elastic/Cornea_Harmonic_Perturbation_2D_Axisymmetric.i:52.3:\nThe following error occurred in the Kernel 'div_sig_x_real' of type TotalLagrangianStressDivergence.\n\nThis kernel should only act in Cartesian coordinates.\n\nI updated MOOSE a few weeks ago. I am using ComputeLagrangianStrainAxisymmetricCylindrical for the strain.",
+          "url": "https://github.com/idaholab/moose/discussions/28870",
+          "updatedAt": "2024-11-12T14:27:45Z",
+          "publishedAt": "2024-10-17T03:33:34Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nAre you creating this object? 'div_sig_x_real' of type TotalLagrangianStressDivergence.\nif not then it s being added by the action.\nUnfortunately this means the SolidMechanics physics is not supporting RZ at the moment. You will need to use the DumpObjectsProblem on a XY problem to get the list of the objects the Physics is creating, then adapt this list manually for RZ coordinates.\n@hugary1995 for a double check on whether the new system actually should support RZ / if trying to hack it is a bad idea",
+                  "url": "https://github.com/idaholab/moose/discussions/28870#discussioncomment-10973138",
+                  "updatedAt": "2024-10-17T15:17:22Z",
+                  "publishedAt": "2024-10-17T15:17:22Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "richmondodufisan"
+                          },
+                          "bodyText": "Yes I created that object, I didn't use the action set up. This is the block:\n[Kernels]\n  [div_sig_x_real]\n    type = TotalLagrangianStressDivergence\n\tcomponent = 0\n\tdisplacements = 'disp_x_real disp_y_real disp_z_real'\n    variable = disp_x_real\n\tbase_name = real\n  []\n\n...\n\n[]\n\nand in my Materials block, I have: (not sure if it is worth checking out but the base_name functionality wasn't implemented for \"getting\" the elasticity tensor so I had to hardcode it here)\n[Materials]\n  [elastic_tensor_real]\n    type = ComputeIsotropicElasticityTensor\n    youngs_modulus = ${youngs_modulus_val}\n    poissons_ratio = ${poissons_ratio_val}\n\tbase_name = real\n  []\n  [compute_stress_real]\n    type = ComputeLagrangianLinearElasticStress\n\telasticity_tensor = real_elasticity_tensor\n\tbase_name = real\n  []\n  [compute_strain_real]\n    type = ComputeLagrangianStrainAxisymmetricCylindrical\n    displacements = 'disp_x_real disp_y_real disp_z_real'\n\tbase_name = real\n  []\n\n...\n[]\n\nand my mesh block:\n[Mesh]\n  second_order = true\n  coord_type = RZ\n  [sample_mesh]\n    type = FileMeshGenerator\n    file = eyeball_2D_axisymmetric.msh\n  []\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/28870#discussioncomment-10975435",
+                          "updatedAt": "2024-10-17T19:10:10Z",
+                          "publishedAt": "2024-10-17T19:08:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Then that object that you created does not handle RZ.\nIf you can find a substitute that does RZ then try to use that. If not then you would need to implement support for RZ in that object.\nIt's not usually very difficult to handle RZ",
+                          "url": "https://github.com/idaholab/moose/discussions/28870#discussioncomment-10975459",
+                          "updatedAt": "2024-10-17T19:11:23Z",
+                          "publishedAt": "2024-10-17T19:11:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "richmondodufisan"
+                          },
+                          "bodyText": "Hi, I found the kernel (thanks to MOOSE being open source!). It is TotalLagrangianStressDivergenceAxisymmetricCylindrical. I think it would be helpful if the documentation page of TotalLagrangianStressDivergence links to/mention them (also for the spherical case, TotalLagrangianStressDivergenceCentrosymmetricSpherical).\nBut an important thing I just found (maybe it could be included as a warning?) is that in the axisymmetric case, the 2D mesh MUST be created in the x-y domain. I struggled for a while trying to figure out why the 3D and 2D axisymmetric simulations I ran didn't match, but then tried on a whim to create the mesh in the x-y plane (instead of x-z plane as before) and that fixed it.\nWell, I guess there already is some kind of warning, the page on coordinate systems says that the arrangement is r, z, theta, instead of r, theta, z. But I didn't think it was that obvious till I fixed it.",
+                          "url": "https://github.com/idaholab/moose/discussions/28870#discussioncomment-11071682",
+                          "updatedAt": "2024-10-28T07:34:27Z",
+                          "publishedAt": "2024-10-28T07:34:27Z",
+                          "isAnswer": true
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "thanks for reporting. I ll create an issue and we ll improve those docs",
+                          "url": "https://github.com/idaholab/moose/discussions/28870#discussioncomment-11079430",
+                          "updatedAt": "2024-10-28T20:16:01Z",
+                          "publishedAt": "2024-10-28T20:16:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Right, thanks to both of you @richmondodufisan @GiudGiud . I agree both the documentation and the action should be improved.",
+                          "url": "https://github.com/idaholab/moose/discussions/28870#discussioncomment-11227346",
+                          "updatedAt": "2024-11-12T14:27:46Z",
+                          "publishedAt": "2024-11-12T14:27:45Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to change output directory?",
+          "author": {
+            "login": "GGNode"
+          },
+          "bodyText": "When I ran a Moose parallel computation on a HPC cluster, I found that the computation speed was not as fast as I thought. I think I should change the output directory because the program was trying to write input_out.e to a virtual node which was restricted by internet speed. But I cannot find any useful tips for me to change the output directory where I can place the input_out.e file. Can anyone give me some suggestions?",
+          "url": "https://github.com/idaholab/moose/discussions/22986",
+          "updatedAt": "2024-11-12T13:07:43Z",
+          "publishedAt": "2022-12-16T06:54:37Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "maxnezdyur"
+                  },
+                  "bodyText": "In the output block, you can specify the location where you want to save something using file_base. For example\nfile_base = /home/location_where_i_want_my_file/name_i_want_to_give_my_file",
+                  "url": "https://github.com/idaholab/moose/discussions/22986#discussioncomment-4421432",
+                  "updatedAt": "2022-12-16T13:20:17Z",
+                  "publishedAt": "2022-12-16T13:20:17Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "achourasia"
+                          },
+                          "bodyText": "Is there a way to specify only the output directory instead of full path to the output file? The idea is to keep the default output name by only specifying the output directory.",
+                          "url": "https://github.com/idaholab/moose/discussions/22986#discussioncomment-8353189",
+                          "updatedAt": "2024-02-03T07:37:13Z",
+                          "publishedAt": "2024-02-03T07:37:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nNot that I can see in the object parameters but feel free to contribute the feature, we would accept that change\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/22986#discussioncomment-8355806",
+                          "updatedAt": "2024-02-03T16:27:02Z",
+                          "publishedAt": "2024-02-03T16:27:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Yulongggggg"
+                          },
+                          "bodyText": "Hi Guid do we have this feature now?\nI really want to specify only the output directory instead of full path to the output file",
+                          "url": "https://github.com/idaholab/moose/discussions/22986#discussioncomment-11221319",
+                          "updatedAt": "2024-11-12T04:50:05Z",
+                          "publishedAt": "2024-11-12T04:50:04Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nNo we have not, we still use the file_base for that purpose",
+                          "url": "https://github.com/idaholab/moose/discussions/22986#discussioncomment-11226057",
+                          "updatedAt": "2024-11-12T13:07:44Z",
+                          "publishedAt": "2024-11-12T13:07:43Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GGNode"
+                  },
+                  "bodyText": "Thank you very much!",
+                  "url": "https://github.com/idaholab/moose/discussions/22986#discussioncomment-4456395",
+                  "updatedAt": "2022-12-20T09:28:56Z",
+                  "publishedAt": "2022-12-20T09:28:56Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Ordering of VectorPostprocessor results in CSV file",
+          "author": {
+            "login": "jessecarterMOOSE"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nI have a VectorPostprocessor that declares a few vectors. Is there a way to explicitly set the order they appear in the CSV file? It looks like it is done alphabetically.",
+          "url": "https://github.com/idaholab/moose/discussions/29052",
+          "updatedAt": "2024-11-12T12:57:11Z",
+          "publishedAt": "2024-11-12T11:47:59Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nI dont think there is a way.\nYou could add that in the base class if you need it.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/29052#discussioncomment-11225910",
+                  "updatedAt": "2024-11-12T12:57:11Z",
+                  "publishedAt": "2024-11-12T12:57:11Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Could NOT find HDF5 (missing: HDF5_LIBRARIES HDF5_INCLUDE_DIRS   HDF5_HL_LIBRARIES C HL) (found version \"\")",
+          "author": {
+            "login": "nancysemwal"
+          },
+          "bodyText": "",
+          "url": "https://github.com/idaholab/moose/discussions/29043",
+          "updatedAt": "2024-11-12T11:09:35Z",
+          "publishedAt": "2024-11-11T10:44:04Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nfor HDF5, if you dont have it, it should be installed by PETSc. Then you can set HDF5_DIR to the folder containing the hdf5 installation.\nIf you do have it, then set HDF5_DIR",
+                  "url": "https://github.com/idaholab/moose/discussions/29043#discussioncomment-11214546",
+                  "updatedAt": "2024-11-11T13:10:14Z",
+                  "publishedAt": "2024-11-11T13:10:12Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "for installing Cardinal with conda, no idea but I dont think it's possible?",
+                          "url": "https://github.com/idaholab/moose/discussions/29043#discussioncomment-11214551",
+                          "updatedAt": "2024-11-11T13:10:39Z",
+                          "publishedAt": "2024-11-11T13:10:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "Entry point fixes are more than likely going to require the reinstallation of Conda. With Conda exhibiting this error, I feel we can't trust Conda to be doing the right things.\n\n\nYou have a system installation of MPI and an MPI installation from Conda (by using our packages):\n\n\n-L/usr/lib/x86_64-linux-gnu/openmpi/lib/fortran/gfortran\n/home/nancy/miniconda3/envs/moose/bin/mpicc\n\nMany odd occurrences will crop up by allowing both to exist.\n\nAre you building on a thumbstick, or external drive? I am referring to the /mnt path for Cardinal. While this is fine, it may explain why missing libraries can exist; Are you building this on one machine and bringing it to another? FYI, that won't work well. Not unless both machines are identically built.\n\nThe issues you are running into seems to me, being caused by a not-sane environment. We need to clean this up. Because you have OpenMPI installed on the system, I would refrain from using any of our Conda packages, and just stick to using apt-get to install what you need.\nIt looks like the first run of your ./diagnostics.sh was only missing F77 F90 variables:\n# get out of the moose environment\nconda deactivate\nconda activate base\n\n# set variables that the system installed version of OpenMPI is not for some reason:\nexport F77=mpif77 F90=mpif90\n./diagnostics.sh\nBecause you introduced two completely different compiler stacks into the mix, the best thing to do from here (./diagnostics.sh is passing and you are not loading the moose environment), is start completely over. The entire Cardinal build must be built using the same compiler.",
+                          "url": "https://github.com/idaholab/moose/discussions/29043#discussioncomment-11214926",
+                          "updatedAt": "2024-11-11T13:46:44Z",
+                          "publishedAt": "2024-11-11T13:46:43Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "Going back and reading the other post yields more concerns:\nBefore, when you had the base environment loading, there was a different Python version being made available, and further more, was not a Conda variant:\nCONDA_PREFIX=/home/nancy/miniconda3\nCONDA_PROMPT_MODIFIER=(base)\nCONDA_PYTHON_EXE=/home/nancy/miniconda3/bin/python\n\n<trimmed>\n\nPython Sanity Checks\n\n/usr/bin/env python3 --version; (reporting as: Python 3.12.3) matches\nwhich python3 python;\n\n/usr/bin/python3 --version; == Python 3.12.3\nWARNING: python; does not exist\n\nlooks like you were using system supplied Python back then\nBut now its:\nCONDA_PREFIX=/home/nancy/miniconda3\nCONDA_PROMPT_MODIFIER=(base) \nCONDA_PYTHON_EXE=/home/nancy/miniconda3/bin/python\n\n<trimmed>\n\nPython Sanity Checks\n\n/usr/bin/env python3 --version; (reporting as: Python 3.12.7) matches\nwhich python3 python;\n\n/home/nancy/miniconda3/bin/python3 --version; == Python 3.12.7\n/home/nancy/miniconda3/bin/python --version; == Python 3.12.7\n\nConda supplied Python\nSomething changed between that build, and your current one. Just listing more oddities...\nWhile not a cause for failure, it is just odd is all I am pointing out.",
+                          "url": "https://github.com/idaholab/moose/discussions/29043#discussioncomment-11215008",
+                          "updatedAt": "2024-11-11T13:55:37Z",
+                          "publishedAt": "2024-11-11T13:54:08Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "nancysemwal"
+                          },
+                          "bodyText": "Yes, you're right about the Python thing.\nInitially I was using the system supplied Python but then I changed my $PATH to pick up the /home/miniconda3/bin/python instead.\nI am indeed having a lot of inconsistencies and oddities in my setup and trying to making Cardinal work with them is causing the complexities to creep in. My reason for doing so was to not lose the progress made while building PETSc, libmesh & wasp because it took a loooong time. But I guess there's no other way.",
+                          "url": "https://github.com/idaholab/moose/discussions/29043#discussioncomment-11221483",
+                          "updatedAt": "2024-11-12T05:23:43Z",
+                          "publishedAt": "2024-11-12T05:23:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "nancysemwal"
+                          },
+                          "bodyText": "Are you building on a thumbstick, or external drive? I am referring to the /mnt path for Cardinal. While this is fine, it may explain why missing libraries can exist; Are you building this on one machine and bringing it to another? FYI, that won't work well. Not unless both machines are identically built.\n\nNo, I'm not building on an external drive. The /mnt path is my /dev/sdb4, a 200 GB partition that I'd created from my 1 TB HDD (but not external, internal drive only, apart from a 250 GB SDD where my /home resides.)",
+                          "url": "https://github.com/idaholab/moose/discussions/29043#discussioncomment-11221524",
+                          "updatedAt": "2024-11-12T05:33:11Z",
+                          "publishedAt": "2024-11-12T05:33:10Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

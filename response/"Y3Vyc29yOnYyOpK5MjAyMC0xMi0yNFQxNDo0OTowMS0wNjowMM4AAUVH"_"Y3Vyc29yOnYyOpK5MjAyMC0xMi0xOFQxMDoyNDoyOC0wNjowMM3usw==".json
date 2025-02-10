@@ -1,0 +1,1019 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMC0xMi0xOFQxMDoyNDoyOC0wNjowMM3usw=="
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Usage of lagrange finite elements in parallel execution",
+          "author": {
+            "login": "abarun22"
+          },
+          "bodyText": "Dear all,\nI wanted to use Lagrange family of finite elements for one my MOOSE parallel computation which requires certain nodal variables to be calculated along a specified boundary. I see that currently parallel computation is not possible with Lagrange family of elements and that the nodal based computation does strictly requires its presence. Here comes the error i received earlier.\n*** ERROR ***\nThe nodal patch recovery option, which calculates the Zienkiewicz-Zhu patch recovery for nodal variables (family = LAGRANGE), is not currently implemented for parallel runs. Run in serial if you must use the nodal patch capability\nMy future work on MOOSE is performance based and so i cannot afford to run in a serial mode. For your reference i am attaching here the input file i am using to run the problem. I would welcome any suggestions/idea on how to accomplish a parallel computation with Lagrange elements and nodal patch capabilities.\nKind regards,\nArun\nPieceWise_test.txt",
+          "url": "https://github.com/idaholab/moose/discussions/16486",
+          "updatedAt": "2022-06-28T11:36:33Z",
+          "publishedAt": "2020-12-14T14:15:24Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "jiangwen84"
+                  },
+                  "bodyText": "First, nodal patch recovery has not been implemented for parallel yetl, and I am not sure whether it will be done very soon.\nSecondly, do you really need or want to use nodal patch recovery? Looks like you want to evaluate stress on a specific boundary. For this purpose, I suggest you consider evaluate and/or integrate stress using the quadratures on the boundary. That would be most accurate way.",
+                  "url": "https://github.com/idaholab/moose/discussions/16486#discussioncomment-205356",
+                  "updatedAt": "2022-06-28T11:36:36Z",
+                  "publishedAt": "2020-12-14T16:00:51Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "abarun22"
+                  },
+                  "bodyText": "Hi Wen,\nThanks for the response. Well, my intention is to extract the mean\nstresses/strains from a selected boundary, irrespective of how it is\ncomputed i.e., through nodal or element based. I see that\n'ElementAverageValue' does not include a boundary identifier to facilitate\nthis sort of selective calculation. Broadly speaking i am interested in\ncreating a so called 'path' engulfing the boundary which is subjected to\nnecking and measure the stresses and strains (as the loading progresses)\nalong this reducing area. I would be glad to hear from you as how i can\noutput these data, possibly with the quadrature rules you mentioned, so\nthat i can plot the true stress/strain results .\nKind regards,\nArun\n\u2026\nOn Mon, Dec 14, 2020 at 4:01 PM Wen Jiang ***@***.***> wrote:\n First, nodal patch recovery has not been implemented for parallel yetl,\n and I am not sure whether it will be done very soon.\n\n Secondly, do you really need or want to use nodal patch recovery? Looks\n like you want to evaluate stress on a specific boundary. For this purpose,\n I suggest you consider evaluate and/or integrate stress using the\n quadratures on the boundary. That would be most accurate way.\n\n \u2014\n You are receiving this because you authored the thread.\n Reply to this email directly, view it on GitHub\n <#16486 (comment)>,\n or unsubscribe\n <https://github.com/notifications/unsubscribe-auth/AJSA25ZUTJ34WR73IZRRH3TSUYZEHANCNFSM4U2ZZTBA>\n .",
+                  "url": "https://github.com/idaholab/moose/discussions/16486#discussioncomment-205530",
+                  "updatedAt": "2022-06-28T11:36:36Z",
+                  "publishedAt": "2020-12-14T16:43:30Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "I would compute those materials on the boundary, and you can find some boundary material tests under moose/test/tests/materials/boundary_material\nBut you need to implement something like ElementIntegralMaterialProperty, but for side (boundary), not block. You can follow    SideIntegralVariablePostprocessor to implement that.",
+                          "url": "https://github.com/idaholab/moose/discussions/16486#discussioncomment-206052",
+                          "updatedAt": "2022-06-28T11:36:36Z",
+                          "publishedAt": "2020-12-14T19:18:04Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "abarun22"
+                          },
+                          "bodyText": "Hi Wen,\nThanks for the response. Indeed my problem of stress dis-agreement at large strains has been solved by the inclusion of 'volumetric locking correction' in to the numerical scheme of things and so i may not be in an urgent need to implement  'ElementIntegralMaterialProperty' to be able to apply along the boundaries for stress calculation. However another advantage of using a nodal patch recovery is to avoid the rendering problems associated with the element based calculations. The attached file shows the difference between the images rendered by peacock for a strain contour done with 'ElementAverageValue' and 'AverageNodalVariableValue'. The later one provide dual benefits of selective calculation of field variables and perfect rendering of pretty pictures, but with a penalty in the form of sequential run and the associated slowness. The problem which takes just over half an hour might take 10-15 days to compute the whole solution, which is never going to be a preferred option. I would like to know if there are any other methods to obtain a smooth contour without having to use the time consuming nodal methods?\nKind regards,\nArun",
+                          "url": "https://github.com/idaholab/moose/discussions/16486#discussioncomment-235116",
+                          "updatedAt": "2022-06-28T11:36:36Z",
+                          "publishedAt": "2020-12-22T17:45:27Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GregVernon"
+                          },
+                          "bodyText": "If you're just concerned with rendering pretty pictures, you could use ParaView's filter: Cell Data to Point Data :",
+                          "url": "https://github.com/idaholab/moose/discussions/16486#discussioncomment-238166",
+                          "updatedAt": "2022-06-28T11:36:37Z",
+                          "publishedAt": "2020-12-23T19:26:05Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "jiangwen84"
+                  },
+                  "bodyText": "In addition to @GregVernon 's solution, you can also use FIRST order monomial for element variable. MOOSE/libmesh uses least square fitting to get the value at the nodes.\n[stress_xx]\norder = FIRST\ntype = MONOMIAL\n[]",
+                  "url": "https://github.com/idaholab/moose/discussions/16486#discussioncomment-238174",
+                  "updatedAt": "2022-06-28T11:36:38Z",
+                  "publishedAt": "2020-12-23T19:29:01Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "abarun22"
+                  },
+                  "bodyText": "Thanks for the suggestions. I dont really get how we go from element\nvariables (as Wen described) to the nodal results. Are there any options to\nbe included in the input file to enforce this conversion?\n\u2026\nOn Wed, Dec 23, 2020 at 7:29 PM Wen Jiang ***@***.***> wrote:\n In addition to @GregVernon <https://github.com/GregVernon> 's solution,\n you can also use FIRST order monomial for element variable. MOOSE/libmesh\n uses least square fitting to get the value at the nodes.\n\n [stress_xx]\n order = FIRST\n type = MONOMIAL\n []\n\n \u2014\n You are receiving this because you authored the thread.\n Reply to this email directly, view it on GitHub\n <#16486 (comment)>,\n or unsubscribe\n <https://github.com/notifications/unsubscribe-auth/AJSA252PYNTH47JWICIRSO3SWJAIVANCNFSM4U2ZZTBA>\n .",
+                  "url": "https://github.com/idaholab/moose/discussions/16486#discussioncomment-238243",
+                  "updatedAt": "2022-06-28T11:36:39Z",
+                  "publishedAt": "2020-12-23T19:40:11Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "Let us use  modules/tensor_mechanics/test/tests/ad_linear_elasticity/applied_strain.i  as example\nAdd following blocks to the input file. This will output stress_xx as a nodal variable.\n[AuxVariables]\n[stress_xx]\norder = FIRST\nfamily = MONOMIAL\n[]\n[]\n[AuxKernels]\n[stress_xx]\ntype = ADRankTwoAux\nvariable = stress_xx\nrank_two_tensor = stress\nindex_i = 0\nindex_j = 0\n[]\n[]\nTensorMechancsMasterAction generate_output option will automatically use Elemental variable. So if you want to output any strain or stress as a nodal variable, you have to manually add the AuxVariable and AuxKernels like what is shown above.",
+                          "url": "https://github.com/idaholab/moose/discussions/16486#discussioncomment-238403",
+                          "updatedAt": "2022-06-28T11:36:39Z",
+                          "publishedAt": "2020-12-23T20:12:41Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "I think what you really want is something similar to the SidesetReaction postprocessor available in the tensor_mechanics module.",
+                  "url": "https://github.com/idaholab/moose/discussions/16486#discussioncomment-238846",
+                  "updatedAt": "2022-06-28T11:36:40Z",
+                  "publishedAt": "2020-12-24T01:38:20Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "abarun22"
+                  },
+                  "bodyText": "Thanks for your suggestion wen, i could now be able to get smooth\nstress/strain contours after conversion to nodal variable output. Thinking\non the lines of Gary, could i ask if it is possible to extend\n'ElementAverageValue' to accept domain boundaries, so that just by\nspecifying this identifier, we could calculate the results specifically to\na part of the model. I am not pretty sure if this can be done practically,\nbut just a thought to ponder upon.\n\nI am happy to work on the SidesetReaction postprocessor if that's something\nwe could develop quickly.\n\u2026\nOn Thu, Dec 24, 2020 at 1:38 AM Gary (Tianchen) Hu ***@***.***> wrote:\n I think what you really want is something similar to the SidesetReaction\n postprocessor available in the tensor_mechanics module.\n\n \u2014\n You are receiving this because you authored the thread.\n Reply to this email directly, view it on GitHub\n <#16486 (comment)>,\n or unsubscribe\n <https://github.com/notifications/unsubscribe-auth/AJSA25YHOR6NDT73EVTUU43SWKLRRANCNFSM4U2ZZTBA>\n .",
+                  "url": "https://github.com/idaholab/moose/discussions/16486#discussioncomment-239733",
+                  "updatedAt": "2022-06-28T11:36:40Z",
+                  "publishedAt": "2020-12-24T14:30:12Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "The ElementAverageValue iderives from ElementIntegralPostprocessor which loops all the elements. So you need to implement a new one that derives from SideIntegralPostprocessor which loops over a side/boundary.",
+                          "url": "https://github.com/idaholab/moose/discussions/16486#discussioncomment-240051",
+                          "updatedAt": "2022-12-15T04:40:54Z",
+                          "publishedAt": "2020-12-24T15:34:06Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "The modeling problem of phase field and j2 coupling to simulate grain growth",
+          "author": {
+            "login": "PengWei97"
+          },
+          "bodyText": "Dear MOOSE experts,\nRecently I replaced the linear elasticity with a j2 plastic model based on poly_grain_growth_2D_eldrforce.i, and to embed elastic energy into the phase field model. But some errors occurred and the simulation could not be performed,\nThe input I wrote is as follows: poly_grain_growth_2D_eldrforce_j2.i\npoly_grain_growth_2D_eldrforce_j2.txt\n, and then run  on the terminal\nmpirun -np 5 ~/project/panda/panda-opt -i poly_grain_growth_2D_eldrforce_j2.i > poly_grain_growth_2D_eldrforce_j2.i\non the port and report an error after the simulation.\ncalled \u201cWORLD\u201d, \u201cWORLD_ORM_ORM_OR\u201d , 1)-process 2\npoly_grain_growth_2D_eldrforce_j2_01.log\nBased on the appeal error, I retyped the command  on the terminal\n~/project/panda/panda-opt -i poly_grain_growth_2D_eldrforce_j2.i> poly_grain_growth_2D_eldrforce_j2.log but the actual error is as follows:\napplication called MPI_Abort(MPI_COMM_WORLD, 1)-process 0\n[unset]: write_line error; fd=-1 buf=:cmd=abort exitcode=1\n:\nsystem msg for write_line failure: Bad file descriptor\n\npoly_grain_growth_2D_eldrforce_j2_02.log\nI think the input file I wrote has some problems.As a moose beginner, I hope the experts can provide me with guidance.\nAny suggestions or recommendations to fix these problems would be greatly appreciated.\nThank you\nWei Peng",
+          "url": "https://github.com/idaholab/moose/discussions/16577",
+          "updatedAt": "2022-06-29T20:08:28Z",
+          "publishedAt": "2020-12-23T07:00:51Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": []
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Terminating the simualtion depending on my microstructure",
+          "author": {
+            "login": "KamalnathOSU"
+          },
+          "bodyText": "Hi all,\nI am using KKS model ( phase-field) module to simulate precipitate growth. I want to terminate my simulation when the volume fraction of precipitate reaches a target value (instead of using \"end_time\" flag in my executioner.) I am measuring the volume fraction using a postprocessor.\nCurrently, I am thinking of write a error message using \"mooseError()\" when my target volume fraction is reached. But in this way, my microstructure at the end of the simulation won't be saved. Is there a better way to do this ?\nRegards,\nKamal",
+          "url": "https://github.com/idaholab/moose/discussions/16569",
+          "updatedAt": "2022-07-10T05:25:11Z",
+          "publishedAt": "2020-12-22T19:12:06Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "jessecarterMOOSE"
+                  },
+                  "bodyText": "There's a Terminator user object that you can add to your input file that will stop the simulation when a postprocessor value is reached.\nHere is an example:\nhttps://github.com/idaholab/moose/blob/next/test/tests/userobjects/Terminator/terminator.i",
+                  "url": "https://github.com/idaholab/moose/discussions/16569#discussioncomment-235291",
+                  "updatedAt": "2022-07-10T05:25:02Z",
+                  "publishedAt": "2020-12-22T19:20:57Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "KamalnathOSU"
+                          },
+                          "bodyText": "Thank you @jessecarterMOOSE .  Does it save the last microstructure in the output file ?",
+                          "url": "https://github.com/idaholab/moose/discussions/16569#discussioncomment-235324",
+                          "updatedAt": "2022-07-10T05:25:02Z",
+                          "publishedAt": "2020-12-22T19:33:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jessecarterMOOSE"
+                          },
+                          "bodyText": "You can use the Outputs block to save your solution at the last step using execute_on=FINAL.",
+                          "url": "https://github.com/idaholab/moose/discussions/16569#discussioncomment-235335",
+                          "updatedAt": "2022-07-10T05:25:02Z",
+                          "publishedAt": "2020-12-22T19:39:49Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Integrate an AuxVariable along a plane?",
+          "author": {
+            "login": "mangerij"
+          },
+          "bodyText": "Hi,\nI looked around and found ElementsAlongPlane and it seems you can get information about elements given some plane coordinate and plane normal. Is there a way to integrate an AuxVariable given the normal and coordinate? Also can this be block restricted?\nthanks",
+          "url": "https://github.com/idaholab/moose/discussions/16481",
+          "updatedAt": "2020-12-22T00:35:39Z",
+          "publishedAt": "2020-12-14T10:28:48Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "aeslaughter"
+                  },
+                  "bodyText": "I don't think that capability exists, but can always be added.",
+                  "url": "https://github.com/idaholab/moose/discussions/16481#discussioncomment-205395",
+                  "updatedAt": "2020-12-14T16:09:52Z",
+                  "publishedAt": "2020-12-14T16:09:35Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hi,\nYou could add the Plane as a sideset in your mesh then use one of the integral postprocessors.",
+                  "url": "https://github.com/idaholab/moose/discussions/16481#discussioncomment-232478",
+                  "updatedAt": "2020-12-21T23:10:24Z",
+                  "publishedAt": "2020-12-21T23:10:11Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "mangerij"
+                  },
+                  "bodyText": "We have tried that. It is a bit tricky when using tets and your plane cuts at weird angles in the mesh. And then you end up getting extra nodes near that desired sideset which give different solutions.\n\nOn Dec 22, 2020 1:10 AM, Guillaume Giudicelli <notifications@github.com> wrote:\n\n*Message sent from a system outside of UConn.*\n\n\nHi,\nYou could add the Plane as a sideset in your mesh then use one of the integral postprocessors.\n\n\u2014\nYou are receiving this because you authored the thread.\nReply to this email directly, view it on GitHub<https://nam10.safelinks.protection.outlook.com/?url=https%3A%2F%2Fgithub.com%2Fidaholab%2Fmoose%2Fdiscussions%2F16481%23discussioncomment-232478&data=04%7C01%7Cjohn.mangeri%40uconn.edu%7Ca1c3e03004a045f5572208d8a6059985%7C17f1a87e2a254eaab9df9d439034b080%7C0%7C0%7C637441890352215909%7CUnknown%7CTWFpbGZsb3d8eyJWIjoiMC4wLjAwMDAiLCJQIjoiV2luMzIiLCJBTiI6Ik1haWwiLCJXVCI6Mn0%3D%7C1000&sdata=SRdxkBuWFY1Qb88PWUhgYBH1BQ%2F5g6ZlnJnuWWyV16E%3D&reserved=0>, or unsubscribe<https://nam10.safelinks.protection.outlook.com/?url=https%3A%2F%2Fgithub.com%2Fnotifications%2Funsubscribe-auth%2FABZ65FAHZ26JQBUO6W5SQ4TSV7IWBANCNFSM4U2QYSLA&data=04%7C01%7Cjohn.mangeri%40uconn.edu%7Ca1c3e03004a045f5572208d8a6059985%7C17f1a87e2a254eaab9df9d439034b080%7C0%7C0%7C637441890352215909%7CUnknown%7CTWFpbGZsb3d8eyJWIjoiMC4wLjAwMDAiLCJQIjoiV2luMzIiLCJBTiI6Ik1haWwiLCJXVCI6Mn0%3D%7C1000&sdata=ueDvTW7ASTK6kDq4Ws%2BVWA%2BW6dCGAlnDrouVNo8D5B8%3D&reserved=0>.",
+                  "url": "https://github.com/idaholab/moose/discussions/16481#discussioncomment-232655",
+                  "updatedAt": "2020-12-21T23:58:12Z",
+                  "publishedAt": "2020-12-21T23:58:00Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Ok if you dont want it to influence your solution but are open to adding the plane in a mesh, then I suggest you use a Multiapp and transfer the solution fields to this other app. You can still use the original mesh in the initial app.\nYou can use the Transfers to interpolate the solution on the new mesh, and you can use the postprocessor on that mesh to obtain the desired integral.",
+                          "url": "https://github.com/idaholab/moose/discussions/16481#discussioncomment-232743",
+                          "updatedAt": "2020-12-22T00:06:29Z",
+                          "publishedAt": "2020-12-22T00:06:29Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Running a Python Script in MOOSE (via MultiApp?)",
+          "author": {
+            "login": "wrkendrick"
+          },
+          "bodyText": "Hi all,\nI'm currently running MOOSE as a heat transfer solver and I'm interested in adding in an existing script that solves a heat pipe environment. The issue is that the heat pipe script was originally FORTRAN and was recently, painstakingly, written into Python, so I have no interest in doing the same for C++.\nI've seen some evidence of people utilizing Python-based scripts in MOOSE, but I can't find any clear examples or actual code of how you go about tying them together. I understand the basics of embedding Python into C++, but I'm not sure that's the right method, or if there's just some easy implementation via the MultiApp functionality.\nI wanted to ask y'all for any advice or experiences you may have had on this sort of topic. Any help is greatly appreciated!",
+          "url": "https://github.com/idaholab/moose/discussions/16497",
+          "updatedAt": "2022-09-13T22:47:02Z",
+          "publishedAt": "2020-12-15T15:53:37Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "aeslaughter"
+                  },
+                  "bodyText": "You should probably create a MOOSE Wrapped App that is capable of running the python via C++.\nWe do have a heat pipe application at INL, but I am not sure it is being released outside of the lab. @joshuahansel can you comment on that?",
+                  "url": "https://github.com/idaholab/moose/discussions/16497#discussioncomment-210317",
+                  "updatedAt": "2022-09-13T22:47:03Z",
+                  "publishedAt": "2020-12-15T16:08:42Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "joshuahansel"
+                          },
+                          "bodyText": "Sockeye (the MOOSE-based heat pipe application) does have users external to INL, but it's not open-source or anything - you'd need to apply for access. I'm not sure on what the criteria are (but probably include organization, project, and nationality). Let me you know if you'd like to try or if you'd like to learn more about Sockeye.",
+                          "url": "https://github.com/idaholab/moose/discussions/16497#discussioncomment-210467",
+                          "updatedAt": "2022-09-13T22:47:03Z",
+                          "publishedAt": "2020-12-15T16:28:51Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "permcody"
+                          },
+                          "bodyText": "Sockeye is licensable: You can apply here: www.inl.gov/ncrc\nCalling Python from C++ is possible, but you'll likely find yourself spending a lot of time working out the technical details. This gets further complicated when you consider that MOOSE is parallel. How exactly do you plan to perform parallel calculations in your Python code or do you just want to limit it to a single processor?",
+                          "url": "https://github.com/idaholab/moose/discussions/16497#discussioncomment-210661",
+                          "updatedAt": "2022-09-13T22:47:04Z",
+                          "publishedAt": "2020-12-15T17:46:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "wrkendrick"
+                          },
+                          "bodyText": "You should probably create a MOOSE Wrapped App that is capable of running the python via C++.\nWe do have a heat pipe application at INL, but I am not sure it is being released outside of the lab. @joshuahansel can you comment on that?\n\nIs there any more info / examples of using a Wrapped App in the MOOSE framework? I'm looking but having a hard time telling what specifically I need to create/pass. The wiki may be a little bugged, too, because when I look to see what variables I can use with ExternalObject I can't really tell: https://mooseframework.inl.gov/source/problems/ExternalProblem.html. It seems like a wrapped app is what I need, though.\n\nSockeye is licensable: You can apply here: www.inl.gov/ncrc\nCalling Python from C++ is possible, but you'll likely find yourself spending a lot of time working out the technical details. This gets further complicated when you consider that MOOSE is parallel. How exactly do you plan to perform parallel calculations in your Python code or do you just want to limit it to a single processor?\n\nThat's a good point I hadn't really thought about. I think for the short term I can live on a single processor, I can sacrifice some runtime if it means that I can actually run.",
+                          "url": "https://github.com/idaholab/moose/discussions/16497#discussioncomment-210847",
+                          "updatedAt": "2022-09-13T22:47:05Z",
+                          "publishedAt": "2020-12-15T18:48:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hi\nI'm sure there are openly accessible examples of external apps wrapped using ExternalProblem. I don't know them but you could ask for access to:\n\nCardinal at ANL, with NEK5000 wrapped this way\nWarthog at ORNL / ANL, with Proteus link\nfor an example.\n\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/16497#discussioncomment-232206",
+                          "updatedAt": "2022-09-13T22:47:05Z",
+                          "publishedAt": "2020-12-21T22:14:22Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Derived classes of template classes",
+          "author": {
+            "login": "srinath-chakravarthy"
+          },
+          "bodyText": "Hi all,\nI am attempting to create a derived template class of ADMatDiffusion with added parameters. For some reason i am unable to use getParam within this. I always get an error \"expected primary-expression before > token\". The code is listed below.\nMy workaround was to duplicate getParam in the specialization, but this involves code duplication for every specialization\n#pragma once\n\n#include \"ADMatDiffusionBase.h\"\n\ntemplate<typename T> \nclass ADChemoMechanoDiffusionTempl : public ADMatDiffusionBase<T>\n{\npublic: \n    static InputParameters validParams();\n\n    ADChemoMechanoDiffusionTempl(const InputParameters & parameters);\n\nprotected:\n    virtual ADRealVectorValue precomputeQpResidual() override;\n    const bool _mu_coupled; \n    const unsigned int _mu_var;\n    Real _temperature; \n    Real _gas_constant;\n\n    const ADVariableGradient * _grad_mu;\n    using ADMatDiffusionBase<T> :: _qp;\n    using ADMatDiffusionBase<T> :: _diffusivity;\n    using ADMatDiffusionBase<T> :: _u;\n    using ADMatDiffusionBase<T> :: adCoupledGradient;\n    using ADMatDiffusionBase<T> :: coupled;\n    using ADMatDiffusionBase<T> :: isCoupled;\n    using ADMatDiffusionBase<T> :: getParam;\nprivate:\n\n};\n\ntemplate<typename T> \nInputParameters\nADChemoMechanoDiffusionTempl<T>::validParams()\n{\n  InputParameters params = ADMatDiffusionBase<T>::validParams();\n  params.addClassDescription(\"Diffusion equation kernel that takes an anisotropic diffusivity \"\n                             \"from a material property and \"\n                             \"computes the gradient of the chemical potential from \"\n                             \"elastic and growth contributions\");\n  params.addCoupledVar(\"stress_based_chemical_potential\", \n                          \"Name of the variable for the stress_based_chemical_potential\");\n  params.addParam<Real>(\"gas_constant\", 8.314426, \"Universal Gas Constant\");\n  params.addParam<Real>(\"temperature\", 298, \"temperature\");\n\n  params.set<bool>(\"use_displaced_mesh\") = false;\n  return params;\n}\n\ntemplate <typename T>\nADChemoMechanoDiffusionTempl<T>::ADChemoMechanoDiffusionTempl(const InputParameters & parameters)\n  : ADMatDiffusionBase<T>(parameters),\n    _mu_coupled(isCoupled(\"stress_based_chemical_potential\")),\n    _mu_var(_mu_coupled ? coupled(\"stress_based_chemical_potential\") : 0), \n    _gas_constant(getParam<Real>(\"gas_constant\")), \n    _temperature(getParam<Real>(\"temperature\"))\n{\n    if (_mu_coupled)\n        _grad_mu = &adCoupledGradient(\"stress_based_chemical_potential\");\n\n}\n\ntemplate<typename T> \nADRealVectorValue\nADChemoMechanoDiffusionTempl<T>::precomputeQpResidual()\n{\n    auto residual = ADMatDiffusionBase<T>::precomputeQpResidual();\n    if (_mu_coupled)\n        residual += _diffusivity[_qp] * _u[_qp] * (*_grad_mu)[_qp] / (_gas_constant * _temperature) ;\n\n    return residual;\n}",
+          "url": "https://github.com/idaholab/moose/discussions/16540",
+          "updatedAt": "2022-11-08T08:34:44Z",
+          "publishedAt": "2020-12-18T16:29:27Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "aeslaughter"
+                  },
+                  "bodyText": "addParam and getParam are template functions. You need to supply the type in the call: addParam<Real>(...) and getParam<Real>(...)\nThis might help you:\nhttps://mooseframework.inl.gov/getting_started/examples_and_tutorials/tutorial01_app_development/step06_input_params.html#step-6-define-a-set-of-input-parameters",
+                  "url": "https://github.com/idaholab/moose/discussions/16540#discussioncomment-230172",
+                  "updatedAt": "2022-12-28T03:37:55Z",
+                  "publishedAt": "2020-12-21T16:28:43Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dschwen"
+                          },
+                          "bodyText": "He is",
+                          "url": "https://github.com/idaholab/moose/discussions/16540#discussioncomment-230293",
+                          "updatedAt": "2022-12-28T03:37:55Z",
+                          "publishedAt": "2020-12-21T17:05:54Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aeslaughter"
+                          },
+                          "bodyText": "Those weren't there in the original post.",
+                          "url": "https://github.com/idaholab/moose/discussions/16540#discussioncomment-230496",
+                          "updatedAt": "2022-12-28T03:37:55Z",
+                          "publishedAt": "2020-12-21T18:09:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "srinath-chakravarthy"
+                          },
+                          "bodyText": "Strange, I did not alter my post.",
+                          "url": "https://github.com/idaholab/moose/discussions/16540#discussioncomment-230508",
+                          "updatedAt": "2022-12-28T03:37:55Z",
+                          "publishedAt": "2020-12-21T18:12:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aeslaughter"
+                          },
+                          "bodyText": "@dschwen Made an edit, I think he is messing with me.",
+                          "url": "https://github.com/idaholab/moose/discussions/16540#discussioncomment-230551",
+                          "updatedAt": "2022-12-28T03:38:24Z",
+                          "publishedAt": "2020-12-21T18:36:49Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "dschwen"
+                  },
+                  "bodyText": "try this-> template getParam<Real>(...",
+                  "url": "https://github.com/idaholab/moose/discussions/16540#discussioncomment-230295",
+                  "updatedAt": "2022-12-28T03:38:24Z",
+                  "publishedAt": "2020-12-21T17:06:12Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "srinath-chakravarthy"
+                          },
+                          "bodyText": "Thanks. Will try it now and report back shortly.",
+                          "url": "https://github.com/idaholab/moose/discussions/16540#discussioncomment-230509",
+                          "updatedAt": "2022-12-28T03:54:40Z",
+                          "publishedAt": "2020-12-21T18:12:40Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "srinath-chakravarthy"
+                          },
+                          "bodyText": "That worked. Thanks so much.",
+                          "url": "https://github.com/idaholab/moose/discussions/16540#discussioncomment-230650",
+                          "updatedAt": "2022-12-28T03:54:45Z",
+                          "publishedAt": "2020-12-21T19:20:25Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "sets of blocks?",
+          "author": {
+            "login": "crswong888"
+          },
+          "bodyText": "Is there a way to create a simple alias for a set of blocks? Most of the time I reference any of the individual blocks, its always the same ones grouped together, and they only need to be unique because of material properties. I'm dealing with a 3D model of a Westinghouse fuel assembly here, and so there's a lot going on.\nAs a simple example, I'm looking for some way to reference blocks 1 and 2 by a single name instead of both explicitly, while still being able to reference 1 and 2 individually:\n[Variables]\n  [disp_x]\n    block = '1 2'\n  []\n[]\n\n[Kernels]\n  [some_kernel]\n    block = '1 2'\n  []\n[]\n\n[Materials]\n  [mat1]\n    block = 1\n  []\n  [mat2]\n    block = 2\n  []\n[]\n\nThe model I'm working with has 18 blocks, not just 2, so trust me, it's a lot more painful than the above example.",
+          "url": "https://github.com/idaholab/moose/discussions/16548",
+          "updatedAt": "2023-04-25T19:41:09Z",
+          "publishedAt": "2020-12-19T03:39:37Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "How about defining\nmy_awesome_block_name = '1 2'\n\non the top of your input file?\nLater on you can use\nblock = ${my_awesome_block_name}",
+                  "url": "https://github.com/idaholab/moose/discussions/16548#discussioncomment-224871",
+                  "updatedAt": "2023-04-25T19:41:31Z",
+                  "publishedAt": "2020-12-19T05:50:04Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "crswong888"
+                          },
+                          "bodyText": "Wow I did not know this kind of syntax was available for MOOSE HIT files. This is very valuable. Thanks!",
+                          "url": "https://github.com/idaholab/moose/discussions/16548#discussioncomment-226015",
+                          "updatedAt": "2023-04-25T19:41:46Z",
+                          "publishedAt": "2020-12-19T21:24:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aeslaughter"
+                          },
+                          "bodyText": "https://mooseframework.inl.gov/application_usage/input_syntax.html",
+                          "url": "https://github.com/idaholab/moose/discussions/16548#discussioncomment-230143",
+                          "updatedAt": "2023-04-25T19:41:46Z",
+                          "publishedAt": "2020-12-21T16:18:09Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Setting number of quadrature points",
+          "author": {
+            "login": "tairoon1"
+          },
+          "bodyText": "Hi,\nI was wondering, how can I set the number of quadrature points used? I am using a QUAD8 mesh and would like to use 2 quadrature points in each direction. The default seems to be three. Can I choose the number in the input file?",
+          "url": "https://github.com/idaholab/moose/discussions/16549",
+          "updatedAt": "2024-02-26T10:46:38Z",
+          "publishedAt": "2020-12-19T15:26:20Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "Look at these tests: https://github.com/idaholab/moose/tree/next/test/tests/quadrature\nYou can control the order of quadrature.",
+                  "url": "https://github.com/idaholab/moose/discussions/16549#discussioncomment-225401",
+                  "updatedAt": "2024-02-26T10:46:38Z",
+                  "publishedAt": "2020-12-19T15:51:20Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "tairoon1"
+                          },
+                          "bodyText": "perfect, thanks!",
+                          "url": "https://github.com/idaholab/moose/discussions/16549#discussioncomment-225692",
+                          "updatedAt": "2024-02-26T10:46:38Z",
+                          "publishedAt": "2020-12-19T17:46:37Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Peacock install on Linux from source",
+          "author": {
+            "login": "dealmeidavf"
+          },
+          "bodyText": "Hello,\nIs there a list of packages needed for peacock when installing from source in Linux?\nI currently have vtk installed but running peacock gives me:\n\n->  ./peacock\nError starting peacock: Could not import vtk\nYou need to use the miniconda module. Run:\nmodule load miniconda\n\nI do not have miniconda. Is it possible to get peacock working without it?\nThanks,\n--\nValmor",
+          "url": "https://github.com/idaholab/moose/discussions/16525",
+          "updatedAt": "2022-10-20T03:37:13Z",
+          "publishedAt": "2020-12-17T08:25:23Z",
+          "category": {
+            "name": "Q&A Tools"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "milljm"
+                  },
+                  "bodyText": "pyqt, vtk, matplotlib (with qt backends), pandas. Those are the top-level requirements. They have quite a few of their own (like PyQt requiring Qt for starters).\nHere is the final list created by Conda, as it attempts to solve the above dependencies. It is extensive, and no doubt your system will already have much of this installed already:\nconda create -n testing install pyqt vtk matplotlib pandas\n\n  bzip2              conda-forge/osx-64::bzip2-1.0.8-hc929b4f_4\n  c-ares             conda-forge/osx-64::c-ares-1.17.1-hc929b4f_0\n  ca-certificates    conda-forge/osx-64::ca-certificates-2020.12.5-h033912b_0\n  certifi            conda-forge/osx-64::certifi-2020.12.5-py37hf985489_0\n  curl               conda-forge/osx-64::curl-7.71.1-hcb81553_8\n  cycler             conda-forge/noarch::cycler-0.10.0-py_2\n  dbus               conda-forge/osx-64::dbus-1.13.6-h0c50699_1\n  double-conversion  conda-forge/osx-64::double-conversion-3.1.5-h4a8c4bd_2\n  eigen              conda-forge/osx-64::eigen-3.3.9-h926bf3e_1\n  expat              conda-forge/osx-64::expat-2.2.9-hb1e8313_2\n  ffmpeg             conda-forge/osx-64::ffmpeg-4.3.1-he496704_1\n  freetype           conda-forge/osx-64::freetype-2.10.4-h3f75d11_0\n  gettext            conda-forge/osx-64::gettext-0.19.8.1-h7937167_1005\n  gl2ps              conda-forge/osx-64::gl2ps-1.4.2-h4cff582_0\n  glew               conda-forge/osx-64::glew-2.1.0-h046ec9c_2\n  glib               conda-forge/osx-64::glib-2.66.3-h519c658_1\n  gmp                conda-forge/osx-64::gmp-6.2.1-h2e338ed_0\n  gnutls             conda-forge/osx-64::gnutls-3.6.13-h756fd2b_1\n  hdf4               conda-forge/osx-64::hdf4-4.2.13-h71d84a9_1004\n  hdf5               conda-forge/osx-64::hdf5-1.10.6-nompi_h0f9794f_1112\n  icu                conda-forge/osx-64::icu-64.2-h6de7cb9_1\n  jpeg               conda-forge/osx-64::jpeg-9d-hbcb3906_0\n  jsoncpp            conda-forge/osx-64::jsoncpp-1.8.4-ha1b3eb9_1002\n  kiwisolver         conda-forge/osx-64::kiwisolver-1.3.1-py37h8ec247f_0\n  krb5               conda-forge/osx-64::krb5-1.17.2-h60d9502_0\n  lame               conda-forge/osx-64::lame-3.100-h1de35cc_1001\n  lcms2              conda-forge/osx-64::lcms2-2.11-h11f7e16_1\n  libblas            conda-forge/osx-64::libblas-3.9.0-3_openblas\n  libcblas           conda-forge/osx-64::libcblas-3.9.0-3_openblas\n  libcurl            conda-forge/osx-64::libcurl-7.71.1-h9bf37e3_8\n  libcxx             conda-forge/osx-64::libcxx-11.0.0-h4c3b8ed_1\n  libedit            conda-forge/osx-64::libedit-3.1.20191231-h0678c8f_2\n  libev              conda-forge/osx-64::libev-4.33-haf1e3a3_1\n  libffi             conda-forge/osx-64::libffi-3.3-h046ec9c_2\n  libgfortran        conda-forge/osx-64::libgfortran-5.0.0-h7cc5361_13\n  libgfortran5       conda-forge/osx-64::libgfortran5-9.3.0-h7cc5361_13\n  libglib            conda-forge/osx-64::libglib-2.66.3-h60154bc_1\n  libiconv           conda-forge/osx-64::libiconv-1.16-haf1e3a3_0\n  liblapack          conda-forge/osx-64::liblapack-3.9.0-3_openblas\n  libnetcdf          conda-forge/osx-64::libnetcdf-4.7.4-nompi_h9d8a93f_107\n  libnghttp2         conda-forge/osx-64::libnghttp2-1.41.0-h7580e61_2\n  libogg             conda-forge/osx-64::libogg-1.3.4-hc929b4f_0\n  libopenblas        conda-forge/osx-64::libopenblas-0.3.12-openmp_h54245bb_1\n  libpng             conda-forge/osx-64::libpng-1.6.37-h7cec526_2\n  libssh2            conda-forge/osx-64::libssh2-1.9.0-h8a08a2b_5\n  libtheora          conda-forge/osx-64::libtheora-1.1.1-haf1e3a3_1004\n  libtiff            conda-forge/osx-64::libtiff-4.1.0-hca7d577_6\n  libvorbis          conda-forge/osx-64::libvorbis-1.3.7-h4a8c4bd_0\n  libwebp-base       conda-forge/osx-64::libwebp-base-1.1.0-hbcb3906_3\n  libxml2            conda-forge/osx-64::libxml2-2.9.10-h53d96d6_0\n  llvm-openmp        conda-forge/osx-64::llvm-openmp-11.0.0-h73239a0_1\n  loguru             conda-forge/osx-64::loguru-0.5.3-py37hc8dfbb8_2\n  lz4-c              conda-forge/osx-64::lz4-c-1.9.2-hb1e8313_3\n  matplotlib         conda-forge/osx-64::matplotlib-3.3.3-py37hf985489_0\n  matplotlib-base    conda-forge/osx-64::matplotlib-base-3.3.3-py37hdacc966_0\n  ncurses            conda-forge/osx-64::ncurses-6.2-h2e338ed_4\n  nettle             conda-forge/osx-64::nettle-3.6-hedd7734_0\n  numpy              conda-forge/osx-64::numpy-1.19.4-py37hec87de9_2\n  olefile            conda-forge/noarch::olefile-0.46-pyh9f0ad1d_1\n  openh264           conda-forge/osx-64::openh264-2.1.1-hd174df1_0\n  openssl            conda-forge/osx-64::openssl-1.1.1i-h35c211d_0\n  pandas             conda-forge/osx-64::pandas-1.1.5-py37h010c265_0\n  pcre               conda-forge/osx-64::pcre-8.44-hb1e8313_0\n  pillow             conda-forge/osx-64::pillow-8.0.1-py37h09f51b7_0\n  pip                conda-forge/noarch::pip-20.3.3-pyhd8ed1ab_0\n  proj               conda-forge/osx-64::proj-7.1.1-h45baca5_3\n  pugixml            conda-forge/osx-64::pugixml-1.10-hb1e8313_1\n  pyparsing          conda-forge/noarch::pyparsing-2.4.7-pyh9f0ad1d_0\n  pyqt               conda-forge/osx-64::pyqt-5.9.2-py37h2a560b1_4\n  python             conda-forge/osx-64::python-3.7.9-h6c3b2c9_0_cpython\n  python-dateutil    conda-forge/noarch::python-dateutil-2.8.1-py_0\n  python_abi         conda-forge/osx-64::python_abi-3.7-1_cp37m\n  pytz               conda-forge/noarch::pytz-2020.4-pyhd8ed1ab_0\n  qt                 conda-forge/osx-64::qt-5.9.7-h8cf7e54_3\n  readline           conda-forge/osx-64::readline-8.0-h0678c8f_2\n  setuptools         conda-forge/osx-64::setuptools-49.6.0-py37h2987424_2\n  sip                pkgs/main/osx-64::sip-4.19.8-py37h0a44026_0\n  six                conda-forge/noarch::six-1.15.0-pyh9f0ad1d_0\n  sqlite             conda-forge/osx-64::sqlite-3.34.0-h17101e1_0\n  tbb                conda-forge/osx-64::tbb-2020.2-h926bf3e_1\n  tbb-devel          conda-forge/osx-64::tbb-devel-2020.2-h926bf3e_1\n  tk                 conda-forge/osx-64::tk-8.6.10-h0419947_1\n  tornado            conda-forge/osx-64::tornado-6.1-py37h4b544eb_0\n  utfcpp             conda-forge/osx-64::utfcpp-3.1.2-0\n  vtk                conda-forge/osx-64::vtk-9.0.1-no_osmesa_py37hc0470e1_102\n  wheel              conda-forge/noarch::wheel-0.36.2-pyhd3deb0d_0\n  x264               conda-forge/osx-64::x264-1!152.20180806-h1de35cc_0\n  xz                 conda-forge/osx-64::xz-5.2.5-haf1e3a3_1\n  zlib               conda-forge/osx-64::zlib-1.2.11-h7795811_1010\n  zstd               conda-forge/osx-64::zstd-1.4.5-h289c70a_2\n\nI respect your attempt at building from source! I used to do this for our older moose-environment package we once distributed (before using Conda).",
+                  "url": "https://github.com/idaholab/moose/discussions/16525#discussioncomment-219188",
+                  "updatedAt": "2022-10-20T03:37:16Z",
+                  "publishedAt": "2020-12-17T14:40:18Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "dealmeidavf"
+                  },
+                  "bodyText": "I may have all dependencies there. At the moment I run peacock, then open the input file and run. This is the output on my terminal screen:\n\n->  peacock\nQCssParser::parseColorValue: Specified color without alpha value but alpha given: 'r1, 111, 111, 255'\n[snip]\nQCssParser::parseColorValue: Specified color without alpha value but alpha given: 'r1, 111, 111, 255'\nFound executable: [snip]\nQCssParser::parseColorValue: Specified color without alpha value but alpha given: 'r1, 111, 111, 255'\n[snip]\nNumeric mode unsupported in the posix collation implementation\nExodus filenames: ['peacock_run_exe_tmp_my-input_out.e']\nPostprocessor filenames: ['peacock_run_exe_tmp_my-input_out.csv']\nRunning command: [snip]/diffusion-opt Outputs/csv=true -i peacock_run_exe_tmp_my-input.i\nWorking directory: [snip]/diffusion\nFinished: Exit code: 0\n\nFiles are created etc. in the directory of the input file.\nNext, in peacock I click on ExodusViewer tab and peacock crashes\n\nSegmentation fault\n\nI had to install vtk from PyPI on my system because the vtk package from my distribution does not seem to allow for  python bindings (?). peacock gives me an error of package not found unless I use vtk from PyPI. I am assuming this is what conda does.  However I think my system will be inconsistent since PyQt is from my linux distro and not PyPI. Again I am assuming conda will use everything from PyPI.\nYes these are the troubleshooting headaches when building from source :)\nAt the moment I get what I need from peacock which is inspection of the input file. I typically run a moose app from the command line; not from peacock. However it would be nice to be able to take a quick view of the exodus output file while in peacock. Otherwise I use VisIt which is another matter for getting it installed...\nThanks for inputs.",
+                  "url": "https://github.com/idaholab/moose/discussions/16525#discussioncomment-224827",
+                  "updatedAt": "2022-10-20T03:37:39Z",
+                  "publishedAt": "2020-12-19T04:11:14Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "AD performance",
+          "author": {
+            "login": "hugary1995"
+          },
+          "bodyText": "I have been using AD for tensor mechanics applications for quite some time, and I observe that in some cases AD is slightly slower but acceptable, but in some cases AD is ~5x slower.\nWe've had this discussion many times at many different places. I think it is time to sit down and look at the performance seriously. I hope this can be a good starting point for some AD performance improvements in tensor mechanics.\nI put together three really simple test cases using the tensor mechanics module only.\nThe input files can be found at https://github.com/hugary1995/moose/tree/AD_performance/modules/tensor_mechanics/examples/perf\nModel\nThis is a 2D square domain with RZ coordinates. The bottom edge is fixed in z, and the left edge is fixed in r. The top edge is being pulled upward (on the displaced mesh). There is a nonhomogeneous eigenstrain applied on the domain.\nEach of the test case uses a different constitutive law. A total small strain linear elastic model, an incremental small strain power law creep model, and an incremental finite strain power law creep model.\nPerformance\nAll tests ran in serial.\n\n \n  \u00a0\n  total small strain elastic\n  incremental small strain creep\n  incremental finite strain creep\n \n \n  \u00a0\n  total_nl_its\n  total_time (sec)\n  total_nl_its\n  total_time (sec)\n  total_nl_its\n  total_time (sec)\n \n \n  non-AD\n  26\n  3.900\n  78\n  23.239\n  95\n  29.928\n \n \n  AD (global sparse)\n  20\n  6.980\n  65\n  72.463\n  74\n  118.143\n \n \n  AD (local dense)\n  20\n  8.985\n  65\n  89.159\n  74\n  134.956",
+          "url": "https://github.com/idaholab/moose/discussions/16466",
+          "updatedAt": "2022-06-22T05:33:47Z",
+          "publishedAt": "2020-12-11T09:00:28Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "@bwspenc @dschwen @lindsayad @tophmatthews I guess you will be interested in seeing this...",
+                  "url": "https://github.com/idaholab/moose/discussions/16466#discussioncomment-191917",
+                  "updatedAt": "2022-06-22T05:33:50Z",
+                  "publishedAt": "2020-12-11T09:03:23Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "PJFNK or NEWTON? I\u2019m happy to see that global sparse is faster than local dense in all your tests.",
+                          "url": "https://github.com/idaholab/moose/discussions/16466#discussioncomment-194143",
+                          "updatedAt": "2022-06-22T05:33:50Z",
+                          "publishedAt": "2020-12-11T15:32:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "All tests are NEWTON with -pc_type lu.",
+                          "url": "https://github.com/idaholab/moose/discussions/16466#discussioncomment-194169",
+                          "updatedAt": "2022-06-22T05:33:50Z",
+                          "publishedAt": "2020-12-11T15:39:53Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "tophmatthews"
+                          },
+                          "bodyText": "5x...ouch. I have seen similar slowdowns. I have found that the ADRankFourTensor is pretty rough. You should push this up into the repo eventually?",
+                          "url": "https://github.com/idaholab/moose/discussions/16466#discussioncomment-195181",
+                          "updatedAt": "2022-06-22T05:33:54Z",
+                          "publishedAt": "2020-12-11T16:17:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Yeah I think we all believe the tensor operations are slowing things down here. I plan to test the small strain test case without using RankFourTensors, and see how it peforms. If the result is promising, I will try to implement a specialized IsotropicRankFourTensor next week.\nI am not sure where to put these tests if I were to push them to the repo. They don't provide additional code/capability coverage so it doesn't make a lot of sense to add them as regression tests. Also they are not \"examples\" in the sense that I am not modeling any real-world application here.",
+                          "url": "https://github.com/idaholab/moose/discussions/16466#discussioncomment-197286",
+                          "updatedAt": "2022-07-22T07:25:54Z",
+                          "publishedAt": "2020-12-11T21:03:40Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "dschwen"
+                  },
+                  "bodyText": "With AD we need to refocus our attention to the cost of full tensor operations. I'd like to see high symmetry tensor classes and either\n\nthe use of templating to support them in calculations\nan enum in the tensor class to indicate symmetry and active entries\n\nGary, you mentioned that your group is already working on point 1. It would be great if we could convince them to share their approach. Otherwise we need to waste resources to do something similar.",
+                  "url": "https://github.com/idaholab/moose/discussions/16466#discussioncomment-195263",
+                  "updatedAt": "2022-06-22T05:33:53Z",
+                  "publishedAt": "2020-12-11T16:45:59Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "There might be some misunderstanding. We tried to write a simple IsotropicRankFourTensor with some basic operators defined. That was just a couple lines of code. We haven't used any templating yet.",
+                          "url": "https://github.com/idaholab/moose/discussions/16466#discussioncomment-195268",
+                          "updatedAt": "2022-06-22T05:33:51Z",
+                          "publishedAt": "2020-12-11T16:47:24Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "I wrote a somewhat optimized ADComputeIsotropicLinearElasticStress stress calculator. But the performance improvement isn't great. Running the small strain elastic case with AD (global sparse) still takes 6.075 seconds.",
+                  "url": "https://github.com/idaholab/moose/discussions/16466#discussioncomment-197603",
+                  "updatedAt": "2022-06-22T05:33:55Z",
+                  "publishedAt": "2020-12-11T22:13:48Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dschwen"
+                          },
+                          "bodyText": "15% speedup is nothing to scoff at, but I had hoped for more.",
+                          "url": "https://github.com/idaholab/moose/discussions/16466#discussioncomment-197724",
+                          "updatedAt": "2022-06-22T05:33:54Z",
+                          "publishedAt": "2020-12-11T22:32:50Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dschwen"
+                          },
+                          "bodyText": "Love the sarcastic rocket emoji @recuero",
+                          "url": "https://github.com/idaholab/moose/discussions/16466#discussioncomment-197775",
+                          "updatedAt": "2022-06-22T05:33:54Z",
+                          "publishedAt": "2020-12-11T22:40:43Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "recuero"
+                          },
+                          "bodyText": "No sarcasm: From 9s to 6s using global indexing plus streamlined elasticity tensor isn't bad to me at all. It'd be nice to see how that speedup translates to assessment-like  TensorMechanics problems",
+                          "url": "https://github.com/idaholab/moose/discussions/16466#discussioncomment-197778",
+                          "updatedAt": "2022-06-22T05:33:54Z",
+                          "publishedAt": "2020-12-11T22:43:03Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "tophmatthews"
+                  },
+                  "bodyText": "The other price is likely the inner newton loop. It feels like there can be a smarter way to avoid doing the inner newton loop twice, or maybe at all for the jacobian?",
+                  "url": "https://github.com/idaholab/moose/discussions/16466#discussioncomment-197773",
+                  "updatedAt": "2022-06-22T05:33:53Z",
+                  "publishedAt": "2020-12-11T22:38:32Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lynnmunday"
+                          },
+                          "bodyText": "Based on what Gary did, I put in a nonAD version of the Laromance model and for some simple load cases for creep modeling and found the nonADLaromance model to be 9x faster.  These are simulating a 10x10x10 element block of material with Neumann and Dirichlet bcs.  I start the simulation at a constant stress for 1e6s and then ramp the stress up to twice its value over 35e3s; the total time being simulated is 37 days.  I will be running these for 20 years of simulation time.  The loading is pretty simple so both AD and nonAD using Newton take 84 linear iterations, 12 nonlinear iterations, 28 simulation steps.  The AD version takes 856s of wall time and nonAD takes 95s.  The PR is here:\n#16521",
+                          "url": "https://github.com/idaholab/moose/discussions/16466#discussioncomment-217864",
+                          "updatedAt": "2022-06-22T05:33:54Z",
+                          "publishedAt": "2020-12-17T02:23:10Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "lindsayad"
+                  },
+                  "bodyText": "You guys should do some profiling with gperftools or instruments\n\u2026\n On Dec 16, 2020, at 6:23 PM, Lynn Munday ***@***.***> wrote:\n\n \ufeff\n Based on what Gary did, I put in a nonAD version of the Laromance model and for some simple load cases for creep modeling and found the nonADLaromance model to be 9x faster. These are simulating a 10x10x10 element block of material with Neumann and Dirichlet bcs. I start the simulation at a constant stress for 1e6s and then ramp the stress up to twice its value over 35e3s; the total time being simulated is 37 days. I will be running these for 20 years of simulation time. The loading is pretty simple so both AD and nonAD using Newton take 84 linear iterations, 12 nonlinear iterations, 28 simulation steps. The AD version takes 856s of wall time and nonAD takes 95s. The PR is here:\n #16521\n\n \u2014\n You are receiving this because you were mentioned.\n Reply to this email directly, view it on GitHub, or unsubscribe.",
+                  "url": "https://github.com/idaholab/moose/discussions/16466#discussioncomment-217881",
+                  "updatedAt": "2022-06-22T05:33:54Z",
+                  "publishedAt": "2020-12-17T02:43:42Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lynnmunday"
+                          },
+                          "bodyText": "I'll profile the ad laromance model.",
+                          "url": "https://github.com/idaholab/moose/discussions/16466#discussioncomment-220138",
+                          "updatedAt": "2022-06-22T05:33:54Z",
+                          "publishedAt": "2020-12-17T21:01:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lynnmunday"
+                          },
+                          "bodyText": "I profiled the ADLaromance function and it has some big vector<vector<vector>> that it fills once per time step.  I was able to make some of them into Reals and all the tests still pass.  This reduces the ADLaromance code runtime from 856s to 180s.  It is now 2x slower than the nonAD version.  I pushed this version to the same pr.  I also attached the profile output.  The ADLAROMANCEStressUpdateBase::precomputeROM takes 40% of the run time but it no longer has any AD data in it so I think this function would take a similar amount of time in the nonAD version",
+                          "url": "https://github.com/idaholab/moose/discussions/16466#discussioncomment-223656",
+                          "updatedAt": "2022-06-22T05:33:54Z",
+                          "publishedAt": "2020-12-18T16:15:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lynnmunday"
+                          },
+                          "bodyText": "junk5.pdf",
+                          "url": "https://github.com/idaholab/moose/discussions/16466#discussioncomment-223671",
+                          "updatedAt": "2022-06-22T05:33:54Z",
+                          "publishedAt": "2020-12-18T16:19:22Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "On that same branch, I added a SymmetricIsotropicRankFourTensor class, which, as its name suggests, is optimized for symmetric isotropic rank four tensor. For the incremental finite strain creep case, the speed up is like 40 seconds -> 35 seconds.\n@dschwen I spent yesterday the entire day trying to compile gperftools on my ubuntu but I ran into some issues. Could you help me sort it out? Alternatively you could just run some profiling on your machine.\nThe input files I am comparing here is AD_small_strain_power_law_creep.i and AD_small_strain_power_law_creep_optimized.i.",
+                  "url": "https://github.com/idaholab/moose/discussions/16466#discussioncomment-223654",
+                  "updatedAt": "2022-06-22T05:33:54Z",
+                  "publishedAt": "2020-12-18T16:14:51Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lynnmunday"
+                          },
+                          "bodyText": "Here are the commands I used to build gperftools on my mac\n10 INSTALL GPERF\n11 git clone from gperftools github page\n12 >cd ~/code/gperftools/\n13 >autoreconf -i\n14 >./configure --prefix=/Users/mundlb/code/gperftools/installed\n15 >mkdir /Users/mundlb/code/gperftools/installed\n16 >make install\n17",
+                          "url": "https://github.com/idaholab/moose/discussions/16466#discussioncomment-223661",
+                          "updatedAt": "2022-06-22T05:33:54Z",
+                          "publishedAt": "2020-12-18T16:16:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Thanks Lynn, I'll try it on a mac.",
+                          "url": "https://github.com/idaholab/moose/discussions/16466#discussioncomment-223666",
+                          "updatedAt": "2022-06-22T05:33:54Z",
+                          "publishedAt": "2020-12-18T16:18:21Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lynnmunday"
+                          },
+                          "bodyText": "I can try running your code later\n\n7 ----------------------------------------------------\n8 RUNNING GPERF PPROF\n9\n10 INSTALL GPERF\n11 git clone from gperftools github page\n12 >cd /code/gperftools/\n13 >autoreconf -i\n14 >./configure --prefix=/Users/mundlb/code/gperftools/installed\n15 >mkdir /Users/mundlb/code/gperftools/installed\n16 >make install\n17\n18 SETUP ENV FOR MOOSE BUILD\n19 (should probably put exports in bashrc)\n20 >export GPERF_DIR=/code/gperftools/installed\n21 >export PATH=$PATH:GPERF_DIR/bin\n22 >cd ~/projects/blackbear\n23 >METHOD=oprof make -j 8\n24\n25 RUN CODE WITH GPERF\n26 >MOOSE_PROFILE_BASE=run1_ mpiexec -n 1 /projects/blackbear_laromance/blackbear-oprof -i creepRamp_AD_P91.i Outputs/file_base=oprof\n27 >make a pdf bubble chart of runtime\n28 >/code/gperftools/installed/bin/pprof --pdf /projects/blackbear_laromance/blackbear-oprof run1_0.prof  > junk.pdf\n29 look at in command line\n30 >/code/gperftools/installed/bin/pprof ~/projects/blackbear_laromance/blackbear-oprof run1_0.prof\n31\n32 Daniel said to use the go version of pprof but I can't get it to work with my mpi\n33 >brew install go\n34 >go get -u github.com/google/pprof\n35 then use this\n36 ~/go/bin/pprof",
+                          "url": "https://github.com/idaholab/moose/discussions/16466#discussioncomment-223678",
+                          "updatedAt": "2022-06-22T05:33:54Z",
+                          "publishedAt": "2020-12-18T16:20:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lynnmunday"
+                          },
+                          "bodyText": "I can't get it to stop crossing out lines\nBut I had some trouble with pprof but I couldn't get the go version of pprof to work with my mpi",
+                          "url": "https://github.com/idaholab/moose/discussions/16466#discussioncomment-223692",
+                          "updatedAt": "2022-07-30T03:15:28Z",
+                          "publishedAt": "2020-12-18T16:22:24Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "dschwen"
+                  },
+                  "bodyText": "I had to do `conda deactivate; conda deactivate` before building the go\npprof. It will run fine in the activated environment later\n\u2026\nOn Fri, Dec 18, 2020 at 9:22 AM Lynn Munday ***@***.***> wrote:\n I can't get it to stop crossing out lines\n But I had some trouble with pprof but I couldn't get the go version of\n pprof to work with my mpi\n\n \u2014\n You are receiving this because you were mentioned.\n Reply to this email directly, view it on GitHub\n <#16466 (reply in thread)>,\n or unsubscribe\n <https://github.com/notifications/unsubscribe-auth/AABRMPXT4KRNA4Y5VDBO2DTSVN6U7ANCNFSM4UWJYFSQ>\n .",
+                  "url": "https://github.com/idaholab/moose/discussions/16466#discussioncomment-223702",
+                  "updatedAt": "2022-06-22T05:33:55Z",
+                  "publishedAt": "2020-12-18T16:24:28Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

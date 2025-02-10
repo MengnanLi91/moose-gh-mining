@@ -1,0 +1,849 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMy0wMS0xMFQxNDowMjo1Ny0wNjowMM4ASGQD"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Diffusion of Constant Monomials",
+          "author": {
+            "login": "lloyd-5731"
+          },
+          "bodyText": "Is it possible to diffuse a constant monomial variable?\nI have an aux variable that is derived from a material value, and hence it must be a constant monomial. (is this true?)\nI am looking to parse this value into a sub app to diffuse it, but it appears that my auxvar that is a constant monomial will not diffuse using Diffusion and TimeDerivative kernels.\nWhen I change the variable to a Lagrange (which will not work with the parent app) it diffuse fine.\nIs there a work around for this?",
+          "url": "https://github.com/idaholab/moose/discussions/23143",
+          "updatedAt": "2023-01-13T17:35:59Z",
+          "publishedAt": "2023-01-12T17:24:32Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYes it is possible. However it must be a nonlinear or primary variable. It cannot be an auxiliary variable\nCan you please attach your input here ?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/23143#discussioncomment-4671040",
+                  "updatedAt": "2023-01-12T19:33:58Z",
+                  "publishedAt": "2023-01-12T19:33:58Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "lloyd-5731"
+                  },
+                  "bodyText": "Here is my parent input file:\nP0 = 1      # Injection pressure\nrho = 1       # Density\nk = 1       # Permeability\nphi = 0.5     # Porosity\nT = 298\nmu = 0.01\ninit_variable = 0  \ninput_from_BC = 1\n\n\n[Mesh]\n    [plate]\n        type = GeneratedMeshGenerator\n        dim = 2\n        xmax = 0.1\n        nx = 100\n        ymax = 0.1\n        ny = 100\n    []\n[]\n[UserObjects]\n    [dictator]\n        type = PorousFlowDictator\n        porous_flow_vars = 'porepressure'\n        number_fluid_phases = 1\n        number_fluid_components = 1\n    []\n    [pc]\n        type = CustomCapillaryPressure\n        p_max = 1000\n        epsilon = 80\n        p_min = 0\n        log_extension = false\n    []\n[]\n\n[GlobalParams]\n    PorousFlowDictator = dictator\n    gravity = '0 0 0'\n[]\n\n[Variables]\n    [porepressure]\n        initial_condition = 0\n    []\n    [variable_to_advect]\n        initial_condition = ${init_variable}\n    []\n[]\n\n[Kernels]\n    [dmdt]\n        type = PorousFlowMassTimeDerivative\n        variable = porepressure\n    []\n    [flux]\n        type = PorousFlowAdvectiveFlux\n        variable = porepressure\n    []\n    [advect_var_flux]\n        type = ConservativeAdvection\n        variable = variable_to_advect\n        velocity = sat_vel\n        upwinding_type = full\n    []\n    [advect_var_time_derivative]\n        type = ADTimeDerivative\n        variable = variable_to_advect\n    []\n[]\n\n[AuxVariables]\n    [saturation]\n        family = MONOMIAL\n        order = CONSTANT\n    []\n    [vel_x]\n        order = CONSTANT\n        family = MONOMIAL\n    []\n[]\n\n[AuxKernels]\n    [saturation]\n        type = PorousFlowPropertyAux\n        variable = saturation\n        property = saturation\n    []\n    [vel_x]\n        type = PorousFlowDarcyVelocityComponent\n        variable = vel_x\n        component = x\n        porepressure = porepressure\n    []\n   []\n\n[BCs]\n    [injection]\n        type = DirichletBC\n        variable = porepressure\n        boundary = 'top'\n        value = ${P0}\n    []\n\n    [Var_in]\n        type = DirichletBC\n        variable = variable_to_advect\n        boundary = 'top'\n        value = ${input_from_BC}\n    []\n[]\n\n[Modules]\n    [FluidProperties]\n        [resin]\n            type = SimpleFluidProperties\n            density0 = ${rho}\n            viscosity = ${mu}\n        []\n    []\n[]\n\n[Materials]\n    [porosity]\n        type = PorousFlowPorosity\n        porosity_zero = ${phi}\n    []\n    [permeability]\n        type = PorousFlowPermeabilityConst\n        permeability = '${k} 0 0   0 ${k} 0   0 0 ${k}'\n    []\n    [saturation_calculator]\n        type = PorousFlow1PhaseP\n        porepressure = porepressure\n        capillary_pressure = pc\n    []\n    [temperature]\n        type = PorousFlowTemperature\n        temperature = ${T}\n    []\n    [massfrac]\n        type = PorousFlowMassFraction\n    []\n    [resin]\n        type = PorousFlowSingleComponentFluid\n        fp = resin\n        phase = 0\n    []\n    [relperm]\n        type = PorousFlowRelativePermeabilityCorey\n        n = 3\n        s_res = 0.1\n        sum_s_res = 0.1\n        phase = 0\n    []\n    [darcy_velocity]\n        type = PorousFlowDarcyVelocityMaterial\n    []\n\n[]\n\n[Preconditioning]\n    [smp]\n        type = SMP\n        full = true\n        petsc_options_iname = '-pc_type -pc_factor_mat_solver_package'\n        petsc_options_value = ' lu       mumps'\n    []\n    \n[]\n\n[Executioner]\n    type = Transient\n    solve_type = 'NEWTON'\n    end_time = 0.5\n    [TimeStepper]\n        type = SolutionTimeAdaptiveDT\n        dt = 0.00001\n    []\n\n    automatic_scaling = true\n    nl_abs_tol = 1e-10\n    nl_rel_tol = 1e-10\n[]\n\n[MultiApps]\n    [sub]\n      type = FullSolveMultiApp\n      input_files = sub.i\n      execute_on = TIMESTEP_END\n    []\n[]\n  \n [Transfers]\n    [to_sub_x]\n      type = MultiAppCopyTransfer\n      source_variable = vel_x\n      variable = u\n      multi_app = sub\n      direction = to_multiapp\n      execute_on = TIMESTEP_END\n    []\n    [from_sub_x]\n        type = MultiAppCopyTransfer\n        source_variable = u\n        variable = vel_x\n        multi_app = sub\n        direction = from_multiapp\n        execute_on = TIMESTEP_END\n    []\n[]\n  \n[Outputs]\n    exodus = true\n    print_linear_residuals = false\n[]",
+                  "url": "https://github.com/idaholab/moose/discussions/23143#discussioncomment-4671124",
+                  "updatedAt": "2023-01-12T19:48:53Z",
+                  "publishedAt": "2023-01-12T19:46:20Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "lloyd-5731"
+                  },
+                  "bodyText": "And my child file:\n[Mesh]\n    [plate]\n        type = GeneratedMeshGenerator\n        dim = 2\n        xmax = 0.1\n        nx = 100\n        ymax = 0.1\n        ny = 100\n    []\n[]\n[Variables]\n    [u]\n        order = CONSTANT\n        family = MONOMIAL\n    []\n    \n[]\n\n[Kernels]\n    [diff_u]\n        type = Diffusion\n        variable = u\n    []\n    [deriv_u]\n        type = TimeDerivative\n        variable = u\n    []\n[]\n\n[Executioner]\n    type = Transient\n    solve_type = 'NEWTON'\n    end_time = 1e-4\n    dt =  1E-7\n  \n    automatic_scaling = true\n    nl_abs_tol = 1e-10\n    nl_rel_tol = 1e-10\n[]\n[Outputs]\n    exodus = true\n    print_linear_residuals = false\n[]",
+                  "url": "https://github.com/idaholab/moose/discussions/23143#discussioncomment-4671160",
+                  "updatedAt": "2023-01-12T19:50:36Z",
+                  "publishedAt": "2023-01-12T19:50:35Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "lloyd-5731"
+                  },
+                  "bodyText": "I need to take the value of the DarcyVelocity which comes out as an AuxVar (Using the existing PorousFlowDarcyVelocityComponent Kernel), slightly diffuse this value (which I have tried to do in my SubApp), and then feed that back in to use later in the calculation.\nAny thoughts would be appreciated. Please note this is a MWE.",
+                  "url": "https://github.com/idaholab/moose/discussions/23143#discussioncomment-4671189",
+                  "updatedAt": "2023-01-12T19:53:45Z",
+                  "publishedAt": "2023-01-12T19:53:44Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "You can project the Monomial from the main app to a Lagrange variable in the subapp. @GiudGiud may know the best transfer to use for that. I'd start with trying maybe MultiAppProjectionTransfer or MultiAppMeshFunctionTransfer.",
+                  "url": "https://github.com/idaholab/moose/discussions/23143#discussioncomment-4673266",
+                  "updatedAt": "2023-01-13T00:46:10Z",
+                  "publishedAt": "2023-01-13T00:46:09Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lloyd-5731"
+                          },
+                          "bodyText": "It look like MultiAppProjectionTransfer was the solution.\nThat's now looking much more like what I want it to thank you.\nMy only other question is that I want to process the variable vel_x in my SubApp (which is now working)\nBut I want to feed that back in the calculation so that the value can be combined with sat_vel, that can be used in the advection.\nI think at the moment I am just performing this diffusion at the end of the time step so it will not be able to be brought into sat_vel.\nAny ideas?",
+                          "url": "https://github.com/idaholab/moose/discussions/23143#discussioncomment-4676868",
+                          "updatedAt": "2023-01-13T10:57:49Z",
+                          "publishedAt": "2023-01-13T10:57:48Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "If you want to diffuse in the same time step and use that diffused result in that same time step you have two options:\nyou include this variable and it\u2019s equation system in the patent application solve and get rid of the multi app.  This is called full coupling, solving all variables in the same non linear solve\nOR\nyou use fixed point iterations between the parent app and the child app to achieve tight coupling. The main app will rerun its time step with the updated velocity. To do that you will need to specify fixed point iteration parameters in the Executioner block.\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/23143#discussioncomment-4678667",
+                          "updatedAt": "2023-01-13T14:56:10Z",
+                          "publishedAt": "2023-01-13T14:56:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lloyd-5731"
+                          },
+                          "bodyText": "Thanks Guilaume, it sounds like I need to try the fixed point iteration in that case.\nIs there an example file on implementing fixed point iterations? As I can't seem to find one in the docs apart from this page: https://mooseframework.inl.gov/bison/syntax/Executioner/FixedPointAlgorithms/index.html\nLloyd",
+                          "url": "https://github.com/idaholab/moose/discussions/23143#discussioncomment-4678770",
+                          "updatedAt": "2023-01-13T15:05:48Z",
+                          "publishedAt": "2023-01-13T15:05:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "There s examples in moose/test/tests/multiapps",
+                          "url": "https://github.com/idaholab/moose/discussions/23143#discussioncomment-4678829",
+                          "updatedAt": "2023-01-13T15:12:00Z",
+                          "publishedAt": "2023-01-13T15:11:59Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lloyd-5731"
+                          },
+                          "bodyText": "Ok thank you, for the help Guilaume.\nWhen I try and implement it gives me this error:\nThe following error occurred in the object \"sub\", of type \"FullSolveMultiApp\".\n\nFullSolveMultiApp is not compatible with auto_advance=false\n\nI am knew to using a multi app system so thank you for being patient!",
+                          "url": "https://github.com/idaholab/moose/discussions/23143#discussioncomment-4678943",
+                          "updatedAt": "2023-01-13T15:22:33Z",
+                          "publishedAt": "2023-01-13T15:22:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "A FullSolveMultiAPp runs an entire simulation, not a single timestep.\nIf you want that, then set auto_advance = true\nIf not then you need to switch to a TransientMultiAPp",
+                          "url": "https://github.com/idaholab/moose/discussions/23143#discussioncomment-4679691",
+                          "updatedAt": "2023-01-13T16:33:42Z",
+                          "publishedAt": "2023-01-13T16:33:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lloyd-5731"
+                          },
+                          "bodyText": "Sorted. Thank you.",
+                          "url": "https://github.com/idaholab/moose/discussions/23143#discussioncomment-4680314",
+                          "updatedAt": "2023-01-13T17:35:56Z",
+                          "publishedAt": "2023-01-13T17:35:56Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "incremental displacements at the boundaries using nodal coordinates",
+          "author": {
+            "login": "gsoim"
+          },
+          "bodyText": "Hi everyone,\nI am trying to solve a plane stress elasto-plastic problem (with J2 plasticity) using incremental displacements at the boundaries. To do so, I have four parameters F11, F12, F21, F22 that need to be multiplied with the nodal coordinates (x,y) of the undeformed mesh at the specific boundary.\nFor example, the four parameters are defined in the input file as:\nF11 = 0.01\nF12 = 0.01\nF21 = 0.01\nF22 = 0.01\n\nwhile the Function for the right boundary is defined as:\n[Functions]\n  # [./right_disp_x]\n  #   type = PiecewiseLinear\n  #   x = '0    1.0    2.0    3.0     4.0    5.0    6.0    7.0    8.0    9.0   10.0'\n  #   y = '0  0.003  0.006  0.009   0.012  0.015  0.018  0.021  0.024  0.027  0.030'\n  # [../]\n  [./right_disp_x]\n    type = PiecewiseLinear\n    total_disp_x = ${fparse ${raw F11}*x + ${raw F12}*y - x}  # (F11*x + F12*y) - x\n    dx = ${fparse ${raw total_disp_x} / 10}\n    x = '0    1.0    2.0    3.0     4.0    5.0    6.0    7.0    8.0    9.0   10.0'\n    y = '0     dx   2*dx   3*dx    4*dx   5*dx   6*dx   7*dx   8*dx   9*dx  10*dx'\n  [../]\n[]\n\nIn the above snippet I have commented out the simple Function that imposes the displacement at the boundary using\nspecific numerical values.\nAnd finally, the BCs are defined as following:\n[BCs]\n  [./bottom_y]\n    type = DirichletBC\n    boundary = 'bottom'\n    variable = disp_y\n    value = 0.0\n  [../]\n  [./left_x]\n    type = DirichletBC\n    boundary = 'left'\n    variable = disp_x\n    value = 0.0\n  [../]\n  [./right_x]\n    type = FunctionDirichletBC\n    boundary = 'right'\n    variable = disp_x\n    function = right_disp_x\n  [../]\n[]\n\nUnfortunately, I get the following error:\n*** ERROR ***\n/Users/georgiossoimoiris/projects/plane_stress/problems/plane_stress_plastic_DefGradBC.i:202: field node 'Functions/right_disp_x/x' does not hold a float-typed value (val=''0    1.0    2.0    3.0     4.0    5.0    6.0    7.0    8.0    9.0   10.0'')\n/Users/georgiossoimoiris/projects/plane_stress/problems/plane_stress_plastic_DefGradBC.i:203: field node 'Functions/right_disp_x/total_disp_x' does not hold a float-typed value (val='${fparse ${raw F11}*x + ${raw F12}*y - x}')\nwhich means that 'x' and 'y' are not the nodal coordinates that I need to use!\nSo, my question is: how can I get the nodal coordinates at a specific boundary and multiply them as a vector with my parameters in order to add them to my BCs as a Function incrementally??\nThank you very much,\nGeorge",
+          "url": "https://github.com/idaholab/moose/discussions/23152",
+          "updatedAt": "2023-01-13T18:28:25Z",
+          "publishedAt": "2023-01-12T23:04:13Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nIndeed the format of these parameters are not quite right.\nYou can write a parsedFunction:\n  [./bc_func]\n    type = ParsedFunction\n    expression = 'F11 * x + F12 * y'\n    symbol_names = 'F11 F12'\n    symbol_values = '${F11} ${F12}'\n  [../]\n\nthen use the FunctionDirichletBC like you did\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/23152#discussioncomment-4673162",
+                  "updatedAt": "2023-01-13T00:28:04Z",
+                  "publishedAt": "2023-01-13T00:28:04Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "gsoim"
+                          },
+                          "bodyText": "Hello,\nThanks for the response.\nUsing the above I got the following error:\n*** ERROR ***\n/Users/.../plane_stress_plastic_DefGradBC.i:202: missing required parameter 'Functions/right_disp_x/value'\n\tDoc String: \"The user defined function.\"\n\nWhy I get this value error??\nMoreover, since I want to impose these displacements incrementally, would it possible to multiply it with time \"t\" like that:\n[./right_disp_x]\n    type = ParsedFunction\n    expression = '((F11 * x + F12 * y) - y) * t'  # instead of:  'F11 * x + F12 * y'\n    symbol_names = 'F11 F12'\n    symbol_values = '${F11} ${F12}'\n[../]\n\nSince I am using a transient  solver like that:\n[Executioner]\n  type = Transient\n  end_time = 10\n  dt = 1\n\n  solve_type = 'newton'\n  petsc_options_iname = '-pc_type'\n  petsc_options_value = 'lu'\n\n  # controls for linear iterations\n  l_max_its = 100\n  l_tol = 1e-03\n  \n  # controls for nonlinear iterations\n  nl_max_its = 100\n  nl_rel_tol = 1e-03\n  nl_abs_tol = 1e-03\n[]\n\nThanks,\nGeorge",
+                          "url": "https://github.com/idaholab/moose/discussions/23152#discussioncomment-4673349",
+                          "updatedAt": "2023-01-13T01:06:31Z",
+                          "publishedAt": "2023-01-13T01:04:09Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Your version is not up to date. This parameter got renamed from value to expression",
+                          "url": "https://github.com/idaholab/moose/discussions/23152#discussioncomment-4674049",
+                          "updatedAt": "2023-01-13T03:29:11Z",
+                          "publishedAt": "2023-01-13T03:29:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "gsoim"
+                          },
+                          "bodyText": "I updated MOOSE and now it seems to be working quite fine.\nThanks!",
+                          "url": "https://github.com/idaholab/moose/discussions/23152#discussioncomment-4679809",
+                          "updatedAt": "2023-01-13T16:44:18Z",
+                          "publishedAt": "2023-01-13T16:44:17Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Problem running custom app from a paper",
+          "author": {
+            "login": "mfitzka"
+          },
+          "bodyText": "Hello all!\nI am a new user to MOOSE as I stumbled upon it regarding a paper (https://www.nature.com/articles/s41467-021-23054-7#Sec22). In their paper, they provided the source code to try the application yourself, which can be found under the following link:\nhttps://gitlab.com/zhangx22/concurrentvascfp\nI therefore installed MOOSE and tried to run the application, however I could do the given examples as I always ran into an error saying that their custom kernel TempDiffusion is not an registered object.\nTherefore, could somebody try to run this on their MOOSE application, as I am wondering if this is a general code problem or has something to do with my MOOSE application.\nAny help would be appreciated.\nThanks,\nMarkus",
+          "url": "https://github.com/idaholab/moose/discussions/23156",
+          "updatedAt": "2023-01-14T14:11:58Z",
+          "publishedAt": "2023-01-13T13:59:32Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nI just had a look at the repository. The source code to run these input files is not included and is not part of MOOSE. Maybe some of it is part of BISON which is not open source but I cannot confirm that.\nInstead they have included a pre built binary. If you were to have the exact same environment as them, including compilers, libmesh and petsc versions, moose version etc\nThen there is a chance this could run on your machine.\nIf you want to run these input files you ll need to contact the authors so they share the source code with you.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/23156#discussioncomment-4678592",
+                  "updatedAt": "2023-01-13T14:50:05Z",
+                  "publishedAt": "2023-01-13T14:50:04Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "mfitzka"
+                  },
+                  "bodyText": "Thank you for your answer!\nI already thought so as looking through the input files mentioned several kernels I could not find even with google searches.\nDo you think rebuilding their same environment is promising? It seems rather tedious to me.\nMarkus",
+                  "url": "https://github.com/idaholab/moose/discussions/23156#discussioncomment-4679633",
+                  "updatedAt": "2023-01-13T16:27:30Z",
+                  "publishedAt": "2023-01-13T16:27:29Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "It's not promising at all, it would be excessively tedious.\nIt also looks from the bash file in the directory that they were using older packages so you d have to install old versions only for this purpose\n# GCC 7.2.0\n# MPICH 3.2.1\n# PETSc 3.8.3\n``",
+                          "url": "https://github.com/idaholab/moose/discussions/23156#discussioncomment-4679665",
+                          "updatedAt": "2023-01-13T16:31:53Z",
+                          "publishedAt": "2023-01-13T16:31:52Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Boost timestep in IterationAdaptiveDT?",
+          "author": {
+            "login": "jessecarterMOOSE"
+          },
+          "bodyText": "In IterationAdaptiveDT, there are lots of ways to limit the timestep, but is there a way to boost it? For instance, if I know, maybe based on a postprocessor value, that I'm in a period that is nearly steady state, can I bump up my timestep? I know the timestep will increase eventually, but I may want to increase it by several orders of magnitude but that can take a while even with a modest growth factor.",
+          "url": "https://github.com/idaholab/moose/discussions/23145",
+          "updatedAt": "2023-02-04T15:48:49Z",
+          "publishedAt": "2023-01-12T18:31:37Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Well yes, there is a growth_factor parameter but it doesnt work with postprocessors. There s a limiting option with postprocessors only.\nWe need some sort of CombinedTimestepper with a reduction operation such as min/max/avg\nthat will let us select the timestep based on multiple timesteppers.\nIt seems here you know of a region where a functionDT could have large steps",
+                  "url": "https://github.com/idaholab/moose/discussions/23145#discussioncomment-4670996",
+                  "updatedAt": "2023-01-12T19:28:52Z",
+                  "publishedAt": "2023-01-12T19:28:51Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jessecarterMOOSE"
+                          },
+                          "bodyText": "If I reformulate my problem, I can know the time(s) where I can take bigger steps. It looks like this example shows how to do this using the time_t and time_dt parameters to IterationAdaptiveDT (though the documentation doesn't say much about how this feature works).",
+                          "url": "https://github.com/idaholab/moose/discussions/23145#discussioncomment-4671515",
+                          "updatedAt": "2023-01-12T20:33:39Z",
+                          "publishedAt": "2023-01-12T20:33:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "We need some sort of CombinedTimestepper with a reduction operation such as min/max/avg\nthat will let us select the timestep based on multiple timesteppers.\n\nThat is one possible design to improve the flexibility of the TimeStepper system. An alternative is to refactor the TimeStepper system as TimeStepModifiers, similar to MeshModifiers in that they can be represented as a directed acyclic graph, where we can do the usual dependency resolution business.\nA lot of things could benefit from DAGs, the MeshModifier and Executor are good examples... I hope someday we can compose the entire MOOSE simulation as a big DAG....",
+                          "url": "https://github.com/idaholab/moose/discussions/23145#discussioncomment-4671604",
+                          "updatedAt": "2023-01-12T20:44:51Z",
+                          "publishedAt": "2023-01-12T20:44:51Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Install MOOSE using WSL windows",
+          "author": {
+            "login": "miraboreasumr"
+          },
+          "bodyText": "Hello, I am confused a little bit by the section on getting started, so it is not recommended to use Windows subsystem Linux\uff1f\nCan I follow this https://mooseframework.inl.gov/getting_started/installation/conda.html\non WSL?",
+          "url": "https://github.com/idaholab/moose/discussions/23125",
+          "updatedAt": "2023-01-11T11:53:45Z",
+          "publishedAt": "2023-01-10T15:55:20Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "aladshaw3"
+                  },
+                  "bodyText": "I have had success installing MOOSE on WSL. Once you follow these instructions first (https://mooseframework.inl.gov/getting_started/installation/windows10.html), which setup your Ubuntu install in WSL, you should just be able to follow the conda instructions you reference for the Linux install.\nFor the WSL installation, I don't use Peacock, so I have never tried installing the VcXsrv tool set before. I generally just skip that step.\nIt has been a few months since I have gone through this, but I do remember needing to also manually install the gcc toolchain for WSL. You may also want to do the following:\nsudo apt-get install build-essential\n\nThat should get you gcc, g++, make, etc. If you are missing any tools, you should be able to just manually install anything using sudo apt-get install [tool] from this point on.",
+                  "url": "https://github.com/idaholab/moose/discussions/23125#discussioncomment-4647649",
+                  "updatedAt": "2023-01-10T16:59:38Z",
+                  "publishedAt": "2023-01-10T16:59:37Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "miraboreasumr"
+                          },
+                          "bodyText": "Hello, I got this issue\nuser:/mnt/d/MOOSE$ mamba activate moose\n\nRun 'mamba init' to be able to run mamba activate/deactivate\nand start a new shell session. Or use conda to activate/deactivate.\n\nafter I type mamba init, and mamba activate moose\nRun 'mamba init' to be able to run mamba activate/deactivate\nand start a new shell session. Or use conda to activate/deactivate.\n\nthis happens again",
+                          "url": "https://github.com/idaholab/moose/discussions/23125#discussioncomment-4650651",
+                          "updatedAt": "2023-01-10T22:58:09Z",
+                          "publishedAt": "2023-01-10T22:58:09Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Did you remember to start a new shell session?",
+                          "url": "https://github.com/idaholab/moose/discussions/23125#discussioncomment-4650669",
+                          "updatedAt": "2023-01-10T23:00:38Z",
+                          "publishedAt": "2023-01-10T23:00:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "miraboreasumr"
+                          },
+                          "bodyText": "Did you remember to start a new shell session?\n\nThanks, another question, where do you install moose, I follow the instructions, it is ~/projects, so it is in the root right? What do you suggest, I want to do /mnt/d for the future APP, but it won't allow me",
+                          "url": "https://github.com/idaholab/moose/discussions/23125#discussioncomment-4652074",
+                          "updatedAt": "2023-01-11T03:21:08Z",
+                          "publishedAt": "2023-01-11T03:21:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "you should be able to\nIf you cant it s likely that you do not have permission to write to this directory",
+                          "url": "https://github.com/idaholab/moose/discussions/23125#discussioncomment-4655617",
+                          "updatedAt": "2023-01-11T11:53:46Z",
+                          "publishedAt": "2023-01-11T11:53:45Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How does this equation get its weak form\uff1f",
+          "author": {
+            "login": "zong-yanyun"
+          },
+          "bodyText": "\u2202c/\u2202t=\u2207[D(\u2207c+c\u22c5Q/(RT^2 )\u22c5\u2207T)  , c is to be evaluated , T is temperature , t is time .The other parameters is about material. I'm not sure whether this equation can be gotten its weak form, whether it can be solved by moose.",
+          "url": "https://github.com/idaholab/moose/discussions/23110",
+          "updatedAt": "2023-02-04T15:48:32Z",
+          "publishedAt": "2023-01-09T03:00:37Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "WilkAndy"
+                  },
+                  "bodyText": "Assuming that your equation is missing a square-bracket at the end (just before the comma), the weak form of the right-hand side is just performing integration by parts (taking the first gradient operator and applying it to the test function).  Your physics is modelled in MOOSE using:\n\nhttps://mooseframework.inl.gov/source/kernels/TimeDerivative.html\nhttps://mooseframework.inl.gov/source/kernels/MatDiffusion.html with diffusivity given by \"D\" which is a Material in the input file (I assume that's what you mean by \"The other parameters is about material\")\nhttps://mooseframework.inl.gov/source/kernels/ConservativeAdvection.html , with advective velocity given by D Q grad(T) / R / T^2.   You'll have to make an AuxVariable for this advective velocity - eg, you could use 3 https://mooseframework.inl.gov/source/auxkernels/ParsedAux.html (one for each velocity component).",
+                  "url": "https://github.com/idaholab/moose/discussions/23110#discussioncomment-4629260",
+                  "updatedAt": "2023-01-09T03:28:10Z",
+                  "publishedAt": "2023-01-09T03:28:10Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "zong-yanyun"
+                          },
+                          "bodyText": "Thank you!",
+                          "url": "https://github.com/idaholab/moose/discussions/23110#discussioncomment-4632576",
+                          "updatedAt": "2023-01-09T11:35:01Z",
+                          "publishedAt": "2023-01-09T11:35:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Here is a complete example on deriving weak form:\nhttps://mooseframework.inl.gov/getting_started/examples_and_tutorials/tutorial01_app_development/step04_weak_form.html",
+                          "url": "https://github.com/idaholab/moose/discussions/23110#discussioncomment-4633598",
+                          "updatedAt": "2023-01-09T13:40:39Z",
+                          "publishedAt": "2023-01-09T13:40:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "zong-yanyun"
+                          },
+                          "bodyText": "Thank you for your help. I have got the weak form, but there is \u2207T (T is not the  parameter I want to solve) in the weak form. How should I define the temperature T? Is it still in material\uff1f",
+                          "url": "https://github.com/idaholab/moose/discussions/23110#discussioncomment-4652088",
+                          "updatedAt": "2023-01-11T03:23:16Z",
+                          "publishedAt": "2023-01-11T03:23:15Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "zong-yanyun"
+                          },
+                          "bodyText": "One more thing,  Q and c are related (c is to be evaluated) , how should I define the Q  in moose?",
+                          "url": "https://github.com/idaholab/moose/discussions/23110#discussioncomment-4653483",
+                          "updatedAt": "2023-01-11T07:54:37Z",
+                          "publishedAt": "2023-01-11T07:54:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "If T is not to be solved for, if it's a known quantity, then T can be an auxiliary variable and initialized using a FunctionIC.\nA function in MOOSE is a known quantity in time & space.\nIt could also be a material property if it depends on local quantities, especially if those local quantities are being solved for.\nQ should likely be a material property",
+                          "url": "https://github.com/idaholab/moose/discussions/23110#discussioncomment-4654956",
+                          "updatedAt": "2023-01-11T10:27:17Z",
+                          "publishedAt": "2023-01-11T10:27:16Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "User-define radial return creep",
+          "author": {
+            "login": "batodon"
+          },
+          "bodyText": "Hello, I\u2019m implementing the following equation using the radial return mapping algorithm. Specifically, I\u2019m following the powerlawcreepstressupdate, so I\u2019m inheriting from the radialreturncreepstressupdate.\n\nAlthough my model compiled and ran successfully, I\u2019m not getting the exact results. I think it has to do with the way I implemented the parameter, $\u03f5_k$. This parameter should be the accumulated scalar creep $\u03f5_k$ obtained from the scalar creep rate $\\dot{\u03f5_k}$ computed from the previous and current steps. Instead of the accumulated values, I\u2019m getting values corresponding to only one step for each $\u03f5_k$. Could someone please help? Here are my results and part of my code showing the way I am computing the residual:\nPostprocessor Values:\n+----------------+----------------+------------------------+------------------------+------------------------+----------------------+----------------+\n| time           | elastic        | primary_creep_strainXX | primary_creep_strainYY | primary_creep_strainZZ | scalar_Kelvin_strain | stressYY       |\n+----------------+----------------+------------------------+------------------------+------------------------+----------------------+----------------+\n:                :                :                        :                        :                        :                      :                :\n|   1.000000e+00 |   4.046200e-02 |          -4.628495e-01 |           9.256991e-01 |          -4.628496e-01 |         9.256991e-01 |   8.092400e+04 |\n|   2.000000e+00 |   3.003676e-02 |          -6.647399e-01 |           1.329480e+00 |          -6.647400e-01 |         1.329480e+00 |   6.007352e+04 |\n|   3.000000e+00 |   2.477598e-02 |          -7.446420e-01 |           1.489284e+00 |          -7.446420e-01 |         1.489284e+00 |   4.955196e+04 |\n|   4.000000e+00 |   2.306555e-02 |          -7.805158e-01 |           1.561032e+00 |          -7.805158e-01 |         1.561032e+00 |   4.613110e+04 |\n|   5.000000e+00 |   2.259377e-02 |          -8.000099e-01 |           1.600020e+00 |          -8.000100e-01 |         1.600020e+00 |   4.518754e+04 |\n|   6.000000e+00 |   2.249286e-02 |          -8.123815e-01 |           1.624763e+00 |          -8.123815e-01 |         1.624763e+00 |   4.498572e+04 |\n|   7.000000e+00 |   2.249336e-02 |          -8.209712e-01 |           1.641942e+00 |          -8.209712e-01 |         1.641942e+00 |   4.498671e+04 |\n|   8.000000e+00 |   2.251732e-02 |          -8.272051e-01 |           1.654410e+00 |          -8.272052e-01 |         1.654410e+00 |   4.503463e+04 |\n|   9.000000e+00 |   2.254240e-02 |          -8.318175e-01 |           1.663635e+00 |          -8.318175e-01 |         1.663635e+00 |   4.508480e+04 |\n|   1.000000e+01 |   2.256217e-02 |          -8.352438e-01 |           1.670488e+00 |          -8.352439e-01 |         1.670488e+00 |   4.512433e+04 |\n|   1.100000e+01 |   2.257495e-02 |          -8.377674e-01 |           1.675535e+00 |          -8.377674e-01 |         1.675535e+00 |   4.514990e+04 |\n|   1.200000e+01 |   2.258064e-02 |          -8.395835e-01 |           1.679167e+00 |          -8.395836e-01 |         1.679167e+00 |   4.516129e+04 |\n|   1.300000e+01 |   2.257967e-02 |          -8.408325e-01 |           1.681665e+00 |          -8.408326e-01 |         1.681665e+00 |   4.515935e+04 |\n|   1.400000e+01 |   2.257262e-02 |          -8.416185e-01 |           1.683237e+00 |          -8.416185e-01 |         1.683237e+00 |   4.514525e+04 |\n|   1.500000e+01 |   2.256010e-02 |          -8.420206e-01 |           1.684041e+00 |          -8.420207e-01 |         1.684041e+00 |   4.512021e+04 |\n+----------------+----------------+------------------------+------------------------+------------------------+----------------------+----------------+\n\ntemplate <bool is_ad>\ntemplate <typename ScalarType>\nScalarType\nLubby2Templ<is_ad>::computeResidualInternal(const GenericReal<is_ad> & effective_trial_stress,\n                                                 const ScalarType & scalar)\n{\n   RankTwoTensor _sigma = _EQstress;  \n   RankTwoTensor deviator_stress = _sigma.deviatoric();\n  ScalarType dev_stress_squared =\n      deviator_stress.doubleContraction(deviator_stress);\n  ScalarType J2 = dev_stress_squared/2.0;\n  ScalarType eff = std::sqrt(3*J2);\n\n  const ScalarType stress_delta = effective_trial_stress - (_three_shear_modulus * scalar);\n\n  const ScalarType etaM = _etaM0 * std::exp(_mvM * eff);\n  const ScalarType etaK = _etaK0 * std::exp(_mvK * eff);\n  const ScalarType GK = _GK0 * std::exp(_mk * eff);\n  _kelvin_creep_rate[_qp] =  _kelvin_creep_rate_old[_qp] + MetaPhysicL::raw_value(scalar);\n\n  //Kelvin creep strain\n  const ScalarType K_creep_rate = (stress_delta / (3.0 * etaK)) - ((GK*_kelvin_creep_rate[_qp])/(etaK));\n\nreturn K_creep_rate * _dt - scalar;\n\n  }",
+          "url": "https://github.com/idaholab/moose/discussions/23092",
+          "updatedAt": "2023-01-11T02:23:33Z",
+          "publishedAt": "2023-01-06T16:33:59Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "Can you show us how you are declaring _kelvin_creep_rate_old in the constructor?\nMy guess is that although you are using _kelvin_creep_rate_old, you forgot to update the current value of _kelvin_creep_rate.",
+                  "url": "https://github.com/idaholab/moose/discussions/23092#discussioncomment-4633781",
+                  "updatedAt": "2023-01-09T13:59:40Z",
+                  "publishedAt": "2023-01-09T13:59:39Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "batodon"
+                          },
+                          "bodyText": "Hello @hugary1995, I believe I declared _kelvin_creep_rate_old correctly:\n    _kelvin_creep_rate(this->template declareGenericProperty<Real, is_ad>(\"kelvin_creep_rate\")),\n    _kelvin_creep_rate_old(this->template getMaterialPropertyOld<Real>(\"kelvin_creep_rate\")),",
+                          "url": "https://github.com/idaholab/moose/discussions/23092#discussioncomment-4635255",
+                          "updatedAt": "2023-01-09T16:15:21Z",
+                          "publishedAt": "2023-01-09T16:15:21Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "In this material, when are you computing the \"kelvin_creep_rate\" ?\nCan you paste the computeQpProperties routine?",
+                          "url": "https://github.com/idaholab/moose/discussions/23092#discussioncomment-4643868",
+                          "updatedAt": "2023-01-10T11:08:31Z",
+                          "publishedAt": "2023-01-10T11:08:31Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "batodon"
+                  },
+                  "bodyText": "Issue already resolved!",
+                  "url": "https://github.com/idaholab/moose/discussions/23092#discussioncomment-4651539",
+                  "updatedAt": "2023-01-11T01:47:57Z",
+                  "publishedAt": "2023-01-11T01:47:56Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Great news! If you could summarize what the problem was, could help us help someone else.",
+                          "url": "https://github.com/idaholab/moose/discussions/23092#discussioncomment-4651550",
+                          "updatedAt": "2023-01-11T01:49:49Z",
+                          "publishedAt": "2023-01-11T01:49:48Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "batodon"
+                          },
+                          "bodyText": "Hi Guillaume, It turns out that there is no error in the code snippet above. I did not correctly declare the _kelvin_creep_rate_old in my header file. Thanks.",
+                          "url": "https://github.com/idaholab/moose/discussions/23092#discussioncomment-4651759",
+                          "updatedAt": "2023-01-11T02:23:34Z",
+                          "publishedAt": "2023-01-11T02:23:33Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Contact Issue when moving Certain Surfaces",
+          "author": {
+            "login": "Vandenbg"
+          },
+          "bodyText": "I am modeling nanoindentation. In the example problem similar to mine, a displacement function applied to the top surface of the indenter push's the objects together. In my current simulation, I am unable to use the same function on the top surface of my indenter model. It results in no contact between them.\n\nI can get contact by moving the bottom surface of the indenter, however, this makes my output of force erroneous. Any suggestions or input would be helpful.\nMy input is as follows.\n[Mesh]\n  file = berk_10umpuck_rev8.e\n  patch_update_strategy = auto\n[]\n[GlobalParams]\n  displacements = 'disp_x disp_y disp_z'\n  volumetric_locking_correction = true\n  order = FIRST\n  family = LAGRANGE\n[]\n[Variables]\n  [disp_x]\n  []\n  [disp_y]\n  []\n  [disp_z]\n  []\n[]\n[AuxVariables]\n  [saved_x]\n  []\n  [saved_y]\n  []\n  [saved_z]\n  []\n  [von_mises]\n    order = CONSTANT\n    family = MONOMIAL\n  []\n  [slip_resistance]\n    order = CONSTANT\n    family = MONOMIAL\n  []\n[]\n[AuxKernels]\n  [von_mises_kernel]\n    type = RankTwoScalarAux\n    variable = von_mises\n    rank_two_tensor = stress\n    execute_on = timestep_end\n    scalar_type = VonMisesStress\n    block = '1'\n  []\n  [slip_resistance]\n    type = MaterialStdVectorAux\n    variable = slip_resistance\n    property = slip_resistance\n    execute_on = timestep_end\n    block = '1'\n  []\n[]\n[Functions]\n  [push_down]\n    type = ParsedFunction\n    value = 'if(t < 2, -t/4000, -0.0005)'\n  []\n[]\n[Modules/TensorMechanics/Master]\n  [arbitrary_name]\n    add_variables = true\n    strain = FINITE\n    block = '1 2'\n    use_automatic_differentiation = false\n    generate_output = 'stress_xx stress_xy stress_xz stress_yy stress_zz'\n    save_in = 'saved_x saved_y saved_z'\n    use_finite_deform_jacobian = true\n  []\n[]\n[BCs]\n  [botz]\n    type = DirichletBC\n    variable = disp_z\n    boundary = 101\n    value = 0.0\n  []\n  [boty]\n    type = DirichletBC\n    variable = disp_y\n    boundary = 101\n    value = 0.0\n  []\n  [botx]\n    type = DirichletBC\n    variable = disp_x\n    boundary = 101\n    value = 0.0\n  []\n  [topz]\n    type = DirichletBC\n    variable = disp_z\n    boundary = 201\n    value = 0.0\n  []\n  [topy]\n    type = FunctionDirichletBC\n    variable = disp_y\n    boundary = '201'\n    function = push_down\n  []\n  [topx]\n    type = DirichletBC\n    variable = disp_x\n    boundary = 201\n    value = 0.0\n  []\n[]\n[Materials]\n  [elasticity_tensor]\n    type = ComputeElasticityTensorConstantRotationCP\n    C_ijkl = '108.2e3 61.3e3 61.3e3 108.2e3 61.3e3 108.2e3 28.5e3 28.5e3 28.5e3'\n    fill_method = symmetric9\n    block = 1\n  []\n  [stress]\n    type = ComputeMultipleCrystalPlasticityStress\n    crystal_plasticity_models = 'trial_xtalpl'\n    tan_mod_type = exact\n    maximum_substep_iteration = 50\n    block = 1 \n  []\n  [trial_xtalpl]\n    type = CrystalPlasticityKalidindiUpdate\n    gss_initial = 31\n    gss_a = 2.25\n    t_sat = 63\n    h = 75\n    ao = 0.001\n    xm = 0.01\n    crystal_lattice_type = FCC\n    number_slip_systems = 12\n    slip_sys_file_name = input_slip_sys.txt\n    block = 1\n  []\n\n  [elasticity_tensor_indenter]\n    # stiffness tensor\n    type = ComputeIsotropicElasticityTensor\n    # any two isotropic elastic constants\n    youngs_modulus = 1000000.0\n    poissons_ratio = 0.3\n    block = 2\n  []\n  [stress_indenter]\n    # uses Cijkl to calculate elastic stress\n    type = ComputeFiniteStrainElasticStress\n    block = 2\n  []\n[]\n[Postprocessors]\n  [.runtime]\n    type = PerfGraphData\n    data_type = total\n    section_name = \"Root\"\n  []\n  [syy_cauchy]\n    type = ElementExtremeValue\n    variable = stress_yy\n    block = 1\n  []\n  [syy_vonmisses]\n    type = ElementExtremeValue\n    variable = von_mises\n    block = 1\n  []\n  [resid_y]\n    type = NodalSum\n    variable = saved_y\n    boundary = 201\n  []\n  [disp_y]\n    type = NodalExtremeValue\n    variable = disp_y\n    boundary = 201\n  []\n  [syy_force_201]\n    type = SideIntegralVariablePostprocessor\n    boundary = 201\n    variable = stress_yy\n  []\n[]\n[Executioner]\n  type = Transient\n  solve_type = 'PJFNK'\n  petsc_options_iname = '-pc_type -pc_factor_mat_solver_type'\n  petsc_options_value = 'lu    superlu_dist'\n  line_search = 'none'\n  l_max_its = 60\n  nl_max_its = 40\n  [TimeStepper]\n    type = ConstantDT\n    dt = 0.004\n  []\n  dtmin = 0.00005\n  end_time = 8\n  nl_rel_tol = 1e-6\n  nl_abs_tol = 1e-6\n  l_tol = 1e-4\n  automatic_scaling = true\n[]\n[Outputs]\n  exodus = true\n  csv = true\n  print_linear_residuals = true\n  perf_graph = true\n  checkpoint = true\n  [my_checkpoint]\n    type = Checkpoint\n    num_files = 3\n    interval = 10\n  []\n  [console]\n    type = Console\n    max_rows = 1\n  []\n[]\n[Preconditioning]\n  [smp]\n    type = SMP\n    full = true\n  []\n[]\n[Dampers]\n  [contact_slip]\n    type = ContactSlipDamper\n    primary = '202'\n    secondary = '102'\n  []\n[]\n[Contact]\n  [ind_base]\n    primary = '202'\n    secondary = '102'\n    model = coulomb\n    friction_coefficient = 0.4\n    normalize_penalty = true\n    formulation = tangential_penalty\n    penalty = 1e8\n    tangential_tolerance = 1\n  []\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/23109",
+          "updatedAt": "2023-02-04T15:48:23Z",
+          "publishedAt": "2023-01-08T21:02:19Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@recuero @hugary1995",
+                  "url": "https://github.com/idaholab/moose/discussions/23109#discussioncomment-4633101",
+                  "updatedAt": "2023-01-09T12:40:49Z",
+                  "publishedAt": "2023-01-09T12:40:48Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "I need some help understanding why this is the case...\n\nIn my current simulation, I am unable to use the same function on the top surface of my indenter model. It results in no contact between them.",
+                  "url": "https://github.com/idaholab/moose/discussions/23109#discussioncomment-4633572",
+                  "updatedAt": "2023-01-09T13:37:31Z",
+                  "publishedAt": "2023-01-09T13:37:30Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Vandenbg"
+                          },
+                          "bodyText": "In my input, when the function push_down is applied to surface 201 (the top of the indenter) it results in the picture above. The tip is pushed down, however, there is no contact at the tip and therefore the material is not deformed. When I apply the function to surface 202 (the bottom/ tip of the indenter) it results in contact between the two surfaces.\n\nI am unsure what is causing this, I also need help understanding why this is the case.",
+                          "url": "https://github.com/idaholab/moose/discussions/23109#discussioncomment-4636643",
+                          "updatedAt": "2023-01-09T18:25:04Z",
+                          "publishedAt": "2023-01-09T18:25:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Could you clarify which of the following is the case: with push_down applied on 201,\n\nthere is a gap (no penetration) between the indenter and the material, and the solver is saying there is no contact.\nthere is penetration between the indenter and the material, but the solver is saying there is no contact.\n\nIf it is 1 then you probably should push the indenter further down. If it is case 2 then we need to look into the penetration locator.",
+                          "url": "https://github.com/idaholab/moose/discussions/23109#discussioncomment-4636786",
+                          "updatedAt": "2023-01-09T18:39:46Z",
+                          "publishedAt": "2023-01-09T18:39:45Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Vandenbg"
+                          },
+                          "bodyText": "I would say this is closer to case 2. The indenter is pushed down, but for some reason the white material is not deformed. What is the penetration locator? I don't think I have used this.",
+                          "url": "https://github.com/idaholab/moose/discussions/23109#discussioncomment-4636859",
+                          "updatedAt": "2023-01-09T18:46:56Z",
+                          "publishedAt": "2023-01-09T18:46:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "It's a utility used to detect penetration between meshes\nhttps://mooseframework.inl.gov/docs/doxygen/moose/classPenetrationLocator.html\nYou can have a look at the PenetrationAux which relies on it\nhttps://mooseframework.inl.gov/moose/source/auxkernels/PenetrationAux.html",
+                          "url": "https://github.com/idaholab/moose/discussions/23109#discussioncomment-4651617",
+                          "updatedAt": "2023-01-11T02:00:03Z",
+                          "publishedAt": "2023-01-11T02:00:03Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "A 'NodalVariableIntegralPD' is not a registered object.",
+          "author": {
+            "login": "BGBK01"
+          },
+          "bodyText": "When executing the following Moose postprocessor code, I get the error \"A 'NodalVariableIntegralPD' is not a registered object.\":\n[outlet_surface_integral_left]\ntype = NodalVariableIntegralPD\nvariable = C_Dm\nboundary = 'SS1'\n[]\nIs is possible that NodalVariableIntegralPD is not yet fully implemented in Moose?\nAny help would be greatly appreciated!\nThanks",
+          "url": "https://github.com/idaholab/moose/discussions/23114",
+          "updatedAt": "2023-02-04T15:47:40Z",
+          "publishedAt": "2023-01-09T15:40:41Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nwhich executable/application/module are you using?\nNot every object is registered to every application\nguillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/23114#discussioncomment-4634914",
+                  "updatedAt": "2023-01-09T15:42:11Z",
+                  "publishedAt": "2023-01-09T15:42:10Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "BGBK01"
+                          },
+                          "bodyText": "So the module is \"peridynamics\" (moose\\modules\\peridynamics\\src\\postprocessors), but my Makefile doesn't seem to have a listing for it:",
+                          "url": "https://github.com/idaholab/moose/discussions/23114#discussioncomment-4635010",
+                          "updatedAt": "2023-01-09T15:51:15Z",
+                          "publishedAt": "2023-01-09T15:51:14Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "you need to add the peridynamics line with yes then",
+                          "url": "https://github.com/idaholab/moose/discussions/23114#discussioncomment-4649853",
+                          "updatedAt": "2023-01-10T21:07:43Z",
+                          "publishedAt": "2023-01-10T21:07:42Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Input file representation after passing CLI args",
+          "author": {
+            "login": "jessecarterMOOSE"
+          },
+          "bodyText": "If I were to pass input file modifications on the command line, like \"Kernels/label/value=foo\", is there a way to get a representation of what the input file would like with that modification? This would be for preserving inputs to runs that are procedurally generated.",
+          "url": "https://github.com/idaholab/moose/discussions/23128",
+          "updatedAt": "2023-02-04T06:32:07Z",
+          "publishedAt": "2023-01-10T17:58:59Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nIf you are using exodus output the inputs are preserved there.\nOtherwise this worked natually for me, the --show-input being the command line option needed\n./moose_test-opt -i tests/kernels/simple_diffusion/simple_diffusion.i --show-input AuxVariables/a/type=MooseVariableFVReal\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/23128#discussioncomment-4649396",
+                  "updatedAt": "2023-02-04T06:32:05Z",
+                  "publishedAt": "2023-01-10T20:02:57Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,986 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyNC0wOC0wNFQxNDowODozMS0wNTowMM4Aau76"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Value requested for nonexistent variable",
+          "author": {
+            "login": "Rahim-Habibi"
+          },
+          "bodyText": "Hi all,\nI am runing a coupled simulation in serial manner (not parallel). I need to call two outputs from previous steps to initialise my current model. I applyed \"SolutionUserObject\" to reed the data from the each outputs (I did not use \"restart\" because i needed to have the data in the functions). here is the blocks in input file:\n[UserObjects]\n  [./solution_1] \n    type = SolutionUserObject\n    mesh = output1.e\n    timestep = LATEST\n    system_variables = 'sigma_xx sigma_xy sigma_xz sigma_yy sigma_yz sigma_zz'\n  [../]\n     [./solution_2] \n    type = SolutionUserObject\n    mesh = output2.e\n    timestep = LATEST\n    system_variables = 'stress_xx stress_xy stress_xz stress_yx stress_yy stress_yz stress_zx stress_zy stress_zz pressure temperature'\n  [../]\n[]\n\nBut the run terminates with the following error, while  'stress_zz' is in the list of available variables, it is shown as nonexistent variable.\n Currently Executing\n  Performing Initial Setup................................................\n\n*** ERROR ***\n/export/dump/rahim/init_seissol-first.i:47.6:\nThe following error occurred in the UserObject 'solution_2' of type SolutionUserObject.\n\nValue requested for nonexistent variable ' stress_zz' in the 'solution_2' SolutionUserObject.\nSystem selected: nl0\nAvailable variables:\n stress_xx, stress_xy, stress_xz, stress_yx, stress_yy, stress_yz, stress_zx, stress_zy, stress_zz, pressure, temperature\n\n\napplication called MPI_Abort(MPI_COMM_WORLD, 1) - process 42\n\nThanks,\nRahim",
+          "url": "https://github.com/idaholab/moose/discussions/28309",
+          "updatedAt": "2024-08-07T07:50:04Z",
+          "publishedAt": "2024-08-05T08:38:55Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nI m surprised the stresses are all in the 'nl0' (nonlinear) system.\nShould you be pulling from the auxiliary system instead?",
+                  "url": "https://github.com/idaholab/moose/discussions/28309#discussioncomment-10248906",
+                  "updatedAt": "2024-08-06T02:59:04Z",
+                  "publishedAt": "2024-08-06T02:59:03Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Also I think the problem does not come from the solution user object, but from the SolutionIC or SolutionAux which instead of specifying 'stress_zz' specified ' stress_zz'",
+                          "url": "https://github.com/idaholab/moose/discussions/28309#discussioncomment-10253110",
+                          "updatedAt": "2024-08-06T12:10:41Z",
+                          "publishedAt": "2024-08-06T12:10:40Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Rahim-Habibi"
+                          },
+                          "bodyText": "Thanks @GiudGiud ,\nI have tried 'stress_zz' instead of ' stress_zz' and it worked.\nRahim",
+                          "url": "https://github.com/idaholab/moose/discussions/28309#discussioncomment-10261577",
+                          "updatedAt": "2024-08-07T07:50:05Z",
+                          "publishedAt": "2024-08-07T07:50:04Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Random Nucleation within grain boundaries",
+          "author": {
+            "login": "vimukthinanayakkara"
+          },
+          "bodyText": "Hello MOOSE members,\nI am currently working on dynamic re-crystallization and need to develop a basic model for random nucleation within grain boundaries. I've used BoundingBoxIC to initiate the initial grain structure (4 grains) and now need to place some nuclei inside the grain boundaries randomly.\nMy approach involves considering the \"bnds\" values. This means if the \"bnds\" are between 0 and 1, the nucleus values are 1, otherwise they are 0. However, the issue is that the \"bnds\" are calculated within AuxKernels while the nucleus_value = 1 is set in the main Kernel. Is it possible to pass variables within blocks?\n#-------- here is the example code---------------------------------------\n[Mesh]\n    # Mesh block.  Meshes can be read in or automatically generated\n    type = GeneratedMesh\n    dim = 2 # Problem dimension\n    nx = 500 # Number of elements in the x-direction\n    ny = 500 # Number of elements in the y-direction\n    xmax = 250 # maximum x-coordinate of the mesh\n    ymax = 250 # maximum y-coordinate of the mesh\n    elem_type = QUAD4 # Type of elements used in the mesh\n    #uniform_refine = 2 # Initial uniform refinement of the mesh\n  \n    parallel_type = replicated # Periodic BCs\n  []\n  [GlobalParams]\n    # Parameters used by several kernels that are defined globally to simplify input file\n    op_num = 4 # Number of grains\n    var_name_base = gr # Base name of grains\n    \n      order = FIRST\n      family = LAGRANGE\n      \n  []\n  [Variables]\n    #[./gr2]\n     #order = FIRST\n    # #family = LAGRANGE\n    #[../]\n      #[./gr1]\n     #order = FIRST\n     #family = LAGRANGE\n    #[../]\n      #[./gr0]\n     #order = FIRST\n     #family = LAGRANGE\n    #[../]\n    #[./gr0]\n    #[../]\n\n    \n    [./PolycrystalVariables]\n\n    [../]\n  []\n\n  [Modules]\n    [./PhaseField]\n      [./GrainGrowth]\n        variable_mobility = false\n      [../]\n    [../]\n  []\n\n  [ICs]\n  [./gr0]\n    y2 = 125\n    y1 = 0\n    inside = 1.0\n    outside = 0\n    x2 = 125\n    variable = gr0\n    int_width = 4\n    x1 = 0\n    type = BoundingBoxIC\n  [../]\n    [./gr1]\n      y2 = 125\n      y1 = 0\n      inside = 1.0\n      outside = 0\n      x2 = 250\n      variable = gr1\n      x1 = 125\n      int_width = 4\n      type = BoundingBoxIC\n    [../]\n    [./gr2]\n      y2 = 250\n      y1 = 125\n      inside = 1.0\n      outside = 0\n      x2 = 250\n      variable = gr2\n      x1 = 0\n      int_width = 4\n      type = BoundingBoxIC\n    [../]\n  \n  []\n\n[AuxVariables]\n  [./bnds]\n    order = FIRST\n    family = LAGRANGE\n    \n  [../]\n\n[]\n[AuxKernels]\n  [./BndsCalc]\n    type = BndsCalcAux\n    variable = bnds\n    \n    execute_on = timestep_end\n    \n  [../]\n\n[]\n\n\n\n\n  \n  [Kernels]\n      \n    [./c_force]\n    \n      type = DiscreteNucleationForce\n      variable = gr3\n      map = map\n     \n      no_nucleus_value = 0\n      nucleus_value = 1\n\n    [../]\n    \n   \n      [./PolycrystalKernel]\n      \n      [../]\n  []\n  \n  [UserObjects]\n  [./inserter]\n    type = DiscreteNucleationInserter\n    hold_time = 10\n    probability = 0.001\n    seed = 12346\n    radius = 3.27\n  [../]\n    [./map]\n      type = DiscreteNucleationMap\n      int_width = 4\n      inserter = inserter\n    [../]\n\n\n  []\n\n  \n\n#--------------------------------------------------------------------------------------------\n  [Materials]\n    [CuGrGr]\n      # Material properties\n      type = GBEvolution # Quantitative material properties for copper grain growth.  Dimensions are nm and ns\n      GBmob0 = 2.5e-6 # Mobility prefactor for Cu from schonfelder1997molecular bibtex entry\n      GBenergy = 0.2 # GB energy for Cu from schonfelder1997molecular bibtex entry\n      Q = 0.23 # Activation energy for grain growth from Schonfelder 1997\n      T = 500 # Constant temperature of the simulation (for mobility calculation)\n      wGB = 4 # Width of the diffuse GB\n    []\n\n  []\n  \n\n\n\n\n\n\n  #-----------------------------------------------------------------------------------------------------\n  [Executioner]\n  type = Transient\n  scheme = BDF2\n  solve_type = 'newton'\n \n  petsc_options_iname = '-pc_type -ksp_grmres_restart -sub_ksp_type -sub_pc_type -pc_asm_overlap'\n  petsc_options_value = 'asm      31                  preonly       lu           1'\n  l_max_its = 30\n  nl_abs_tol = 1e-9\n  l_tol = 1e-7\n  nl_max_its = 30\n  nl_rel_tol = 1e-9\n \n  start_time = 0.0\n  end_time = 4000\n  dtmax=0.5\n  \n\n  []\n  \n  [Outputs]\n    execute_on = 'timestep_end'\n    exodus = true\n  []",
+          "url": "https://github.com/idaholab/moose/discussions/28264",
+          "updatedAt": "2024-08-06T23:34:13Z",
+          "publishedAt": "2024-07-30T09:17:51Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nWhat do you mean by\n\ns it possible to pass variables within blocks\n\ndo you mean objects would use the value of a variable?\nThis is certainly possible for many objects, but they have to be coded for that purpose. For example, see all the Coupled.... kernels\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/28264#discussioncomment-10192173",
+                  "updatedAt": "2024-07-30T15:21:16Z",
+                  "publishedAt": "2024-07-30T15:21:16Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "vimukthinanayakkara"
+                          },
+                          "bodyText": "@GiudGiud thank you for your prompt reply.\nWhat I intend to do is, after calculating the 'bnds', set 'nucleus_value' to 1 if 'bnds' falls between 0 and 1, otherwise set it to zero. However, the issue I'm encountering is how to specify a condition within the Kernel block while computing 'bnds' values inside AuxKernels.",
+                          "url": "https://github.com/idaholab/moose/discussions/28264#discussioncomment-10199423",
+                          "updatedAt": "2024-07-31T09:34:05Z",
+                          "publishedAt": "2024-07-31T09:34:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "the initial conditions are not specified in the kernels block, they are specified in the ICs block. They can also be set a little hackily in the auxkernel block\nIs nucleus_value a variable?",
+                          "url": "https://github.com/idaholab/moose/discussions/28264#discussioncomment-10199513",
+                          "updatedAt": "2024-07-31T09:42:10Z",
+                          "publishedAt": "2024-07-31T09:42:09Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "vimukthinanayakkara"
+                          },
+                          "bodyText": "@GiudGiud , Yes it is a variable which is in  double data type.Variable value indicating the presence of a nucleus.",
+                          "url": "https://github.com/idaholab/moose/discussions/28264#discussioncomment-10201775",
+                          "updatedAt": "2024-07-31T13:41:37Z",
+                          "publishedAt": "2024-07-31T13:41:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Unfortunately a double data type is not a field variable.\nI would rewrite the kernel to use afield variable if you want this local dependency on the values of bnds",
+                          "url": "https://github.com/idaholab/moose/discussions/28264#discussioncomment-10201872",
+                          "updatedAt": "2024-07-31T13:50:19Z",
+                          "publishedAt": "2024-07-31T13:50:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "vimukthinanayakkara"
+                          },
+                          "bodyText": "@GiudGiud ,Thank you very much. this was the problem I was facing.",
+                          "url": "https://github.com/idaholab/moose/discussions/28264#discussioncomment-10201911",
+                          "updatedAt": "2024-07-31T13:52:56Z",
+                          "publishedAt": "2024-07-31T13:52:54Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "vimukthinanayakkara"
+                          },
+                          "bodyText": "@GiudGiud could you please help me with this matter? I mean how to get local dependency of bnds(Auxkernel)",
+                          "url": "https://github.com/idaholab/moose/discussions/28264#discussioncomment-10253980",
+                          "updatedAt": "2024-08-06T13:35:13Z",
+                          "publishedAt": "2024-08-06T13:35:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "bnds(Auxkernel) ? What do you mean by that?\nDo you need to bound an aux-variable now?\nOr is this still an input problem where you want to use a field variable instead of a single number?",
+                          "url": "https://github.com/idaholab/moose/discussions/28264#discussioncomment-10258618",
+                          "updatedAt": "2024-08-06T23:34:14Z",
+                          "publishedAt": "2024-08-06T23:34:13Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Using Tabulated fluid properties without another fluid",
+          "author": {
+            "login": "Jake-HW-Miles"
+          },
+          "bodyText": "Hi there,\nI am trying to get tabulated data to work in one of my input files,  however it doesnt seem to work.\nI have tried it in a couple ways, see below for one:\n  [he]\n    type = SimpleFluidProperties\n  []\n\n  [he_tab]\n    type = TabulatedBicubicFluidProperties\n    fluid_property_file = '../csv_store/coolant_salt_tab.csv'\n    fp = he\n    allow_fp_and_tabulation = true\n\n    interpolated_properties = 'density viscosity k cp cv internal_energy'\n\n    out_of_bounds_behavior = set_to_closest_bound\n    error_on_out_of_bounds = false\n\n    construct_pT_from_vh = false\n    construct_pT_from_ve = false\n\n    # Tabulation range\n    temperature_min = 450\n    temperature_max = 845\n    pressure_min = 100000.0\n    pressure_max = 12000000.0\n\n    # Newton parameters\n    tolerance = 1e-8\n    T_initial_guess = 647.5\n    p_initial_guess = 4000000.0\n  []\n\nI have tried it without the extra fp object, as well as linearfluid properties, but none seem to work.\nAlso, the option for specific volume doesnt seem to exist?\nNote: The fluid is not helium, it is a ternary chloride salt - so I need it to be treated as a liquid",
+          "url": "https://github.com/idaholab/moose/discussions/28223",
+          "updatedAt": "2024-08-06T23:32:32Z",
+          "publishedAt": "2024-07-25T11:00:58Z",
+          "category": {
+            "name": "Q&A Modules: Thermal Hydraulics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nWe will need the exact error messages you are hitting.\nIt should work, especially with the latest rework.\nDid you make sure to use an updated moose from basically yesterday? Because a lot of the parameters you are using were merged this week.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/28223#discussioncomment-10148311",
+                  "updatedAt": "2024-07-25T11:58:24Z",
+                  "publishedAt": "2024-07-25T11:58:23Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Jake-HW-Miles"
+                          },
+                          "bodyText": "I just pulled and made from main, so I should have the most updated.\nIm getting a couple different ones as I try a variety of things, the latest of which are:\n**Method 1:  Just tabulated fluid properties **\n... reading the following properties : 'density viscosity k cp cv internal_energy v'\n... I have set the name of \"v\" to be \"specifc_volume\" also.\n *** ERROR ***\n /root/projects/ORCA/models/systems/2_HTGR/5_scaled_power/p4_tabulated_fp_coolant.i:422.3:\n The following error occurred in the FluidProperties 'he' of type TabulatedBicubicFluidProperties.\n \n virtual void TabulatedFluidProperties::p_from_v_e(libMesh::Real, libMesh::Real, libMesh::Real&, libMesh::Real&, libMesh::Real&) const\n No tabulation or fluid property 'fp' object to compute value\n\n**Method 2:  Pairing with linearfluidproperties **\n... It does NOT run if I leave linear props empty, as is requesting parameters\n... it runs with some reference values taken from the csv but fails to converge.\n... There were also a couple other not implemented errors, but this could be the consequence of something else\nFor context, the system is a 90MWth primary and secondary (open brayton), where the original primary fluid was helium and we are now trying to change it to a system with a ternary coolant salt. It ran well before changing the fluid medium. If you think we are barking up the wrong tree, please let me know!",
+                          "url": "https://github.com/idaholab/moose/discussions/28223#discussioncomment-10148458",
+                          "updatedAt": "2024-07-25T21:00:05Z",
+                          "publishedAt": "2024-07-25T12:15:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Ok so option 1 needs a ve tabulation file if you want to use with code that requests p_from_ve.\nYou can generate that on your own or you can use additional parameters in the TFP (create_ve_tabulation) to do it\nIn option 2 those calls that are not known to the pT tabulation (the only one you provided) are forwarded to the fp object, which is why it does not error.\nThe documentation for TFP is fairly extensive and describes the 3 ways you can use this.",
+                          "url": "https://github.com/idaholab/moose/discussions/28223#discussioncomment-10148551",
+                          "updatedAt": "2024-07-25T12:24:59Z",
+                          "publishedAt": "2024-07-25T12:24:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Are you using the thermal hydraulics module for this ternary salt loop?",
+                          "url": "https://github.com/idaholab/moose/discussions/28223#discussioncomment-10148557",
+                          "updatedAt": "2024-07-25T12:25:37Z",
+                          "publishedAt": "2024-07-25T12:25:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Jake-HW-Miles"
+                          },
+                          "bodyText": "Thank you GG, I will have a look at generating a ve tabulation file in one way or another.\nI would prefer to use option one, so will test this and get back to you.\nAlso,\nI am using thm for the salt loop! I can send parts of my input file if it will be helpful",
+                          "url": "https://github.com/idaholab/moose/discussions/28223#discussioncomment-10149171",
+                          "updatedAt": "2024-07-25T13:25:03Z",
+                          "publishedAt": "2024-07-25T13:25:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Sounds good. Lemme know if you hit more errors. For this object at this point, it's more a matter of inputting different parameters than developing new things",
+                          "url": "https://github.com/idaholab/moose/discussions/28223#discussioncomment-10153172",
+                          "updatedAt": "2024-07-25T21:01:29Z",
+                          "publishedAt": "2024-07-25T21:01:28Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Jake-HW-Miles"
+                          },
+                          "bodyText": "Making progress! However, I cant see why I am getting this error:\n\n*** ERROR ***\n/root/projects/ORCA/models/systems/2_HTGR/5_scaled_power/p4_gas_dT_25.i:438.3:\nThe following parameter error occurred in the FluidProperties 'he' of type TabulatedBicubicFluidProperties.\nfp: No fluid properties or csv data provided for density.\n\n... I am providing density data, so Im not sure why it is saying this.\nI have also had to fix internal energy as it doesnt seem to like it being different for different specific volumes?",
+                          "url": "https://github.com/idaholab/moose/discussions/28223#discussioncomment-10158019",
+                          "updatedAt": "2024-07-26T09:27:56Z",
+                          "publishedAt": "2024-07-26T09:27:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "ok so I ll modify the error to make that clear, but is it density(p,T) or density(v,e) that is crashing? and are you providing both in both pT and ve tabulations?\n\nI have also had to fix internal energy as it doesnt seem to like it being different for different specific volumes?\n\nThat does not seem right. It should form a grid in the ve tabulation.\nSomething like\nv1 e1\nv1 e2\nv1 e3\nv2 e1\nv2 e2\nv2 e3\nv3 e1\n...",
+                          "url": "https://github.com/idaholab/moose/discussions/28223#discussioncomment-10158199",
+                          "updatedAt": "2024-07-26T09:46:30Z",
+                          "publishedAt": "2024-07-26T09:46:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Jake-HW-Miles"
+                          },
+                          "bodyText": "ok so I ll modify the error to make that clear, but is it density(p,T) or density(v,e) that is crashing? and are you providing both in both pT and ve tabulations?\n\nIm only providing ve:\n  [he]\n    type = TabulatedBicubicFluidProperties\n    fluid_property_ve_file = \"../csv_store/coolant_salt_tab.csv\"\n    interpolated_properties = 'internal_energy pressure temperature density viscosity k c cv cp entropy'\n    create_ve_interpolations = true\n    create_pT_interpolations = false\n    out_of_bounds_behavior = set_to_closest_bound\n  []\n\n//\nBut yes, that v1 v2 v3 ... is how my csv is laid out",
+                          "url": "https://github.com/idaholab/moose/discussions/28223#discussioncomment-10158318",
+                          "updatedAt": "2024-07-26T09:57:34Z",
+                          "publishedAt": "2024-07-26T09:56:43Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Weird\nI can take a look when I get back this afternoon",
+                          "url": "https://github.com/idaholab/moose/discussions/28223#discussioncomment-10158518",
+                          "updatedAt": "2024-07-26T10:13:37Z",
+                          "publishedAt": "2024-07-26T10:13:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "The more you can share with me the better, I ll need to be able to get to the error",
+                          "url": "https://github.com/idaholab/moose/discussions/28223#discussioncomment-10158524",
+                          "updatedAt": "2024-07-26T10:14:07Z",
+                          "publishedAt": "2024-07-26T10:14:07Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "The coupled heat source from openmc cannot act on the temperature field",
+          "author": {
+            "login": "LeonDong1998"
+          },
+          "bodyText": "Hello everyone!\nI have installed and deployed cardinal-moose-openmc and run it successfully. When running the example, I found a problem. The temperature field in moose solid seems to be affected by the power value of 1000, and the calculated heat source (power 1e7) does not act on the temperature field.\nThe heat source calculated by openmc exists in the form of auxvariables, but the heatsource kernel seems to only support equations and value. How to set the auxiliary variables as internal heat sources?\nThanks in advance!",
+          "url": "https://github.com/idaholab/moose/discussions/28319",
+          "updatedAt": "2024-08-06T15:37:56Z",
+          "publishedAt": "2024-08-06T15:24:30Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "hello\nyou can use this kernel to input a force term (here a heat source) from a variable\nhttps://mooseframework.inl.gov/source/kernels/CoupledForce.html",
+                  "url": "https://github.com/idaholab/moose/discussions/28319#discussioncomment-10255410",
+                  "updatedAt": "2024-08-06T15:43:30Z",
+                  "publishedAt": "2024-08-06T15:37:56Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "TimedSubdomainModifier at time zero",
+          "author": {
+            "login": "Wendy-Ji"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nHello,\nI would like to check whether this was intended. If the time is set to zero, then the subdomain change does not occur. Below is an example file, where subdomains 2 and 3 are changing to subdomain 1 at times 0 and 1 respectively. Subdomain 3 changes, but subdomain 2 remains the same for the whole simulation. Was this because a subdomain change for a whole block shouldn't occur at time zero?\nThank you.\n[Problem]\n  solve = false\n[]\n\n[Mesh]\n  [gen]\n    type = GeneratedMeshGenerator\n    dim = 2\n    xmax = 3\n    ymax = 1\n    nx = 3\n    ny = 1\n  []\n  [left]\n    type = SubdomainBoundingBoxGenerator\n    input = 'gen'\n    block_id = 1\n    bottom_left = '0 0 0'\n    top_right = '1 1 0'\n  []\n  [middle]\n    type = SubdomainBoundingBoxGenerator\n    input = 'left'\n    block_id = 2\n    bottom_left = '1 0 0'\n    top_right = '2 1 0'\n  []\n  [right]\n    type = SubdomainBoundingBoxGenerator\n    input = 'middle'\n    block_id = 3\n    bottom_left = '2 0 0'\n    top_right = '3 1 0'\n  []\n[]\n\n[Variables]\n  [dummy]\n  []\n[]\n\n[UserObjects]\n  [block_change]\n    type = TimedSubdomainModifier\n    times = '0 1'\n    blocks_from = '2 3'\n    blocks_to = '1 1'\n    execute_on = 'INITIAL TIMESTEP_BEGIN'\n  []\n[]\n\n[Executioner]\n  type = Transient\n  dt = 1\n  end_time = 2\n[]\n\n[Outputs]\n  exodus = true\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/28125",
+          "updatedAt": "2024-08-06T03:11:34Z",
+          "publishedAt": "2024-07-12T22:03:47Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nI think this might have been a miss. I ll check and create an issue\nIf you need this, you can set a start_time to the simulation before 0\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/28125#discussioncomment-10045686",
+                  "updatedAt": "2024-07-14T22:19:37Z",
+                  "publishedAt": "2024-07-14T22:19:36Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jmeier"
+                          },
+                          "bodyText": "Is there any news on this yet?",
+                          "url": "https://github.com/idaholab/moose/discussions/28125#discussioncomment-10240641",
+                          "updatedAt": "2024-08-05T08:21:01Z",
+                          "publishedAt": "2024-08-05T08:21:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I created an issue\n#28132\nthe workaround being so simple, it's not a priority to change this",
+                          "url": "https://github.com/idaholab/moose/discussions/28125#discussioncomment-10248984",
+                          "updatedAt": "2024-08-06T03:11:35Z",
+                          "publishedAt": "2024-08-06T03:11:34Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "PorousFlow mechanics with an empty pipe in a porous medium",
+          "author": {
+            "login": "marinsiebert"
+          },
+          "bodyText": "Hello everyone,\nI have a functioning input file for a TH-problem where a heat-source is placed in a porous medium. The heat-source is a fluid filled pipe, the thermal processes in the pipe are currently calculated by simple HeatConduction Kernels outside of the PorousFlow module.\nHow would I proceed to incorporate mechanics in order to investigate consolidation of the porous medium surrounding the pipe?",
+          "url": "https://github.com/idaholab/moose/discussions/28251",
+          "updatedAt": "2024-08-14T16:21:04Z",
+          "publishedAt": "2024-07-29T12:50:29Z",
+          "category": {
+            "name": "Q&A Modules: Porous Flow"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "josebastiase"
+                  },
+                  "bodyText": "Well, you just need to couple the mechanical part to your model\nFor a THM problem look at modules/porous_flow/examples/tutorial/04.i and for the consolidation problem here modules/porous_flow/test/tests/poro_elasticity/terzaghi_constM.i",
+                  "url": "https://github.com/idaholab/moose/discussions/28251#discussioncomment-10186921",
+                  "updatedAt": "2024-07-30T06:29:20Z",
+                  "publishedAt": "2024-07-30T06:29:19Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "marinsiebert"
+                          },
+                          "bodyText": "Thank you for your reply. For the porous medium I already have the blocks accordingly to the tutorials. The question is how to consider the mechanics for the pipe, as stress would also be taken and transferred by the pipe, and it would also be displaced when the underlying soil is consolidated.\nI probably phrased this a little bit unclear in the initial question.",
+                          "url": "https://github.com/idaholab/moose/discussions/28251#discussioncomment-10186998",
+                          "updatedAt": "2024-07-30T06:38:09Z",
+                          "publishedAt": "2024-07-30T06:38:08Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "josebastiase"
+                          },
+                          "bodyText": "With TransientMultiApps maybe? (https://mooseframework.inl.gov/syntax/MultiApps/index.html). With two input files one for your porous medium and one for your pipe. You need to transfer data from one to the other. But this is not fully coupled.",
+                          "url": "https://github.com/idaholab/moose/discussions/28251#discussioncomment-10201815",
+                          "updatedAt": "2024-07-31T13:44:46Z",
+                          "publishedAt": "2024-07-31T13:44:45Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Iterative coupling with multiapp s is \"tight coupling\" and it converges to the same answer as full coupling (single matrix approach)",
+                          "url": "https://github.com/idaholab/moose/discussions/28251#discussioncomment-10201996",
+                          "updatedAt": "2024-07-31T13:56:52Z",
+                          "publishedAt": "2024-07-31T13:56:51Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "marinsiebert"
+                          },
+                          "bodyText": "I've got the mechanics running so far, however the results seem a little counterintuitive.\nThe calculated stresses are positive, per convention this means they are expansive rather than compressive. Correspondingly, the resulting displacements are positive as well.\n\ntest.txt\nI guess this comes from the pore pressure being calculated by porepressure = airpressure (1 atm) - capillary pressure (here roughly 15kPa)\nThis leads to a positive porepressure larger than the calculated stresses and thus expansion.\nHowever, porepressure is normally given by rho_w  * g * z and with the density of water smaller than of that soil should yield negative stresses. Am I missing something here?",
+                          "url": "https://github.com/idaholab/moose/discussions/28251#discussioncomment-10208374",
+                          "updatedAt": "2024-08-01T07:45:13Z",
+                          "publishedAt": "2024-08-01T05:56:05Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "marinsiebert"
+                          },
+                          "bodyText": "Giving this a push, as I am somewhat on a schedule.\nLooking at #23541 and the other threads cited by @WilkAndy a porepressure of 0 corresponds to atmospheric pressure and negative porepressures to an unsaturated medium - this does not seem to be the case here. I've created a simplified model of the problem described above using a single phase with porepressure as main variable and with this I am now able to achieve the desired results. This is fine for me.\nHowever, the question still remains if this is actually achievable with the NCG model?",
+                          "url": "https://github.com/idaholab/moose/discussions/28251#discussioncomment-10242042",
+                          "updatedAt": "2024-08-05T10:56:01Z",
+                          "publishedAt": "2024-08-05T10:56:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@cpgr",
+                          "url": "https://github.com/idaholab/moose/discussions/28251#discussioncomment-10248897",
+                          "updatedAt": "2024-08-06T02:57:13Z",
+                          "publishedAt": "2024-08-06T02:57:12Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Usage of ProjectionAux for the whole domain",
+          "author": {
+            "login": "rnpratoori"
+          },
+          "bodyText": "Hello,\nI am currently using ProjectionAux to calculate the average of a variable for each element. Is there a way I can use it for all the elements - I need the average of the value for all the elements.\nJust FYI - I know the average value (it is one of the constant global values in the input file). I need it to be used in a AuxKernel I wrote. This value does not change throughout the simulation. So, any other alternative way of handling it is also appreciated.\nThanks in advance,\nRaghunandan.",
+          "url": "https://github.com/idaholab/moose/discussions/28313",
+          "updatedAt": "2024-08-14T16:39:16Z",
+          "publishedAt": "2024-08-05T21:55:38Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYou can set an auxvariable using a ParsedAux if you already know the value.\nComputing a single value for the entire domain is more the role of a Postprocessor than an auxkernel. You should use something like this\nhttps://mooseframework.inl.gov/source/postprocessors/ElementAverageValue.html\nthen use a ParsedAux to spread the value to a field, only if it's really needed",
+                  "url": "https://github.com/idaholab/moose/discussions/28313#discussioncomment-10247481",
+                  "updatedAt": "2024-08-05T22:06:34Z",
+                  "publishedAt": "2024-08-05T22:06:34Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Calculation of logistic functions gives not-a-number (nan) errors or zero when it should increase from zero to unity.",
+          "author": {
+            "login": "EdSheltonUKAEA"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nI am trying to use logistic functions to add a function as a smooth sigmoid over a time period.  But the calculation of the function behaves erratically.\nThe function I would like to use in a ParsedFunction is:\nexpression = 'if(t<79500, 0, 1/(1 + exp((80000-t)/50) ) )'\nBut even if I start my solve at t = 79500 s, it fails immediately with:\n`Time Step 1, time = 79510, dt = 10\nPre-SMO residual: -nan\nPerforming automatic scaling calculation\nNonlinear solve did not converge due to DIVERGED_FNORM_NAN iterations 0\nSolve Did NOT Converge!`\nAt t = 79500, exp((80000-t)/50) = exp(10) = 22026 which shouldn't be causing the NAN error.\nSo I've tried an alternative expression for the logistic function (without an if statement since for t<<80000, the exp term should tend to zero):\nexpression = '1 - (1/(1 + exp((t - 80000)/50)) )'\nThis code runs, but the value of the function calculated with this expression stays stuck at zero, even when t = 80500 and higher, where it should tend to unity.  This makes even less sense to me than the nan error.\nHowever, if I let my solve start at t = 0 and use:\nexpression = '1/(1 + exp((500-t)/50) )'\nthen everything works fine.  The functions increases sigmoidally up to unity at about t = 1380 s and beyond.\nSo I can \"force\" it to work in this way and then append this bit of the solve to previous output up to 79500 s, but this is rather inelegant and time-consuming.\nWhy can the function expression cope when the logistic function mid-point is at 500s, but not at 80000 s (for t>79500 s), even though the range of values of the argument of the exp function is the same?\nIs there some setting I can change to get the solve to work around 80000 s?",
+          "url": "https://github.com/idaholab/moose/discussions/28289",
+          "updatedAt": "2024-08-05T12:34:20Z",
+          "publishedAt": "2024-08-02T11:13:06Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThanks for reporting this. This must be an issue in the parser, we use this\nhttp://warp.povusers.org/FunctionParser/fparser.html\nWould you mind checking if they mention any overflow issue in their documentation?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/28289#discussioncomment-10223274",
+                  "updatedAt": "2024-08-02T12:23:46Z",
+                  "publishedAt": "2024-08-02T12:23:46Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "EdSheltonUKAEA"
+                          },
+                          "bodyText": "Hi\nThanks for the quick reply.\nI'm not sure what I'd be looking for in the document at that link as I'm not fluent in C++ or understanding all the details of the calculations that go on behind the scenes.\nI sort of assume that MOOSE would \"do the math\" for the functions I put in.  Hence my confusion that it didn't.\nEd",
+                          "url": "https://github.com/idaholab/moose/discussions/28289#discussioncomment-10223404",
+                          "updatedAt": "2024-08-02T12:41:38Z",
+                          "publishedAt": "2024-08-02T12:41:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "EdSheltonUKAEA"
+                          },
+                          "bodyText": "It does say this, which seems it could be relevant:\n\n\"(Note that currently the exponentiation operator is not supported for FunctionParser_li nor FunctionParser_gmpint. With the former the result would very easily overflow, making its usefulness questionable. With the latter it could be easily abused to make the program run out of memory; think of a function like \"10^10^10^100000\".) \"",
+                          "url": "https://github.com/idaholab/moose/discussions/28289#discussioncomment-10223425",
+                          "updatedAt": "2024-08-02T12:43:52Z",
+                          "publishedAt": "2024-08-02T12:43:50Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "EdSheltonUKAEA"
+                          },
+                          "bodyText": "Mind you, that means exponentiation as raising to powers, not the exponential function.  So probably not relevant after all.",
+                          "url": "https://github.com/idaholab/moose/discussions/28289#discussioncomment-10223445",
+                          "updatedAt": "2024-08-02T12:45:51Z",
+                          "publishedAt": "2024-08-02T12:45:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "EdSheltonUKAEA"
+                          },
+                          "bodyText": "Here are the only other mentions of \"overflow\":\n\nHowever, the library can not guarantee that it will catch all possible floating point errors before performing them, because this is impossible to do with standard C++. For example, dividing a very large value by a value which is very close to zero, or calculating the logarithm of a very small value may overflow the result, as well as multiplying two very large values. Raising a negative number to a non-integral power may cause a NaN result, etc.\nAs a rule of thumb, the library will (by default) detect invalid operations if they are invalid for a range of values. For example, square root is undefined for all negative values, and arc sine is undefined only values outside the range [-1, 1]. In general, operations which are invalid for only one single value (rather than a contiguous range of values) will not be detected (division by the exact value of zero is an exception to this rule) nor will overflow/underflow situations.",
+                          "url": "https://github.com/idaholab/moose/discussions/28289#discussioncomment-10223462",
+                          "updatedAt": "2024-08-02T12:47:42Z",
+                          "publishedAt": "2024-08-02T12:47:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "ok thanks for searching the documentation. There is not a strong hint that the exponentials are not evaluated as we would expect.\ncould you try this by any chance?\nexpression = '1 - (1/(1 + exp( ((t - 80000)/50)))  )'\n\nIn case it's optimizing by doing something like\nexp(t/50) exp(- 80000)/50)\nwhich would obviously be problematic",
+                          "url": "https://github.com/idaholab/moose/discussions/28289#discussioncomment-10231001",
+                          "updatedAt": "2024-08-03T14:31:39Z",
+                          "publishedAt": "2024-08-03T14:31:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "EdSheltonUKAEA"
+                          },
+                          "bodyText": "I'll aim to give this a try in the next day or two.  If I understand it right, including the extra set of brackets may force the parser to process the calculations in a different order.\nBut for now I'm able to carry on with my workaround, see below.",
+                          "url": "https://github.com/idaholab/moose/discussions/28289#discussioncomment-10236384",
+                          "updatedAt": "2024-08-04T17:54:44Z",
+                          "publishedAt": "2024-08-04T17:54:44Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "That is what I am thinking yes\nok I am glad. We'll need to work in FParser to fix this. @dschwen thoughts?",
+                          "url": "https://github.com/idaholab/moose/discussions/28289#discussioncomment-10236709",
+                          "updatedAt": "2024-08-04T19:39:47Z",
+                          "publishedAt": "2024-08-04T19:39:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "EdSheltonUKAEA"
+                          },
+                          "bodyText": "Trying\nexpression = '1 - (1/(1 + exp( ((t - 80000)/50)))  )'\ndidn't work.\nThe value of the function stays at zero even for t = 84700, the end time of my model.",
+                          "url": "https://github.com/idaholab/moose/discussions/28289#discussioncomment-10239899",
+                          "updatedAt": "2024-08-05T07:10:05Z",
+                          "publishedAt": "2024-08-05T07:10:04Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "EdSheltonUKAEA"
+                  },
+                  "bodyText": "I'm going to try a workaround where I set time t in the MOOSE model to be the actual value starting at 79500, but define a function:\ntdash = t - 79500\nwhich I can use in the argument of the exponential term of the logistic function.\nBut a more robust solution would be welcome if anyone can suggest one.",
+                  "url": "https://github.com/idaholab/moose/discussions/28289#discussioncomment-10223639",
+                  "updatedAt": "2024-08-02T13:04:40Z",
+                  "publishedAt": "2024-08-02T13:04:39Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "EdSheltonUKAEA"
+                          },
+                          "bodyText": "A quick update, this seems to have worked.  I've now managed to run my model to the end and the increasing sigmoidal logistic function worked perfectly.",
+                          "url": "https://github.com/idaholab/moose/discussions/28289#discussioncomment-10236389",
+                          "updatedAt": "2024-08-04T17:56:33Z",
+                          "publishedAt": "2024-08-04T17:56:33Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "EdSheltonUKAEA"
+                          },
+                          "bodyText": "For clarity, here's what I'm using which gives the desired output:\n  [tdash_fn]\n    type = ParsedFunction\n    expression = 't-79500'  \n  []\n  [H_time_smooth_fn]\n    type = ParsedFunction\n    symbol_names = 'tdash'\n    symbol_values = 'tdash_fn'\n    expression = 'if(t<79500, 0, 1 - 1/(1+exp((tdash-500)/50)) )'\n  []",
+                          "url": "https://github.com/idaholab/moose/discussions/28289#discussioncomment-10239919",
+                          "updatedAt": "2024-08-05T07:12:48Z",
+                          "publishedAt": "2024-08-05T07:12:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "EdSheltonUKAEA"
+                          },
+                          "bodyText": "Or a bit more straightforward:\n  [tdash_fn]\n    type = ParsedFunction\n    expression = 't-80000'  \n  []\n  [H_time_smooth_fn]\n    type = ParsedFunction\n    symbol_names = 'tdash'\n    symbol_values = 'tdash_fn'\n    expression = 'if(t<79500, 0, 1 - 1/(1+exp(tdash/50)) )'\n  []",
+                          "url": "https://github.com/idaholab/moose/discussions/28289#discussioncomment-10242884",
+                          "updatedAt": "2024-08-05T12:34:20Z",
+                          "publishedAt": "2024-08-05T12:34:19Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Inactive Subdomain with no variables and kernels",
+          "author": {
+            "login": "jmeier"
+          },
+          "bodyText": "Dear Moose Community,\nI have created a very simple Moose model in which the elements of a subdomain are to be moved to an \u201cinactive\u201d subdomain. Following the recommendation in #28092, I tried to block-restrict all variables and kernels away from my inactive subdomain. When I run this model, Moose will not converge:\nTime Step 3, time = 0.101, dt = 0.001\n 0 Nonlinear |R| = 4.150026e+01\n  Linear solve did not converge due to DIVERGED_PC_FAILED iterations 0\n                 PC failed due to FACTOR_NUMERIC_ZEROPIVOT \nNonlinear solve did not converge due to DIVERGED_LINE_SEARCH iterations 0\n Solve Did NOT Converge!\nAborting as solve did not converge\n\nWhen I add some MatDiffusion kernels, the model converges.\nMy questions are:\n\nHow can I check which variables and kernels are active on which subdomains?\nA nuance asked differently: How can I see what is active (kernels, variables, ...) on a given subdomain?\nThe variables disp_x, disp_y, and disp_z seem to be present in my inactive domain. Is there my problem? If yes, should I block-restrict them as well?\n\n Moose Model without Variables and Kernels in the inactive subdomain - but failing \n\n[GlobalParams]\n  displacements = 'disp_x disp_y disp_z'\n  use_displaced_mesh = false\n[]\n\nBox1_inactive_name = 'Box1_inactive'\ninactive_domain_block_names = '${Box1_inactive_name}'\n\n[Problem]\n  solve = true\n  kernel_coverage_check = SKIP_LIST\n  kernel_coverage_block_list = '${inactive_domain_block_names}'\n  material_coverage_check = SKIP_LIST\n  material_coverage_block_list = '${inactive_domain_block_names}'\n[]\n\n[Mesh]\n  [BaseMesh]\n    type = GeneratedMeshGenerator\n    subdomain_name = 'BaseMesh'\n    elem_type = 'HEX8'\n    dim = 3\n    nx = 6\n    ny = 6\n    nz = 2\n    xmin = -3\n    xmax = +3\n    ymin = -3\n    ymax = +3\n    zmin = -2\n    zmax = +2\n  []\n\n  [Box1]\n    type = SubdomainBoundingBoxGenerator\n    block_name = 'Box1'\n    input = \"BaseMesh\"\n    block_id = 1\n    location = \"INSIDE\"\n    bottom_left = \"-1.0 -1.0 -0.0\"\n    top_right = \"+1.0 +1.0 +2.0\"\n  []\n\n  add_subdomain_names = '${inactive_domain_block_names}'\n[]\n\n[Physics]\n  [SolidMechanics]\n    [QuasiStatic]\n      [all]\n        strain = SMALL\n        incremental = true\n        add_variables = true\n        generate_output = 'stress_xx stress_yy stress_zz'\n        block = 'BaseMesh Box1'\n      []\n    []\n  []\n[]\n\n[AuxVariables]\n  [dummy]\n    type = MooseVariableFVReal\n    block = 'BaseMesh Box1'\n  []\n[]\n\n# fix the lower model boundary in y and z direction\n[BCs]\n  [./back_fix_y]\n    type = DirichletBC\n    variable = disp_y\n    boundary = 'back'\n    value = 0.0\n  []\n  [./back_fix_z]\n    type = DirichletBC\n    variable = disp_z\n    boundary = 'back'\n    value = 0.0\n  []\n[]\n\n# fix the left mdoel boundary in x direction\n[BCs]\n  [./left_fix_x]\n    type = DirichletBC\n    variable = disp_x\n    boundary = 'left'\n    value = 0.0\n  []\n[]\n\n# put some pressure on the right model boundary\n[BCs]\n  [./right_Dirichlet]\n    type = FunctionDirichletBC\n    variable = disp_x\n    boundary = 'right'\n    function = right_pressure_function\n  []\n[]\n[Functions]\n  [right_pressure_function]\n    type = ParsedFunction\n    expression = '-0.001 * t'\n  []\n[]\n\n# Material: Volume Elements\n[Materials]\n\n  [elasticity_tensor]\n    type = ComputeIsotropicElasticityTensor\n    block = 'BaseMesh Box1'\n    youngs_modulus = 1e6\n    poissons_ratio = 0.25\n  []\n\n  [stress]\n    type = ComputeFiniteStrainElasticStress\n    block = 'BaseMesh Box1'\n  []\n\n[]\n\n# move elements between subdomains back and forth\n[UserObjects]\n  [GlobalSubdomainModifier]\n    type = TimedSubdomainModifier\n    times = '0.2'\n    blocks_from = 'Box1'\n    blocks_to = 'Box1_inactive'\n    execute_on = 'INITIAL TIMESTEP_BEGIN'\n  []\n[]\n\n[Preconditioning]\n  [.\\SMP]\n    type = SMP\n    full = true\n  []\n[]\n\n[Executioner]\n  type = Transient\n\n  end_time = 1.0\n  dtmin = 0.001\n  [TimeSteppers]\n    [BlockEventTimeStepper]\n      type = TimeSequenceStepper\n      time_sequence = '0.05 0.1 0.2 0.4 1.0'\n    []\n  []\n\n  solve_type = 'PJFNK'\n  petsc_options = '-snes_converged_reason'\n  petsc_options_iname = '-pc_type -pc_factor_mat_solver_package'\n  petsc_options_value = ' lu       mumps'\n\n  l_tol = 1E-10\n  l_max_its = 20\n\n  nl_abs_tol = 1E-10\n  nl_rel_tol = 1e-8\n  nl_max_its = 20\n\n[]\n\n[Outputs]\n  exodus = true\n[]\n\n\n\n \n Moose Model with MatDiffusion-Kernels in the inactive subdomain - working \n\n# This test contains blocks of 3D elements and blocks with 2D elements.\n\n[GlobalParams]\n  displacements = 'disp_x disp_y disp_z'\n  use_displaced_mesh = false\n[]\n\nBox1_inactive_name = 'Box1_inactive'\ninactive_domain_block_names = '${Box1_inactive_name}'\n\n[Problem]\n  solve = true\n  kernel_coverage_check = SKIP_LIST\n  kernel_coverage_block_list = '${inactive_domain_block_names}'\n  material_coverage_check = SKIP_LIST\n  material_coverage_block_list = '${inactive_domain_block_names}'\n[]\n\n[Mesh]\n  [BaseMesh]\n    type = GeneratedMeshGenerator\n    subdomain_name = 'BaseMesh'\n    elem_type = 'HEX8'\n    dim = 3\n    nx = 6\n    ny = 6\n    nz = 2\n    xmin = -3\n    xmax = +3\n    ymin = -3\n    ymax = +3\n    zmin = -2\n    zmax = +2\n  []\n\n  [Box1]\n    type = SubdomainBoundingBoxGenerator\n    block_name = 'Box1'\n    input = \"BaseMesh\"\n    block_id = 1\n    location = \"INSIDE\"\n    bottom_left = \"-1.0 -1.0 -0.0\"\n    top_right = \"+1.0 +1.0 +2.0\"\n  []\n\n  add_subdomain_names = '${inactive_domain_block_names}'\n[]\n\n[Physics]\n  [SolidMechanics]\n    [QuasiStatic]\n      [all]\n        strain = SMALL\n        incremental = true\n        add_variables = true\n        generate_output = 'stress_xx stress_yy stress_zz'\n        block = 'BaseMesh Box1'\n      []\n    []\n  []\n[]\n\n# ===== Dummy-Kernels for Inactive Domain =====\n[Kernels]\n  [./donothing1]\n    type = MatDiffusion\n    block = '${inactive_domain_block_names}'\n    variable = disp_z\n    diffusivity = 1e-7\n  []\n [./donothing2]\n    type = MatDiffusion\n    block = '${inactive_domain_block_names}'\n    variable = disp_x\n    diffusivity = 1e-7\n  []\n [./donothing3]\n    type = MatDiffusion\n    block = '${inactive_domain_block_names}'\n    variable = disp_y\n    diffusivity = 1e-7\n  []\n[]\n\n[AuxVariables]\n  [dummy]\n    type = MooseVariableFVReal\n  []\n[]\n\n# fix the lower model boundary in y and z direction\n[BCs]\n  [./back_fix_y]\n    type = DirichletBC\n    variable = disp_y\n    boundary = 'back'\n    value = 0.0\n  []\n  [./back_fix_z]\n    type = DirichletBC\n    variable = disp_z\n    boundary = 'back'\n    value = 0.0\n  []\n[]\n\n# fix the left mdoel boundary in x direction\n[BCs]\n  [./left_fix_x]\n    type = DirichletBC\n    variable = disp_x\n    boundary = 'left'\n    value = 0.0\n  []\n[]\n\n# put some pressure on the right model boundary\n[BCs]\n  [./right_Dirichlet]\n    type = FunctionDirichletBC\n    variable = disp_x\n    boundary = 'right'\n    function = right_pressure_function\n  []\n[]\n[Functions]\n  [right_pressure_function]\n    type = ParsedFunction\n    expression = '-0.001 * t'\n  []\n[]\n\n# Material: Volume Elements\n[Materials]\n\n  [elasticity_tensor]\n    type = ComputeIsotropicElasticityTensor\n    block = 'BaseMesh Box1'\n    youngs_modulus = 1e6\n    poissons_ratio = 0.25\n  []\n\n  [stress]\n    type = ComputeFiniteStrainElasticStress\n    block = 'BaseMesh Box1'\n  []\n\n[]\n\n# move elements between subdomains back and forth\n[UserObjects]\n  [GlobalSubdomainModifier]\n    type = TimedSubdomainModifier\n    times = '0.2'\n    blocks_from = 'Box1'\n    blocks_to = 'Box1_inactive'\n    execute_on = 'INITIAL TIMESTEP_BEGIN'\n  []\n[]\n\n[Preconditioning]\n  [.\\SMP]\n    type = SMP\n    full = true\n  []\n[]\n\n[Executioner]\n  type = Transient\n\n  end_time = 1.0\n  dtmin = 0.001\n  [TimeSteppers]\n    [BlockEventTimeStepper]\n      type = TimeSequenceStepper\n      time_sequence = '0.05 0.1 0.2 0.4 1.0'\n    []\n  []\n\n  solve_type = 'PJFNK'\n  petsc_options = '-snes_converged_reason'\n  petsc_options_iname = '-pc_type -pc_factor_mat_solver_package'\n  petsc_options_value = ' lu       mumps'\n\n  l_tol = 1E-10\n  l_max_its = 20\n\n  nl_abs_tol = 1E-10\n  nl_rel_tol = 1e-8\n  nl_max_its = 20\n\n[]\n\n[Outputs]\n  exodus = true\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/28250",
+          "updatedAt": "2024-08-05T06:52:39Z",
+          "publishedAt": "2024-07-29T11:26:21Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "How can I check which variables and kernels are active on which subdomains?\n\nOne way is to use Debug/show_execution_order and see what kernel is active on what subdomain\n\nThe variables disp_x, disp_y, and disp_z seem to be present in my inactive domain. Is there my problem? If yes, should I block-restrict them as well?\n\nAbsolutely.\nIf they are present on domains that there is no equation for them, then the nullspace is the entire space, and most solvers will not like this.",
+                  "url": "https://github.com/idaholab/moose/discussions/28250#discussioncomment-10184371",
+                  "updatedAt": "2024-07-29T22:20:30Z",
+                  "publishedAt": "2024-07-29T22:20:30Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jmeier"
+                          },
+                          "bodyText": "Thanks for pointing to Debug/show_execution_order. If I interpret the output correctly, there are no kernels on block 2 (as expected, since I do not request kernels for this block in the input file). But I dont see block-coverage of the variables?\nTime Step 3, time = 0.101, dt = 0.001\n[DBG] Computing elemental user objects on TIMESTEP_BEGIN\n[DBG] Ordering of User Objects on block 0\n[DBG] Executing ElementUserObject on TIMESTEP_BEGIN\n[DBG] Order of execution:\n[DBG] GlobalSubdomainModifier\n                             \n[DBG] Only user objects active on local element/sides are executed\n[DBG] Ordering of User Objects on block 2\n[DBG] Executing ElementUserObject on TIMESTEP_BEGIN\n[DBG] Order of execution:\n[DBG] GlobalSubdomainModifier\n                             \n[DBG] Only user objects active on local element/sides are executed\n[DBG] Beginning elemental loop to compute Residual on LINEAR\n[DBG] Ordering of Residual Objects on block BaseMesh (0)\n[DBG] Ordering of kernels:\n[DBG] TM_bla0 TM_bla1 TM_bla2\n[DBG] Ordering of Residual Objects on block Box1_inactive (2)\n 0 Nonlinear |R| = 4.150026e+01\n\nDigging a little deeper:\nIf I read the code correctly that adds the displacement variables, Moose does not seem to apply the block constraints to the variables created. Therefore, disp_x, disp_y, and disp_z are also active for all my inactive domains. Is this assessment correct?\n\n  \n    \n      moose/modules/solid_mechanics/src/physics/QuasiStaticSolidMechanicsPhysics.C\n    \n    \n        Lines 385 to 402\n      in\n      26a0eda\n    \n  \n  \n    \n\n        \n          \n           if (getParam<bool>(\"add_variables\")) \n        \n\n        \n          \n           { \n        \n\n        \n          \n             auto params = _factory.getValidParams(\"MooseVariable\"); \n        \n\n        \n          \n             // determine necessary order \n        \n\n        \n          \n             const bool second = _problem->mesh().hasSecondOrderElements(); \n        \n\n        \n          \n            \n        \n\n        \n          \n             params.set<MooseEnum>(\"order\") = second ? \"SECOND\" : \"FIRST\"; \n        \n\n        \n          \n             params.set<MooseEnum>(\"family\") = \"LAGRANGE\"; \n        \n\n        \n          \n             if (isParamValid(\"scaling\")) \n        \n\n        \n          \n               params.set<std::vector<Real>>(\"scaling\") = {getParam<Real>(\"scaling\")}; \n        \n\n        \n          \n            \n        \n\n        \n          \n             // Loop through the displacement variables \n        \n\n        \n          \n             for (const auto & disp : _displacements) \n        \n\n        \n          \n             { \n        \n\n        \n          \n               // Create displacement variables \n        \n\n        \n          \n               _problem->addVariable(\"MooseVariable\", disp, params); \n        \n\n        \n          \n             } \n        \n\n        \n          \n           } \n        \n    \n  \n\n\nJust from the syntax of the [Physics/SolidMechanics/QuasiStatic]-block I'd assume Moose is only adding this varibales to the subdomains given in the blocks parameter:\n[Physics]\n  [SolidMechanics]\n    [QuasiStatic]\n      [bla]\n        strain = SMALL\n        incremental = true\n        add_variables = true\n        generate_output = 'stress_xx stress_yy stress_zz'\n        block = 'BaseMesh Box1'\n      []\n    []\n  []\n[]\n\nWould it make sense to hand-down the block restriction of [Physics/SolidMechanics/QuasiStatic] to the variables it creates?\nIf the answer to this question is 'yes' some things are unclear to me. Please assume a hypothetical model:\n\nWith a [Physics/SolidMechanics/QuasiStatic], disp_x, disp_y and disp_z variables are only created for subdomain \u201cA\u201d (e.g. for 3D-volume elements)\nThe user also needs the variables disp_x, disp_y and disp_z and others (rotXYZ variables...) for a subdomain \u201cB\u201d with e.g. shell elements. The user must then create these variables explicitly with [Variables]...[].\nDoes this mean that Moose creates 2x the variables disp_x, disp_y and disp_z? Or does Mosse automatically merge these variables?",
+                          "url": "https://github.com/idaholab/moose/discussions/28250#discussioncomment-10186723",
+                          "updatedAt": "2024-07-30T06:01:17Z",
+                          "publishedAt": "2024-07-30T06:01:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Moose does not automatically merge two variables\nAnd defining them twice won't work because you'll get an error.\nImo you need to add an option to not define the variables inside the Physics, then perform that part manually",
+                          "url": "https://github.com/idaholab/moose/discussions/28250#discussioncomment-10186774",
+                          "updatedAt": "2024-07-30T06:09:30Z",
+                          "publishedAt": "2024-07-30T06:09:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jmeier"
+                          },
+                          "bodyText": "Ok, without changing the code of Moose, I have to fall back to \u201cadd_variables = false\u201d and add the disp-variables by hand with \"correct\" block restriction.\nWould the following behavior be desirable if \u201cadd_variables = true\u201d is set in [Physics/SolidMechanics/QuasiStatic]?\n[Physics/SolidMechanics/QuasiStatic] checks whether the disp variables are already defined in the model. If not, these variables are added with bock-restriction. If the variables already exist and have a block-restriction, the existing block-restriction from [Physics/SolidMechanics/QuasiStatic] is added.",
+                          "url": "https://github.com/idaholab/moose/discussions/28250#discussioncomment-10186872",
+                          "updatedAt": "2024-07-30T06:22:17Z",
+                          "publishedAt": "2024-07-30T06:22:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "This seems fine to me",
+                          "url": "https://github.com/idaholab/moose/discussions/28250#discussioncomment-10189400",
+                          "updatedAt": "2024-07-30T10:45:05Z",
+                          "publishedAt": "2024-07-30T10:45:04Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jmeier"
+                          },
+                          "bodyText": "Now I got a little problem.\nIf I define the variable disp_x above the [Physics/SolidMechanics/QuasiStatic] block, I can dedect this variable in QuasiStaticSolidMechanicsPhysics.C using\nif (_problem->hasVariable(disp)) ...\n\nThe corresponding input file:\n# ===== Variables: Displacements =====\n[Variables]\n  [disp_x]\n    order = SECOND\n    family = LAGRANGE\n    block = 'BaseMesh'\n  []\n  ...\n[]\n\n[Physics]\n  [SolidMechanics]\n    [QuasiStatic]\n      [all]\n        strain = SMALL\n        incremental = true\n        add_variables = true\n        generate_output = 'stress_xx stress_yy stress_zz'\n        block = 'Box1'\n      []\n    []\n  []\n[]\n\nIf I have the [Variables] block below the [Physics/SolidMechanics/QuasiStatic] block, _problem->hasVariable(disp) returns false.\nFun fact: Moose does not complain that add_variables is true and disp_x already exists regardless of where which block is located! I think this is because:\n\n  \n    \n      moose/framework/src/problems/FEProblemBase.C\n    \n    \n         Line 2562\n      in\n      468ab73\n    \n  \n  \n    \n\n        \n          \n           if (duplicateVariableCheck(var_name, fe_type, /* is_aux = */ false)) \n        \n    \n  \n\n\nOne option would be to force the user to define Variables before [Physics/SolidMechanics/QuasiStatic]. This would add constraints to the design of the input files. I do not like this option much, but it would ease implementing this issue.\nIn search of other options: Is there a way to detect and modify variables defined after the [Physics/SolidMechanics/QuasiStatic] block (I'd need to merge the block-restriction of [Physics/SolidMechanics/QuasiStatic])",
+                          "url": "https://github.com/idaholab/moose/discussions/28250#discussioncomment-10201106",
+                          "updatedAt": "2024-07-31T12:38:11Z",
+                          "publishedAt": "2024-07-31T12:38:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nIf a task has to happen before the task that adds the variables of the physics, then in the ...App.C file (SolidMechanics most likely) the dependency between the two tasks should be indicated.\nIf you add Debug/show_actions=true you can see the order in which the tasks of each action are performed.\nWithin the same task, the order in the input file matters\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/28250#discussioncomment-10201483",
+                          "updatedAt": "2024-07-31T13:17:02Z",
+                          "publishedAt": "2024-07-31T13:17:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jmeier"
+                          },
+                          "bodyText": "Dear Guillaume,\nI need to come byck to one of my initial questions:\n\nHow can I check which variables and kernels are active on which subdomains?\n\nFor Kernels you gave:\n\nOne way is to use Debug/show_execution_order and see what kernel is active on what subdomain\n\nHow about variables? How can I find out in which blocks a variable is defined?",
+                          "url": "https://github.com/idaholab/moose/discussions/28250#discussioncomment-10214571",
+                          "updatedAt": "2024-08-01T16:17:42Z",
+                          "publishedAt": "2024-08-01T16:17:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "We don't have that in moose.\nFeel free to add Debug/show_block_restriction to moose if you need it",
+                          "url": "https://github.com/idaholab/moose/discussions/28250#discussioncomment-10214864",
+                          "updatedAt": "2024-08-01T16:51:42Z",
+                          "publishedAt": "2024-08-01T16:51:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jmeier"
+                          },
+                          "bodyText": "The name show_block_restriction would suggest to show more than just \"what variables are defined per block\".\nSo the output of show_block_restriction may look like:\nSubdomain 'BaseMesh' (0):\n    Variables (3): disp_x, disp_y, disp_z\n    AuxVariables (1): dummy_aux_var\n\nSubdomain 'TheOtherBlock' (1):\n    Variables (3): disp_x, disp_y, disp_z\n    AuxVariables (2): dummy_aux_var, another_aux_var\n\nBeside Variables and AuxVariables other objects may be shown.\nWould that be in the spirit of a debug option show_block_restriction?",
+                          "url": "https://github.com/idaholab/moose/discussions/28250#discussioncomment-10215476",
+                          "updatedAt": "2024-08-01T18:13:10Z",
+                          "publishedAt": "2024-08-01T18:13:08Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Yes I think this would make be good to do this for all the different systems in use and block-restricted\nAlternatively, the code could detect groups of blocks that are shared between groups of objects. This would limit the output.\nHowever because this is for debug purposes it's not needed now\n@YaqiWang dont you have that in griffin?",
+                          "url": "https://github.com/idaholab/moose/discussions/28250#discussioncomment-10220127",
+                          "updatedAt": "2024-08-02T06:49:13Z",
+                          "publishedAt": "2024-08-02T06:49:13Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "2D Mesh Extrusion",
+          "author": {
+            "login": "TLWise"
+          },
+          "bodyText": "Is it possible to create a AnnularMeshGenerator generated mesh with differing mesh bias at the ID and OD of the geometry? If so can that 2D mesh be extruded with bias from the origin that decreases (decreased mesh growth} with each subsequent level of mesh height?",
+          "url": "https://github.com/idaholab/moose/discussions/28300",
+          "updatedAt": "2024-08-04T19:08:31Z",
+          "publishedAt": "2024-08-03T00:16:04Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThe AdvancedMeshExtruder will let you extrude with different axial layer thicknesses.\nThere are numerous circular mesh generator. I'm sure there is one with a radial biasing option\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/28300#discussioncomment-10228248",
+                  "updatedAt": "2024-08-03T00:37:55Z",
+                  "publishedAt": "2024-08-03T00:37:55Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "https://mooseframework.inl.gov/source/meshgenerators/PolygonConcentricCircleMeshGenerator.html will let you pick ring sizes.\nJust delete the regions outside the cylinder using a BlockDeletionGenerator after",
+                          "url": "https://github.com/idaholab/moose/discussions/28300#discussioncomment-10228251",
+                          "updatedAt": "2024-08-03T00:39:38Z",
+                          "publishedAt": "2024-08-03T00:39:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "TLWise"
+                          },
+                          "bodyText": "Thank you. I was able to do what I had asked by using two instances of AnnularMeshGenerator, one to make an outer ring with negative bias and the other to make an inner ring with positive bias. I then used StitchedMeshGenerator to combine the two coincident surfaces, removing the previous surface names. I extruded the mesh using AdvancedExtruderGenerator, with bias.",
+                          "url": "https://github.com/idaholab/moose/discussions/28300#discussioncomment-10232959",
+                          "updatedAt": "2024-08-04T00:54:30Z",
+                          "publishedAt": "2024-08-04T00:54:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I'm glad. Thanks for reporting back about it!",
+                          "url": "https://github.com/idaholab/moose/discussions/28300#discussioncomment-10236603",
+                          "updatedAt": "2024-08-04T19:08:31Z",
+                          "publishedAt": "2024-08-04T19:08:31Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

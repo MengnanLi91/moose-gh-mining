@@ -1,0 +1,650 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyNC0xMC0xN1QxNzo1ODoxNS0wNTowMM4Ab3dB"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Parameter Sweep Setup and Extracting Results",
+          "author": {
+            "login": "AmbroiseJuston"
+          },
+          "bodyText": "Goof afternoon,\nI need to run a parametric sweep on a model that we have. We have a few parameters that we want to perturb in a model and gets some results out of. Specifically, we want to do the following:\n\nperturb some variables 'x y z'\nrun the simulation at conditions (from 1 volt to 10 volts) in an increasing step sequence of a specified step size\nextract some property at the end of each voltage step (in this case current)\nrepeat from step 1.\n\nI have already looked at the parameter sweep page (https://mooseframework.inl.gov/modules/stochastic_tools/examples/parameter_study.html) with some of the associated pages/links and i am unsure if the parameter sweep could be implement for a linear sweep instead of following a random distribution.\nAdditionally i am unsure how the results would be portrayed. will it only give distributions as shown from the example shown in the link provided or is it possible to tailor the post-processed results into a different format that would suit this case.\nThank you for any help you can provide. Let me know if you need more details about my specific case to get a better understanding of the question.",
+          "url": "https://github.com/idaholab/moose/discussions/28894",
+          "updatedAt": "2024-10-20T22:09:18Z",
+          "publishedAt": "2024-10-20T22:09:18Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": []
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Using aux variables and material properties in DerivativeParsedMaterial",
+          "author": {
+            "login": "rnpratoori"
+          },
+          "bodyText": "Hello,\nI am working on a set of phase-field equations where the energy is defined using polymer volume fraction instead of the regular phase field order parameter c. Although I can rewrite the expression using c, it would make it cumbersome.\nNow, to combat this, I have defined an aux variable for polymer volume fraction which is calculated based on c. Can I use this to define the expression for energy using DerivativeParsedMaterial? In this case, what will be the coupled_variable? 'c' or polymer volume fraction?\nI also have a material property which is calculated at each quadrature point and used in one of the energy terms and is also dependent on polymer volume fraction. How is it handled in DerivativeParsedMaterial?",
+          "url": "https://github.com/idaholab/moose/discussions/28876",
+          "updatedAt": "2024-10-20T17:35:11Z",
+          "publishedAt": "2024-10-17T18:16:51Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nAn auxiliary variable can be substituted but I would not recommend it if you are using automatic differentiation (AD) or the Derivatives from the DerivativeParsedMaterial because auxiliary variables do not propagate derivatives (there might be a way with the DerivativeParsedMaterial, definitely not with AD)\nSo instead I would recommend using an AD material property instead",
+                  "url": "https://github.com/idaholab/moose/discussions/28876#discussioncomment-10975443",
+                  "updatedAt": "2024-10-17T19:09:40Z",
+                  "publishedAt": "2024-10-17T19:09:38Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rnpratoori"
+                          },
+                          "bodyText": "So, having defining both as the material property with DerivativeParsedMaterial and then using them in another material property will work? In this case I believe I need to use c as the coupled_variable.",
+                          "url": "https://github.com/idaholab/moose/discussions/28876#discussioncomment-10975568",
+                          "updatedAt": "2024-10-17T19:23:23Z",
+                          "publishedAt": "2024-10-17T19:23:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I think so. I recommend you check with the Jacobian debugger afterwards\nhttps://mooseframework.inl.gov/help/development/analyze_jacobian.html",
+                          "url": "https://github.com/idaholab/moose/discussions/28876#discussioncomment-10976026",
+                          "updatedAt": "2024-10-17T20:28:43Z",
+                          "publishedAt": "2024-10-17T20:28:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rnpratoori"
+                          },
+                          "bodyText": "So, I tried with u (phase field order parameter) and I am getting this error -\n*** ERROR ***\nInvalid function\n(-1/(N2*phi^2))*(log(1-phi)+phi+nc*vs*((1/phi)-(phi/2)))\nu\nin ParsedMaterialHelper.\nSyntax error: Unknown identifier\n\nI tried with phi (polymer volume fraction) and it throws this error -\n*** ERROR ***\nchi: Coupled variable 'phi' was not found\n\nI am not sure what I am missing here...\nThis is the complete input file - https://github.com/rnpratoori/panther/blob/ddcfc03e83ae240f7632eb57a575d3d433dc6981/problems/CL_CHNS.i",
+                          "url": "https://github.com/idaholab/moose/discussions/28876#discussioncomment-10988069",
+                          "updatedAt": "2024-10-18T21:38:00Z",
+                          "publishedAt": "2024-10-18T21:37:59Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "[./chi]\n        type = DerivativeParsedMaterial\n        property_name = chi\n        coupled_variables = 'u'\n        constant_names =        'N2     nc      vs      s'\n        constant_expressions = '${N2}   ${nc}   ${vs}   ${s}'\n        expression = '(-1/(N2*phi^2))*(log(1-phi)+phi+nc*vs*((1/phi)-(phi/2)))'\n        derivative_order = 2\n    [../]\n\nshould likely be\n    [./chi]\n        type = DerivativeParsedMaterial\n        property_name = chi\n        coupled_variables = 'u phi'\n        constant_names =        'N2     nc      vs      s'\n        constant_expressions = '${N2}   ${nc}   ${vs}   ${s}'\n        expression = '(-1/(N2*phi^2))*(log(1-phi)+phi+nc*vs*((1/phi)-(phi/2)))'\n        derivative_order = 2\n    [../]\n\nif phi is a variable",
+                          "url": "https://github.com/idaholab/moose/discussions/28876#discussioncomment-10990272",
+                          "updatedAt": "2024-10-19T10:02:38Z",
+                          "publishedAt": "2024-10-19T10:02:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rnpratoori"
+                          },
+                          "bodyText": "phi here is another DerivativeParsedMaterial which is dependent on the variable u. How do I handle it in this case?",
+                          "url": "https://github.com/idaholab/moose/discussions/28876#discussioncomment-10991240",
+                          "updatedAt": "2024-10-19T13:35:58Z",
+                          "publishedAt": "2024-10-19T13:35:57Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "add to the Material\nmaterial_property_names = phi",
+                          "url": "https://github.com/idaholab/moose/discussions/28876#discussioncomment-10991253",
+                          "updatedAt": "2024-10-19T13:38:24Z",
+                          "publishedAt": "2024-10-19T13:38:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rnpratoori"
+                          },
+                          "bodyText": "I was just looking at the options for DerivativeParsedMaterial, should phi not be a additional_derivative_symbols",
+                          "url": "https://github.com/idaholab/moose/discussions/28876#discussioncomment-10991281",
+                          "updatedAt": "2024-10-19T13:45:16Z",
+                          "publishedAt": "2024-10-19T13:45:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Unlikely, we only need variables there. When assembling a Jacobian we only need derivatives wrt to variables.\nIf we needed the derivative of this property with regards to phi, it would be for another object s needs.",
+                          "url": "https://github.com/idaholab/moose/discussions/28876#discussioncomment-10991626",
+                          "updatedAt": "2024-10-19T14:54:09Z",
+                          "publishedAt": "2024-10-19T14:54:08Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rnpratoori"
+                          },
+                          "bodyText": "I wanted to check the Jacobian with the debugger as you suggested. It gives an error message -\n /home/rnp/Software/MOOSE/projects/moose/python/jacobiandebug/analyzejacobian.py CL_CHNS.i\nTraceback (most recent call last):\n  File \"/home/rnp/Software/MOOSE/projects/moose/python/jacobiandebug/analyzejacobian.py\", line 339, in <module>\n    executable = findExecutable(options.executable, options.method)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/rnp/Software/MOOSE/projects/moose/python/jacobiandebug/analyzejacobian.py\", line 82, in findExecutable\n    elif shutil.which(executable_option):\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/rnp/Software/miniforge/envs/moose/lib/python3.11/shutil.py\", line 1493, in which\n    if os.path.dirname(cmd):\n       ^^^^^^^^^^^^^^^^^^^^\n  File \"<frozen posixpath>\", line 152, in dirname\nTypeError: expected str, bytes or os.PathLike object, not NoneType\n\nIs there something wrong I am doing?\nI used this command to run the debugger -\n/home/rnp/Software/MOOSE/projects/moose/python/jacobiandebug/analyzejacobian.py CL_CHNS.i",
+                          "url": "https://github.com/idaholab/moose/discussions/28876#discussioncomment-10997461",
+                          "updatedAt": "2024-10-20T17:05:57Z",
+                          "publishedAt": "2024-10-20T17:05:56Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "you need to provide the executable if it can't find it\n/home/rnp/Software/MOOSE/projects/moose/python/jacobiandebug/analyzejacobian.py -e <path to your executable> CL_CHNS.i",
+                          "url": "https://github.com/idaholab/moose/discussions/28876#discussioncomment-10997642",
+                          "updatedAt": "2024-10-20T17:35:13Z",
+                          "publishedAt": "2024-10-20T17:35:11Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Moose Mesh generator code error",
+          "author": {
+            "login": "libinbabu1991"
+          },
+          "bodyText": "Hello,\nI am following along the MOOSE workshop tutorials. (https://www.youtube.com/watch?v=QPuK6OdF2hM)\nI couldn't generate the mesh as shown by the instructor and getting below error.\n(moose) root@131-ENG-DESKTOP:~/projects/moose/tutorials/darcy_thermo_mech/step01_diffusion/problems# ../darcy_thermo_mech-opt -i step1_logan.i --mesh-only\nI appreciate any guidance on this.\n*** ERROR ***\n/root/projects/moose/tutorials/darcy_thermo_mech/step01_diffusion/problems/step1_logan.i:1.1: section '[mesh]' does not have an associated \"Action\".\nCommon causes:\n\nyou misspelled the Action/section name\nthe app you are running does not support this Action/syntax\n/root/projects/moose/tutorials/darcy_thermo_mech/step01_diffusion/problems/step1_logan.i:2.3: section '[mesh/mesh]' does not have an associated \"Action\".\nCommon causes:\nyou misspelled the Action/section name\nthe app you are running does not support this Action/syntax",
+          "url": "https://github.com/idaholab/moose/discussions/28893",
+          "updatedAt": "2024-10-19T16:41:14Z",
+          "publishedAt": "2024-10-19T03:42:18Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\n[mesh] should like be [Mesh]\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/28893#discussioncomment-10990241",
+                  "updatedAt": "2024-10-19T09:55:06Z",
+                  "publishedAt": "2024-10-19T09:55:06Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "libinbabu1991"
+                          },
+                          "bodyText": "Just read the Syntax rules. It worked, thank you very much!",
+                          "url": "https://github.com/idaholab/moose/discussions/28893#discussioncomment-10992188",
+                          "updatedAt": "2024-10-19T16:41:15Z",
+                          "publishedAt": "2024-10-19T16:41:14Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Peacock aborted",
+          "author": {
+            "login": "libinbabu1991"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n I have consulted the Posting Guidelines.\n I have searched the Discussions Forum and MOOSE Framework Troubleshooting and have not found what I was looking for\n Q&A Getting Started is the most appropriate category for my question (trouble installing, beginner user, ...)\n\nIssue or question about MOOSE\nHi,\nI am running moose from ubuntu app installed on my windows. I have added peacock the the path as instructed on the moose website.\nexport PATH=~/projects/moose/python/peacock:$PATH\nHowever when I try to open peacock with or without an input file, I am getting \"aborted\" message.\nI would like to know how can I fix this error.\nThanks!\n(Optional) code in question / simulation log / errors\nNo response\nEncountering Errors? Please include diagnostic output\nNo response",
+          "url": "https://github.com/idaholab/moose/discussions/28890",
+          "updatedAt": "2024-10-19T09:59:35Z",
+          "publishedAt": "2024-10-19T00:18:02Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nI think making Peacock work on WSL takes a little bit of work.\nYou should start with this advice\n#28784 (reply in thread)\nand get Paraview and other examples to work. Once that works we can look at peacock which relies on a lot of the same machinery",
+                  "url": "https://github.com/idaholab/moose/discussions/28890#discussioncomment-10990259",
+                  "updatedAt": "2024-10-19T09:59:36Z",
+                  "publishedAt": "2024-10-19T09:59:35Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Too many exodus files while using an adaptive mesh",
+          "author": {
+            "login": "jackeggemeyer"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nHi all,\nI have a model that uses an adaptive mesh to create multiple exodus files per simulation. I have some custom kernels that don't have the best convergence but work, so I get a lot of time steps. I have noticed these files \"corrupt\" after 998 exodus files being created.\nRight now, I have to set my interval to a value and guess an end time so it doesn't exceed the 998 file limit. Is there a more elegant solution to this where MOOSE will stop after making 998 files? Or is it possible to have an adaptive mesh that only makes one exodus file? The size of the file will not be an issue. I have copied some of my code below. Thank you!\n[Executioner]\n  # Preconditioned JFNK (default)\n  type = Transient\n  nl_max_its = 15\n  scheme = bdf2\n  #solve_type = NEWTON\n  solve_type = PJFNK\n  petsc_options_iname = -pc_type\n  petsc_options_value = asm\n  l_max_its = 15\n  l_tol = 1.0e-3\n  nl_rel_tol = 1.0e-8\n  start_time = 0.0\n  # num_steps = 1\n  end_time = 1450\n  nl_abs_tol = 1e-11\n  # dt = 1\n  [./TimeStepper]\n    type = IterationAdaptiveDT\n        dt = 1\n        optimal_iterations = 2\n        iteration_window = 2\n  [../]\n  [./Predictor]\n    type = SimplePredictor\n    scale = 0.8\n  [../]\n[]\n\n# [Debug]\n#   show_var_residual_norms = true\n# []\n\n[Outputs]\n    [./exodus]\n      file_base = ../../Main/Data/10-18/testmpo3\n      type = Exodus\n      interval = 100\n      sync_times = '1000 1200'\n    [../]\n  []",
+          "url": "https://github.com/idaholab/moose/discussions/28889",
+          "updatedAt": "2024-10-18T20:31:19Z",
+          "publishedAt": "2024-10-18T20:01:56Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nIf you know the end time, you can use the simulation_time_interval for that same purpose.\nI dont think it's normal this 998 problem. Do you have a minimal example showing the issue?",
+                  "url": "https://github.com/idaholab/moose/discussions/28889#discussioncomment-10987734",
+                  "updatedAt": "2024-10-18T20:31:20Z",
+                  "publishedAt": "2024-10-18T20:31:19Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Errors With Declarations",
+          "author": {
+            "login": "TLWise"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nI am using the following code:\n'''InputParameters\nIntegralDirectedSurfaceForceFEM::validParams()\n{\nInputParameters params = SideIntegralPostprocessor::validParams();\nparams.addClassDescription(\"Computes the directed force from friction and pressure differences on a surface.\");\nparams.addRequiredParam(\"vel_x\", \"The velocity in the x-direction.\");\n: SideIntegralPostprocessor(parameters),\n_vel_x(getFunctor(\"vel_x\")),'''\nI am getting the following error:\n'''/home/twise/projects/crab/src/postprocessors/IntegralDirectedSurfaceForceFEM.C:36:28: error: invalid initialization of reference of type 'const VariableValue&' {aka 'const MooseArray&'} from expression of type 'Moose::Functor' {aka 'const Moose::FunctorEnvelope'}\n36 |     _vel_x(getFunctor(\"vel_x\")), //  _vel_x(getFunctor(\"vel_x\")),\n|            ~~~~~~~~~~~~~~~~^~~~~~~~~'''",
+          "url": "https://github.com/idaholab/moose/discussions/28888",
+          "updatedAt": "2024-10-18T20:35:35Z",
+          "publishedAt": "2024-10-18T19:48:11Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "TLWise"
+                  },
+                  "bodyText": "Adding Templ<is_ad> appears to have eliminated the problem.",
+                  "url": "https://github.com/idaholab/moose/discussions/28888#discussioncomment-10987602",
+                  "updatedAt": "2024-10-18T20:14:20Z",
+                  "publishedAt": "2024-10-18T20:14:20Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "the error here\n\ninvalid initialization of reference of type 'const VariableValue&' {aka 'const MooseArray&'} from expression of type 'Moose::Functor'\n\nsays that you have _vel_x as a variable value, which you can initialize with coupledValue from the Coupleable interface.\nBut you are trying to initialize it with getFunctor, which is meant for retrieving references to functors",
+                          "url": "https://github.com/idaholab/moose/discussions/28888#discussioncomment-10987667",
+                          "updatedAt": "2024-10-18T20:23:14Z",
+                          "publishedAt": "2024-10-18T20:23:13Z",
+                          "isAnswer": true
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Multiple nucleation conditions",
+          "author": {
+            "login": "ashishdhole"
+          },
+          "bodyText": "Hello,\nI am working on phase transformation and need nucleation event happening at different region with different conditions. Can I use the following:\n[UserObjects]\n  [inserter1]\n    type = DiscreteNucleationInserter\n    hold_time = 0.4\n    probability = P\n    seed = 12346\n    radius = 3.27\n  []\n  [inserter2]\n    type = DiscreteNucleationFromFile\n    hold_time = 10\n    file = nuclei2.csv\n    radius = 2\n  []\n  [map1]\n    type = DiscreteNucleationMap\n    int_width = 2\n    periodic = eta1\n    inserter = inserter1\n  []\n  [map2]\n    type = DiscreteNucleationMap\n    int_width = 2\n    periodic = eta2\n    inserter = inserter2\n  []\n[]\n\nor is there any other way?\nThank you",
+          "url": "https://github.com/idaholab/moose/discussions/28884",
+          "updatedAt": "2024-10-18T19:20:22Z",
+          "publishedAt": "2024-10-18T01:42:19Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThe documentation for this technique can be found there\nhttps://mooseframework.inl.gov/modules/phase_field/Nucleation/DiscreteNucleation.html\nI dont know if we have other methods in moose\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/28884#discussioncomment-10987247",
+                  "updatedAt": "2024-10-18T19:20:23Z",
+                  "publishedAt": "2024-10-18T19:20:22Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "New user : A 'ComputeIsotropicElasticityTensor' is not a registered object.",
+          "author": {
+            "login": "shredderbvek"
+          },
+          "bodyText": "I followed the solid mechanics tutorial, however, when I tried to initiate the simulation the following error occurred.\n(moose) bibek@ghostRobot96:~/projects/solid_mech$ ./solid_mech-opt -i solid_mech.i\n\n\n*** ERROR ***\nA 'ComputeIsotropicElasticityTensor' is not a registered object.\n\nIf you are trying to find this object in a dynamically loaded library, make sure that\nthe library can be found either in your \"Problem/library_path\" parameter or in the\nMOOSE_LIBRARY_PATH environment variable.\n\nStack frames: 21\n0: libMesh::print_trace(std::ostream&)\n1: moose::internal::mooseErrorRaw(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >)\n2: void mooseError<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&)\n3: Factory::reportUnregisteredError(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) const\n4: Factory::getValidParams(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) const\n5: MooseObjectAction::MooseObjectAction(InputParameters const&)\n6: AddMaterialAction::AddMaterialAction(InputParameters const&)\n7: RegistryEntry<AddMaterialAction>::buildAction(InputParameters const&)\n8: ActionFactory::create(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, InputParameters&)\n9: Moose::Builder::walkRaw(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, hit::Node*)\n10: Moose::Builder::walk(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, hit::Node*)\n11: hit::Node::walk(hit::Walker*, hit::NodeType, hit::TraversalOrder)\n12: hit::Node::walk(hit::Walker*, hit::NodeType, hit::TraversalOrder)\n13: hit::Node::walk(hit::Walker*, hit::NodeType, hit::TraversalOrder)\n14: Moose::Builder::build()\n15: MooseApp::setupOptions()\n16: MooseApp::run()\n17: ./solid_mech-opt(+0x20eb) [0x561d8ee780eb]\n18: main\n19: __libc_start_main\n20: ./solid_mech-opt(+0x2396) [0x561d8ee78396]\napplication called MPI_Abort(MPI_COMM_WORLD, 1) - process 0\n[unset]: write_line error; fd=-1 buf=:cmd=abort exitcode=1\n:\nsystem msg for write_line failure : Bad file descriptor",
+          "url": "https://github.com/idaholab/moose/discussions/28887",
+          "updatedAt": "2024-10-18T19:18:33Z",
+          "publishedAt": "2024-10-18T19:16:26Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYou need to use either:\n\nthe solid mechanics module executable\nor\nan application executable with SOLID_MECHANICS set to yes in the Makefile.\nto run solid mechanics simulations.\n\nIf you are doing the latter, you'll need to:\n\nadd it to the makefile\nmake clobberall\nthen rebuild with make",
+                  "url": "https://github.com/idaholab/moose/discussions/28887#discussioncomment-10987226",
+                  "updatedAt": "2024-10-18T19:18:34Z",
+                  "publishedAt": "2024-10-18T19:18:33Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "outputting state variables using MaterialStdVectorAux",
+          "author": {
+            "login": "MaheshTummala17"
+          },
+          "bodyText": "I have been working on obtaining data for state variables such as Accumulated Plastic Strain Energy Density (APSED) and Plastic Strain Accumulation (PSA), both of which involve time-dependent integration. When comparing the results from MOOSE with those from Abaqus, I am getting close values for APSED at the centroids of all elements. However, the PSA values show a significant discrepancy, with the differences being large. In both simulations, I used the same UMAT file. I'm unsure where the mistake lies and would appreciate help in identifying the issue.\nAPSED is integral over time, with summation on all slip systems as the product of resolved shear stress and slip shear rate.\nPSA is the integral over time with terms containing the inner tensor product of plastic velocity gradient\nPreconditioning = SMP\nTimeIntegrator = ImplicitEuler\nsolver type = 'NEWTON'\n[AuxVariables]\n[APSED]\norder = FIRST\nfamily = MONOMIAL\n[]\n[PSA]\norder = FIRST\nfamily = MONOMIAL\n[]\n[]\n[AuxKernels]\n[SV_193]\ntype = MaterialStdVectorAux\nproperty = state_var\nvariable = APSED\nindex = 192\nexecute_on = timestep_end\n[]\n[SV_289]\ntype = MaterialStdVectorAux\nproperty = state_var\nvariable = PSA\nindex = 288\nexecute_on = timestep_end\n[]\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/28824",
+          "updatedAt": "2024-10-18T08:58:45Z",
+          "publishedAt": "2024-10-10T07:35:54Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": []
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "LineValueSampler: VectorPostProcessor in PostProcessor",
+          "author": {
+            "login": "TFdvd"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nHello MOOSE community!\nI'm intrested in the behaviour of LineValueSampler. In particular, the latter is a VectorPostProcessor and I get a .csv for each iteration. Is it possible to pass LineValueSampler from a VectorPostProcessor to a PostProcessor so that I can manipulate its behaviour to obtain a single .csv? Specifically, LineValueSampler in VectorPostProcessor returns me a .csv with a number of results = num_points (requested parameter) . My idea is to save this dataset, but to manipulate it in the PostProcessor area to get a single value of my interest.\nDo you have any suggestions for following this path? Maybe this is a silly question, but I don't have much experience.\nThanks for your time and patience :)",
+          "url": "https://github.com/idaholab/moose/discussions/28827",
+          "updatedAt": "2024-10-17T22:58:15Z",
+          "publishedAt": "2024-10-11T11:55:42Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nAll the postprocessors get lumped into the same CSV file by default.\nHowever you can create a cutom CSV output and use the 'show' parameter to select which postprocessors to print there.\nYou can retrieve the vector values of of a VPP in a custom postprocessor using\ngetVectorPostprocessorValue(\"name of VPP\", \"which vector\")\n\nthis return a reference, you should save it in an attribute of your custom PP",
+                  "url": "https://github.com/idaholab/moose/discussions/28827#discussioncomment-10916539",
+                  "updatedAt": "2024-10-11T14:58:25Z",
+                  "publishedAt": "2024-10-11T14:58:23Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "TFdvd"
+                          },
+                          "bodyText": "Hello @GiudGiud , thanks for your answer! I got your suggestion and I implemented it into a .h and .c that I will attach below.\nFrom LineValueSampler I obtained a .csv with [variable][id][x][y][z] as output.\nIn the .h and .c below, my purpose is to save [variable] and possibly [y], in a Postprocessor in order to compare [variable] in this way:\n(std::abs(_c_var[i] - _threshold) < _tolerance)`\n\nI'm not sure about the result because in the terminal got these error and notes:\nerror: invalid new-expression of abstract class type 'NeckValue'\n  962 |     { return unique_ptr<_Tp>(new _Tp(std::forward<_Args>(__args)...)); }\n      |                              ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n\nnote:   because the following virtual functions are pure within 'NeckValue':\n   29 | class NeckValue : public GeneralPostprocessor\n      |       ^~~~~~~~~\n\nnote:     'virtual PostprocessorValue Postprocessor::getValue() const'\n   39 |   virtual PostprocessorValue getValue() const = 0;\n      |                              ^~~~~~~~\n\nSo I'm not able to proceed. Do you have some suggestion to correct and continue my custom Postprocessor?\n`NeckValue.h`\n\n`#ifndef NECKVALUE_H\n#define NECKVALUE_H\n\n#include \"GeneralPostprocessor.h\"\n\n\nclass NeckValue; \n\n\nclass NeckValue : public GeneralPostprocessor\n{\npublic:\n  \n  Real computeValue();\n\n  static InputParameters validParams();\n  NeckValue(const InputParameters & parameters);\n  \n  virtual void initialize() override;\n  virtual void execute() override;\n\n\n\n  \n\nprotected:\n\n  \n  std::vector<Real> _c_var;\n  const Real _threshold;\n  const Real _tolerance;\n \n\n\n};\n\n#endif //NECKVALUE_H`\n\n\n`NeckValue.C`\n\n\n`#include \"NeckValue.h\"\n#include \"NeckLineValueSampler.h\"  \n#include \"SystemBase.h\" \nusing namespace std;    \n\nregisterMooseObject(\"ParrotApp\", NeckValue);\n\nInputParameters\nNeckValue::validParams()\n{\n  InputParameters params = GeneralPostprocessor::validParams();\n\nparams.addRequiredParam<Real>(\"threshold\", \"Seconda variabile\");\nparams.addRequiredParam<Real>(\"tolerance\", \"Terza variabile\");\n\nparams.addRequiredParam<VectorPostprocessorName>(\"vpp\", \"The name of the VectorPostprocessor to pull the data from.\"); //new\nparams.addRequiredParam<std::string>(\"vector_name\",\"The name of the vector to use from the VectorPostprocessor\"); //new\nparams.addRequiredParam<std::vector<Real>>(\"c_var\", \"Lista di valori per c_var\");\n  return params;\n}\n\n\nNeckValue::NeckValue(\n  const InputParameters &parameters)  \n\n    : GeneralPostprocessor(parameters), \n    _threshold(getParam<Real>(\"threshold\")),\n    _tolerance(getParam<Real>(\"tolerance\")),\n    _c_var(getParam<std::vector<Real>>(\"c_var\"))\n{}\n\nvoid \nNeckValue::initialize()\n{\n\n}\nvoid \nNeckValue::execute()\n{\n  \n}\n\n\n  Real NeckValue::computeValue() { \n  Real value = 0.0; \n \n  \n  VectorPostprocessorValue c_var = getVectorPostprocessorValueByName(getParam<VectorPostprocessorName>(\"vpp\"),getParam<std::string>(\"vector_name\"));\n  for (unsigned int i = 0; i < 100; i++)\n  {\n    if (std::abs(_c_var[i] - _threshold) < _tolerance) \n    {\n      value = c_var[i];\n    }\n  }\n  return value;\n}\n\n`\n\nThanks @GiudGiud for your time and patience!",
+                          "url": "https://github.com/idaholab/moose/discussions/28827#discussioncomment-10930014",
+                          "updatedAt": "2024-10-15T13:27:32Z",
+                          "publishedAt": "2024-10-13T18:22:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "hello\nthis is the message to look for\nnote: because the following virtual functions are pure within 'NeckValue':\n29 | class NeckValue : public GeneralPostprocessor\n| ^~~~~~~~~\nnote: 'virtual PostprocessorValue Postprocessor::getValue() const'\n39 | virtual PostprocessorValue getValue() const = 0;\n\nbascially you need to implement getValue\nso in the header add\nPostprocessorValue getValue() const override;\n\nand in the source add\nPostprocessorValue getValue() const\n{\nreturn _value;\n}\n\nin computeValue(), you should save value to a _value attribute",
+                          "url": "https://github.com/idaholab/moose/discussions/28827#discussioncomment-10931254",
+                          "updatedAt": "2024-10-14T00:04:08Z",
+                          "publishedAt": "2024-10-14T00:04:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "TFdvd"
+                          },
+                          "bodyText": "Hello @GiudGiud, thanks for your help! I need again support as regarding a doubt. I have a Postprocessor in which I manipulate a vector obtained from a VectoPostprocessor. I'm currently accessing the vector with the function\n const VectorPostprocessorValue & c_var = getVectorPostprocessorValueByName(getParam<VectorPostprocessorName>(\"vpp\"),getParam<std::string>(\"vector_name\")); \n\nbut unfortunately I don't get the desired vector. Below, I attach my .C and .i.\nThe current script runs without any error, however the results I get are not correct. Do you have any suggestion please?  Thanks a lot for your help\n#include \"NeckValue.h\"\n#include \"NeckLineValueSampler.h\"  \n#include \"SystemBase.h\" \nusing namespace std;   \n\nregisterMooseObject(\"ParrotApp\", NeckValue);\n\nInputParameters\nNeckValue::validParams()\n{\n  InputParameters params = GeneralPostprocessor::validParams();\nparams.addRequiredParam<Real>(\"threshold\", \"Seconda variabile\");\nparams.addRequiredParam<Real>(\"tolerance\", \"Terza variabile\");\nparams.addRequiredParam<VectorPostprocessorName>(\"vpp\", \"The name of the VectorPostprocessor to pull the data from.\"); \nparams.addRequiredParam<std::string>(\"vector_name\",\"The name of the vector to use from the VectorPostprocessor\"); \nparams.addParam<std::vector<Real>>(\"c_var\", std::vector<Real>{}, \"Vector of real values used in computation.\");\n  return params;\n}\n\n\nNeckValue::NeckValue(\n  const InputParameters &parameters)  \n    : GeneralPostprocessor(parameters), \n    _threshold(getParam<Real>(\"threshold\")),\n    _tolerance(getParam<Real>(\"tolerance\")),\n    _c_var(getParam<std::vector<Real>>(\"c_var\")) \n{}\n\nvoid \nNeckValue::initialize()\n{\n _c_var = getParam<std::vector<Real>>(\"c_var\"); \n}\nvoid \nNeckValue::execute()\n{\n  \n}\n\n\nReal NeckValue::computeValue() { \n\n  _value = 0.0; \n  _index = 0.0;\n \n  const VectorPostprocessorValue & c_var = getVectorPostprocessorValueByName(getParam<VectorPostprocessorName>(\"vpp\"),getParam<std::string>(\"vector_name\"));\n  \n  for (unsigned int i = 0; i < _c_var.size(); i++)\n  {\n    if (std::abs(_c_var[i] - _threshold) < _tolerance)  \n    {\n      _value = c_var[i]; \n      _index = i; \n      break;  \n    } \n  }\n                       \n    return _value;  \n}  \n\n  PostprocessorValue NeckValue::getValue() const       \n  {                                         \n    return _value;                              \n  }\n\n[VectorPostprocessors]\n  [./c_along_vertical]\n    type = NeckLineValueSampler\n    variable = c                    \n    start_point = '40 0 0'          \n    end_point = '40 30 0'           \n    num_points = 100                \n    sort_by = y \n  [../] \n[]\n\n\n[Postprocessors]\n  [./c_neck]\n    type = NeckValue\n    vpp = 'c_along_vertical' \n    threshold = 0.4 \n    tolerance = 0.05\n  [../]  \n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/28827#discussioncomment-10941069",
+                          "updatedAt": "2024-10-14T22:40:50Z",
+                          "publishedAt": "2024-10-14T20:54:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Is it lagged?\nDo you have a print out of a the vector in the VPP and in the PP?",
+                          "url": "https://github.com/idaholab/moose/discussions/28827#discussioncomment-10941084",
+                          "updatedAt": "2024-10-14T20:56:30Z",
+                          "publishedAt": "2024-10-14T20:56:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "TFdvd"
+                          },
+                          "bodyText": "In my VPP I get the output in a .csv like this:\n[variable] [id] [x] [y] [z].\nIn PP I would like to take the vector [variable] and manipulate it. My difficulty is to export [variable] from VPP to PP.",
+                          "url": "https://github.com/idaholab/moose/discussions/28827#discussioncomment-10941376",
+                          "updatedAt": "2024-10-14T21:55:54Z",
+                          "publishedAt": "2024-10-14T21:55:53Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "What error do you get?",
+                          "url": "https://github.com/idaholab/moose/discussions/28827#discussioncomment-10941407",
+                          "updatedAt": "2024-10-14T22:01:41Z",
+                          "publishedAt": "2024-10-14T22:01:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "TFdvd"
+                          },
+                          "bodyText": "I don't get an error. The results are not coherent and I think that my procedure is wrong when I pass [variable] from VPP to PP. Maybe, passing the vector \"[variable]\" in the right way, I will solve the problem.",
+                          "url": "https://github.com/idaholab/moose/discussions/28827#discussioncomment-10941439",
+                          "updatedAt": "2024-10-14T22:07:20Z",
+                          "publishedAt": "2024-10-14T22:07:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Can you report here the print out of the vector in the VPP and in the PP?",
+                          "url": "https://github.com/idaholab/moose/discussions/28827#discussioncomment-10941555",
+                          "updatedAt": "2024-10-14T22:35:03Z",
+                          "publishedAt": "2024-10-14T22:34:48Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "TFdvd"
+                          },
+                          "bodyText": "Yes, sure!\nA generic .csv of my VPP is:\nC_along_vertical_0005_.xlsx\nThe file above treats the i-th iteration. On the previous file, that comes from VPP, I'm only interested on the entire vector c (1st column) that I want to export on the PP in order to catch one only value of my interest.\nThe result of my PP for all iteration in the single value of my interest is:\nc_neck.xlsx\nAs you can see, the repeted value 8.8931816251424e-323 in c_neck.xlsx file is not coherent and maybe VPP and PP are not comunicate well from the previous .C and .i that I attached. Thanks for your patience @GiudGiud",
+                          "url": "https://github.com/idaholab/moose/discussions/28827#discussioncomment-10946001",
+                          "updatedAt": "2024-10-15T09:57:17Z",
+                          "publishedAt": "2024-10-15T09:57:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "8.8931816251424e-323\n\nmeans an unitialized value in C++\nwhat is happening is that nothing ever calls computeValue().\nYou need to do this\nvoid \nNeckValue::execute()\n{\n  computeValue();\n}\n\nor move the code in computeValue into execute",
+                          "url": "https://github.com/idaholab/moose/discussions/28827#discussioncomment-10948067",
+                          "updatedAt": "2024-10-15T13:28:48Z",
+                          "publishedAt": "2024-10-15T13:28:46Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "TFdvd"
+                  },
+                  "bodyText": "Hello @GiudGiud!\nI really want to thank you for your help, my custom PP works almost 100%. I have solved almost all the problems except for one detail that doesn't add up. From the results I attach below you can see that at the first iteration 0.2 I get 3.22 e-320 while at iteration 0.5 I get 4.42, which is the result I need to get in 0.2. In other words, I get the results of the current iteration at the next iteration.\nTime  |    c\n0      |    0\n0.2   |    3.56e-321\n0.5   |    4.84\n0.95  |   6.06\n.      |      .\n.      |      .\n.      |      ...... and so on\nI have tried indexing the for loop in various ways without getting a solution. I attach the .C below. Do you have any suggestions or notice anything that might explain this tendency? The explanation I have found is that perhaps the PP runs the loop before the VPP and so at the current iteration the PP finds no value from the VPP, while at the next iteration the PP finds data from the VPP which is still at the previous iteration. I don't know if this makes sense, but I would like to know your point of view and how I could solve this last detail. Thanks again for your help @GiudGiud !\n#include \"NeckValue.h\"\nregisterMooseObject(\"ParrotApp\", NeckValue);\nInputParameters\nNeckValue::validParams()\n{\nInputParameters params = GeneralPostprocessor::validParams();\nparams.addRequiredParam(\"threshold\", \"Seconda variabile\");\nparams.addRequiredParam(\"tolerance\", \"Terza variabile\");\nparams.addRequiredParam(\"vpp\", \"The name of the VectorPostprocessor to pull the data from.\"); //new\nparams.addRequiredParamstd::string(\"vector_name\",\"The name of the vector to use from the VectorPostprocessor\"); //new\nparams.addParam<std::vector>(\"c_var\", std::vector{}, \"Vector of real values used in computation.\");\nreturn params;\n}\nNeckValue::NeckValue(\nconst InputParameters &parameters)\n: GeneralPostprocessor(parameters),\n_threshold(getParam(\"threshold\")),\n_tolerance(getParam(\"tolerance\")),\n_c_var(getParam<std::vector>(\"c_var\")) //virgola in pi\u00f9\n{}\nvoid\nNeckValue::initialize()\n{\n_c_var = getParam<std::vector>(\"c_var\");\n}\nvoid\nNeckValue::execute()\n{\ncomputeValue();\n}\nReal NeckValue::computeValue() {\nconst VectorPostprocessorValue & _c_var = getVectorPostprocessorValueByName(getParam(\"vpp\"),getParamstd::string(\"vector_name\"));\nfor (unsigned int i = 0; i < _c_var.size(); i++)\n{\nif (std::abs(_c_var[i] - _threshold) < _tolerance)\n{\n  _value = _c_var[i]; \n\n[ ]\n  _index = i;\n\n  _true_neck = (_index * 0.303); \n\n  break; \n}  \n\n}\nreturn _true_neck; \n\n}\nPostprocessorValue NeckValue::getValue() const\n{\nreturn _true_neck;\n}",
+                  "url": "https://github.com/idaholab/moose/discussions/28827#discussioncomment-10976668",
+                  "updatedAt": "2024-10-17T22:17:09Z",
+                  "publishedAt": "2024-10-17T22:17:08Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "ok so what must be happening is that the postprocessor is executed before the VPP\nso to fix that, use execution_order_groups (a parameter for both PPs, VPPs and UOs), and set the PP to be executed after the VPP",
+                          "url": "https://github.com/idaholab/moose/discussions/28827#discussioncomment-10976679",
+                          "updatedAt": "2024-10-17T22:19:39Z",
+                          "publishedAt": "2024-10-17T22:19:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "TFdvd"
+                          },
+                          "bodyText": "Perhaps I have not understood your point of view.\nThe VPP has to be executed first in order to provide the data to the PP afterwards.\nIf it is a matter of using execution_order_groups anyway, could you explain how to do that? Thanks in advance",
+                          "url": "https://github.com/idaholab/moose/discussions/28827#discussioncomment-10976717",
+                          "updatedAt": "2024-10-17T22:26:38Z",
+                          "publishedAt": "2024-10-17T22:26:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "in the VPP set\nexecution_order_group = 0\nin the PP set\nexecution_order_group = 1\nthat should work",
+                          "url": "https://github.com/idaholab/moose/discussions/28827#discussioncomment-10976732",
+                          "updatedAt": "2024-10-17T22:30:20Z",
+                          "publishedAt": "2024-10-17T22:30:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "TFdvd"
+                          },
+                          "bodyText": "You're right!! Thank a lot @GiudGiud",
+                          "url": "https://github.com/idaholab/moose/discussions/28827#discussioncomment-10976857",
+                          "updatedAt": "2024-10-17T22:58:16Z",
+                          "publishedAt": "2024-10-17T22:58:15Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,974 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMi0xMC0wN1QwNDo1NjowNS0wNTowMM4AQ5E_"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Question about the PETSc options",
+          "author": {
+            "login": "Ethan-xj"
+          },
+          "bodyText": "I used a strange method to write a PDE which contains the variables of different blocks in Kernel.\nBut it shows Linear solve did not converge due to DIVERGED_BREAKDOWN in terminal. I'm trying to figure out where the problem is.\nI guess maybe the method is wrong or the form of the PDE is wrong.\nI noticed there is a PETSc options -pc_type svd -pc_svd_monitor in NonlinearSystemBase. And it says \"You can inspect the condition number of your preconditioning matrix for small problems (should be less than 1000 degrees of freedom) by running it\". I'm wondering if this option can show the form of the PDE is true or false. I want to know if this can do what I want and how to use this PETSc option?",
+          "url": "https://github.com/idaholab/moose/discussions/22344",
+          "updatedAt": "2022-10-11T01:16:38Z",
+          "publishedAt": "2022-10-10T08:27:21Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYou pass these parameters to petsc_options_iname and petsc_options_ivalue in the Executioner block.\nThis wont tell you if the PDE is written properly or not, but it will roughly tell you if it's solvable. If the conditioning is decent, PETSc has generally no trouble solving the linear problems.\nIf you want to test if you implemented the PDE right you need to perform a verification procedure.\nI ll paste here @hugary1995 's excellent suggestions from another post:\n In FEM code, typically two methods are used for the verification stage in code development\n\nPatch test: You'll need to setup a problem that is as simple as possible in which the analytical solution is known, and the solution can\nbe exactly matched by the basis function of your choice. For example, you can create a single-element cube, apply Dirichlet BC on\n one side, and apply Neumann BC on the opposite side. By applying your kernels one at a time, you can easily match the numerical\n solution (given by MOOSE) with the analytical solution.\n\nMethod of manufactured solution: This method is documented here https://mooseframework.inl.gov/python/mms.html. In essence, you\n will first manufacture an arbitrary, non-homogeneous solution, and then work your way back to derive the corresponding \"body force\"\n that would result in the manufactured solution. Even if the manufactured solution can't be exactly represented on the basis function\n of your choice, you should still see optimal order of convergence by looking at the appropriate error measure.\n\nAnother concern is whether you implemented the jacobian right (did you use AD? If so dont worry about that part).\nThis page has resources for checking this:\nhttps://mooseframework.inl.gov/help/development/analyze_jacobian.html",
+                  "url": "https://github.com/idaholab/moose/discussions/22344#discussioncomment-3839872",
+                  "updatedAt": "2022-10-10T14:19:19Z",
+                  "publishedAt": "2022-10-10T14:17:18Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Ethan-xj"
+                          },
+                          "bodyText": "Yes I've used AD. Thank you!\nI think I should test if I implemented the PDE right first.",
+                          "url": "https://github.com/idaholab/moose/discussions/22344#discussioncomment-3843922",
+                          "updatedAt": "2022-10-11T01:16:36Z",
+                          "publishedAt": "2022-10-11T01:16:36Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Materials in FV volume kernel",
+          "author": {
+            "login": "heinono1"
+          },
+          "bodyText": "I am setting up some kernels for a FV problem. In one kernel, I need to access materials properties for a volume contribution to the residual. So I have InputParameters:\nInputParameters\nMyFVVolumeKernel::validParams()\n{\nInputParameters params = FVElementalKernel::validParams();\n..\nparams.addRequired<MooseFunctorName>(\"Km\", \"materials property\");\n....\nreturn params;\n}\n\nand later\n\nMyFVVolumeKernel::MyFVVolumeKernel(const inputParameters & parameters):FVElementalKernel(parameters),\n...\n_Km(getFunctor<ADRreal>(\"Km\"),\n..\n\nand for the residual\nADReal\nMyFVVolumeKernel::computeQPResidual()\n{\nreturn _Km[_qp]*u[_qp];\n}\n\nThe problem I have seems to be that I cannot evaluate _Km at quadrature points - the error when I compile is\n\"no match for 'operator[]'\"\nHow can I fix this?\nThanks!",
+          "url": "https://github.com/idaholab/moose/discussions/22350",
+          "updatedAt": "2022-10-10T23:13:16Z",
+          "publishedAt": "2022-10-10T19:34:22Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nFunctions and functors cant be access with []. Functions use .value(), functors use ()\nWe access functors by passing arguments, see some examples in Navier Stokes or in the framework.\nA Qp, a face, an element or a position are all accepted arguments\nhttps://github.com/idaholab/moose/blob/next/framework/src/auxkernels/FunctorElementalAux.C\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22350#discussioncomment-3842472",
+                  "updatedAt": "2022-10-10T21:28:59Z",
+                  "publishedAt": "2022-10-10T20:07:45Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "heinono1"
+                  },
+                  "bodyText": "Ah, got you.\n\nThanks, Guillaume!\n\u2026\nOn Mon, Oct 10, 2022 at 3:07 PM Guillaume Giudicelli < ***@***.***> wrote:\n Hello\n\n Functions cant be access with [].\n We access functors by passing arguments, see some examples in Navier\n Stokes or in the framework.\n A Qp, a face, an element or a position are all accepted arguments\n\n\n https://github.com/idaholab/moose/blob/next/framework/src/auxkernels/FunctorElementalAux.C\n\n Guillaume\n\n \u2014\n Reply to this email directly, view it on GitHub\n <#22350 (comment)>,\n or unsubscribe\n <https://github.com/notifications/unsubscribe-auth/AEKZEF4KAT2B4PCZN6JVZNDWCRZRZANCNFSM6AAAAAARBT3F2Q>\n .\n You are receiving this because you authored the thread.Message ID:\n ***@***.***>\n\n\n-- \nOlle Heinonen\n***@***.***",
+                  "url": "https://github.com/idaholab/moose/discussions/22350#discussioncomment-3842918",
+                  "updatedAt": "2022-10-10T21:19:59Z",
+                  "publishedAt": "2022-10-10T21:19:58Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Error in ThreadedElementLoopBase dependent on number of nodes",
+          "author": {
+            "login": "czadeh"
+          },
+          "bodyText": "Hi,\nSorry for all the posts recently about this issue, but I need to figure out why my program runs sometimes but fails other times.\nPosts: #22033 #22287\nI have no problems with compiling my project with a derivative size of 400.\nI have a minimal input file that I use for testing.\n\n3D rectangular mesh\nThe main variable, temperature, is set according to a parsed function to create a linear range across the x-axis.\nI use NullKernel for temperature so there is no change.\nMy custom material property is coupled to temperature.\n\nIf I run the input file with\n\nnx = 10\nny = 5\nnz = 3\n\neverything runs fine.\nIf I change it to\n\nnx = 100\nny = 50\nnz = 25\n\nthen I get\n*** ERROR ***\nWe caught a MetaPhysicL error in ThreadedElementLoopBase. This is very likely due to AD not having a sufficiently large derivative container size. Please run MOOSE configure with the '--with-derivative-size=' option\n\nI compiled the debugging executable and ran gdb with a breakpoint set on MPI_Abort. gdb returns this:\nStack frames: 21\n0: libMesh::print_trace(std::ostream&)\n1: moose::internal::mooseErrorRaw(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >)\n2: void mooseError<char const (&) [219]>(char const (&) [219])\n3: ThreadedElementLoopBase<libMesh::StoredRange<libMesh::MeshBase::const_element_iterator, libMesh::Elem const*> >::operator()(libMesh::StoredRange<libMesh::MeshBase::const_element_iterator, libMesh::Elem const*> const&, bool)\n4: /home/cameron/projects/moose/framework/libmoose-dbg.so.0(+0x1002bd9) [0x7ffff55dbbd9]\n5: void AuxiliarySystem::computeElementalVarsHelper<AuxKernelTempl<double> >(MooseObjectWarehouse<AuxKernelTempl<double> > const&, std::vector<std::vector<MooseVariableFieldBase*, std::allocator<MooseVariableFieldBase*> >, std::allocator<std::vector<MooseVariableFieldBase*, std::allocator<MooseVariableFieldBase*> > > > const&)\n6: AuxiliarySystem::computeElementalVars(MooseEnumItem)\n7: AuxiliarySystem::compute(MooseEnumItem)\n8: FEProblemBase::computeAuxiliaryKernels(MooseEnumItem const&)\n9: FEProblemBase::execute(MooseEnumItem const&)\n10: FixedPointSolve::solveStep(double&, double&, std::set<unsigned long, std::less<unsigned long>, std::allocator<unsigned long> > const&)\n11: FixedPointSolve::solve()\n12: TimeStepper::step()\n13: Transient::takeStep(double)\n14: Transient::execute()\n15: MooseApp::executeExecutioner()\n16: MooseApp::run()\n17: main\n18: /lib/x86_64-linux-gnu/libc.so.6(+0x29d90) [0x7fffeb699d90]\n19: __libc_start_main\n20: /home/cameron/projects/turtle/turtle-dbg(+0x3079) [0x555555557079]\n\nThread 1 \"turtle-dbg\" hit Breakpoint 1, 0x00007fffeba89820 in PMPI_Abort () from /home/cameron/mambaforge3/envs/moose/lib/libmpi.so.12\n\nI also got the back trace, copied below:\n#0  0x00007fffeba89820 in PMPI_Abort ()\n   from /home/cameron/mambaforge3/envs/moose/lib/libmpi.so.12\n#1  0x00007ffff67ecffe in moose::internal::mooseErrorRaw (msg=..., prefix=...)\n    at /home/cameron/projects/moose/framework/src/base/MooseError.C:83\n#2  0x00007ffff55742c1 in mooseError<char const (&) [219]> ()\n    at /home/cameron/projects/moose/framework/build/header_symlinks/MooseError.h:256\n#3  0x00007ffff556ef90 in ThreadedElementLoopBase<libMesh::StoredRange<libMesh::MeshBase::const_element_iterator, libMesh::Elem const*> >::operator() (this=0x7fffffffb050, range=..., \n    bypass_threading=false)\n    at /home/cameron/projects/moose/framework/build/header_symlinks/ThreadedElementLoopBase.h:283\n#4  0x00007ffff55dbbd9 in libMesh::Threads::parallel_reduce<libMesh::StoredRange<libMesh::MeshBase::const_element_iterator, libMesh::Elem const*>, ComputeElemAuxVarsThread<AuxKernelTempl<double> > > (range=..., body=...)\n    at /home/cameron/mambaforge3/envs/moose/libmesh/include/libmesh/threads_pthread.h:380\n#5  0x00007ffff557f4c9 in AuxiliarySystem::computeElementalVarsHelper<AuxKernelTempl<double> > (this=0x55555a006fa0, warehouse=..., vars=...)\n    at /home/cameron/projects/moose/framework/src/systems/AuxiliarySystem.C:863\n#6  0x00007ffff557eb20 in AuxiliarySystem::computeElementalVars (this=0x55555a006fa0, \n    type=...) at /home/cameron/projects/moose/framework/src/systems/AuxiliarySystem.C:789\n#7  0x00007ffff557b4fc in AuxiliarySystem::compute (this=0x55555a006fa0, type=...)\n    at /home/cameron/projects/moose/framework/src/systems/AuxiliarySystem.C:463\n#8  0x00007ffff5e03fe2 in FEProblemBase::computeAuxiliaryKernels (this=0x5555597fd1d0, \n    type=...) at /home/cameron/projects/moose/framework/src/problems/FEProblemBase.C:3852\n#9  0x00007ffff5e03f23 in FEProblemBase::execute (this=0x5555597fd1d0, exec_type=...)\n    at /home/cameron/projects/moose/framework/src/problems/FEProblemBase.C:3840\n#10 0x00007ffff5467d83 in FixedPointSolve::solveStep (this=0x5555559004a0, \n    begin_norm=@0x555559ec02d0: 0, end_norm=@0x55555f3ddc60: 0, transformed_dofs=...)\n    at /home/cameron/projects/moose/framework/src/executioners/FixedPointSolve.C:424\n#11 0x00007ffff5466ec4 in FixedPointSolve::solve (this=0x5555559004a0)\n    at /home/cameron/projects/moose/framework/src/executioners/FixedPointSolve.C:274\n#12 0x00007ffff4f9cf68 in TimeStepper::step (this=0x555559db7510)\n    at /home/cameron/projects/moose/framework/src/timesteppers/TimeStepper.C:162\n#13 0x00007ffff547643c in Transient::takeStep (this=0x55555a046bb0, input_dt=-1)\n    at /home/cameron/projects/moose/framework/src/executioners/Transient.C:444\n#14 0x00007ffff547576c in Transient::execute (this=0x55555a046bb0)\n    at /home/cameron/projects/moose/framework/src/executioners/Transient.C:329\n#15 0x00007ffff68884e8 in MooseApp::executeExecutioner (this=0x5555556ec970)\n    at /home/cameron/projects/moose/framework/src/base/MooseApp.C:1097\n#16 0x00007ffff688b4d0 in MooseApp::run (this=0x5555556ec970)\n    at /home/cameron/projects/moose/framework/src/base/MooseApp.C:1402\n#17 0x0000555555557745 in main (argc=3, argv=0x7fffffffc288)\n    at /home/cameron/projects/turtle/src/main.C:33\n\nI tried to figure out what the error was caused by, but I had difficulty in understanding the back trace output. Do you know what it could mean?\nThanks,\nCameron",
+          "url": "https://github.com/idaholab/moose/discussions/22313",
+          "updatedAt": "2022-10-10T18:51:02Z",
+          "publishedAt": "2022-10-05T19:59:48Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "Attaching the input file would help.\nSounds like you'd want to define temperature as an aux variable. Then removing the null kernel should fix this issue.",
+                  "url": "https://github.com/idaholab/moose/discussions/22313#discussioncomment-3810227",
+                  "updatedAt": "2022-10-06T02:00:23Z",
+                  "publishedAt": "2022-10-06T02:00:22Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "czadeh"
+                          },
+                          "bodyText": "I could attach the input file, but it is dependent on a custom material property I created. Could I send you both privately?\nI did that and it can run with those settings, but I need it to be able to run when temperature is a Variable being solved with PJFNK.",
+                          "url": "https://github.com/idaholab/moose/discussions/22313#discussioncomment-3816318",
+                          "updatedAt": "2022-10-06T16:49:03Z",
+                          "publishedAt": "2022-10-06T16:48:57Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "So you said\n\nI have a minimal input file that I use for testing.\n\nI think we need to first make sure this \"minimal input file\" is a faithful representation of the actual model you will be running. For example, in your real model, you won't be using NullKernel for the temperature, and the NullKernel is probably the exact thing that causes the errors you see using your \"minimal input file\". In other words, do you see the same errors when you run the actual model? If not, there is no point in debugging this minimal input file.\n\nI could attach the input file, but it is dependent on a custom material property I created. Could I send you both privately?\n\nYou can just attach the \"minimal input file\" and remove anything that you want to keep private.",
+                          "url": "https://github.com/idaholab/moose/discussions/22313#discussioncomment-3816565",
+                          "updatedAt": "2022-10-06T17:19:21Z",
+                          "publishedAt": "2022-10-06T17:19:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "czadeh"
+                          },
+                          "bodyText": "In my full input file, I have:\n\nTemperature with ADHeatConduction and ADHeatConductionTimeDerivative kernels.\nADMatHeatSource working with FunctionPathEllipsoidHeatSource and some parsed functions\na custom material property that provides specific heat, thermal conductivity, and density\na custom material property for crystallinity fraction - this is the part that causes problems\nA porosity variable solved by a custom kernel\nADNeumannBC and ADDirichletBC\nFull SMP preconditioning\nTransient executioner\n\nAnd when the mesh has 100 * 50 * 25 nodes, it gives me the error.\nIf I run it with 10 * 5 * 5 nodes, I get low resolution results that qualitatively appear correct.\nIf I try to run it without the crystallinity material property and with a high number of nodes, it runs fine. So that seems to narrow it down to this material property, which is why I thought I could isolate it into a more minimal file.\nMy minimal input file is not a faithful representation of the full model I will need. But I see the same error occur in the full model and the minimal model.\nHowever, I can go through the debugging and back trace steps with my full model if you think that would be better.",
+                          "url": "https://github.com/idaholab/moose/discussions/22313#discussioncomment-3816812",
+                          "updatedAt": "2022-10-06T17:58:56Z",
+                          "publishedAt": "2022-10-06T17:58:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Okay, thanks for the detailed information. Yeah, this is an odd one -- the MetaPhysicL exception is only thrown when the mesh gets large...\nThe only possibility I can think of is when your mesh gets more refined, the temperature and porosity variables get more resolution, and at certain quadrature point their values trigger the MetaPhysicL exception. You probably have log of a negative number or something like that somewhere in your material. Does that ring a bell?",
+                          "url": "https://github.com/idaholab/moose/discussions/22313#discussioncomment-3817670",
+                          "updatedAt": "2022-10-06T20:21:22Z",
+                          "publishedAt": "2022-10-06T20:21:21Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Errr, now I see you got the same answer from @lindsayad in #22033\nI don't think opening a duplicate post is a wise choice.",
+                          "url": "https://github.com/idaholab/moose/discussions/22313#discussioncomment-3817685",
+                          "updatedAt": "2022-10-06T20:24:09Z",
+                          "publishedAt": "2022-10-06T20:24:08Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "why is the auxiliary system returning an AD error though? in the backtrace\nAuxiliarySystem::computeElementalVarsHelper<AuxKernelTempl<double> > (this=0x55555a006fa0, warehouse=..., vars=...) at /home/cameron/projects/moose/framework/src/systems/AuxiliarySystem.C:863\nI d like to see smallest input file that fails",
+                          "url": "https://github.com/idaholab/moose/discussions/22313#discussioncomment-3818116",
+                          "updatedAt": "2022-10-06T21:50:41Z",
+                          "publishedAt": "2022-10-06T21:50:40Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "czadeh"
+                          },
+                          "bodyText": "You probably have log of a negative number or something like that somewhere in your material. Does that ring a bell?\n\nLog of a negative number and divide by zero were problems that I had before. But now I have bounds on my functions to prevent that from happening. Also, the debugger told me when I had those errors. Now, the back trace is more opaque.\n\nI don't think opening a duplicate post is a wise choice.\n\nI apologize, I wasn't sure if I should add to a thread after it had been answered. And I thought this may have been different enough to warrant a new post.\nI did try what @lindsayad suggested and I got this:\nThread 1 \"turtle-dbg\" hit Catchpoint 2 (exception thrown), __cxxabiv1::__cxa_throw (obj=0x555562267210, tinfo=0x7ffff7f97190 <typeinfo for MetaPhysicL::LogicError>, dest=0x7ffff7f015dc <MetaPhysicL::LogicError::~LogicError()>) at ../../../../libstdc++-v3/libsupc++/eh_throw.cc:80\n80\t../../../../libstdc++-v3/libsupc++/eh_throw.cc: No such file or directory.\n\n\nI d like to see smallest input file that fails\n\nHere is what I can provide apart from the custom material property. I just don't want to post it publicly at this point, but I don't mind sharing it privately.\n[Mesh]\n  type = GeneratedMesh\n  dim = 3\n  nx = 100\n  ny = 50\n  nz = 30\n  xmax = 1e-3 #meters\n  ymax = 0.5e-3\n  zmax = 0.25e-3\n[]\n[Variables]\n  [T]\n  []\n[]\n[ICs]\n  [functionIC]\n    type = FunctionIC\n    variable = T\n    function = parsedFunc\n  []\n[]\n[Functions]\n  [parsedFunc]\n    type = ParsedFunction\n    value = '430 + 20000*x'\n  []\n[]\n[Materials]\n  [CrystallinityModel]\n  (removed)\n  []\n[]\n[Kernels]\n  [nothing]\n    type = NullKernel\n    variable = T\n  []\n[]\n[Preconditioning]\n  [full]\n    type = SMP\n    full = true\n  []\n[]\n[Executioner]\n  type = Transient\n  solve_type = PJFNK\n  num_steps = 1e3\n  dt = 1e-5\n[]\n[Outputs]\n  exodus = true\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/22313#discussioncomment-3818196",
+                          "updatedAt": "2022-10-06T22:11:22Z",
+                          "publishedAt": "2022-10-06T22:11:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "why is the auxiliary system returning an AD error though?\n\nCould be material property aux.",
+                          "url": "https://github.com/idaholab/moose/discussions/22313#discussioncomment-3818199",
+                          "updatedAt": "2022-10-06T22:12:46Z",
+                          "publishedAt": "2022-10-06T22:12:45Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "I did try what @lindsayad suggested and I got this:\n\nIt looks like you were on the right track. You just need to print a backtrace and go up your stack to where the exception is being thrown",
+                          "url": "https://github.com/idaholab/moose/discussions/22313#discussioncomment-3818249",
+                          "updatedAt": "2022-10-06T22:21:57Z",
+                          "publishedAt": "2022-10-06T22:21:56Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "Don't worry about the No such file or directory warning",
+                          "url": "https://github.com/idaholab/moose/discussions/22313#discussioncomment-3818254",
+                          "updatedAt": "2022-10-06T22:22:40Z",
+                          "publishedAt": "2022-10-06T22:22:40Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Feasibility in Random Vibration Analysis",
+          "author": {
+            "login": "Krystalfang"
+          },
+          "bodyText": "Dear experts\uff0c\nI've been trying to do random vibration analysis with moose recently\uff0cspecific description is\uff1aapply an acceleration power spectral density function to the sample, under given conditions, through the acceleration PSD response curve of the test sample at its typical position.\nI would like to ask, can MOOSE fulfill this requirement?\nThanks,\nKrystal",
+          "url": "https://github.com/idaholab/moose/discussions/22335",
+          "updatedAt": "2022-10-11T21:38:04Z",
+          "publishedAt": "2022-10-08T11:55:20Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@bwspenc  @cbolisetti",
+                  "url": "https://github.com/idaholab/moose/discussions/22335#discussioncomment-3829051",
+                  "updatedAt": "2022-10-08T14:25:55Z",
+                  "publishedAt": "2022-10-08T14:25:55Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "cbolisetti"
+                  },
+                  "bodyText": "Hi @Krystalfang, currently, we can only perform response history analyses in MOOSE. Unfortunately, we cannot perform frequency-domain simulations (or eigen value analysis), which would be needed for RVA.",
+                  "url": "https://github.com/idaholab/moose/discussions/22335#discussioncomment-3841479",
+                  "updatedAt": "2022-10-10T17:24:42Z",
+                  "publishedAt": "2022-10-10T17:24:41Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Using isopod alongside another app (outside of MOOSE)",
+          "author": {
+            "login": "mangerij"
+          },
+          "bodyText": "Hi,\nI'd like to call some of Isopod's objects in an experimental Ferret branch. If I clone it along side moose in the same folder (/projects/moose and /projects/ferret and projects/isopod), how do I modify Ferret's makefile for this?\nThanks",
+          "url": "https://github.com/idaholab/moose/discussions/22168",
+          "updatedAt": "2022-10-10T14:08:33Z",
+          "publishedAt": "2022-09-22T13:54:29Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nEasy solution is to copy all of Ferret into isopod. Just copy all the src and headers, and re-register all objects.\nOther solutions:\n\n\ntry to get dynamic loading to work. This is the (limited) docs for it\nhttps://mooseframework.inl.gov/moose/source/actions/DynamicObjectRegistrationAction.html\n\n\nbuild a combined other application (with both other apps and moose as submodules).\nThere s advice on this here:\n#21980\n\n\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22168#discussioncomment-3710855",
+                  "updatedAt": "2022-09-22T16:08:33Z",
+                  "publishedAt": "2022-09-22T16:08:32Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "permcody"
+                  },
+                  "bodyText": "John, do you have access to one of the other applications that combines more than one sub-application? Generally you can add about 3-4 lines to your Makefile to pull this off. Something like the following inserted before the final executable block:\nAPPLICATION_DIR    := <directory>\nAPPLICATION_NAME   := <application name>\ninclude            $(FRAMEWORK_DIR)/app.mk",
+                  "url": "https://github.com/idaholab/moose/discussions/22168#discussioncomment-3711449",
+                  "updatedAt": "2022-09-22T17:31:18Z",
+                  "publishedAt": "2022-09-22T17:31:17Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "You also need to modify the base/XXXApp.C to register the objects",
+                          "url": "https://github.com/idaholab/moose/discussions/22168#discussioncomment-3725549",
+                          "updatedAt": "2022-09-25T01:21:23Z",
+                          "publishedAt": "2022-09-25T01:21:22Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "mangerij"
+                  },
+                  "bodyText": "Thanks guys!",
+                  "url": "https://github.com/idaholab/moose/discussions/22168#discussioncomment-3722203",
+                  "updatedAt": "2022-09-24T07:33:36Z",
+                  "publishedAt": "2022-09-24T07:33:34Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "also in case no one mentioned this before, the optimization module in a PR in MOOSE right is isopod",
+                          "url": "https://github.com/idaholab/moose/discussions/22168#discussioncomment-3839792",
+                          "updatedAt": "2022-10-10T14:08:09Z",
+                          "publishedAt": "2022-10-10T14:08:09Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "#21887",
+                          "url": "https://github.com/idaholab/moose/discussions/22168#discussioncomment-3839797",
+                          "updatedAt": "2022-10-10T14:08:33Z",
+                          "publishedAt": "2022-10-10T14:08:32Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "'not converge due to DIVERGED_FNORM_NAN' when increasing processors",
+          "author": {
+            "login": "RECHOA"
+          },
+          "bodyText": "Hi all,\nWhen i run my case by using 30 processors (mpiexec -n 30 ), it could converge sucessfully.\nHowever, when i increased the number of processors to 60  (mpiexec -n 60 ),  it shows Nonlinear solve did not converge due to DIVERGED_FNORM_NAN iterations 0 and then failed. What's more, it shows Warning in PenetrationLocator which did not appear when using 30 processors:\n *** Warning ***\nWarning in PenetrationLocator. Penetration is not detected for one or more secondary nodes. This could be because those secondary nodes simply do not project to faces on the primary surface. However, this could also be because contact should be enforced on those nodes, but the faces that they project to are outside the contact patch, which will give an erroneous result. Use appropriate options for 'patch_size' and 'patch_update_strategy' in the Mesh block to avoid this issue. Setting 'patch_update_strategy=iteration' is recommended because it completely avoids this potential issue. Also note that this warning is printed only once, so a similar situation could occur multiple times during the simulation but this warning is printed only at the first occurrence.\n\nHere is my result log of running my case by using  60 processors:\n\n\ufffd[36m\n*** Info ***\nTensorMechanics Action: selecting 'total small strain' formulation. Use `incremental = true` to select 'incremental small strain' instead.\ufffd[39m\nSetting Up\n  Setting Up Options.....                                                                [\ufffd[33m 37.46 s\ufffd[39m] [\ufffd[33m  129 MB\ufffd[39m]\n  Setting Mesh\n    Reading Mesh.                                                                        [\ufffd[33m 19.93 s\ufffd[39m] [\ufffd[33m  404 MB\ufffd[39m]\n  Finished Setting Mesh                                                                  [\ufffd[33m 23.20 s\ufffd[39m] [\ufffd[33m  756 MB\ufffd[39m]\n\n\ufffd[36m\n*** Info ***\nNeither the `reference_residual_variables` nor `reference_vector` parameter is specified for `ReferenceResidualProblem`, which means that no reference quantites are set. Because of this, the standard technique of comparing the norm of the full residual vector with its initial value will be used.\ufffd[39m\n  Finished Building Node To Elem Map                                                     [\ufffd[33m  1.51 s\ufffd[39m] [\ufffd[33m  129 MB\ufffd[39m]\n\n\ufffd[33m\n*** Warning, This code is deprecated and will be removed in future versions:\nThe parameter component is deprecated.\nThis parameter is no longer necessary\ufffd[39m\n\nStill Setting Up.............\n  Initializing\n    Initializing Equation Systems\n      Finished Building Node To Elem Map                                                 [\ufffd[33m  1.53 s\ufffd[39m] [\ufffd[33m  123 MB\ufffd[39m]\n    Still Initializing Equation Systems.                                                 [\ufffd[33m 21.10 s\ufffd[39m] [\ufffd[33m  377 MB\ufffd[39m]\n    Initializing Displaced Equation System                                               [\ufffd[33m 13.14 s\ufffd[39m] [\ufffd[33m  187 MB\ufffd[39m]\n  Finished Initializing                                                                  [\ufffd[33m 40.86 s\ufffd[39m] [\ufffd[33m  574 MB\ufffd[39m]\nFinished Setting Up                                                                      [\ufffd[33m183.19 s\ufffd[39m] [\ufffd[33m 2168 MB\ufffd[39m]\n\nFramework Information:\nMOOSE Version:           git commit ccf25ce on 2022-07-13\nLibMesh Version:         \nPETSc Version:           3.16.5\nSLEPc Version:           3.16.2\nCurrent Time:            Tue Oct  4 19:44:25 2022\nExecutable Timestamp:    Wed Sep 28 01:14:29 2022\n\nParallelism:\n  Num Processors:          60\n  Num Threads:             1\n\nMesh: \n  Parallel Type:           replicated\n  Mesh Dimension:          3\n  Spatial Dimension:       3\n  Nodes:                   \n    Total:                 523394\n    Local:                 9037\n    Min/Max/Avg:           6857/9115/8723\n  Elems:                   \n    Total:                 1322815\n    Local:                 22040\n    Min/Max/Avg:           21253/28390/22046\n  Num Subdomains:          1049\n  Num Partitions:          60\n  Partitioner:             metis\n\nNonlinear System:\n  Num DOFs:                2093576\n  Num Local DOFs:          36148\n  Variables:               { \"temp\" \"disp_x\" \"disp_y\" \"disp_z\" } \n  Finite Element Types:    \"LAGRANGE\" \n  Approximation Orders:    \"FIRST\" \n\nAuxiliary System:\n  Num DOFs:                29872691\n  Num Local DOFs:          498988\n  Variables:               { \"fast_neutron_fluence\" \"baf\" \"strain_xx\" \"strain_yy\" \"strain_zz\" ... \"stress_zz\" \n                             \"hoop_stress_bees\" \"hoop_strain_bees\" \"radial_strain_bees\" \"thermal_conductivity\" \n                             } \"rad_disp\" { \"vonmises\" \"maxPrincipal_stress\" \"creep_strain\" \"thermal_strain\" \n                             \"swell_strain\" \"Weibull_failure_probability\" \"Pdpenetration_depth\" \"qpoint_penetration\" \n                             \"paired_temp\" } { \"penetration\" \"contact_pressure\" \"nodal_area_pellet_clad_mechanical\" \n                             } \n  Finite Element Types:    \"MONOMIAL\" \"LAGRANGE\" \"MONOMIAL\" \"LAGRANGE\" \n  Approximation Orders:    \"CONSTANT\" \"FIRST\" \"CONSTANT\" \"FIRST\" \n\nExecution Information:\n  Executioner:             Transient\n  TimeStepper:             FunctionDT\n  Solver Mode:             Preconditioned JFNK\n  MOOSE Preconditioner:    SMP\n\n\ufffd[31mLEGACY MODES ENABLED:\ufffd[39m\n This application uses the legacy material output option: material properties are output only on TIMESTEP_END, not INITIAL. To remove this message, set 'use_legacy_material_output' to false in this application. If there are gold output files that contain material property output for which output occurs on INITIAL, then these will generate diffs due to zero values being stored, and these tests should be re-golded.\n\ufffd[39m\n\n\n\n    Setting Up Materials\n      Computing Initial Material Values                                                  [\ufffd[33m 10.37 s\ufffd[39m] [\ufffd[33m10050 MB\ufffd[39m]\n    Finished Setting Up Materials                                                        [\ufffd[33m 10.44 s\ufffd[39m] [\ufffd[33m10050 MB\ufffd[39m]\n    Updating Geometric Search\n      Updating Displaced GeometricSearch\n        Finding Nearest Nodes\n          Finished Building Node To Elem Map                                             [\ufffd[33m  1.53 s\ufffd[39m] [\ufffd[33m  128 MB\ufffd[39m]\n        Finished Finding Nearest Nodes                                                   [\ufffd[33m  1.53 s\ufffd[39m] [\ufffd[33m  128 MB\ufffd[39m]\n      Finished Updating Displaced GeometricSearch                                        [\ufffd[33m  1.54 s\ufffd[39m] [\ufffd[33m  128 MB\ufffd[39m]\n    Finished Updating Geometric Search                                                   [\ufffd[33m  1.54 s\ufffd[39m] [\ufffd[33m  128 MB\ufffd[39m]\n    Reinitializing Because of Geometric Search Objects..........                         [\ufffd[33m 65.89 s\ufffd[39m] [\ufffd[33m  683 MB\ufffd[39m]\n\ufffd[36msub_KernelBuffer0: \ufffd[39mParallelism:\n\ufffd[36msub_KernelBuffer0: \ufffd[39m  Num Processors:          2\n\ufffd[36msub_KernelBuffer0: \ufffd[39m  Num Threads:             1\n\ufffd[36msub_KernelBuffer0: \ufffd[39m\n\ufffd[36msub_KernelBuffer0: \ufffd[39mMesh: \n\ufffd[36msub_KernelBuffer0: \ufffd[39m  Parallel Type:           replicated\n\ufffd[36msub_KernelBuffer0: \ufffd[39m  Mesh Dimension:          3\n\ufffd[36msub_KernelBuffer0: \ufffd[39m  Spatial Dimension:       3\n\ufffd[36msub_KernelBuffer0: \ufffd[39m  Nodes:                   \n\ufffd[36msub_KernelBuffer0: \ufffd[39m    Total:                 11214\n\ufffd[36msub_KernelBuffer0: \ufffd[39m    Local:                 5607\n\ufffd[36msub_KernelBuffer0: \ufffd[39m    Min/Max/Avg:           5607/5607/5607\n\ufffd[36msub_KernelBuffer0: \ufffd[39m  Elems:                   \n\ufffd[36msub_KernelBuffer0: \ufffd[39m    Total:                 10368\n\ufffd[36msub_KernelBuffer0: \ufffd[39m    Local:                 5184\n\ufffd[36msub_KernelBuffer0: \ufffd[39m    Min/Max/Avg:           5184/5184/5184\n\ufffd[36msub_KernelBuffer0: \ufffd[39m  Num Subdomains:          12\n\ufffd[36msub_KernelBuffer0: \ufffd[39m  Num Partitions:          2\n\ufffd[36msub_KernelBuffer0: \ufffd[39m  Partitioner:             metis\n\ufffd[36msub_KernelBuffer0: \ufffd[39m\n\ufffd[36msub_KernelBuffer0: \ufffd[39mNonlinear System:\n\ufffd[36msub_KernelBuffer0: \ufffd[39m  Num DOFs:                44856\n\ufffd[36msub_KernelBuffer0: \ufffd[39m  Num Local DOFs:          22428\n\ufffd[36msub_KernelBuffer0: \ufffd[39m  Variables:               { \"temp\" \"disp_x\" \"disp_y\" \"disp_z\" } \n\ufffd[36msub_KernelBuffer0: \ufffd[39m  Finite Element Types:    \"LAGRANGE\" \n\ufffd[36msub_KernelBuffer0: \ufffd[39m  Approximation Orders:    \"FIRST\" \n\ufffd[36msub_KernelBuffer0: \ufffd[39m\n\ufffd[36msub_KernelBuffer0: \ufffd[39mAuxiliary System:\n\ufffd[36msub_KernelBuffer0: \ufffd[39m  Num DOFs:                280782\n\ufffd[36msub_KernelBuffer0: \ufffd[39m  Num Local DOFs:          140391\n\ufffd[36msub_KernelBuffer0: \ufffd[39m  Variables:               { \"fission_rate\" \"bu\" \"bu_atom\" \"fast_neutron_fluence\" \"baf\" ... \"stress_zz\" \n\ufffd[36msub_KernelBuffer0: \ufffd[39m                             \"hoop_stress_bees\" \"hoop_strain_bees\" \"radial_strain_bees\" \"thermal_conductivity\" \n\ufffd[36msub_KernelBuffer0: \ufffd[39m                             } \"rad_disp\" { \"vonmises\" \"maxPrincipal_stress\" \"creep_strain\" \"thermal_strain\" \n\ufffd[36msub_KernelBuffer0: \ufffd[39m                             \"swell_strain\" ... \"h_gas\" \"h_radiation\" \"mixture_conductivity\" \"gap_width_mechanical\" \n\ufffd[36msub_KernelBuffer0: \ufffd[39m                             \"migration_distance\" } \n\ufffd[36msub_KernelBuffer0: \ufffd[39m  Finite Element Types:    \"MONOMIAL\" \"LAGRANGE\" \"MONOMIAL\" \n\ufffd[36msub_KernelBuffer0: \ufffd[39m  Approximation Orders:    \"CONSTANT\" \"FIRST\" \"CONSTANT\" \n\ufffd[36msub_KernelBuffer0: \ufffd[39m\n\ufffd[36msub_KernelBuffer0: \ufffd[39mExecution Information:\n\ufffd[36msub_KernelBuffer0: \ufffd[39m  Executioner:             Transient\n\ufffd[36msub_KernelBuffer0: \ufffd[39m  TimeStepper:             FunctionDT\n\ufffd[36msub_KernelBuffer0: \ufffd[39m  Solver Mode:             Preconditioned JFNK\n\ufffd[36msub_KernelBuffer0: \ufffd[39m  MOOSE Preconditioner:    SMP\n\ufffd[36msub_KernelBuffer0: \ufffd[39m\n\ufffd[36msub_KernelBuffer0: \ufffd[39m\ufffd[31mLEGACY MODES ENABLED:\ufffd[39m\n\ufffd[36msub_KernelBuffer0: \ufffd[39m This application uses the legacy material output option: material properties are output only on TIMESTEP_END, not INITIAL. To remove this message, set 'use_legacy_material_output' to false in this application. If there are gold output files that contain material property output for which output occurs on INITIAL, then these will generate diffs due to zero values being stored, and these tests should be re-golded.\n\ufffd[36msub_KernelBuffer0: \ufffd[39m\ufffd[39m\n\ufffd[36msub_KernelBuffer0: \ufffd[39m\n\ufffd[36msub_KernelBuffer0: \ufffd[39mTime Step 0, time = 0\n\ufffd[36msub_KernelBuffer0: \ufffd[39m\n\ufffd[36msub_KernelBuffer0: \ufffd[39mPostprocessor Values:\n\ufffd[36msub_KernelBuffer0: \ufffd[39m+----------------+----------------+----------------+----------------+---------------------+---------------------+---------------------+---------------------+---------------------+---------------------+----------------+----------------+----------------+----------------+----------------+----------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+-------------------------+-------------------------+-------------------------+-------------------------+-------------------------+-------------------------+----------------+------------------+------------------+------------------+------------------+------------------+------------------+------------------------+------------------------+------------------------+------------------------+------------------------+------------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------------+----------------------+----------------------+----------------------+----------------------+----------------------+------------------------+------------------------+------------------------+------------------------+------------------------+------------------------+-------------------------+-------------------------+-------------------------+-------------------------+-------------------------+-------------------------+---------------------------+---------------------------+---------------------------+---------------------------+---------------------------+---------------------------+-----------------------+-----------------------+-----------------------+-----------------------+-----------------------+-----------------------+----------------+----------------+----------------+----------------+----------------+----------------+-------------------+-------------------+-------------------+-------------------+-------------------+-------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+\n\ufffd[36msub_KernelBuffer0: \ufffd[39m| time           | Day            | bu_atom        | bu_ave         | co_production_new_1 | co_production_new_2 | co_production_new_3 | co_production_new_4 | co_production_new_5 | co_production_new_6 | fgr_ratio_1    | fgr_ratio_2    | fgr_ratio_3    | fgr_ratio_4    | fgr_ratio_5    | fgr_ratio_6    | fis_gas_released_1 | fis_gas_released_2 | fis_gas_released_3 | fis_gas_released_4 | fis_gas_released_5 | fis_gas_released_6 | fission_gas_generated_1 | fission_gas_generated_2 | fission_gas_generated_3 | fission_gas_generated_4 | fission_gas_generated_5 | fission_gas_generated_6 | fission_rate   | gap_pressurePP_1 | gap_pressurePP_2 | gap_pressurePP_3 | gap_pressurePP_4 | gap_pressurePP_5 | gap_pressurePP_6 | gap_width_mechanical_1 | gap_width_mechanical_2 | gap_width_mechanical_3 | gap_width_mechanical_4 | gap_width_mechanical_5 | gap_width_mechanical_6 | h_gap_1        | h_gap_2        | h_gap_3        | h_gap_4        | h_gap_5        | h_gap_6        | h_gas_1        | h_gas_2        | h_gas_3        | h_gas_4        | h_gas_5        | h_gas_6        | h_radiation_1  | h_radiation_2  | h_radiation_3  | h_radiation_4  | h_radiation_5  | h_radiation_6  | migration_distance_1 | migration_distance_2 | migration_distance_3 | migration_distance_4 | migration_distance_5 | migration_distance_6 | mixture_conductivity_1 | mixture_conductivity_2 | mixture_conductivity_3 | mixture_conductivity_4 | mixture_conductivity_5 | mixture_conductivity_6 | rad_disp_Buffer_outer_1 | rad_disp_Buffer_outer_2 | rad_disp_Buffer_outer_3 | rad_disp_Buffer_outer_4 | rad_disp_Buffer_outer_5 | rad_disp_Buffer_outer_6 | rad_disp_IPyC_inner_ave_1 | rad_disp_IPyC_inner_ave_2 | rad_disp_IPyC_inner_ave_3 | rad_disp_IPyC_inner_ave_4 | rad_disp_IPyC_inner_ave_5 | rad_disp_IPyC_inner_ave_6 | temp_IPyC_inner_ave_1 | temp_IPyC_inner_ave_2 | temp_IPyC_inner_ave_3 | temp_IPyC_inner_ave_4 | temp_IPyC_inner_ave_5 | temp_IPyC_inner_ave_6 | temp_buffer_1  | temp_buffer_2  | temp_buffer_3  | temp_buffer_4  | temp_buffer_5  | temp_buffer_6  | temp_buffer_out_1 | temp_buffer_out_2 | temp_buffer_out_3 | temp_buffer_out_4 | temp_buffer_out_5 | temp_buffer_out_6 | temp_max_1     | temp_max_2     | temp_max_3     | temp_max_4     | temp_max_5     | temp_max_6     | volume_buffer_1| volume_buffer_2| volume_buffer_3| volume_buffer_4| volume_buffer_5| volume_buffer_6|\n\ufffd[36msub_KernelBuffer0: \ufffd[39m+----------------+----------------+----------------+----------------+---------------------+---------------------+---------------------+---------------------+---------------------+---------------------+----------------+----------------+----------------+----------------+----------------+----------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+-------------------------+-------------------------+-------------------------+-------------------------+-------------------------+-------------------------+----------------+------------------+------------------+------------------+------------------+------------------+------------------+------------------------+------------------------+------------------------+------------------------+------------------------+------------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------------+----------------------+----------------------+----------------------+----------------------+----------------------+------------------------+------------------------+------------------------+------------------------+------------------------+------------------------+-------------------------+-------------------------+-------------------------+-------------------------+-------------------------+-------------------------+---------------------------+---------------------------+---------------------------+---------------------------+---------------------------+---------------------------+-----------------------+-----------------------+-----------------------+-----------------------+-----------------------+-----------------------+----------------+----------------+----------------+----------------+----------------+----------------+-------------------+-------------------+-------------------+-------------------+-------------------+-------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+\n\ufffd[36msub_KernelBuffer0: \ufffd[39m|   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |        1.000000e-50 |        1.000000e-50 |        1.000000e-50 |        1.000000e-50 |        1.000000e-50 |        1.000000e-50 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |       0.000000e+00 |       0.000000e+00 |       0.000000e+00 |       0.000000e+00 |       0.000000e+00 |       0.000000e+00 |            0.000000e+00 |            0.000000e+00 |            0.000000e+00 |            0.000000e+00 |            0.000000e+00 |            0.000000e+00 |   0.000000e+00 |     0.000000e+00 |     0.000000e+00 |     0.000000e+00 |     0.000000e+00 |     0.000000e+00 |     0.000000e+00 |           0.000000e+00 |           0.000000e+00 |           0.000000e+00 |           0.000000e+00 |           0.000000e+00 |           0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |         0.000000e+00 |         0.000000e+00 |         0.000000e+00 |         0.000000e+00 |         0.000000e+00 |         0.000000e+00 |           0.000000e+00 |           0.000000e+00 |           0.000000e+00 |           0.000000e+00 |           0.000000e+00 |           0.000000e+00 |            0.000000e+00 |            0.000000e+00 |            0.000000e+00 |            0.000000e+00 |            0.000000e+00 |            0.000000e+00 |              0.000000e+00 |              0.000000e+00 |              0.000000e+00 |              0.000000e+00 |              0.000000e+00 |              0.000000e+00 |          0.000000e+00 |          0.000000e+00 |          0.000000e+00 |          0.000000e+00 |          0.000000e+00 |          0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |      8.000000e+02 |      8.000000e+02 |      8.000000e+02 |      8.000000e+02 |      8.000000e+02 |      8.000000e+02 |   8.000000e+02 |   8.000000e+02 |   8.000000e+02 |   8.000000e+02 |   8.000000e+02 |   8.000000e+02 |   1.033996e-10 |   1.033996e-10 |   1.033996e-10 |   1.033996e-10 |   1.033996e-10 |   1.033996e-10 |\n\ufffd[36msub_KernelBuffer0: \ufffd[39m+----------------+----------------+----------------+----------------+---------------------+---------------------+---------------------+---------------------+---------------------+---------------------+----------------+----------------+----------------+----------------+----------------+----------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+-------------------------+-------------------------+-------------------------+-------------------------+-------------------------+-------------------------+----------------+------------------+------------------+------------------+------------------+------------------+------------------+------------------------+------------------------+------------------------+------------------------+------------------------+------------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------------+----------------------+----------------------+----------------------+----------------------+----------------------+------------------------+------------------------+------------------------+------------------------+------------------------+------------------------+-------------------------+-------------------------+-------------------------+-------------------------+-------------------------+-------------------------+---------------------------+---------------------------+---------------------------+---------------------------+---------------------------+---------------------------+-----------------------+-----------------------+-----------------------+-----------------------+-----------------------+-----------------------+----------------+----------------+----------------+----------------+----------------+----------------+-------------------+-------------------+-------------------+-------------------+-------------------+-------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+\n\ufffd[36msub_KernelBuffer0: \ufffd[39m\n    Building SemiLocalElemMap.....                                                       [\ufffd[33m 36.12 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n  Still Performing Initial Setup.................\n    Computing Initial Material Properties                                                [\ufffd[33m  6.28 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n\n  Finished Performing Initial Setup                                                      [\ufffd[33m225.16 s\ufffd[39m] [\ufffd[33m10968 MB\ufffd[39m]\n\n\ufffd[33m\n*** Warning ***\n/public1/home/scb3820/new-projects/bees_new/testbees/integral/vol30/rectangle/input_FCM_vol30_cladding_test.i:19338: unused parameter 'Outputs/additional_execute_on'\n\ufffd[39m\n\n\nTime Step 0, time = 0\n\nPostprocessor Values:\n+----------------+----------------+-------------------------+-----------------------+-------------------+----------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+------------------------------+-------------------------+-------------------------+------------------------+---------------------------+---------------------------+-----------------------------+---------------------------+-----------------------------+--------------------------+----------------------------+---------------------+---------------------------+---------------------------+---------------------------+---------------------------+---------------------------+---------------------------+-----------------------+-----------------------+-----------------------+-----------------------+-----------------------+-----------------------+\n| time           | Day            | Pdpenetration_depth_max | WeibullFailure_pb_ave | ave_temp_interior | contact_pressure_max | dt             | gap_pressure_1 | gap_pressure_2 | gap_pressure_3 | gap_pressure_4 | gap_pressure_5 | gap_pressure_6 | gap_pressure_matrix_graphite | maxPrincipalStress_IPyC | maxPrincipalStress_OPyC | maxPrincipalStress_SiC | maxPrincipalStress_matrix | max_hoop_stress_bees_IPyC | max_hoop_stress_bees_IPyC01 | max_hoop_stress_bees_OPyC | max_hoop_stress_bees_OPyC01 | max_hoop_stress_bees_SiC | max_hoop_stress_bees_SiC01 | max_vonmises_matrix | rad_disp_IPyC_inner_ave_1 | rad_disp_IPyC_inner_ave_2 | rad_disp_IPyC_inner_ave_3 | rad_disp_IPyC_inner_ave_4 | rad_disp_IPyC_inner_ave_5 | rad_disp_IPyC_inner_ave_6 | temp_IPyC_inner_ave_1 | temp_IPyC_inner_ave_2 | temp_IPyC_inner_ave_3 | temp_IPyC_inner_ave_4 | temp_IPyC_inner_ave_5 | temp_IPyC_inner_ave_6 |\n+----------------+----------------+-------------------------+-----------------------+-------------------+----------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+------------------------------+-------------------------+-------------------------+------------------------+---------------------------+---------------------------+-----------------------------+---------------------------+-----------------------------+--------------------------+----------------------------+---------------------+---------------------------+---------------------------+---------------------------+---------------------------+---------------------------+---------------------------+-----------------------+-----------------------+-----------------------+-----------------------+-----------------------+-----------------------+\n|   0.000000e+00 |   0.000000e+00 |            0.000000e+00 |          0.000000e+00 |      8.000000e+02 |         0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |                 1.600000e+06 |            0.000000e+00 |            0.000000e+00 |           0.000000e+00 |              0.000000e+00 |              0.000000e+00 |                0.000000e+00 |              0.000000e+00 |                0.000000e+00 |             0.000000e+00 |               0.000000e+00 |        0.000000e+00 |              0.000000e+00 |              0.000000e+00 |              0.000000e+00 |              0.000000e+00 |              0.000000e+00 |              0.000000e+00 |          8.000000e+02 |          8.000000e+02 |          8.000000e+02 |          8.000000e+02 |          8.000000e+02 |          8.000000e+02 |\n+----------------+----------------+-------------------------+-----------------------+-------------------+----------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+------------------------------+-------------------------+-------------------------+------------------------+---------------------------+---------------------------+-----------------------------+---------------------------+-----------------------------+--------------------------+----------------------------+---------------------+---------------------------+---------------------------+---------------------------+---------------------------+---------------------------+---------------------------+-----------------------+-----------------------+-----------------------+-----------------------+-----------------------+-----------------------+\n\n\n.                                                                            [\ufffd[33m 13.01 s\ufffd[39m] [\ufffd[33m  267 MB\ufffd[39m]\n\n\nTime Step 1, time = 100, dt = 100\n\n\n    Computing Initial Residual\n      Finished Computing Residual                                                        [\ufffd[33m  8.08 s\ufffd[39m] [\ufffd[33m   25 MB\ufffd[39m]\n    Finished Computing Initial Residual                                                  [\ufffd[33m  8.08 s\ufffd[39m] [\ufffd[33m   25 MB\ufffd[39m]\n    Finished Computing Residual                                                          [\ufffd[33m  8.06 s\ufffd[39m] [\ufffd[33m    1 MB\ufffd[39m]\n\n 0 Nonlinear |R| = \ufffd[32m7.101140e+03\ufffd[39m\n\n    Computing Jacobian                                                                   [\ufffd[33m  8.45 s\ufffd[39m] [\ufffd[33m   20 MB\ufffd[39m]\n\n      0 Linear |R| = \ufffd[32m7.101140e+03\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m 10.28 s\ufffd[39m] [\ufffd[33m   79 MB\ufffd[39m]\n    Finished Computing Residual                                                          [\ufffd[33m 10.81 s\ufffd[39m] [\ufffd[33m    2 MB\ufffd[39m]\n\n      1 Linear |R| = \ufffd[32m4.733107e+02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m 12.86 s\ufffd[39m] [\ufffd[33m   -1 MB\ufffd[39m]\n\n      2 Linear |R| = \ufffd[32m4.040623e+02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m 12.66 s\ufffd[39m] [\ufffd[33m   13 MB\ufffd[39m]\n\n      3 Linear |R| = \ufffd[32m2.637210e+02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m 12.19 s\ufffd[39m] [\ufffd[33m   -1 MB\ufffd[39m]\n\n      4 Linear |R| = \ufffd[32m6.584162e+01\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m 11.92 s\ufffd[39m] [\ufffd[33m    1 MB\ufffd[39m]\n\n      5 Linear |R| = \ufffd[32m1.345540e+01\ufffd[39m\n\n Damping factor: 0.216954\n\n    Computing Residual                                                                   [\ufffd[33m 11.49 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n 1 Nonlinear |R| = \ufffd[32m5.559546e+03\ufffd[39m\n\n\ufffd[33m\n*** Warning ***\nWarning in PenetrationLocator. Penetration is not detected for one or more secondary nodes. This could be because those secondary nodes simply do not project to faces on the primary surface. However, this could also be because contact should be enforced on those nodes, but the faces that they project to are outside the contact patch, which will give an erroneous result. Use appropriate options for 'patch_size' and 'patch_update_strategy' in the Mesh block to avoid this issue. Setting 'patch_update_strategy=iteration' is recommended because it completely avoids this potential issue. Also note that this warning is printed only once, so a similar situation could occur multiple times during the simulation but this warning is printed only at the first occurrence.\ufffd[39m\n\n    Computing Jacobian                                                                   [\ufffd[33m  8.83 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      0 Linear |R| = \ufffd[32m5.559546e+03\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m 10.09 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Residual                                                          [\ufffd[33m  8.64 s\ufffd[39m] [\ufffd[33m   49 MB\ufffd[39m]\n\n      1 Linear |R| = \ufffd[32m7.295424e+02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  9.08 s\ufffd[39m] [\ufffd[33m  -49 MB\ufffd[39m]\n\n      2 Linear |R| = \ufffd[32m3.203741e+02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.57 s\ufffd[39m] [\ufffd[33m   12 MB\ufffd[39m]\n\n      3 Linear |R| = \ufffd[32m8.692981e+01\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.66 s\ufffd[39m] [\ufffd[33m  -24 MB\ufffd[39m]\n\n      4 Linear |R| = \ufffd[32m2.123357e+01\ufffd[39m\n\n Damping factor: 0.206495\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.73 s\ufffd[39m] [\ufffd[33m   62 MB\ufffd[39m]\n\n 2 Nonlinear |R| = \ufffd[32m4.409945e+03\ufffd[39m\n\n    Computing Jacobian                                                                   [\ufffd[33m  7.68 s\ufffd[39m] [\ufffd[33m  -38 MB\ufffd[39m]\n\n      0 Linear |R| = \ufffd[32m4.409945e+03\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.77 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Residual                                                          [\ufffd[33m  8.69 s\ufffd[39m] [\ufffd[33m   -1 MB\ufffd[39m]\n\n      1 Linear |R| = \ufffd[32m5.613454e+02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.71 s\ufffd[39m] [\ufffd[33m   62 MB\ufffd[39m]\n\n      2 Linear |R| = \ufffd[32m2.067775e+02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.71 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      3 Linear |R| = \ufffd[32m1.700111e+02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.73 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      4 Linear |R| = \ufffd[32m1.473045e+02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.62 s\ufffd[39m] [\ufffd[33m  -50 MB\ufffd[39m]\n\n      5 Linear |R| = \ufffd[32m1.364154e+02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.49 s\ufffd[39m] [\ufffd[33m   50 MB\ufffd[39m]\n\n      6 Linear |R| = \ufffd[32m9.275512e+01\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.54 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      7 Linear |R| = \ufffd[32m3.078867e+01\ufffd[39m\n\n Damping factor: 0.272037\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.71 s\ufffd[39m] [\ufffd[33m  -50 MB\ufffd[39m]\n\n 3 Nonlinear |R| = \ufffd[32m3.211690e+03\ufffd[39m\n\n    Computing Jacobian                                                                   [\ufffd[33m  7.89 s\ufffd[39m] [\ufffd[33m   50 MB\ufffd[39m]\n\n      0 Linear |R| = \ufffd[32m3.211690e+03\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.68 s\ufffd[39m] [\ufffd[33m   12 MB\ufffd[39m]\n    Finished Computing Residual                                                          [\ufffd[33m  8.60 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      1 Linear |R| = \ufffd[32m2.947353e+02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.48 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      2 Linear |R| = \ufffd[33m2.809886e+02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.55 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      3 Linear |R| = \ufffd[32m1.853516e+02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.69 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      4 Linear |R| = \ufffd[32m1.040928e+02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.77 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      5 Linear |R| = \ufffd[32m7.562506e+01\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.77 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      6 Linear |R| = \ufffd[32m3.515142e+01\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.74 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      7 Linear |R| = \ufffd[32m1.322248e+01\ufffd[39m\n\n Damping factor: 0.405449\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.88 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n 4 Nonlinear |R| = \ufffd[32m1.912031e+03\ufffd[39m\n\n    Computing Jacobian                                                                   [\ufffd[33m  7.69 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      0 Linear |R| = \ufffd[32m1.912031e+03\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.47 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Residual                                                          [\ufffd[33m  8.49 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      1 Linear |R| = \ufffd[32m1.061330e+03\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.65 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      2 Linear |R| = \ufffd[33m1.039777e+03\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.54 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      3 Linear |R| = \ufffd[32m9.673393e+02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.47 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      4 Linear |R| = \ufffd[33m9.189745e+02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.50 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      5 Linear |R| = \ufffd[32m7.992959e+02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.42 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      6 Linear |R| = \ufffd[33m7.781005e+02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.51 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      7 Linear |R| = \ufffd[33m7.692568e+02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.66 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      8 Linear |R| = \ufffd[32m6.018966e+02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.57 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      9 Linear |R| = \ufffd[32m2.935824e+02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.51 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n     10 Linear |R| = \ufffd[32m1.728999e+02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.53 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n     11 Linear |R| = \ufffd[32m1.231966e+02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.44 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n     12 Linear |R| = \ufffd[32m8.285344e+01\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.41 s\ufffd[39m] [\ufffd[33m    1 MB\ufffd[39m]\n\n     13 Linear |R| = \ufffd[32m4.369330e+01\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.46 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n     14 Linear |R| = \ufffd[32m2.151765e+01\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.65 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n     15 Linear |R| = \ufffd[32m1.493702e+01\ufffd[39m\n\n Damping factor: 0.162395\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.98 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n 5 Nonlinear |R| = \ufffd[33m1.846287e+03\ufffd[39m\n\n    Computing Jacobian                                                                   [\ufffd[33m  7.46 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      0 Linear |R| = \ufffd[32m1.846287e+03\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.60 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Residual                                                          [\ufffd[33m  8.42 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      1 Linear |R| = \ufffd[32m2.125358e+02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.45 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      2 Linear |R| = \ufffd[32m1.194226e+02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.51 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      3 Linear |R| = \ufffd[32m2.788589e+01\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.58 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      4 Linear |R| = \ufffd[32m6.807548e+00\ufffd[39m\n\n Damping factor: 0.712036\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.96 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n 6 Nonlinear |R| = \ufffd[32m5.297617e+02\ufffd[39m\n\n    Computing Jacobian                                                                   [\ufffd[33m  7.44 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      0 Linear |R| = \ufffd[32m5.297617e+02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.58 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Residual                                                          [\ufffd[33m  8.36 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      1 Linear |R| = \ufffd[32m1.293625e+02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.37 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      2 Linear |R| = \ufffd[32m5.937392e+01\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.45 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      3 Linear |R| = \ufffd[32m1.042647e+01\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.49 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      4 Linear |R| = \ufffd[32m2.890221e+00\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.76 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n 7 Nonlinear |R| = \ufffd[32m9.143633e+00\ufffd[39m\n\n    Computing Jacobian                                                                   [\ufffd[33m  7.41 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      0 Linear |R| = \ufffd[32m9.143633e+00\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.63 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Residual                                                          [\ufffd[33m  8.37 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      1 Linear |R| = \ufffd[33m9.138740e+00\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.39 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      2 Linear |R| = \ufffd[33m9.137914e+00\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.60 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      3 Linear |R| = \ufffd[33m8.850256e+00\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.62 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      4 Linear |R| = \ufffd[32m7.918260e+00\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  9.20 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      5 Linear |R| = \ufffd[32m5.403643e+00\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.85 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      6 Linear |R| = \ufffd[32m1.880475e+00\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  9.61 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      7 Linear |R| = \ufffd[32m8.805939e-01\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  9.98 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      8 Linear |R| = \ufffd[32m4.154774e-01\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  9.11 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      9 Linear |R| = \ufffd[32m1.657908e-01\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  9.05 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n     10 Linear |R| = \ufffd[32m5.880546e-02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  9.53 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n 8 Nonlinear |R| = \ufffd[32m8.044271e+00\ufffd[39m\n\n    Computing Jacobian                                                                   [\ufffd[33m  8.41 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      0 Linear |R| = \ufffd[32m8.044271e+00\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m 10.11 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Residual                                                          [\ufffd[33m  9.10 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      1 Linear |R| = \ufffd[33m8.042774e+00\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  9.00 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      2 Linear |R| = \ufffd[33m8.014565e+00\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.81 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      3 Linear |R| = \ufffd[32m6.778389e+00\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.75 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      4 Linear |R| = \ufffd[32m3.969138e+00\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.55 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      5 Linear |R| = \ufffd[32m1.624860e+00\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.56 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      6 Linear |R| = \ufffd[32m5.735789e-01\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.49 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      7 Linear |R| = \ufffd[32m1.518506e-01\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.50 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      8 Linear |R| = \ufffd[32m3.823038e-02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.55 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n 9 Nonlinear |R| = \ufffd[32m4.896965e+00\ufffd[39m\n\n    Computing Jacobian                                                                   [\ufffd[33m  7.85 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      0 Linear |R| = \ufffd[32m4.896965e+00\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m 10.05 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Residual                                                          [\ufffd[33m  9.35 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      1 Linear |R| = \ufffd[33m4.895973e+00\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  9.01 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      2 Linear |R| = \ufffd[33m4.781753e+00\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.49 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      3 Linear |R| = \ufffd[32m4.477534e+00\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.73 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      4 Linear |R| = \ufffd[32m3.640864e+00\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.54 s\ufffd[39m] [\ufffd[33m   23 MB\ufffd[39m]\n\n      5 Linear |R| = \ufffd[32m1.296092e+00\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.53 s\ufffd[39m] [\ufffd[33m  -23 MB\ufffd[39m]\n\n      6 Linear |R| = \ufffd[32m3.642429e-01\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.53 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      7 Linear |R| = \ufffd[32m1.821551e-01\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.55 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      8 Linear |R| = \ufffd[32m5.895436e-02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.39 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      9 Linear |R| = \ufffd[32m1.592889e-02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.40 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n10 Nonlinear |R| = \ufffd[32m1.169164e+00\ufffd[39m\n\n    Computing Jacobian                                                                   [\ufffd[33m  7.54 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      0 Linear |R| = \ufffd[32m1.169164e+00\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.64 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Residual                                                          [\ufffd[33m  8.48 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      1 Linear |R| = \ufffd[33m1.169101e+00\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.52 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      2 Linear |R| = \ufffd[32m1.072773e+00\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.53 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      3 Linear |R| = \ufffd[32m4.403432e-01\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.40 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      4 Linear |R| = \ufffd[32m1.323612e-01\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  9.80 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      5 Linear |R| = \ufffd[32m3.562316e-02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.98 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      6 Linear |R| = \ufffd[32m1.260166e-02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  9.02 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      7 Linear |R| = \ufffd[32m3.859914e-03\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.59 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n11 Nonlinear |R| = \ufffd[32m8.258105e-02\ufffd[39m\n\n    Computing Jacobian                                                                   [\ufffd[33m  7.71 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      0 Linear |R| = \ufffd[32m8.258105e-02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.65 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Residual                                                          [\ufffd[33m  8.39 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      1 Linear |R| = \ufffd[33m8.149706e-02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.41 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      2 Linear |R| = \ufffd[32m7.426298e-02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.62 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      3 Linear |R| = \ufffd[32m2.380249e-02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.61 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      4 Linear |R| = \ufffd[32m1.055988e-02\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.59 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      5 Linear |R| = \ufffd[32m3.551131e-03\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.45 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      6 Linear |R| = \ufffd[32m1.636567e-03\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.42 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      7 Linear |R| = \ufffd[32m8.344709e-04\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.36 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n      8 Linear |R| = \ufffd[32m6.296505e-04\ufffd[39m\n\n    Finished Computing Residual                                                          [\ufffd[33m  8.55 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n12 Nonlinear |R| = \ufffd[32m1.029494e-03\ufffd[39m\n\n\ufffd[32m Solve Converged!\ufffd[39m\n\n  Finished Solving                                                                       [\ufffd[33m1187.10 s\ufffd[39m] [\ufffd[33m  199 MB\ufffd[39m]\n\ufffd[36msub_KernelBuffer0: \ufffd[39m\n\ufffd[36msub_KernelBuffer0: \ufffd[39mTime Step 1, time = 100, dt = 100\n\ufffd[36msub_KernelBuffer0: \ufffd[39m 0 Nonlinear |R| = \ufffd[32m5.057001e+02\ufffd[39m\n\ufffd[36msub_KernelBuffer0: \ufffd[39m      0 Linear |R| = \ufffd[32m5.057001e+02\ufffd[39m\n\ufffd[36msub_KernelBuffer0: \ufffd[39m      1 Linear |R| = \ufffd[32m9.737720e+00\ufffd[39m\n\ufffd[36msub_KernelBuffer0: \ufffd[39m      2 Linear |R| = \ufffd[32m1.541330e-01\ufffd[39m\n\ufffd[36msub_KernelBuffer0: \ufffd[39m 1 Nonlinear |R| = \ufffd[32m4.198362e+00\ufffd[39m\n\ufffd[36msub_KernelBuffer0: \ufffd[39m      0 Linear |R| = \ufffd[32m4.198362e+00\ufffd[39m\n\ufffd[36msub_KernelBuffer0: \ufffd[39m      1 Linear |R| = \ufffd[32m1.223378e+00\ufffd[39m\n\ufffd[36msub_KernelBuffer0: \ufffd[39m      2 Linear |R| = \ufffd[32m3.815525e-03\ufffd[39m\n\ufffd[36msub_KernelBuffer0: \ufffd[39m 2 Nonlinear |R| = \ufffd[32m3.838253e-03\ufffd[39m\n\ufffd[36msub_KernelBuffer0: \ufffd[39m\ufffd[32m Solve Converged!\ufffd[39m\n\ufffd[36msub_KernelBuffer0: \ufffd[39mFinished Solving                                                                         [\ufffd[33m 11.75 s\ufffd[39m] [\ufffd[33m   18 MB\ufffd[39m]\n\ufffd[36msub_KernelBuffer0: \ufffd[39m\n\ufffd[36msub_KernelBuffer0: \ufffd[39mPostprocessor Values:\n\ufffd[36msub_KernelBuffer0: \ufffd[39m+----------------+----------------+----------------+----------------+---------------------+---------------------+---------------------+---------------------+---------------------+---------------------+----------------+----------------+----------------+----------------+----------------+----------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+-------------------------+-------------------------+-------------------------+-------------------------+-------------------------+-------------------------+----------------+------------------+------------------+------------------+------------------+------------------+------------------+------------------------+------------------------+------------------------+------------------------+------------------------+------------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------------+----------------------+----------------------+----------------------+----------------------+----------------------+------------------------+------------------------+------------------------+------------------------+------------------------+------------------------+-------------------------+-------------------------+-------------------------+-------------------------+-------------------------+-------------------------+---------------------------+---------------------------+---------------------------+---------------------------+---------------------------+---------------------------+-----------------------+-----------------------+-----------------------+-----------------------+-----------------------+-----------------------+----------------+----------------+----------------+----------------+----------------+----------------+-------------------+-------------------+-------------------+-------------------+-------------------+-------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+\n\ufffd[36msub_KernelBuffer0: \ufffd[39m| time           | Day            | bu_atom        | bu_ave         | co_production_new_1 | co_production_new_2 | co_production_new_3 | co_production_new_4 | co_production_new_5 | co_production_new_6 | fgr_ratio_1    | fgr_ratio_2    | fgr_ratio_3    | fgr_ratio_4    | fgr_ratio_5    | fgr_ratio_6    | fis_gas_released_1 | fis_gas_released_2 | fis_gas_released_3 | fis_gas_released_4 | fis_gas_released_5 | fis_gas_released_6 | fission_gas_generated_1 | fission_gas_generated_2 | fission_gas_generated_3 | fission_gas_generated_4 | fission_gas_generated_5 | fission_gas_generated_6 | fission_rate   | gap_pressurePP_1 | gap_pressurePP_2 | gap_pressurePP_3 | gap_pressurePP_4 | gap_pressurePP_5 | gap_pressurePP_6 | gap_width_mechanical_1 | gap_width_mechanical_2 | gap_width_mechanical_3 | gap_width_mechanical_4 | gap_width_mechanical_5 | gap_width_mechanical_6 | h_gap_1        | h_gap_2        | h_gap_3        | h_gap_4        | h_gap_5        | h_gap_6        | h_gas_1        | h_gas_2        | h_gas_3        | h_gas_4        | h_gas_5        | h_gas_6        | h_radiation_1  | h_radiation_2  | h_radiation_3  | h_radiation_4  | h_radiation_5  | h_radiation_6  | migration_distance_1 | migration_distance_2 | migration_distance_3 | migration_distance_4 | migration_distance_5 | migration_distance_6 | mixture_conductivity_1 | mixture_conductivity_2 | mixture_conductivity_3 | mixture_conductivity_4 | mixture_conductivity_5 | mixture_conductivity_6 | rad_disp_Buffer_outer_1 | rad_disp_Buffer_outer_2 | rad_disp_Buffer_outer_3 | rad_disp_Buffer_outer_4 | rad_disp_Buffer_outer_5 | rad_disp_Buffer_outer_6 | rad_disp_IPyC_inner_ave_1 | rad_disp_IPyC_inner_ave_2 | rad_disp_IPyC_inner_ave_3 | rad_disp_IPyC_inner_ave_4 | rad_disp_IPyC_inner_ave_5 | rad_disp_IPyC_inner_ave_6 | temp_IPyC_inner_ave_1 | temp_IPyC_inner_ave_2 | temp_IPyC_inner_ave_3 | temp_IPyC_inner_ave_4 | temp_IPyC_inner_ave_5 | temp_IPyC_inner_ave_6 | temp_buffer_1  | temp_buffer_2  | temp_buffer_3  | temp_buffer_4  | temp_buffer_5  | temp_buffer_6  | temp_buffer_out_1 | temp_buffer_out_2 | temp_buffer_out_3 | temp_buffer_out_4 | temp_buffer_out_5 | temp_buffer_out_6 | temp_max_1     | temp_max_2     | temp_max_3     | temp_max_4     | temp_max_5     | temp_max_6     | volume_buffer_1| volume_buffer_2| volume_buffer_3| volume_buffer_4| volume_buffer_5| volume_buffer_6|\n\ufffd[36msub_KernelBuffer0: \ufffd[39m+----------------+----------------+----------------+----------------+---------------------+---------------------+---------------------+---------------------+---------------------+---------------------+----------------+----------------+----------------+----------------+----------------+----------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+-------------------------+-------------------------+-------------------------+-------------------------+-------------------------+-------------------------+----------------+------------------+------------------+------------------+------------------+------------------+------------------+------------------------+------------------------+------------------------+------------------------+------------------------+------------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------------+----------------------+----------------------+----------------------+----------------------+----------------------+------------------------+------------------------+------------------------+------------------------+------------------------+------------------------+-------------------------+-------------------------+-------------------------+-------------------------+-------------------------+-------------------------+---------------------------+---------------------------+---------------------------+---------------------------+---------------------------+---------------------------+-----------------------+-----------------------+-----------------------+-----------------------+-----------------------+-----------------------+----------------+----------------+----------------+----------------+----------------+----------------+-------------------+-------------------+-------------------+-------------------+-------------------+-------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+\n\ufffd[36msub_KernelBuffer0: \ufffd[39m|   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |        1.000000e-50 |        1.000000e-50 |        1.000000e-50 |        1.000000e-50 |        1.000000e-50 |        1.000000e-50 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |       0.000000e+00 |       0.000000e+00 |       0.000000e+00 |       0.000000e+00 |       0.000000e+00 |       0.000000e+00 |            0.000000e+00 |            0.000000e+00 |            0.000000e+00 |            0.000000e+00 |            0.000000e+00 |            0.000000e+00 |   0.000000e+00 |     0.000000e+00 |     0.000000e+00 |     0.000000e+00 |     0.000000e+00 |     0.000000e+00 |     0.000000e+00 |           0.000000e+00 |           0.000000e+00 |           0.000000e+00 |           0.000000e+00 |           0.000000e+00 |           0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |         0.000000e+00 |         0.000000e+00 |         0.000000e+00 |         0.000000e+00 |         0.000000e+00 |         0.000000e+00 |           0.000000e+00 |           0.000000e+00 |           0.000000e+00 |           0.000000e+00 |           0.000000e+00 |           0.000000e+00 |            0.000000e+00 |            0.000000e+00 |            0.000000e+00 |            0.000000e+00 |            0.000000e+00 |            0.000000e+00 |              0.000000e+00 |              0.000000e+00 |              0.000000e+00 |              0.000000e+00 |              0.000000e+00 |              0.000000e+00 |          0.000000e+00 |          0.000000e+00 |          0.000000e+00 |          0.000000e+00 |          0.000000e+00 |          0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |      8.000000e+02 |      8.000000e+02 |      8.000000e+02 |      8.000000e+02 |      8.000000e+02 |      8.000000e+02 |   8.000000e+02 |   8.000000e+02 |   8.000000e+02 |   8.000000e+02 |   8.000000e+02 |   8.000000e+02 |   1.033996e-10 |   1.033996e-10 |   1.033996e-10 |   1.033996e-10 |   1.033996e-10 |   1.033996e-10 |\n\ufffd[36msub_KernelBuffer0: \ufffd[39m|   1.000000e+02 |   1.157407e-03 |   5.439275e-08 |   4.422175e-05 |       2.325852e+247 |        3.727385e-29 |        3.515693e-29 |        3.135820e-29 |       2.255289e+160 |        2.045759e-29 |   3.471804e-03 |   3.446497e-03 |   3.352640e-03 |   3.176432e-03 |   2.922845e-03 |   2.596460e-03 |       1.474754e-18 |       1.464004e-18 |       1.424136e-18 |       1.349286e-18 |       1.241567e-18 |       1.102925e-18 |            4.247804e-14 |            4.247804e-14 |            4.247804e-14 |            4.247804e-14 |            4.247804e-14 |            4.247804e-14 |   1.335232e+19 |    3.419904e+261 |     2.141428e-04 |     2.073742e-04 |     1.953720e-04 |    3.239971e+174 |     1.567307e-04 |           1.000000e-06 |           1.000000e-06 |           1.000000e-06 |           1.000000e-06 |           1.000000e-06 |           1.000000e-06 |   1.643651e+04 |   1.642619e+04 |   1.638740e+04 |   1.631210e+04 |   1.619745e+04 |   1.603716e+04 |   1.639247e+04 |   1.638225e+04 |   1.634380e+04 |   1.626915e+04 |   1.615548e+04 |   1.599654e+04 |   4.403203e+01 |   4.394150e+01 |   4.360201e+01 |   4.294818e+01 |   4.196583e+01 |   4.061854e+01 |         2.642022e-27 |         1.050929e-26 |        -1.531359e-26 |        -1.714838e-26 |         4.638198e-27 |         6.367302e-27 |           6.556989e-02 |           6.552901e-02 |           6.537520e-02 |           6.507659e-02 |           6.462194e-02 |           6.398615e-02 |            1.411760e-06 |            2.452183e-07 |            1.221333e-07 |            8.082197e-08 |            5.993290e-08 |            4.718367e-08 |              5.322850e-07 |              5.284812e-07 |              5.282803e-07 |              5.293448e-07 |              5.265162e-07 |              5.259881e-07 |          8.642226e+02 |          8.636291e+02 |          8.613968e+02 |          8.570644e+02 |          8.504715e+02 |          8.412595e+02 |   8.671927e+02 |   8.665999e+02 |   8.643702e+02 |   8.600431e+02 |   8.534587e+02 |   8.442593e+02 |      8.653356e+02 |      8.647427e+02 |      8.625126e+02 |      8.581846e+02 |      8.515989e+02 |      8.423977e+02 |   8.710516e+02 |   8.704585e+02 |   8.682274e+02 |   8.638977e+02 |   8.573092e+02 |   8.481041e+02 |   1.043268e-10 |   1.043259e-10 |   1.043223e-10 |   1.043154e-10 |   1.043049e-10 |   1.042903e-10 |\n\ufffd[36msub_KernelBuffer0: \ufffd[39m+----------------+----------------+----------------+----------------+---------------------+---------------------+---------------------+---------------------+---------------------+---------------------+----------------+----------------+----------------+----------------+----------------+----------------+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+-------------------------+-------------------------+-------------------------+-------------------------+-------------------------+-------------------------+----------------+------------------+------------------+------------------+------------------+------------------+------------------+------------------------+------------------------+------------------------+------------------------+------------------------+------------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------------+----------------------+----------------------+----------------------+----------------------+----------------------+------------------------+------------------------+------------------------+------------------------+------------------------+------------------------+-------------------------+-------------------------+-------------------------+-------------------------+-------------------------+-------------------------+---------------------------+---------------------------+---------------------------+---------------------------+---------------------------+---------------------------+-----------------------+-----------------------+-----------------------+-----------------------+-----------------------+-----------------------+----------------+----------------+----------------+----------------+----------------+----------------+-------------------+-------------------+-------------------+-------------------+-------------------+-------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+\n\ufffd[36msub_KernelBuffer0: \ufffd[39m\n    Finished Executing MultiApps                                                         [\ufffd[33m 13.28 s\ufffd[39m] [\ufffd[33m   18 MB\ufffd[39m]\n  Finished Executing MultiApps                                                           [\ufffd[33m 13.28 s\ufffd[39m] [\ufffd[33m   18 MB\ufffd[39m]\n\n\nPostprocessor Values:\n+----------------+----------------+-------------------------+-----------------------+-------------------+----------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+------------------------------+-------------------------+-------------------------+------------------------+---------------------------+---------------------------+-----------------------------+---------------------------+-----------------------------+--------------------------+----------------------------+---------------------+---------------------------+---------------------------+---------------------------+---------------------------+---------------------------+---------------------------+-----------------------+-----------------------+-----------------------+-----------------------+-----------------------+-----------------------+\n| time           | Day            | Pdpenetration_depth_max | WeibullFailure_pb_ave | ave_temp_interior | contact_pressure_max | dt             | gap_pressure_1 | gap_pressure_2 | gap_pressure_3 | gap_pressure_4 | gap_pressure_5 | gap_pressure_6 | gap_pressure_matrix_graphite | maxPrincipalStress_IPyC | maxPrincipalStress_OPyC | maxPrincipalStress_SiC | maxPrincipalStress_matrix | max_hoop_stress_bees_IPyC | max_hoop_stress_bees_IPyC01 | max_hoop_stress_bees_OPyC | max_hoop_stress_bees_OPyC01 | max_hoop_stress_bees_SiC | max_hoop_stress_bees_SiC01 | max_vonmises_matrix | rad_disp_IPyC_inner_ave_1 | rad_disp_IPyC_inner_ave_2 | rad_disp_IPyC_inner_ave_3 | rad_disp_IPyC_inner_ave_4 | rad_disp_IPyC_inner_ave_5 | rad_disp_IPyC_inner_ave_6 | temp_IPyC_inner_ave_1 | temp_IPyC_inner_ave_2 | temp_IPyC_inner_ave_3 | temp_IPyC_inner_ave_4 | temp_IPyC_inner_ave_5 | temp_IPyC_inner_ave_6 |\n+----------------+----------------+-------------------------+-----------------------+-------------------+----------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+------------------------------+-------------------------+-------------------------+------------------------+---------------------------+---------------------------+-----------------------------+---------------------------+-----------------------------+--------------------------+----------------------------+---------------------+---------------------------+---------------------------+---------------------------+---------------------------+---------------------------+---------------------------+-----------------------+-----------------------+-----------------------+-----------------------+-----------------------+-----------------------+\n|   0.000000e+00 |   0.000000e+00 |            0.000000e+00 |          0.000000e+00 |      8.000000e+02 |         0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |                 1.600000e+06 |            0.000000e+00 |            0.000000e+00 |           0.000000e+00 |              0.000000e+00 |              0.000000e+00 |                0.000000e+00 |              0.000000e+00 |                0.000000e+00 |             0.000000e+00 |               0.000000e+00 |        0.000000e+00 |              0.000000e+00 |              0.000000e+00 |              0.000000e+00 |              0.000000e+00 |              0.000000e+00 |              0.000000e+00 |          8.000000e+02 |          8.000000e+02 |          8.000000e+02 |          8.000000e+02 |          8.000000e+02 |          8.000000e+02 |\n|   1.000000e+02 |   1.157407e-03 |            1.189375e-18 |          0.000000e+00 |      8.171092e+02 |         7.311967e+02 |   1.000000e+02 |  3.419904e+261 |   2.141428e-04 |   2.073742e-04 |   1.953720e-04 |  3.239971e+174 |   1.567307e-04 |                 1.682925e+06 |            2.888408e+05 |            4.265352e+07 |           9.954284e+07 |              3.287125e+08 |             -2.816006e+07 |               -3.565181e+07 |             -3.000791e+07 |               -3.894658e+07 |            -3.118248e+07 |              -5.927828e+07 |        1.254286e+09 |              5.322850e-07 |              5.284812e-07 |              5.282803e-07 |              5.293448e-07 |              5.265162e-07 |              5.259881e-07 |          8.642226e+02 |          8.636291e+02 |          8.613968e+02 |          8.570644e+02 |          8.504715e+02 |          8.412595e+02 |\n+----------------+----------------+-------------------------+-----------------------+-------------------+----------------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+------------------------------+-------------------------+-------------------------+------------------------+---------------------------+---------------------------+-----------------------------+---------------------------+-----------------------------+--------------------------+----------------------------+---------------------+---------------------------+---------------------------+---------------------------+---------------------------+---------------------------+---------------------------+-----------------------+-----------------------+-----------------------+-----------------------+-----------------------+-----------------------+\n\n\n  Finished Outputting                                                                    [\ufffd[33m 10.30 s\ufffd[39m] [\ufffd[33m    2 MB\ufffd[39m]\n\n\nTime Step 2, time = 299.9, dt = 199.9\n\n\n    Computing Initial Residual\n      Finished Computing Residual                                                        [\ufffd[33m 11.46 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Initial Residual                                                  [\ufffd[33m 11.46 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Residual                                                          [\ufffd[33m  9.22 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\nNonlinear solve did not converge due to DIVERGED_FNORM_NAN iterations 0\n\n\ufffd[31m Solve Did NOT Converge!\ufffd[39m\n\n  Finished Solving                                                                       [\ufffd[33m 20.84 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n\nAborting as solve did not converge\n\n\nTime Step 2, time = 199.95, dt = 99.95\n\n\n    Computing Initial Residual\n      Finished Computing Residual                                                        [\ufffd[33m  8.78 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Initial Residual                                                  [\ufffd[33m  8.78 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Residual                                                          [\ufffd[33m  8.51 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\nNonlinear solve did not converge due to DIVERGED_FNORM_NAN iterations 0\n\n\ufffd[31m Solve Did NOT Converge!\ufffd[39m\n\n  Finished Solving                                                                       [\ufffd[33m 17.48 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n\nAborting as solve did not converge\n\n\nTime Step 2, time = 149.975, dt = 49.975\n\n\n    Computing Initial Residual\n      Finished Computing Residual                                                        [\ufffd[33m  8.36 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Initial Residual                                                  [\ufffd[33m  8.36 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Residual                                                          [\ufffd[33m  8.36 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\nNonlinear solve did not converge due to DIVERGED_FNORM_NAN iterations 0\n\n\ufffd[31m Solve Did NOT Converge!\ufffd[39m\n\n  Finished Solving                                                                       [\ufffd[33m 16.88 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n\nAborting as solve did not converge\n\n\nTime Step 2, time = 124.987, dt = 24.9875\n\n\n    Computing Initial Residual\n      Finished Computing Residual                                                        [\ufffd[33m  8.30 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Initial Residual                                                  [\ufffd[33m  8.30 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Residual                                                          [\ufffd[33m  8.40 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\nNonlinear solve did not converge due to DIVERGED_FNORM_NAN iterations 0\n\n\ufffd[31m Solve Did NOT Converge!\ufffd[39m\n\n  Finished Solving                                                                       [\ufffd[33m 16.86 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n\nAborting as solve did not converge\n\n\nTime Step 2, time = 112.494, dt = 12.4938\n\n\n    Computing Initial Residual\n      Finished Computing Residual                                                        [\ufffd[33m  8.35 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Initial Residual                                                  [\ufffd[33m  8.35 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Residual                                                          [\ufffd[33m  8.36 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\nNonlinear solve did not converge due to DIVERGED_FNORM_NAN iterations 0\n\n\ufffd[31m Solve Did NOT Converge!\ufffd[39m\n\n  Finished Solving                                                                       [\ufffd[33m 16.85 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n\nAborting as solve did not converge\n\n\nTime Step 2, time = 106.247, dt = 6.24688\n\n\n    Computing Initial Residual\n      Finished Computing Residual                                                        [\ufffd[33m  8.35 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Initial Residual                                                  [\ufffd[33m  8.35 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Residual                                                          [\ufffd[33m  8.24 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\nNonlinear solve did not converge due to DIVERGED_FNORM_NAN iterations 0\n  Finished Solving                                                                       [\ufffd[33m 16.74 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n\ufffd[31m Solve Did NOT Converge!\ufffd[39m\n\n\nAborting as solve did not converge\n\n\nTime Step 2, time = 103.123, dt = 3.12344\n\n\n    Computing Initial Residual\n      Finished Computing Residual                                                        [\ufffd[33m  8.28 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Initial Residual                                                  [\ufffd[33m  8.28 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Residual                                                          [\ufffd[33m  8.43 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\nNonlinear solve did not converge due to DIVERGED_FNORM_NAN iterations 0\n  Finished Solving                                                                       [\ufffd[33m 16.85 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n\ufffd[31m Solve Did NOT Converge!\ufffd[39m\n\n\nAborting as solve did not converge\n\n\nTime Step 2, time = 101.562, dt = 1.56172\n\n\n    Computing Initial Residual\n      Finished Computing Residual                                                        [\ufffd[33m  8.38 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Initial Residual                                                  [\ufffd[33m  8.38 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Residual                                                          [\ufffd[33m  8.39 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\nNonlinear solve did not converge due to DIVERGED_FNORM_NAN iterations 0\n  Finished Solving                                                                       [\ufffd[33m 16.91 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n\ufffd[31m Solve Did NOT Converge!\ufffd[39m\n\n\nAborting as solve did not converge\n\n\nTime Step 2, time = 100.781, dt = 0.780859\n\n\n    Computing Initial Residual\n      Finished Computing Residual                                                        [\ufffd[33m  8.27 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Initial Residual                                                  [\ufffd[33m  8.27 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Residual                                                          [\ufffd[33m  8.27 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\nNonlinear solve did not converge due to DIVERGED_FNORM_NAN iterations 0\n\n\ufffd[31m Solve Did NOT Converge!\ufffd[39m\n\n  Finished Solving                                                                       [\ufffd[33m 16.68 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n\nAborting as solve did not converge\n\n\nTime Step 2, time = 100.39, dt = 0.39043\n\n\n    Computing Initial Residual\n      Finished Computing Residual                                                        [\ufffd[33m  8.37 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Initial Residual                                                  [\ufffd[33m  8.37 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Residual                                                          [\ufffd[33m  8.41 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\nNonlinear solve did not converge due to DIVERGED_FNORM_NAN iterations 0\n\n\ufffd[31m Solve Did NOT Converge!\ufffd[39m\n\n  Finished Solving                                                                       [\ufffd[33m 16.92 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n\nAborting as solve did not converge\n\n\nTime Step 2, time = 100.195, dt = 0.195215\n\n\n    Computing Initial Residual\n      Finished Computing Residual                                                        [\ufffd[33m  8.36 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Initial Residual                                                  [\ufffd[33m  8.36 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Residual                                                          [\ufffd[33m  8.40 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\nNonlinear solve did not converge due to DIVERGED_FNORM_NAN iterations 0\n  Finished Solving                                                                       [\ufffd[33m 16.91 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n\ufffd[31m Solve Did NOT Converge!\ufffd[39m\n\n\nAborting as solve did not converge\n\n\nTime Step 2, time = 100.098, dt = 0.0976074\n\n\n    Computing Initial Residual\n      Finished Computing Residual                                                        [\ufffd[33m  8.60 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Initial Residual                                                  [\ufffd[33m  8.60 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Residual                                                          [\ufffd[33m 10.32 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\nNonlinear solve did not converge due to DIVERGED_FNORM_NAN iterations 0\n  Finished Solving                                                                       [\ufffd[33m 19.05 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n\ufffd[31m Solve Did NOT Converge!\ufffd[39m\n\n\nAborting as solve did not converge\n\n\nTime Step 2, time = 100.049, dt = 0.0488037\n\n\n    Computing Initial Residual\n      Finished Computing Residual                                                        [\ufffd[33m  8.75 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Initial Residual                                                  [\ufffd[33m  8.75 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Residual                                                          [\ufffd[33m  8.36 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\nNonlinear solve did not converge due to DIVERGED_FNORM_NAN iterations 0\n\n\ufffd[31m Solve Did NOT Converge!\ufffd[39m\n\n  Finished Solving                                                                       [\ufffd[33m 17.27 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n\nAborting as solve did not converge\n\n\nTime Step 2, time = 100.024, dt = 0.0244019\n\n\n    Computing Initial Residual\n      Finished Computing Residual                                                        [\ufffd[33m  8.48 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Initial Residual                                                  [\ufffd[33m  8.48 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Residual                                                          [\ufffd[33m  8.20 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\nNonlinear solve did not converge due to DIVERGED_FNORM_NAN iterations 0\n\n\ufffd[31m Solve Did NOT Converge!\ufffd[39m\n\n  Finished Solving                                                                       [\ufffd[33m 16.83 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n\nAborting as solve did not converge\n\n\nTime Step 2, time = 100.012, dt = 0.0122009\n\n\n    Computing Initial Residual\n      Finished Computing Residual                                                        [\ufffd[33m  8.38 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Initial Residual                                                  [\ufffd[33m  8.38 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Residual                                                          [\ufffd[33m  8.35 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\nNonlinear solve did not converge due to DIVERGED_FNORM_NAN iterations 0\n\n\ufffd[31m Solve Did NOT Converge!\ufffd[39m\n\n  Finished Solving                                                                       [\ufffd[33m 16.88 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n\nAborting as solve did not converge\n\n\nTime Step 2, time = 100.01, dt = 0.01\n\n\n    Computing Initial Residual\n      Finished Computing Residual                                                        [\ufffd[33m  8.37 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Initial Residual                                                  [\ufffd[33m  8.37 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n    Finished Computing Residual                                                          [\ufffd[33m  8.37 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\nNonlinear solve did not converge due to DIVERGED_FNORM_NAN iterations 0\n  Finished Solving                                                                       [\ufffd[33m 16.89 s\ufffd[39m] [\ufffd[33m    0 MB\ufffd[39m]\n\n\ufffd[31m Solve Did NOT Converge!\ufffd[39m\n\nAborting as solve did not converge\n\n\ufffd[31m\n*** ERROR ***\nThe following error occurred in the object \"TimeStepper\", of type \"FunctionDT\".\nSolve failed and timestep already at or below dtmin, cannot continue!\ufffd[39m\napplication called MPI_Abort(MPI_COMM_WORLD, 1) - process 19\n\nAnd my setting of Executioner:\n[Executioner]\n  type = Transient\n  petsc_options_iname = '-ksp_gmres_restart -pc_type -pc_hypre_type -pc_hypre_boomeramg_max_iter'\n  petsc_options_value = '201                hypre    boomeramg      4'\n  line_search = 'none'\n  solve_type = PJFNK\n  l_tol =      8.0e-3 #0.001\n  l_max_its =  30 #50\n  nl_rel_tol = 1.0e-6 #0.0005\n  nl_abs_tol = 1.0e-5 #1e-07\n  nl_max_its = 15\n\n  dtmin = 0.01\n  dtmax = 1.0e6\n  start_time = 0.0\n  end_time = ${end_time}\n  [./TimeStepper]\n    type = FunctionDT\n    function = dts\n    min_dt = 1.0\n  [../]\n []",
+          "url": "https://github.com/idaholab/moose/discussions/22291",
+          "updatedAt": "2022-10-09T19:42:59Z",
+          "publishedAt": "2022-10-04T13:20:56Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "friedmud"
+                  },
+                  "bodyText": "It looks like you got a solution for timestep 1... what does it look like?  Is it \"good\"... or does it look wrong?",
+                  "url": "https://github.com/idaholab/moose/discussions/22291#discussioncomment-3796485",
+                  "updatedAt": "2022-10-04T14:16:37Z",
+                  "publishedAt": "2022-10-04T14:16:35Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "RECHOA"
+                          },
+                          "bodyText": "Thanks for your reply. Here is the TimeStepper:\n  [./TimeStepper]\n    type = FunctionDT\n    function = dts\n    min_dt = 1.0\n  [../]\n\nAnd the  Function dts is:\n  [./dts]\n    type = PiecewiseLinear\n    x = '0     1.0e5 2.0e6  7.0e7'\n    y = '1.0e2 1.0e5 1.0e6  1.0e6'\n  [../]\n\nAt 1st step, dt = 100; and at 2nd step, dt =199.9. and decreased to dt_min due to the solve did not converge. I used the same TimeStepper whilerunning the case with 30  processors. It seems that the error was not due to the TimeStepper.",
+                          "url": "https://github.com/idaholab/moose/discussions/22291#discussioncomment-3796580",
+                          "updatedAt": "2022-10-04T14:29:46Z",
+                          "publishedAt": "2022-10-04T14:27:22Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "permcody"
+                  },
+                  "bodyText": "When pasting from the terminal into a web form, try using the option --color off to remove the terminal color codes.",
+                  "url": "https://github.com/idaholab/moose/discussions/22291#discussioncomment-3796696",
+                  "updatedAt": "2022-10-04T14:38:36Z",
+                  "publishedAt": "2022-10-04T14:38:35Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "RECHOA"
+                          },
+                          "bodyText": "I'm sorry that when running case on our HPC, the terminal log was recorded in a text file. I just copy it from the file and use the back quotes to format the terminal  log.",
+                          "url": "https://github.com/idaholab/moose/discussions/22291#discussioncomment-3796802",
+                          "updatedAt": "2022-10-04T14:52:38Z",
+                          "publishedAt": "2022-10-04T14:52:36Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Your convergence criteria are too loose.\nPlease turn on automatic scaling, and tighten convergence a bit on this first time step.\n1e-3 for the residual is too loose",
+                  "url": "https://github.com/idaholab/moose/discussions/22291#discussioncomment-3799439",
+                  "updatedAt": "2022-10-04T20:31:40Z",
+                  "publishedAt": "2022-10-04T20:31:39Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "RECHOA"
+                          },
+                          "bodyText": "Thanks for your suggestion. I tried to  turn on automatic_scaling and tighten convergence, or change the TimeStepper , but it still shows\n\nNonlinear solve did not converge due to DIVERGED_FNORM_NAN iterations 0",
+                          "url": "https://github.com/idaholab/moose/discussions/22291#discussioncomment-3801708",
+                          "updatedAt": "2022-10-05T05:39:12Z",
+                          "publishedAt": "2022-10-05T05:39:11Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "maxnezdyur"
+                  },
+                  "bodyText": "Are you running a contact model, maybe thermal contact? Can I see the input file you are using?",
+                  "url": "https://github.com/idaholab/moose/discussions/22291#discussioncomment-3804762",
+                  "updatedAt": "2022-10-05T12:34:46Z",
+                  "publishedAt": "2022-10-05T12:34:45Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "RECHOA"
+                          },
+                          "bodyText": "yes there is a contact model set as follow:\n[Contact]\n  [./pellet_clad_mechanical]\n    primary = gra_inner\n    secondary = ma_surf\n    penalty = 1.0e7 \n    formulation = PENALTY\n    normalize_penalty = true\n    model = frictionless\n  [../]\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/22291#discussioncomment-3804791",
+                          "updatedAt": "2022-10-05T12:38:36Z",
+                          "publishedAt": "2022-10-05T12:38:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "maxnezdyur"
+                          },
+                          "bodyText": "I don't know if this will help. I had some problems with this a while back and I think I fixed it with the options below(but could be wrong).\nUnder your mesh block put the options below. Try it and let me know if anything changed.\n[Mesh]\n  patch_update_strategy = iteration\n  patch_size = 200\n  use_displaced_mesh = true",
+                          "url": "https://github.com/idaholab/moose/discussions/22291#discussioncomment-3804843",
+                          "updatedAt": "2022-10-05T12:43:45Z",
+                          "publishedAt": "2022-10-05T12:43:44Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "RECHOA"
+                          },
+                          "bodyText": "Thanks, I will try as you advised. Due to the large mesh size and the limited computing resources, I have to queue for a long time to run my case.",
+                          "url": "https://github.com/idaholab/moose/discussions/22291#discussioncomment-3804884",
+                          "updatedAt": "2022-10-05T12:48:47Z",
+                          "publishedAt": "2022-10-05T12:48:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "RECHOA"
+                          },
+                          "bodyText": "I added the options to the Mesh block of my inputfile, the Warning in PenetrationLocator disappeared. However, it still shows  not converge due to DIVERGED_FNORM_NAN iterations 0.",
+                          "url": "https://github.com/idaholab/moose/discussions/22291#discussioncomment-3827658",
+                          "updatedAt": "2022-10-08T07:15:44Z",
+                          "publishedAt": "2022-10-08T07:15:43Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I d work on the settings of the executioner next\n  petsc_options_iname = '-ksp_gmres_restart -pc_type -pc_hypre_type -pc_hypre_boomeramg_max_iter'\n  petsc_options_value = '201                hypre    boomeramg      4'\n\nI d try changing the hypre settings and if it still works in serial but not in parallel, i d try looking for another preconditioner",
+                          "url": "https://github.com/idaholab/moose/discussions/22291#discussioncomment-3829047",
+                          "updatedAt": "2022-10-08T14:25:16Z",
+                          "publishedAt": "2022-10-08T14:25:15Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "RECHOA"
+                          },
+                          "bodyText": "Thanks for your suggestion @GiudGiud . I will consider to change the settings of the Executioner .\nI noticed that when adding the options in Mesh block as @maxnezdyur adviced, the Warning in PenetrationLocator disappeared, maybe the problem was caused by the mesh file. Actually, i'm working on refining my mesh now and then i will test my case again.",
+                          "url": "https://github.com/idaholab/moose/discussions/22291#discussioncomment-3829117",
+                          "updatedAt": "2022-10-08T14:43:18Z",
+                          "publishedAt": "2022-10-08T14:43:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "RECHOA"
+                          },
+                          "bodyText": "After I tightened the tolerances and refined the mesh (acturally the mesh of the secondary object in Contact  block), my case can run now. And the Warning in PenetrationLocator would not appear even the patch_update_strategy = iteration hadn't been set.\nThank you all for kindly help\uff01",
+                          "url": "https://github.com/idaholab/moose/discussions/22291#discussioncomment-3834209",
+                          "updatedAt": "2022-10-09T17:42:54Z",
+                          "publishedAt": "2022-10-09T17:42:54Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Discrete nucleation overlap",
+          "author": {
+            "login": "achnr"
+          },
+          "bodyText": "Hi,\nI'm using Discrete Nucleation for a recrystallization problem. I noticed that new nuclei are allowed to overlap with previous ones. This is problematic because it unnecessarily creates (extra) new grains which requires more order parameters and refines the mesh even more.\nIs there a way to prevent this overlap?\nThanks,\nAmani",
+          "url": "https://github.com/idaholab/moose/discussions/22182",
+          "updatedAt": "2022-10-07T23:07:22Z",
+          "publishedAt": "2022-09-23T18:20:58Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@laagesen @permcody any ideas on this?",
+                  "url": "https://github.com/idaholab/moose/discussions/22182#discussioncomment-3764894",
+                  "updatedAt": "2022-09-29T17:17:42Z",
+                  "publishedAt": "2022-09-29T17:17:41Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "permcody"
+                          },
+                          "bodyText": "@dschwen may have a suggestion as well. The GrainTracker can handle nucleation, but the nucleation objects are responsible for avoiding overlap and I believe this should be working properly. The problem may not be setup correctly.",
+                          "url": "https://github.com/idaholab/moose/discussions/22182#discussioncomment-3766903",
+                          "updatedAt": "2022-09-29T22:20:03Z",
+                          "publishedAt": "2022-09-29T22:20:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "laagesen"
+                          },
+                          "bodyText": "Hi Amani - The DiscreteNucleationInserter requires a material property that gives the probability of nucleation- in a past nucleation problem I was working on where voids were nucleating in a solid matrix, I made the material property include a conditional that set the nucleation probability to zero unless the matrix order parameter was larger than a certain value (0.98) close to the equilibrium value (1), to avoid nuclei forming on top of existing ones. This was on top of the probability dependence on classical nucleation theory, which on its own wasn't enough to keep nuclei from forming close to existing ones. I'm not sure if that same approach will work for a recrystallization problem but maybe it can be adapted...",
+                          "url": "https://github.com/idaholab/moose/discussions/22182#discussioncomment-3775628",
+                          "updatedAt": "2022-09-30T21:08:14Z",
+                          "publishedAt": "2022-09-30T21:08:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "achnr"
+                          },
+                          "bodyText": "Thank you for your answers. I had essentially used the same approach as @laagesen, however the center of a new nucleus could still be in the vicinity of a pre-existing nucleus, which creates an overlap between parts of both nuclei. With recrystallization, the number of new nuclei can be significant enough to have many overlaps in the domain.\nThe other issue is that within one time step, new nuclei overlap with each other as the probability is not updated until the next time step. It seems that the nucleation algorithm could be improved in that regard.",
+                          "url": "https://github.com/idaholab/moose/discussions/22182#discussioncomment-3807206",
+                          "updatedAt": "2022-10-05T16:44:48Z",
+                          "publishedAt": "2022-10-05T16:44:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "FHilty"
+                          },
+                          "bodyText": "Hi Everyone, I am also working on a recrystallization model and ran into similar overlap issues. I have spent some time fixing the problem of overlap within a single time step by modifying DescreteNucleationInserter.  In that user object each mpi rank evaluates its piece of the domain and generates a list of qp for new nuclei centers. These local lists are then collected together, after which it is easy to check if any of the new nuclei overlap and remove one when it does.\nThe problem is this method can skew the nucleation rate. The image below shows an extreme case with a high nucleation rate and large nuclei (left is the original code and right is with my changes to remove overlap), where half of the nuclei are lost. This effect should be minimized with smaller nuclei and slower rates, such that fewer are eliminated at this step, but it is still a potential issue.\nThere does not seem to be a straightforward way to correct nucleation rate problem in this case due to the nuclei being generated in each mpi rank, and full list only existing to check afterward. Which is possibly why no routine to prevent the overlap has been implemented already. I was thinking about having the fraction of nuclei that were eliminated printed to screen so the user could decide if it was a significant nucleation rate reduction or not, but i would love to hear ideas about how to properly fix the root problems.",
+                          "url": "https://github.com/idaholab/moose/discussions/22182#discussioncomment-3826331",
+                          "updatedAt": "2022-10-07T23:07:23Z",
+                          "publishedAt": "2022-10-07T23:07:22Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "question about the workshop",
+          "author": {
+            "login": "Oops-Qiao"
+          },
+          "bodyText": "",
+          "url": "https://github.com/idaholab/moose/discussions/22331",
+          "updatedAt": "2022-10-08T14:37:49Z",
+          "publishedAt": "2022-10-07T18:32:04Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "Oops-Qiao"
+                  },
+                  "bodyText": "Dear all,\nJust a quick question from workshop, in your presentation it is mentioned ADKernel should be used when the PDE is multiplied by both the test function and the gradient of the test function. However, in the following the PDE is only multiplied with gradient of test function, why is the ADKernel is used not the ADKernelGrad one? Thank you very much.",
+                  "url": "https://github.com/idaholab/moose/discussions/22331#discussioncomment-3825573",
+                  "updatedAt": "2022-10-07T19:47:49Z",
+                  "publishedAt": "2022-10-07T19:47:49Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "ADKernel lets you overwrite computeQpResidual\nwhile ADKernelGrad lets you overwrite preComputeQpResidual\nthe difference is that the latter has a multiplication by the gradient of a test function built in",
+                          "url": "https://github.com/idaholab/moose/discussions/22331#discussioncomment-3825597",
+                          "updatedAt": "2022-10-07T19:51:28Z",
+                          "publishedAt": "2022-10-07T19:51:27Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Extra nodeset generated from subdomain subtracted sidesets",
+          "author": {
+            "login": "BoZeng1997"
+          },
+          "bodyText": "HI,\nIs there a way to generate nodeset consists of all the nodes in a subdomain but not on the selected boundaries?",
+          "url": "https://github.com/idaholab/moose/discussions/22311",
+          "updatedAt": "2022-10-07T18:45:42Z",
+          "publishedAt": "2022-10-05T19:00:54Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nNot in the current set of mesh generators. This could be a custom one you make for your application though, it would not be very difficult to code in C++ in MOOSE\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22311#discussioncomment-3808554",
+                  "updatedAt": "2022-10-05T19:47:48Z",
+                  "publishedAt": "2022-10-05T19:47:47Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "friedmud"
+                          },
+                          "bodyText": "And if you do make it - it would be great if you want to contribute it back to MOOSE by putting up a PR.",
+                          "url": "https://github.com/idaholab/moose/discussions/22311#discussioncomment-3809567",
+                          "updatedAt": "2022-10-05T22:47:03Z",
+                          "publishedAt": "2022-10-05T22:47:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "BoZeng1997"
+                          },
+                          "bodyText": "I will try my best!",
+                          "url": "https://github.com/idaholab/moose/discussions/22311#discussioncomment-3825246",
+                          "updatedAt": "2022-10-07T18:45:42Z",
+                          "publishedAt": "2022-10-07T18:45:42Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "IGA Negative Jacobian",
+          "author": {
+            "login": "makeclean"
+          },
+          "bodyText": "Hi All\nQuick one, following successful recompilation of MOOSE with an appropriate derivative size (:facepalm:) my original IGA problem ran, I then remeshing to remove some aberrations from the geometry, the hex mesh underlying the geometry is good, and produces an IGA mesh without issue, but when MOOSE runs this new geometry I get a -ve jacobian warning, I've traced the IGA element to a particular hex element but it doesn't have a -ve jacobian, do you have any advice on how to trace down the issue, and fix the upstream mesh?\nThanks\nAndy",
+          "url": "https://github.com/idaholab/moose/discussions/22248",
+          "updatedAt": "2022-10-14T03:30:30Z",
+          "publishedAt": "2022-09-28T08:32:05Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThere is an offset of 1 between the ids, can you double check you traced it back to the right element?\nAnother technique would be to use a VolumeAux to output the element volumes, then use a filter on that number in paraview to find the bad one\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22248#discussioncomment-3757379",
+                  "updatedAt": "2022-09-28T22:43:37Z",
+                  "publishedAt": "2022-09-28T22:43:37Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "makeclean"
+                          },
+                          "bodyText": "So, the element suggested by the bounding box of the hex is shown below, I dont see how this could have a -ve Jacobian. The only issue might be that the error regarding the -ve jacobian happens during loading the mesh, not during running.",
+                          "url": "https://github.com/idaholab/moose/discussions/22248#discussioncomment-3771887",
+                          "updatedAt": "2022-09-30T12:20:27Z",
+                          "publishedAt": "2022-09-30T12:20:26Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "makeclean"
+                          },
+                          "bodyText": "Here is the text\n  Finished Initializing                                                                  [\n  3.25 s] [  716 MB]\nFinished Setting Up                                                                      [\n  5.03 s] [  885 MB]\nFramework Information:\nMOOSE Version:           git commit 82f5b1d92b on 2022-09-26\nLibMesh Version:         1eef758792bff86e26258972ab9dc60533161964\nPETSc Version:           3.16.6\nSLEPc Version:           3.16.2\nCurrent Time:            Fri Sep 30 13:43:48 2022\nExecutable Timestamp:    Tue Sep 27 16:01:28 2022\n\nParallelism:\n  Num Processors:          4\n  Num Threads:             1\n\nMesh: \n  Parallel Type:           replicated\n  Mesh Dimension:          3\n  Spatial Dimension:       3\n  Nodes:                   \n    Total:                 149904\n    Local:                 37495\n    Min/Max/Avg:           36828/38004/37476\n  Elems:                   \n    Total:                 16896\n    Local:                 4224\n    Min/Max/Avg:           4224/4224/4224\n  Num Subdomains:          3\n  Num Partitions:          4\n  Partitioner:             metis\n\nNonlinear System:\n  Num DOFs:                599616\n  Num Local DOFs:          149980\n  Variables:               { \"temperature\" \"disp_x\" \"disp_y\" \"disp_z\" } \n  Finite Element Types:    \"RATIONAL_BERNSTEIN\" \n  Approximation Orders:    \"SECOND\" \n\nAuxiliary System:\n  Num DOFs:                16896\n  Num Local DOFs:          4224\n  Variables:               \"volume\" \n  Finite Element Types:    \"MONOMIAL\" \n  Approximation Orders:    \"CONSTANT\" \n\nExecution Information:\n  Executioner:             Steady\n  Solver Mode:             NEWTON\n  MOOSE Preconditioner:    SMP (auto)\n\n  Elem Information\n   id()=52, unique_id()=78286, processor_id()=3\n   type()=HEX27\n   dim()=3\n   n_nodes()=27\n   mapping=RATIONAL_BERNSTEIN_MAP\n    0  Node id()=954, processor_id()=3, Point=(x,y,z)=(   0.001, -0.000293901, 0.00940452)\n    DoFs=(0/0/449088) (0/1/449089) (0/2/449090) (0/3/449091) \n    weight=1\n    1  Node id()=833, processor_id()=3, Point=(x,y,z)=(0.00101849, -0.000546374, 0.0094420\n3)\n    DoFs=(0/0/448736) (0/1/448737) (0/2/448738) (0/3/448739) \n    weight=1\n    2  Node id()=834, processor_id()=3, Point=(x,y,z)=( 0.00025, -0.000558127, 0.00944398)\n    DoFs=(0/0/448740) (0/1/448741) (0/2/448742) (0/3/448743) \n    weight=1\n    3  Node id()=955, processor_id()=3, Point=(x,y,z)=( 0.00025, -0.000293901, 0.00940452)\n    DoFs=(0/0/449092) (0/1/449093) (0/2/449094) (0/3/449095) \n    weight=1\n    4  Node id()=930, processor_id()=3, Point=(x,y,z)=(   0.001, -0.00040452, 0.0092939)\n    DoFs=(0/0/449028) (0/1/449029) (0/2/449030) (0/3/449031) \n    weight=1\n    5  Node id()=855, processor_id()=3, Point=(x,y,z)=(0.000984093, -0.000715071, 0.009343\n99)\n    DoFs=(0/0/448824) (0/1/448825) (0/2/448826) (0/3/448827) \n    weight=1\n    6  Node id()=856, processor_id()=3, Point=(x,y,z)=( 0.00025, -0.000717885, 0.00934319)\n    DoFs=(0/0/448828) (0/1/448829) (0/2/448830) (0/3/448831) \n    weight=1\n    7  Node id()=931, processor_id()=3, Point=(x,y,z)=( 0.00025, -0.00040452, 0.0092939)\n    DoFs=(0/0/449032) (0/1/449033) (0/2/449034) (0/3/449035) \n    weight=1\n    8  Node id()=956, processor_id()=3, Point=(x,y,z)=(0.00102408, -0.000302228, 0.0093982\n5)\n    DoFs=(0/0/449096) (0/1/449097) (0/2/449098) (0/3/449099) \n    weight=1\n    9  Node id()=845, processor_id()=3, Point=(x,y,z)=(0.000649218, -0.000528803, 0.009442\n47)\n    DoFs=(0/0/448784) (0/1/448785) (0/2/448786) (0/3/448787) \n    weight=1\n    10  Node id()=957, processor_id()=3, Point=(x,y,z)=( 0.00025, -0.00031551, 0.00939682)\n    DoFs=(0/0/449100) (0/1/449101) (0/2/449102) (0/3/449103) \n    weight=1\n    11  Node id()=958, processor_id()=3, Point=(x,y,z)=(0.000625, -0.000293901, 0.00940452\n)\n    DoFs=(0/0/449104) (0/1/449105) (0/2/449106) (0/3/449107) \n    weight=1\n    12  Node id()=959, processor_id()=3, Point=(x,y,z)=(   0.001, -0.000357971, 0.00935797\n)\n    DoFs=(0/0/449108) (0/1/449109) (0/2/449110) (0/3/449111) \n    weight=1\n    13  Node id()=859, processor_id()=3, Point=(x,y,z)=(0.000993625, -0.000670314, 0.00939\n969)\n    DoFs=(0/0/448840) (0/1/448841) (0/2/448842) (0/3/448843) \n    weight=1\n    14  Node id()=860, processor_id()=3, Point=(x,y,z)=( 0.00025, -0.000673075, 0.00940009\n)\n    DoFs=(0/0/448844) (0/1/448845) (0/2/448846) (0/3/448847) \n    weight=1\n    15  Node id()=960, processor_id()=3, Point=(x,y,z)=( 0.00025, -0.000357971, 0.00935797\n)\n    DoFs=(0/0/449112) (0/1/449113) (0/2/449114) (0/3/449115) \n    weight=1\n    16  Node id()=936, processor_id()=3, Point=(x,y,z)=(0.000989257, -0.000485761, 0.00929\n217)\n    DoFs=(0/0/449036) (0/1/449037) (0/2/449038) (0/3/449039) \n    weight=1\n    17  Node id()=861, processor_id()=3, Point=(x,y,z)=(0.000608948, -0.000710116, 0.00934\n637)\n    DoFs=(0/0/448848) (0/1/448849) (0/2/448850) (0/3/448851) \n    weight=1\n    18  Node id()=937, processor_id()=3, Point=(x,y,z)=( 0.00025, -0.000496346, 0.00929221\n)\n    DoFs=(0/0/449040) (0/1/449041) (0/2/449042) (0/3/449043) \n    weight=1\n    19  Node id()=938, processor_id()=3, Point=(x,y,z)=(0.000625, -0.00040452, 0.0092939)\n    DoFs=(0/0/449044) (0/1/449045) (0/2/449046) (0/3/449047) \n    weight=1\n    20  Node id()=961, processor_id()=3, Point=(x,y,z)=(0.000654528, -0.000277344, 0.00940\n385)\n    DoFs=(0/0/449116) (0/1/449117) (0/2/449118) (0/3/449119) \n    weight=1\n    21  Node id()=962, processor_id()=3, Point=(x,y,z)=(0.000999709, -0.000404649, 0.00935\n081)\n    DoFs=(0/0/449120) (0/1/449121) (0/2/449122) (0/3/449123) \n    weight=1\n    22  Node id()=867, processor_id()=3, Point=(x,y,z)=(0.000619607, -0.000668235, 0.00940\n113)\n    DoFs=(0/0/448872) (0/1/448873) (0/2/448874) (0/3/448875) \n    weight=1\n    23  Node id()=963, processor_id()=3, Point=(x,y,z)=( 0.00025, -0.000418708, 0.00935042\n)\n    DoFs=(0/0/449124) (0/1/449125) (0/2/449126) (0/3/449127) \n    weight=1\n    24  Node id()=964, processor_id()=3, Point=(x,y,z)=(0.000625, -0.000357971, 0.00935797\n)\n    DoFs=(0/0/449128) (0/1/449129) (0/2/449130) (0/3/449131) \n    weight=1\n    25  Node id()=947, processor_id()=3, Point=(x,y,z)=(0.000615466, -0.000472034, 0.00929\n731)\n    DoFs=(0/0/449064) (0/1/449065) (0/2/449066) (0/3/449067) \n    weight=1\n    26  Node id()=965, processor_id()=3, Point=(x,y,z)=(0.000628136, -0.000385747, 0.00935\n694)\n    DoFs=(0/0/449132) (0/1/449133) (0/2/449134) (0/3/449135) \n    weight=1\n   n_sides()=6\n    neighbor(0)=56\n    neighbor(1)=468\n    neighbor(2)=46\n    neighbor(3)=nullptr\n    neighbor(4)=nullptr\n    neighbor(5)=51\n   hmin()=0.000156439, hmax()=0.000863727\n   volume()=2.81264e-11\n   active()=1, ancestor()=0, subactive()=0, has_children()=0\n   parent()=nullptr\n   level()=0, p_level()=0\n   refinement_flag()=DO_NOTHING\n   p_refinement_flag()=DO_NOTHING\n   DoFs=(1/0/12694) \nERROR: negative Jacobian -6.27634e-14 at point (x,y,z)=(0.000915474, -0.000293901, 0.00940\n452) in element 52\n[3] ../src/fe/fe_map.C, line 1173, compiled Sep 27 2022 at 15:52:56\n--------------------------------------------------------------------------\nMPI_ABORT was invoked on rank 3 in communicator MPI_COMM_WORLD\nwith errorcode 1.\n\nNOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.\nYou may or may not see output from other processes, depending on\nexactly when Open MPI kills them.\n--------------------------------------------------------------------------",
+                          "url": "https://github.com/idaholab/moose/discussions/22248#discussioncomment-3772117",
+                          "updatedAt": "2022-09-30T12:48:58Z",
+                          "publishedAt": "2022-09-30T12:48:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Cubit should support Jacobian calculations for this element according to this\nhttps://coreform.com/cubit_help/mesh_generation/mesh_quality_assessment/hexahedral_metrics.htm\nlet s see if it agrees\nI m going to plot this element and see what I get for these metrics. A volume of 2e-11 is pretty small already but it's positive.\nNegative Jacobian, not sure why that is\nlet s tag @roystgnr since this is for IGA",
+                          "url": "https://github.com/idaholab/moose/discussions/22248#discussioncomment-3773073",
+                          "updatedAt": "2022-09-30T16:39:35Z",
+                          "publishedAt": "2022-09-30T14:46:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "makeclean"
+                          },
+                          "bodyText": "nb: i applied a scaling factor of 1e-3 to the mesh wrt to the raw cubit geometry",
+                          "url": "https://github.com/idaholab/moose/discussions/22248#discussioncomment-3773279",
+                          "updatedAt": "2022-09-30T15:13:32Z",
+                          "publishedAt": "2022-09-30T15:13:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "This is what I get so far for the nodes\n\ninteresting that some face centers on 4 faces are offset, and so is the center",
+                          "url": "https://github.com/idaholab/moose/discussions/22248#discussioncomment-3773722",
+                          "updatedAt": "2022-09-30T16:09:25Z",
+                          "publishedAt": "2022-09-30T16:09:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "the top right points on the figure could be inverted?\nI ll see what I can get for Jacobian",
+                          "url": "https://github.com/idaholab/moose/discussions/22248#discussioncomment-3773726",
+                          "updatedAt": "2022-09-30T16:10:16Z",
+                          "publishedAt": "2022-09-30T16:10:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "projecting the faces of the element onto an XY plane I get the image below\nthe center node is outside of the face (side element).\nThere's another face that is similarly deformed. I imagine two issues can make for a positive volume and a negative Jacobian\nThe other faces look more like expected\nSo this mesh is straight from the mesher? no deforming physics solved on it yet?",
+                          "url": "https://github.com/idaholab/moose/discussions/22248#discussioncomment-3775737",
+                          "updatedAt": "2022-09-30T21:41:16Z",
+                          "publishedAt": "2022-09-30T21:32:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "The desired map, modulo a rotation\n# Map of side element nodes\n# *          3     6     2\n# *   QUAD9: o-----o-----o\n# *          |           |           eta\n# *          |     8     |            ^\n# *        7 o     o     o 5          |\n# *          |           |            |\n# *          |           |            o---> xi\n# *          o-----o-----o\n# *          0     4     1",
+                          "url": "https://github.com/idaholab/moose/discussions/22248#discussioncomment-3775738",
+                          "updatedAt": "2022-09-30T21:32:39Z",
+                          "publishedAt": "2022-09-30T21:32:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "makeclean"
+                          },
+                          "bodyText": "No physics, straight from the cubit uspline process barfs on startup",
+                          "url": "https://github.com/idaholab/moose/discussions/22248#discussioncomment-3775745",
+                          "updatedAt": "2022-09-30T21:34:31Z",
+                          "publishedAt": "2022-09-30T21:34:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@GregVernon @roystgnr thoughts?",
+                          "url": "https://github.com/idaholab/moose/discussions/22248#discussioncomment-3775785",
+                          "updatedAt": "2022-09-30T21:42:56Z",
+                          "publishedAt": "2022-09-30T21:42:55Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "makeclean"
+                  },
+                  "bodyText": "Well I'm meaning (correctly or otherwise) that the IGA element on the right hand figure you can see two curves of the element cross over one another",
+                  "url": "https://github.com/idaholab/moose/discussions/22248#discussioncomment-3821473",
+                  "updatedAt": "2022-10-07T09:56:06Z",
+                  "publishedAt": "2022-10-07T09:56:05Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

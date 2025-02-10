@@ -1,0 +1,1088 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMS0wMy0wNFQwMDowODo1My0wNjowMM4AMYI1"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Deleting elements in tensor mechanics",
+          "author": {
+            "login": "ngrilli"
+          },
+          "bodyText": "Dear Moose Users,\nI was looking at the possibility of deleting elements, when a certain condition, for instance temperature increase, is satisfied.\nI have already implemented models where the element stiffness is degraded, however, I would like to compare them\nwith a model where certain elements are actually removed from the finite element problem.\nI have seen something similar is done in XFEM by creating the EFA mesh.\nMy understanding is that in the XFEM module, a copy of the original mesh is created and manipulated by creating cuts,\nthen the stress divergence kernel is calculated on the manipulated mesh. But I may be wrong here.\nCan someone point me to a strategy to try the element deletion?\nIs the creation of a separate mesh necessary?\nI would be happy if I could do the deletion just based on element index.\nThank you very much in advance.\nBest Regards,\nNicol\u00f2 Grilli\nNational University of Singapore",
+          "url": "https://github.com/idaholab/moose/discussions/16387",
+          "updatedAt": "2022-06-22T18:26:00Z",
+          "publishedAt": "2020-12-04T15:43:52Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "MatthewMavis"
+                  },
+                  "bodyText": "Hi all,\nI'm just jumping on this thread to say I'm also interested in this as I'm looking into topology optimisation using moose. I have developed some code to do this based on element IDs though it is currently very rough (https://github.com/MatthewMavis/moose/blob/TopOpt/framework/src/meshgenerators/ElementDeleter.C).\nYou should be able to hook into the ElementDeletionGeneratorBase.C like I have which will delete the elements, though one problem I'm currently having with this is that the element ID's are reassigned meaning any data from the simulation cannot be used with the original mesh. So if anyone has any ideas on how to preserve the original IDs it would be a great help.\nI hope this helps in some way.\nBest Regards,\nMatt Mavis",
+                  "url": "https://github.com/idaholab/moose/discussions/16387#discussioncomment-147293",
+                  "updatedAt": "2022-06-22T18:25:57Z",
+                  "publishedAt": "2020-12-04T16:24:22Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ngrilli"
+                          },
+                          "bodyText": "Dear Matthew,\nThank you very much for your reply.\nI will look into the details of your code and give you feedback.\nFor sure the issue with the elements ID is a difficult one.\nNicol\u00f2",
+                          "url": "https://github.com/idaholab/moose/discussions/16387#discussioncomment-147304",
+                          "updatedAt": "2022-06-22T18:25:58Z",
+                          "publishedAt": "2020-12-04T16:34:58Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "WilkAndy"
+                  },
+                  "bodyText": "I think this would be useful to me too, but don't have time to implement it.  I wrote the BlockDeleter, which may give you some hints about what to do, if you choose to do it...",
+                  "url": "https://github.com/idaholab/moose/discussions/16387#discussioncomment-147641",
+                  "updatedAt": "2022-06-22T18:25:58Z",
+                  "publishedAt": "2020-12-05T00:40:03Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ngrilli"
+                          },
+                          "bodyText": "Dear Andy,\nThank you very much for your reply.\nIndeed, I think if block with specific IDs are deleted, the other blocks will maintain the original ID.\nSo this may be a better solution for me.\nI will let you know how it goes\nNicol\u00f2",
+                          "url": "https://github.com/idaholab/moose/discussions/16387#discussioncomment-147692",
+                          "updatedAt": "2022-06-22T18:25:59Z",
+                          "publishedAt": "2020-12-05T02:59:19Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "ngrilli"
+                  },
+                  "bodyText": "Dear Moose Users,\nI developed the following strategy to delete elements:\n\nGenerate a new block with new id using ElementSubdomainIDGenerator\nDeleting that block using BlockDeletionGenerator\nOf course this will require a restart of the simulation, I restart the simulations at the point where I want to delete the elements using the\nSolutionUserObject and SolutionFunction as explained here:\nhttps://mooseframework.inl.gov/modules/porous_flow/restart.html\nI have tested and seems the variables are assigned correctly at the correct spatial position in the elements remaining after restart\nOf course the Element Global ID changes\n\nYou can find a simple example here:\nhttps://github.com/ngrilli/c_pfor_am/tree/main/test/tests/DeleteElementsRestart\nNow the question is: will such a method preserve the Material Properties declared in the material blocks?\nFor instance, I have plastic deformation and I don't want it to be reinitialized to zero after restart.\nCan you envisage a method to do so?\nI mean restarting the simulation with elements deleted, but preserving the Material Properties at the correct spatial positions in the remaining elements.\nBest Regards,\nNicol\u00f2 Grilli\nNational University of Singapore",
+                  "url": "https://github.com/idaholab/moose/discussions/16387#discussioncomment-148719",
+                  "updatedAt": "2022-06-22T18:25:59Z",
+                  "publishedAt": "2020-12-07T10:20:25Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "jiangwen84"
+                  },
+                  "bodyText": "@ngrilli The element deletion method is somehow on our radar to work on in the future. Instead, we have started to implement element activation for AM application recently, see #16008  It does the opposite thing to deletion, but the method would be similar. It handles material initialization as you asked about in that PR.",
+                  "url": "https://github.com/idaholab/moose/discussions/16387#discussioncomment-149099",
+                  "updatedAt": "2022-06-29T13:31:46Z",
+                  "publishedAt": "2020-12-07T16:23:18Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "@dschwen and @dewenyushu they can comment on this better.",
+                          "url": "https://github.com/idaholab/moose/discussions/16387#discussioncomment-149203",
+                          "updatedAt": "2022-06-29T13:31:54Z",
+                          "publishedAt": "2020-12-07T16:25:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ngrilli"
+                          },
+                          "bodyText": "Dear Jiang Wen,\nThank you for your answer, it would be great to have that feature in the future, but I guess it's complicated to implement.\nFor the moment, I am testing the restart with SolutionUserObject and SolutionFunction.\nI am trying to understand if the material properties in the non-deleted elements, like plastic deformation gradient,\nare initialized from the values of the previous solution or are reinitialized by the Material Class (like for a new simulation).\nI am sure the plastic deformation gradient is taken from the previous solution with the \"basic restart\" method,\nwhen the mesh before and after coincide,\nbut not sure if that is still valid with SolutionUserObject and SolutionFunction.\nI will let you know what I find.\nBest Regards,\nNicol\u00f2 Grilli",
+                          "url": "https://github.com/idaholab/moose/discussions/16387#discussioncomment-154290",
+                          "updatedAt": "2022-06-29T13:31:54Z",
+                          "publishedAt": "2020-12-07T17:13:09Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dewenyushu"
+                          },
+                          "bodyText": "Our element activation capability should be readily extendable to element deletion. This is because we have \"active\" and \"inactive\" subdomains, during element activation, we move elements from \"inactive\" ->\"active\" subdomain. Element deletion will be the opposite (i.e., move elements from \"active\" ->\"inactive\" subdomain), which seems to be a minor change to #16008 .\nThe current PR already takes care of material initialization, updates boundary, does not require any change to the existing physics modules, and is computationally efficient since only the \"active\" dofs will appear in the system.",
+                          "url": "https://github.com/idaholab/moose/discussions/16387#discussioncomment-154411",
+                          "updatedAt": "2022-06-29T13:31:55Z",
+                          "publishedAt": "2020-12-07T17:25:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Thanks @dewenyushu , this is a nice addition to MOOSE.   In the past i have simply set the solid-mechanical stiffness of \"deleted\" elements to zero, or the thermal conductivity to zero, or the permeability to zero, etc (depending on the physics).  But to be able to actually delete the elements is much nicer.",
+                          "url": "https://github.com/idaholab/moose/discussions/16387#discussioncomment-162481",
+                          "updatedAt": "2022-09-02T14:11:54Z",
+                          "publishedAt": "2020-12-07T21:12:02Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "ngrilli"
+                  },
+                  "bodyText": "Dear Dewen,\nThank you very much for your answer,\nI will try your modifications and give you feedback.\nYes, I think element deletion is somehow easier than insertion.\nI have tried using simulation restart with SolutionUserObject and SolutionFunction,\nbut the Material Properties are reinitialized in the elements that are not deleted,\ntherefore this is not helpful for history dependent materials like plasticity.\nIt would be great to have your modifications released in MOOSE.\nBest Regards,\nNicol\u00f2",
+                  "url": "https://github.com/idaholab/moose/discussions/16387#discussioncomment-162961",
+                  "updatedAt": "2022-06-29T13:31:55Z",
+                  "publishedAt": "2020-12-08T09:08:23Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dewenyushu"
+                          },
+                          "bodyText": "Sounds great! I suppose the solution provided in the PR can help with the material property issue. Let me know how it goes.",
+                          "url": "https://github.com/idaholab/moose/discussions/16387#discussioncomment-163730",
+                          "updatedAt": "2022-06-29T13:31:56Z",
+                          "publishedAt": "2020-12-08T16:15:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ngrilli"
+                          },
+                          "bodyText": "Dear @dewenyushu\nI have tested your code modification for element activation/deactivation.\nIt works well in terms of moving elements from the \"inactive block\" to the \"active block\".\nHowever, I see that the stress is still calculated on both active and inactive domains\nand the boundary conditions I impose on the active domain are inducing stress and displacement also on the inactive domain.\nThis happens also in your example:\ncheck_element_addition_by_variable.i\nYou mentioned in your code only the active DOF will appear,\nso perhaps I am not understanding well.\nThis is the test I was looking at:\nhttps://github.com/ngrilli/c_pfor_am/tree/main/test/tests/AddElements\nBasically half the domain is active, half is inactive.\nI apply displacement on a boundary of the active and I see the inactive domain moving as well.\nTherefore the DOF of the inactive seem not be inactive.\nThank you very much in advance for your answer.\nBest Regards,\nNicol\u00f2",
+                          "url": "https://github.com/idaholab/moose/discussions/16387#discussioncomment-205613",
+                          "updatedAt": "2022-06-29T13:31:59Z",
+                          "publishedAt": "2020-12-14T17:15:12Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dewenyushu"
+                          },
+                          "bodyText": "@ngrilli thanks for trying this!\nYou will need to make sure your variables (displacements and stresses), kernels (TensorMechanics), and materials are block-restricted, e.g., block = '1'.\nMOOSE will throw out error about no kernel is defined in the inactive block, so you will need to add the following in your input as well.\n[Problem]\n  kernel_coverage_check = false\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/16387#discussioncomment-205782",
+                          "updatedAt": "2022-06-29T13:31:57Z",
+                          "publishedAt": "2020-12-14T17:52:56Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ngrilli"
+                          },
+                          "bodyText": "Dear @dewenyushu\nYes, your suggestion worked and your code seems to add elements fine for my application.\nI have created some test cases where I see the stress appearing in new elements under load:\nhttps://github.com/ngrilli/c_pfor_am/tree/main/test/tests/AddElements\nI will now try to modify the code to move elements from the active to the inactive block.\nI am still studying the part of the code that updates the boundary sets and not sure that has to be changed.\nFor the moment I will modify only the function\nActivateElementsUserObjectBase::execute()\nI will keep you updated about the results.\nThank you very much again for your help.\nBest Regards,\nNicol\u00f2",
+                          "url": "https://github.com/idaholab/moose/discussions/16387#discussioncomment-210474",
+                          "updatedAt": "2022-07-01T03:11:54Z",
+                          "publishedAt": "2020-12-15T16:31:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dewenyushu"
+                          },
+                          "bodyText": "Sounds great!\nBefore looking deeper/trying to change the code, I would suggest trying the following:\n\nDefine your kernels, variables, materials on the block that you want to delete elements from, say block = '2'\nThen in the ActivateElementsCoupled user object, set active_subdomain_id = '1'\n\nIt may just work. The element activation code is basically moving elements from one subdomain to another. So in theory it should not prevent us from doing element deletion without much code change. Outside of the user object, we can always define our FEProblem in the subdomain that the elements are moved to or from by using the block restricted capability.",
+                          "url": "https://github.com/idaholab/moose/discussions/16387#discussioncomment-210507",
+                          "updatedAt": "2022-07-01T03:11:54Z",
+                          "publishedAt": "2020-12-15T16:45:37Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "ngrilli"
+                  },
+                  "bodyText": "@dewenyushu @MatthewMavis @jiangwen84\nDear Dewen,\nI have completed and tested an implementation where I can do both element activation and deactivation based on a condition:\nhttps://github.com/ngrilli/c_pfor_am\nIt is a minor modification of your code.\nAs you suggested I move elements from the inactive block to the active block and vice versa\nbased on the condition.\nIn this way the plastic deformation is reinitialised properly when elements are reactivated.\nThe \"moving interface\" is not yet updated correctly during element elimination.\nI think more modifications are needed for this.\nHowever, I am not applying any boundary condition on the \"moving interface\"\nand my understanding is that there is stress free boundary condition at the boundary between the\nactive block and deactivated block.\nI am happy if someone can check and test my implementation\nI think it is quite interesting for the mechanics community.\nBest Regards,\nNicol\u00f2 Grilli\nNational University of Singapore",
+                  "url": "https://github.com/idaholab/moose/discussions/16387#discussioncomment-256254",
+                  "updatedAt": "2022-07-01T03:11:51Z",
+                  "publishedAt": "2021-01-02T05:55:12Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dewenyushu"
+                          },
+                          "bodyText": "Thanks @ngrilli for sharing your branch with us.\nI looked at your example c_pfor_am/test/tests/ElementAddDelete/ElementAddDeleteDispX.i. One issue may result in incorrect moving_interface  update is that you may have specified the wrong Mesh/sidesets/normal. It seems that you have left and right subdomains. Therefore, the initial moving_interface should have normal = '1 0 0' (+x direction) instead of normal='0 0 1'(+z direction). Hope this would fix the issue.\nNevertheless, I am happy that most of the part works for your application!",
+                          "url": "https://github.com/idaholab/moose/discussions/16387#discussioncomment-260307",
+                          "updatedAt": "2022-07-01T03:11:58Z",
+                          "publishedAt": "2021-01-04T15:42:27Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "Traiwit"
+                  },
+                  "bodyText": "@ngrilli  @dewenyushu\nHi guys,\nI am very new to MOOSE, been using it for less than a month, but I found it very powerful.\nI've been working on mine stimulation, right now I can do the blockdeletion for a simple model\nHowever, I would like to know if it is possible to add the block/element back to the void space (backfill) without altering the strain on surrounding area (strain-free).\nto make it clearer, here's the workflow:\ncreate a solid geometry -> remove a block -> run a equalibirum simulation with gravity activate -> the void is deformed due to stress\n-> backfill the material back into the void without altering the deformation from the previous step.\nAnother question I have is: when I use 'BlockDeletionGenerator', the block is gone, the issue would also be that: how can i locate the position of the backfill if I no longer have the deleted block in the system.\nI read @ngrilli reply back in Jan, but i am not sure if it will works for my problem, could you please clarify, thanks!.\nThank you\nKind regards,\nTrai\nbelow is my script for blockdeletion\n[Mesh]\n[./gen]\ntype = FileMeshGenerator\nfile = equlstep_step0.e\n# show_info = true\nuse_for_exodus_restart = true\n# exodus_extra_element_integers = 's11_aux s22_aux s33_aux'\n[]\n[mergedBox]\ntype = RenameBlockGenerator\ninput = gen\nold_block_id = '2'\nnew_block_id = '1'\n[]\n[ed0]\ntype = BlockDeletionGenerator\ninput = mergedBox\nblock_id = 1\n[]\n[]",
+                  "url": "https://github.com/idaholab/moose/discussions/16387#discussioncomment-428072",
+                  "updatedAt": "2022-07-01T03:11:59Z",
+                  "publishedAt": "2021-03-04T05:17:57Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "You are correct: once you have used BlockDeletionGenerator, the block simply does not exist and you cannot add the block's elements back to the simulation again.  You could: (1) create another model without the deletion and read the results from the deleted-model during the initialization; or (2) use a different method like setting the young's modulus of your \"deleted\" elements to zero, solving, and then resetting the young's modulus to the original value.   However, i suggest you use neither of these methods, and instead try the method described by @ngrilli and @dewenyushu above.",
+                          "url": "https://github.com/idaholab/moose/discussions/16387#discussioncomment-428092",
+                          "updatedAt": "2022-07-18T13:12:14Z",
+                          "publishedAt": "2021-03-04T05:36:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ngrilli"
+                          },
+                          "bodyText": "Dear @Traiwit\nYou can find a test case for deleting and reactivating element in my repository:\nhttps://github.com/ngrilli/c_pfor_am/tree/main/test/tests/ElementAddDelete\nWhen an element is reactivated (moved to the active subdomain), it will not affect affect directly the strain in the other elements.\nThe nodes that are shared between the active elements and the reactivating element will keep the same displacement\nthat they had at the previous time step.\nThe displacement in the newly activated nodes will be initialized based on your displacement ICs (default is 0).\nThe Material Properties will be reinitialized based on your material objects.\nIf the element is reactivated at the beginning of the time step\n(flag execute_on = timestep_begin in ActDeactElementsCoupled),\nit will affect the strain in the neighbouring elements at the end of the time step\nbecause the element will be considered in the equilibrium equations.\nTrust this helps.\nBest Regards,\nNicol\u00f2 Grilli\nNational University of Singapore",
+                          "url": "https://github.com/idaholab/moose/discussions/16387#discussioncomment-429457",
+                          "updatedAt": "2022-07-18T13:12:14Z",
+                          "publishedAt": "2021-03-04T14:39:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dewenyushu"
+                          },
+                          "bodyText": "@Traiwit I agree with what @ngrilli explained above and I think the element deletion and reactivation should help your problem.\nIn addition to this, I would like to mention that there is a new implementation by @hugary1995 to unify element activation, deletion, and moving interface, which is based on the element activation code Nicolo and I used, but is more general and flexible in terms of moving elements from one subdomain to another.\n#17101",
+                          "url": "https://github.com/idaholab/moose/discussions/16387#discussioncomment-429876",
+                          "updatedAt": "2022-07-18T13:12:13Z",
+                          "publishedAt": "2021-03-04T16:15:28Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "@WilkAndy @ngrilli @dewenyushu\nThank you for all your help, I attempted all the methods you all suggested, but I found \"use a different method like setting the young's modulus of your \"deleted\" elements to zero, solving, and then resetting the young's modulus to the original value.\" method is the most applicable to my problem.\nHowever, when I changed the young's modulus value of the 'deleted' block back to original and run the elastic equlibirium simulation, it pushes the deleted block back the the pre-deformed shape which i do not want. is there anyway to work around this?\nfigure1: pre elastic equlibirium simulation, the green block is the deleted block (applied low young's modulus)\n\nfigure2: after the simulation, the green block got pushed back\n\nI tried to use \"use_displaced_mesh = true\" at every possible location in my input file, but still couldn't solve this problem.\nThank you again\nKind regards,\nTraiwit from Australia",
+                          "url": "https://github.com/idaholab/moose/discussions/16387#discussioncomment-444322",
+                          "updatedAt": "2022-07-18T13:12:24Z",
+                          "publishedAt": "2021-03-08T04:00:50Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "I think you've got to model what actually happens in real life.   What is the material being \"added back\"?",
+                          "url": "https://github.com/idaholab/moose/discussions/16387#discussioncomment-444394",
+                          "updatedAt": "2022-07-18T13:12:41Z",
+                          "publishedAt": "2021-03-08T04:04:34Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "Hi Andy,\nExactly the same material as before it got deleted.\nas shown below, i have 3 materials = geo (geology), void, and blackfill.\nso for block2 the steps are: elastic bulk model > detetion > backfill\nThe objective here is to backfill the material into the deformed mesh.\nRegards,\nTraiwit\n[Materials]\n[./strain]\ntype = ComputeFiniteStrain\n# eigenstrain_names = ini_stress\ndisplacements = 'disp_x disp_y disp_z'\n[../]\n[./stress]\ntype = ComputeFiniteStrainElasticStress\n[../]\n[./elasticity_tensor_geo]\ntype = ComputeIsotropicElasticityTensor\nyoungs_modulus = 20e9\npoissons_ratio = 0.25\nblock = '0 3'\nuse_displaced_mesh = true\n[../]\n[./elasticity_tensor_void]\ntype = ComputeIsotropicElasticityTensor\nyoungs_modulus = 100000\npoissons_ratio = 0.3\nblock = '1'\nuse_displaced_mesh = true\n[../]\n[./elasticity_tensor_backfill]\ntype = ComputeIsotropicElasticityTensor\nyoungs_modulus = 20e9\npoissons_ratio = 0.3\nblock = '2'\nuse_displaced_mesh = true\n[../]\n[./density_geo]\ntype = GenericConstantMaterial\nprop_names = density\nprop_values = 2700 # kg/m3\nblock = '0 3'\nuse_displaced_mesh = true\n[../]\n[./density_void]\ntype = GenericConstantMaterial\nprop_names = density\nprop_values = 1.225 # kg/m3\nblock = '1'\nuse_displaced_mesh = true\n[../]\n[./density_backfill]\ntype = GenericConstantMaterial\nprop_names = density\nprop_values = 2700 # kg/m3\nblock = '2'\nuse_displaced_mesh = true\n[../]\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/16387#discussioncomment-444513",
+                          "updatedAt": "2022-07-18T13:12:40Z",
+                          "publishedAt": "2021-03-08T04:10:57Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "To me, this sounds like a mining scenario.  In mining, the \"backfill\" is not identical to the unmined rock.  It is significantly softer, and probably has a much larger Poisson's ratio.   You will have to determine exactly what material properties you need to assign to the backfill.  You will also need to set \"strain = 0\" in the element as it is backfilled (or measure the stress relative to the strained material).\nIf it is not a mining scenario and you really are backfilling with identical material, then MOOSE might be doing exactly what you want!",
+                          "url": "https://github.com/idaholab/moose/discussions/16387#discussioncomment-444801",
+                          "updatedAt": "2022-07-18T13:12:43Z",
+                          "publishedAt": "2021-03-08T04:33:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "Hi @WilkAndy,\nThank you for your suggestion, yes, I am making a prototype simulation for mining scenarios, and I am new to the field.\nI agree the backfill material should have a much lower young modulus, I set it to 0.001xE_orginal.\nI am currently looking for a strain-free (=0) way to backfill this material back into the particular block of the system using MOOSE, do you have any suggestion? Since we cannot directly change the value of strain within the input file.\nI found 'Compute Eigenstrain' https://mooseframework.inl.gov/source/materials/ComputeEigenstrain.html, will it work if I set all the 'eigen_base  = 0'. I've also found 'ComputeEigenstrainFromInitialStress' https://mooseframework.inl.gov/source/materials/ComputeEigenstrainFromInitialStress.html which sounds like it might work as well.\nThank you for help, I appreciate it\nKind regards,\nTraiwit from Australia",
+                          "url": "https://github.com/idaholab/moose/discussions/16387#discussioncomment-448138",
+                          "updatedAt": "2022-07-18T13:12:43Z",
+                          "publishedAt": "2021-03-08T07:55:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Hi @Traiwit ,\nSo, i think you might be able to use controls to ensure the strain-setting activates at the correct time, but it might also be easier to write some C++ yourself.\nA few related side notes:\n\nYou're probably aware, but your situation is likely to be inelastic.  I've created lots of rock-mechanics plasticity classes (various versions of Drucker-Prager, Mohr-Coulomb and weak-plane) that might be useful.\nYou will have to be careful about the roof penetrating the floor\nDo you work for CSIRO?  If so, i can help and we have our own private app designed for mining situations, and you can use it.\n\na",
+                          "url": "https://github.com/idaholab/moose/discussions/16387#discussioncomment-449513",
+                          "updatedAt": "2022-07-18T13:12:45Z",
+                          "publishedAt": "2021-03-08T09:54:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "Hi @WilkAndy,\nYes, I will look into that.\nRe: side notes\n\nYes I am fully aware, that will be my next step to work on the inelastic (plastic/non-linear) problems. Is the model you mentioned available online or it is internal to CSIRO? It will be very helpful for my project.\nWill keep that in mind\nI am not with CSIRO, but I know many people there are using MOOSE for their modelling, my PhD colleague is also working with CSIRO on the Hydrogen storage model.\n\nAgain, thank you for your suggestions.\nKind regards,\nTraiwit from Australia",
+                          "url": "https://github.com/idaholab/moose/discussions/16387#discussioncomment-450049",
+                          "updatedAt": "2022-07-18T13:12:45Z",
+                          "publishedAt": "2021-03-08T13:06:26Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to avoid the bubble on the boundary using MultiSmoothCircleIC",
+          "author": {
+            "login": "wenpeng231024"
+          },
+          "bodyText": "Hi Moose group,\nNow I try to use \"MultiSmoothCircleIC\" to build multiple bubbles sample.  But I found there are some bubbles on the boundary. Because my boundary condition is not a periodic boundary, do you know how to avoid the bubble on the boundary?\nThanks,\nPeng",
+          "url": "https://github.com/idaholab/moose/discussions/17201",
+          "updatedAt": "2022-12-28T12:01:38Z",
+          "publishedAt": "2021-03-03T15:19:33Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "laagesen"
+                  },
+                  "bodyText": "Right now it is only set up assuming periodic BCs. If you want to try modifying the code to avoid having bubbles intersect boundaries, I can suggest how it can be done. Another option would be to use SpecifiedSmoothCircleIC, then you can place the bubbles exactly where you want them.",
+                  "url": "https://github.com/idaholab/moose/discussions/17201#discussioncomment-456155",
+                  "updatedAt": "2022-12-28T12:01:38Z",
+                  "publishedAt": "2021-03-09T16:58:36Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "wenpeng231024"
+                          },
+                          "bodyText": "Got it. I will try to use SpecifiedSmoothCirclesIC to place the bubbles. Thanks very much.\nPeng",
+                          "url": "https://github.com/idaholab/moose/discussions/17201#discussioncomment-456214",
+                          "updatedAt": "2022-12-28T12:01:39Z",
+                          "publishedAt": "2021-03-09T17:12:43Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How can I create a austenite growing in to pearlite microstructure?",
+          "author": {
+            "login": "Henrique-B-Pereira"
+          },
+          "bodyText": "Hello,\nI'm new to the program. I literally installed and ran the first example yesterday.\nI am looking to do a model that involves the growth of austenite from a completely pearlitic microstructure, similar to this example:\n\nAfterwards, I would like to use the same microstructure generated from the simulations and return with the pearlite transformation.\nIs there a tutorial / example that I can take as a basis?\nWhat suggestion can you give me that I can do this simulation?",
+          "url": "https://github.com/idaholab/moose/discussions/17212",
+          "updatedAt": "2023-03-10T11:20:12Z",
+          "publishedAt": "2021-03-03T19:38:11Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "laagesen"
+                  },
+                  "bodyText": "Hello Henrique,\nThis is probably best modeled with a single order parameter that distinguishes between the austenite and pearlite phases, and composition variables for each solute atom. A KKS-type model would probably work best:\nhttps://mooseframework.inl.gov/modules/phase_field/MultiPhase/KKS.html\nThere are some examples given on the above web page. However, they are not going to be physically parameterized for the system you are looking at. Before you start trying to parameterize the model, I would highly suggest that you do some background reading on phase-field modeling if you aren't familiar with the methodology. The following page has a lot of good resources:\nhttps://pages.nist.gov/pfhub/",
+                  "url": "https://github.com/idaholab/moose/discussions/17212#discussioncomment-456189",
+                  "updatedAt": "2023-03-10T11:20:25Z",
+                  "publishedAt": "2021-03-09T17:08:16Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Porous media module: to output final permeability field from different reads",
+          "author": {
+            "login": "zhang-rite"
+          },
+          "bodyText": "Hi\nI set the permeability of different regions (e.g., block1,2...) in a model separately.\nSo these can be saved in the exodus file separately.\nBut how can I export the final permeability field of the entire model to an exodus file by one variable name for visualization?\nPerhaps also for the setting of other materials.\nThank you.",
+          "url": "https://github.com/idaholab/moose/discussions/17253",
+          "updatedAt": "2024-11-03T04:33:15Z",
+          "publishedAt": "2021-03-09T02:45:42Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "WilkAndy"
+                  },
+                  "bodyText": "Just create an AuxVariable that's defined over all the blocks",
+                  "url": "https://github.com/idaholab/moose/discussions/17253#discussioncomment-452477",
+                  "updatedAt": "2024-11-03T04:33:15Z",
+                  "publishedAt": "2021-03-09T03:25:52Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "zhang-rite"
+                          },
+                          "bodyText": "Andy, Thanks always. The problem is I have defined several Auxvarible over individual blocks.\nEach is set via RandomIC. I want to apply random permeability fields with different ranges.",
+                          "url": "https://github.com/idaholab/moose/discussions/17253#discussioncomment-452502",
+                          "updatedAt": "2024-11-03T04:33:33Z",
+                          "publishedAt": "2021-03-09T03:55:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "You can probably join the variables together in paraview\nAlternatively, define a new AuxVariable, and use PorousFlowPropertyAux with property = permeability, along with row and column to populate it.",
+                          "url": "https://github.com/idaholab/moose/discussions/17253#discussioncomment-452513",
+                          "updatedAt": "2024-11-03T04:33:33Z",
+                          "publishedAt": "2021-03-09T04:08:29Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Calculation of reaction forces on the loading boundary",
+          "author": {
+            "login": "abarun22"
+          },
+          "bodyText": "Dear all,\nI wonder if there is any default method (possibly through the aux kernels) to compute the reaction forces in the boundary where the loads (displacement controlled) are applied. I know this can be done via the stresses (stress_xx) in the loading direction when multiplied by the cross-sectional area of the boundary, but can be slightly inaccurate at times. ANSYS does a better comparison where the loads are extracted for the respective boundary from the in-built 'Force-reaction' solution module. Attached please see the comparison. However it showed a huge difference when the conventional path of (stress_xx*area) was followed. Any guidance on the correct method to compute the loads in MOOSE would be highly appreciated.\nKind regards,\nArun",
+          "url": "https://github.com/idaholab/moose/discussions/16945",
+          "updatedAt": "2022-10-21T23:56:27Z",
+          "publishedAt": "2021-02-10T19:23:07Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "You can save the residuals from the StressDivergence kernels into an AuxVariable, and then sum up the residual on whatever boundary you want to evaluate the reaction force there. If you search for \"save_in\" in the tensor_mechanics module's regression tests you'll find enough examples.",
+                  "url": "https://github.com/idaholab/moose/discussions/16945#discussioncomment-357798",
+                  "updatedAt": "2022-10-11T13:51:17Z",
+                  "publishedAt": "2021-02-10T20:06:36Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "abarun22"
+                          },
+                          "bodyText": "Dear Gary,\nThanks for the suggestion. This seems to be the approach that would potentially give close results with ANSYS and experiments, however i am stuck with trouble when the volumetric locking correction is included, which screws up the results at large strains. The plasticity model at its usual self requires 'volumetric locking correction' option to be included to give correct results at these strains. The stress divergence calculations (done through ADStressDivergenceTensors) however requires this option to be switched OFF it it were to execute correctly. This however gives wrong results (please see the achieved matching in the attached plot). On the other hand setting 'volumetric locking correction' to TRUE gives the following error.\n*** ERROR ***\nVolumetric locking correction should be set to false for 1-D problems\nBeing a 3D problem, i could not find reasons for this error and would like to know from you whether there is any possible fix. I tried setting dim=3 in the mesh block with out much success. One more issue i wanted to discuss here is the negative jacobian obtained for certain elements during the course of computation (possibly stress divergence), although it does not interfere with the results. I wonder whether this is something that  needs attention. Also there seems to be 'MooseException' raised during the computation of Aux variable (please see the .log file) which needs a further look-in.\nI guess we almost found the correct set of input commands (see the attached .i file) to be included that calculate precisely the reaction forces. If this can be done with locking correction ON the problem is solved. I welcome your suggestions in this regard.\nKind regards,\nArun\n16022021.zip",
+                          "url": "https://github.com/idaholab/moose/discussions/16945#discussioncomment-374389",
+                          "updatedAt": "2022-10-11T13:51:17Z",
+                          "publishedAt": "2021-02-16T17:32:54Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Sorry Arun I'm late on this. Setting volumetric_locking_correction = true is the correct thing to do here. The relevant logic for that error can be found in ADStressDivergenceTensors.C:\nif (_ndisp == 1 && _volumetric_locking_correction)\n    mooseError(\"Volumetric locking correction should be set to false for 1-D problems.\");\n\nSo the kernel must think you only coupled one displacement to it. Indeed, in the input file you had displacements = disp_x in ADStressDivergenceTensors, therefore it overrides your GlobalParams definition of displacements = 'disp_x disp_y disp_z'.\nSimply removing displacements = disp_x and similarly the lines displacements = disp_y and displacements = disp_z should work.",
+                          "url": "https://github.com/idaholab/moose/discussions/16945#discussioncomment-381268",
+                          "updatedAt": "2022-10-11T13:51:32Z",
+                          "publishedAt": "2021-02-18T14:57:53Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "abarun22"
+                  },
+                  "bodyText": "Dear all,\nI peformed an exercise in setting the elements to SECOND order to bye-pass the problems associated with 'volumetric_locking_correction' so that i get same response as physical tests.  This time i received a seg fault error (as given below), which i wanted to report. Please could you comment if the second order elements are a better way to avoid locking behaviour and achieve correct results.\nAlso let me know how this memory crash can be reported.\n(base) abalasub@freia013> ../../../hardening_model_app-opt -i PieceWise_test.i\nFramework Information:\nMOOSE Version:           git commit 4c15601 on 2021-02-12\nLibMesh Version:         c70ab40900490f44391f1b891c8c3731c45f0cf1\nPETSc Version:           3.14.2\nSLEPc Version:           3.14.0\nCurrent Time:            Thu Feb 18 11:00:26 2021\nExecutable Timestamp:    Mon Feb 15 19:33:31 2021\nParallelism:\nNum Processors:          1\nNum Threads:             1\nMesh:\nParallel Type:           replicated\nMesh Dimension:          3\nSpatial Dimension:       3\nNodes:\nTotal:                 12369\nLocal:                 12369\nElems:\nTotal:                 1242\nLocal:                 1242\nNum Subdomains:          1\nNum Partitions:          1\nNonlinear System:\nNum DOFs:                37107\nNum Local DOFs:          37107\nVariables:               { \"disp_x\" \"disp_y\" \"disp_z\" }\nFinite Element Types:    \"LAGRANGE\"\nApproximation Orders:    \"SECOND\"\nAuxiliary System:\nNum DOFs:                86787\nNum Local DOFs:          86787\nVariables:               { \"stress_xx\" \"strain_xx_av\" \"plastic_strain_xx\" \"vonmises\" } { \"resid_x\"\n\"resid_y\" \"resid_z\" }\nFinite Element Types:    \"MONOMIAL\" \"LAGRANGE\"\nApproximation Orders:    \"SECOND\" \"SECOND\"\nExecution Information:\nExecutioner:             Transient\nTimeStepper:             ConstantDT\nSolver Mode:             Preconditioned JFNK\nMOOSE Preconditioner:    SMP\nLEGACY MODES ENABLED:\nThis application uses the legacy material output option: material properties are output only on TIMESTEP_END, not INITIAL. To remove this message, set 'use_legacy_material_output' to false in this application. If there are gold output files that contain material property output for which output occurs on INITIAL, then these will generate diffs due to zero values being stored, and these tests should be re-golded.\nProjecting initial condition                                                               [  1.39 s]\nComputing initial stateful property values                                                 [  1.19 s]\nTime Step 0, time = 0\nPostprocessor Values:\n+----------------+----------------+----------------+----------------+----------------+----------------+----------------+\n| time           | VonMises       | disp_xx        | p_xx           | resid_x        | s_xx           | strain_xx_pp   |\n+----------------+----------------+----------------+----------------+----------------+----------------+----------------+\n|   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |\n+----------------+----------------+----------------+----------------+----------------+----------------+----------------+\nTime Step 1, time = 0.1, dt = 0.1\nComputing initial residual .                                                               [  2.37 s]\n0 Nonlinear |R| = 1.192609e+09\nSegmentation fault\nKind regards,\nArun\nPieceWise_test.txt",
+                  "url": "https://github.com/idaholab/moose/discussions/16945#discussioncomment-380701",
+                  "updatedAt": "2022-10-13T08:34:56Z",
+                  "publishedAt": "2021-02-18T11:26:11Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "abarun22"
+                  },
+                  "bodyText": "Dear Gary,\nWe nearly identified the methods (especially the usage of 'ADStressDivergenceTensors') needed to achieve the correct results.  Definition of volumetric locking correction and displacements variables are done in the global parameters block and never allowed to get over-written thereafter. The only thing i wish to highlight was regarding the accuracy of the results computed by this kernel.  Setting OFF 'use_displaced_mesh' produced exact results (as ANSYS and experiments) up to the UTS and showed a marked difference thereafter.  On the other hand setting this option to TRUE gives acceptable close results (as in the attached plot), but not the exact fit one would look for. I still believe there is further scope to improve the accuracy of results, which i am unaware of.  Request you please to take a look at the attached input commands and let me know your suggestions.\n\nPieceWise_test.txt\nKind regards,\nArun",
+                  "url": "https://github.com/idaholab/moose/discussions/16945#discussioncomment-401235",
+                  "updatedAt": "2022-10-13T08:35:21Z",
+                  "publishedAt": "2021-02-24T13:17:43Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Hello Arun,\nThere are two separate sets of things you are trying to do here:\n\nsetting up the correct input file, and\ntuning parameters to match the experiment.\n\nI don't think you can do both at the same time. I would first make sure 1 is done, then 2.\nI see that in the input file you are using the tensor mechanics action. That action will set up the correct kernels and strain calculators for you -- so you don't need to define them. In fact, I would just remove the kernel you had in there.\nJust so we are on the same page, the input file after modification should look like this:\n# A UserObject IsotropicSD test, with power rule hardening with rate 1e2.\n# Linear strain is applied in the x and y direction.\n\n[Mesh]\n  type = FileMesh\n  file = Specimen_QtrModel.e\n[]\n\n[GlobalParams]\n  displacements = 'disp_x disp_y disp_z'\n  volumetric_locking_correction = true\n[]\n\n[Modules/TensorMechanics/Master]\n  [./all]\n    strain = FINITE\n    incremental = true\n    add_variables = true \n    use_automatic_differentiation = true\n    save_in = 'resid_x resid_y resid_z'\n  [../]\n[]\n\n[BCs]\n  [./Load_RE]\n    type = FunctionDirichletBC\n    variable = disp_x\n    function = '0.0226*t*(0.15/0.125)'\n    boundary = \"Right_end\"\n  [../]\n  [./Symm_LE]\n    type = ADDirichletBC\n    variable = disp_x\n    value = 0\n    boundary = \"Left_end\"\n  [../]\n  [./Symm_BY]\n    type = ADDirichletBC\n    variable = disp_y\n    value = 0.0\n    boundary = \"Bottom\"\n  [../]\n  [./Symm_LZ]\n    type = ADDirichletBC\n    variable = disp_z\n    value = 0.0\n    boundary = \"Lateral_face\"\n  [../]\n  [./Const_RY]\n    type = ADDirichletBC\n    variable = disp_y\n    value = 0.0\n    boundary = \"Right_end\"\n  [../]\n  [./Const_RZ]\n    type = ADDirichletBC\n    variable = disp_z\n    value = 0.0\n    boundary = \"Right_end\"\n  [../]\n[]\n\n[AuxVariables]\n  [./stress_xx]\n    order = FIRST\n    family = MONOMIAL\n  [../]\n  [./strain_xx_av]\n   order = FIRST\n    family = MONOMIAL\n  [../]\n  [./plastic_strain_xx]\n    order = FIRST\n    family = MONOMIAL\n  [../]\n  [./vonmises]\n    order = FIRST\n    family = MONOMIAL\n  [../]\n  [./resid_x]\n    order = FIRST\n    family = LAGRANGE\n  [../]\n  [./resid_y]\n  [../]\n  [./resid_z]\n  [../]\n[] \n\n[AuxKernels]\n  [./stress_xx]\n    type = ADRankTwoAux\n    rank_two_tensor = stress\n    variable = stress_xx\n    index_i = 0\n    index_j = 0\n  [../]\n  [./strain_xx_ak]\n    type = ADRankTwoAux\n    rank_two_tensor = total_strain\n    variable = strain_xx_av\n    index_i = 0\n    index_j = 0\n  [../]\n  [./vonmises]\n    type = ADRankTwoScalarAux\n    rank_two_tensor = stress\n    variable = vonmises\n    scalar_type = VonMisesStress\n  [../]\n  [./plastic_strain_xx]\n    type = ADRankTwoAux\n    rank_two_tensor = plastic_strain\n    variable = plastic_strain_xx\n    index_i = 0\n    index_j = 0\n  [../]\n[] \n\n[Postprocessors]\n  [./disp_xx]\n    type = SideAverageValue\n    variable = disp_x\n    boundary = \"Right_end\"\n  [../]\n  [./s_xx]\n    type = SideAverageValue\n    variable = stress_xx\n    boundary = \"Right_end\"\n  [../]\n  [./p_xx]\n    type = SideAverageValue\n    variable = plastic_strain_xx\n    boundary = \"Left_end\"\n  [../]\n  [./strain_xx_pp]\n    type = SideAverageValue\n    variable = strain_xx_av\n    boundary = \"Left_end\"\n  [../]\n  [./VonMises]\n    type = SideAverageValue\n    variable = vonmises\n    boundary = \"Right_end\"\n  [../]\n  [./resid_x]\n    type = SideAverageValue\n    variable = resid_x\n    boundary = \"Right_end\"\n  [../]\n[]\n\n[Functions]\n  [./hf]\n    type = PiecewiseLinear\n    data_file = PW_last_iter_AsIs_extractedYield_start.csv\n    scale_factor = 1\n    format = columns\n  [../]\n[]\n\n[Materials]\n  [./elasticity_tensor]\n    type = ADComputeIsotropicElasticityTensor\n    youngs_modulus = 2.02E+11\n    poissons_ratio = 0.315\n  [../]\n  [./isotropic_plasticity]\n    type =ADIsotropicPlasticityStressUpdate\n    yield_stress = 554146341.5\n    hardening_function = hf\n    use_displaced_mesh=true\n  [../]\n  [./radial_return_stress]\n    type = ADComputeMultipleInelasticStress\n    inelastic_models = 'isotropic_plasticity'\n  [../]\n[]\n\n[Executioner]\n  num_steps = 500\n  dt = 0.1\n  type = Transient\n\n  nl_rel_tol = 1e-6\n  nl_max_its = 20\n  l_tol = 1e-4\n  l_max_its = 100\n\n  solve_type = PJFNK\n  petsc_options_iname = '-pc_type'\n  petsc_options_value = 'lu'\n[]\n\n[Outputs]\n  perf_graph = false\n  exodus = true\n  csv = true\n[]\n\n[Preconditioning]\n [./smp]\n   type = SMP\n   full = true\n [../]\n[]\n\nThe parameters like \"use_displaced_mesh\" should be set to give you the correct solution, instead of tuned to give you results that are closer to the experimental data. In the case of finite deformation, we calculate cauchy stress in the stress calculator, so the stress divergence kernels should run on displaced mesh, i.e. use_displaced_mesh = true. Again, you don't need to worry about all this if you are using the action.",
+                          "url": "https://github.com/idaholab/moose/discussions/16945#discussioncomment-427921",
+                          "updatedAt": "2022-10-13T08:35:34Z",
+                          "publishedAt": "2021-03-04T02:37:30Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "abarun22"
+                  },
+                  "bodyText": "Dear Gary,\nThanks for the response. I agree that we must try and set up the correct solution with the input commands rather than matching with the experimental results. But the issue here is that we have variants of solution for different set of commands and the one that produces results close to the experiments is elusive here. If we manage to match the curves very closely, then we can say that we've found the most realistic solution. I would still like to retain the added kernel for stress divergence calculations as it gives a much improved fit as compared to running without them (Please see the attached plot). The fact that we achieve an exact fit without the usage of 'use_displaced_mesh' in the divergence kernel (other plot) atleast for the small strain limit suggests that some other options could play a part here and there is very much hope that we get an exact solution.\nKind regards,\nArun",
+                  "url": "https://github.com/idaholab/moose/discussions/16945#discussioncomment-451078",
+                  "updatedAt": "2022-10-13T08:37:11Z",
+                  "publishedAt": "2021-03-08T17:56:08Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Switch DirichletBC to NeumannBC on the same boundary",
+          "author": {
+            "login": "styyokuda"
+          },
+          "bodyText": "Dear MOOSE Team,\nI need to set DirichletBC at time = 0, then switch the DirichletBC to NeumannBC for time > 0 on the same boundary.\nPlease help.\nS. Thomas",
+          "url": "https://github.com/idaholab/moose/discussions/17238",
+          "updatedAt": "2023-02-23T16:21:03Z",
+          "publishedAt": "2021-03-05T18:50:11Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "josebastiase"
+                  },
+                  "bodyText": "Hi,\nI'm not sure whether this is implemented in MOOSE already, but I would try using controls.\nhttps://mooseframework.inl.gov/syntax/Controls/\nCheers,\nJose",
+                  "url": "https://github.com/idaholab/moose/discussions/17238#discussioncomment-449606",
+                  "updatedAt": "2023-03-06T07:44:17Z",
+                  "publishedAt": "2021-03-08T10:43:45Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "ngrilli"
+                  },
+                  "bodyText": "Dear @styyokuda\nIf it's just at time 0, you could set an initial condition on the variable of interest using FunctionIC.\nBy setting the initial condition as a function of the coordinates x,y,z\nyou can make sure the initial condition is applied only on the boundary of choice at time 0.\nOtherwise, what I did in the past was to use the \"basic restart\" procedure described here:\nhttps://mooseframework.inl.gov/modules/porous_flow/restart.html\nIn the restart input file you can just remove the DirichletBC and the solver will apply NeumannBC\nin the restarted simulation.\nTrust this helps.\nBest Regards,\nNicol\u00f2 Grilli\nNational University of Singapore",
+                  "url": "https://github.com/idaholab/moose/discussions/17238#discussioncomment-450170",
+                  "updatedAt": "2023-03-06T07:44:24Z",
+                  "publishedAt": "2021-03-08T13:56:12Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Thank you for mesh-only plaintext info",
+          "author": {
+            "login": "WilkAndy"
+          },
+          "bodyText": "To whoever added some nice plaintext info into the output generated by \"--mesh-only\": Thank you!\na",
+          "url": "https://github.com/idaholab/moose/discussions/17244",
+          "updatedAt": "2021-03-17T18:37:39Z",
+          "publishedAt": "2021-03-07T23:26:34Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "loganharbour"
+                  },
+                  "bodyText": "Your agreement in #16783 gave me the idea to include it elsewhere!\nI was thinking about an option to make it a little less verbose - but only if people are frustrated by it \ud83d\ude06",
+                  "url": "https://github.com/idaholab/moose/discussions/17244#discussioncomment-440896",
+                  "updatedAt": "2021-03-08T00:33:42Z",
+                  "publishedAt": "2021-03-08T00:33:30Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "FileMesh vs. FileMeshGenerator",
+          "author": {
+            "login": "hsheldon"
+          },
+          "bodyText": "Can someone please explain to me the difference between FileMesh and FileMeshGenerator?\nI have come across a strange situation where initial_from_file_var works fine if I use FileMesh, but does not work if I use FileMeshGenerator. I don't get an error, but the variables are not being initialised when I use FileMeshGenerator to read the mesh.",
+          "url": "https://github.com/idaholab/moose/discussions/17225",
+          "updatedAt": "2021-03-05T01:10:40Z",
+          "publishedAt": "2021-03-04T03:52:33Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "YaqiWang"
+                  },
+                  "bodyText": "FileMeshGenerator is the preferred way for creating meshes. It is part of the new mesh generation system. FileMesh could be deprecated in the future if I understand correctly. To make initial_from_file_var work with FileMeshGenerator, you will need to set this parameter use_for_exodus_restart to true in the mesh generator to tell MOOSE that this exodus file can be used for initializing variables later.",
+                  "url": "https://github.com/idaholab/moose/discussions/17225#discussioncomment-428021",
+                  "updatedAt": "2021-03-04T04:08:52Z",
+                  "publishedAt": "2021-03-04T04:08:20Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "All this really needs to be documented!\nThe doc string \"True to indicate that the mesh file this generator is reading can be used for restarting variables\" seems to say nothing about initializing variables, only \"restarting\" them.\nIdeally, there should be a link to a test/example that shows users how to initialize variables.\nAlso, this documentation is really hard to understand \"users can use parameter exodus_extra_element_integers to load elemental variables for setting extra element integers of the mesh. The names of the extra element integers will be the same as the names of the element variables in the mesh file\" .   Another example would be useful.",
+                          "url": "https://github.com/idaholab/moose/discussions/17225#discussioncomment-428104",
+                          "updatedAt": "2021-03-04T05:44:52Z",
+                          "publishedAt": "2021-03-04T05:44:52Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hsheldon"
+                          },
+                          "bodyText": "Agree the doco could be a bit more clear!",
+                          "url": "https://github.com/idaholab/moose/discussions/17225#discussioncomment-431210",
+                          "updatedAt": "2021-03-04T23:25:41Z",
+                          "publishedAt": "2021-03-04T23:25:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hsheldon"
+                          },
+                          "bodyText": "I've been wondering for a while why the old mesh generation methods haven't been deprecated.",
+                          "url": "https://github.com/idaholab/moose/discussions/17225#discussioncomment-431217",
+                          "updatedAt": "2021-03-04T23:29:16Z",
+                          "publishedAt": "2021-03-04T23:29:16Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "YaqiWang"
+                  },
+                  "bodyText": "I don't get an error, but the variables are not being initialised when I use FileMeshGenerator to read the mesh.\n\nForgot replying this part: You should hit an error message saying you are missing use_for_exodus_restart.\nFor example, in moose/test/tests/ics/from_exodus_solution/elem_part2.i if you comment out that parameter, you will hit an error.",
+                  "url": "https://github.com/idaholab/moose/discussions/17225#discussioncomment-428281",
+                  "updatedAt": "2021-03-04T07:48:17Z",
+                  "publishedAt": "2021-03-04T07:48:02Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hsheldon"
+                          },
+                          "bodyText": "Thanks @YaqiWang, it turns out I last updated MOOSE 2 days before you added that bit to the code! Note to self, must update more often :-) Then I would have got the error message and saved myself some hassle.",
+                          "url": "https://github.com/idaholab/moose/discussions/17225#discussioncomment-431221",
+                          "updatedAt": "2021-03-04T23:30:03Z",
+                          "publishedAt": "2021-03-04T23:30:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "YaqiWang"
+                          },
+                          "bodyText": "You are welcome. This code was added by me ;-) Doc is always difficult especially we do not have end users as reviewers.",
+                          "url": "https://github.com/idaholab/moose/discussions/17225#discussioncomment-431363",
+                          "updatedAt": "2021-03-05T01:10:27Z",
+                          "publishedAt": "2021-03-05T01:10:27Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to perform distributed-mesh computation?",
+          "author": {
+            "login": "zhang-rite"
+          },
+          "bodyText": "Hi MOOSE experts\nI am trying to modify a 2D porous media hydromechanical problem to 3D.  In 3D, the model generates the mesh using CartesianMeshGenerator and has less than 150 M elements. A direct run (e.g., mpiexec -n 50) is always out of memory.\nI have tried to split the mesh into 50 chunks by running:\nmpiexec -n 50 ./porous_flow-opt -i test.i --split-mesh 50\n\nThen run by\nmpiexec -n 50 ./porous_flow-opt -i test.i --use-split\n\nHowever, the memory-out problem remains. The problem file is here (github link ).\nI am working on a university cluster. Each node has 56 cpus and a shared memory about 170 G.\nPerhaps something wrong with my MOOSE installation?\nThe run_test log can be seen here (github link)\nCould someone give some solutions? Thanks!",
+          "url": "https://github.com/idaholab/moose/discussions/17200",
+          "updatedAt": "2022-06-21T16:34:29Z",
+          "publishedAt": "2021-03-03T13:58:35Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "loganharbour"
+                  },
+                  "bodyText": "You don\u2019t need that many processes for the initial split. When splitting the mesh, just a few procs is sufficient. Give something like 5 a try.\nKeep in mind that during the splitting, if the mesh is replicated it must be loaded on each proc. In general terms, this means you could be effectively loading (150 million x 50 procs) elements! Instead, with 5 processors the mesh is duplicated only 5 times.\nAre you running out of memory splitting the mesh or running with the split mesh?",
+                  "url": "https://github.com/idaholab/moose/discussions/17200#discussioncomment-425540",
+                  "updatedAt": "2022-06-21T16:34:32Z",
+                  "publishedAt": "2021-03-03T14:13:53Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "zhang-rite"
+                          },
+                          "bodyText": "Are you running out of memory splitting the mesh or running with the split mesh?\nThe latter. There is no problem when splitting the mesh. I will soon try usingless procs. Thank you.",
+                          "url": "https://github.com/idaholab/moose/discussions/17200#discussioncomment-425629",
+                          "updatedAt": "2022-06-21T16:34:32Z",
+                          "publishedAt": "2021-03-03T14:20:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "loganharbour"
+                          },
+                          "bodyText": "When you run the latter problem, do you get to the point where the framework prints out its information (version, number of elements, variables, etc)? If so, paste that here.",
+                          "url": "https://github.com/idaholab/moose/discussions/17200#discussioncomment-425710",
+                          "updatedAt": "2022-06-21T16:34:41Z",
+                          "publishedAt": "2021-03-03T14:27:40Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "zhang-rite"
+                          },
+                          "bodyText": "Initializing equation system                                                               [  1.82 s]\nFramework Information:\nMOOSE Version:           git commit dfbdf0e on 2020-12-02\nLibMesh Version:         0d19e76fc8e7345a0634cba450f488b3a5626eb3\nPETSc Version:           3.13.3\nSLEPc Version:           3.13.3\nCurrent Time:            Wed Mar  3 23:34:35 2021\nExecutable Timestamp:    Tue Dec  8 09:28:56 2020\nParallelism:\nNum Processors:          50\nNum Threads:             1\nMesh:\nParallel Type:           distributed (pre-split)\nMesh Dimension:          3\nSpatial Dimension:       3\nNodes:\nTotal:                 1521194\nLocal:                 33277\nElems:\nTotal:                 1480800\nLocal:                 29621\nNum Subdomains:          2\nNum Partitions:          1\nPartitioner:             parmetis\nNonlinear System:\nNum DOFs:                6084776\nNum Local DOFs:          133108\nVariables:               { \"pwater\" \"disp_x\" \"disp_y\" \"disp_z\" }\nFinite Element Types:    \"LAGRANGE\"\nApproximation Orders:    \"FIRST\"\nAuxiliary System:\nNum DOFs:                60712800\nNum Local DOFs:          1214461\nVariables:               { \"stress_xx\" \"stress_zz\" \"stress_yy\" \"strain_yy\" \"strain_yy_0\" \"strain_yy_2\"\n\"strain_xx\" \"strain_zz\" \"perm_md\" \"perm\" } \"PorousFlow_effective_fluid_pressure_qp\"\nFinite Element Types:    \"MONOMIAL\" \"MONOMIAL\"\nApproximation Orders:    \"FIRST\" \"CONSTANT\"\nExecution Information:\nExecutioner:             Steady\nSolver Mode:             NEWTON\nPETSc Preconditioner:    lu\nMOOSE Preconditioner:    SMP\nOutputting exodus .................Warning:  This MeshOutput subclass only supports meshes which have been serialized!\nWarning:  This MeshOutput subclass only supports meshes which have been serialized!\n...Warning, Exodus files cannot have titles longer than 80 characters.  Your title will be truncated.\n.........                                            [ 30.31 s]\nComputing initial residual ...                                                             [  4.46 s]\nUpdating displaced mesh                                                                    [  1.69 s]\n0 Nonlinear |R| = 5.964885e+08\nUpdating displaced mesh                                                                    [  1.71 s]",
+                          "url": "https://github.com/idaholab/moose/discussions/17200#discussioncomment-425749",
+                          "updatedAt": "2022-06-21T16:34:36Z",
+                          "publishedAt": "2021-03-03T14:38:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "zhang-rite"
+                          },
+                          "bodyText": "Then after several mins the system stopped the run. I received the information with \"Memory size limit exceeded\" from the cluster.",
+                          "url": "https://github.com/idaholab/moose/discussions/17200#discussioncomment-425802",
+                          "updatedAt": "2022-10-31T16:27:43Z",
+                          "publishedAt": "2021-03-03T14:50:05Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "permcody"
+                          },
+                          "bodyText": "Depending on how big your mesh is, you may also need to switch your output to Nemesis (DistributedMesh output analog), otherwise you will end up serializing the mesh to the root processor for output, which could still run you out of memory.\n[Outputs]\n ...\n nemesis = true\n exodus = false\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/17200#discussioncomment-426467",
+                          "updatedAt": "2022-10-31T16:27:43Z",
+                          "publishedAt": "2021-03-03T17:14:51Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "zhang-rite"
+                          },
+                          "bodyText": "Thank you for this suggestion. This partially solves the problem.",
+                          "url": "https://github.com/idaholab/moose/discussions/17200#discussioncomment-428111",
+                          "updatedAt": "2022-10-31T16:27:45Z",
+                          "publishedAt": "2021-03-04T05:56:12Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "WilkAndy"
+                  },
+                  "bodyText": "I would hazard a guess that it is your use of LU+MUMPS.  Although that might work for smaller meshes, you might be forced to try ASM+LU+MUMPS, or HYPRE+BOOMERAMG, or ILU, or something else - i'm sure lots of other people can suggest other things to try.\nIf this is the case, then.... when you try different solver choices, i strongly suggest you do it on a smaller problem, so you get more rapid feedback on whether you have made a good choice (pay attention to the rate of convergence of the linear and the nonlinear residual, and feel free to ask for more help if you're not entirely sure).  i recommended MUMPS in the PorousFlow doco because it is a \"generally good\" choice (works for most models) but there are plenty of models which behave very satisfactorily with a \"weaker\", less memory-intensive option.\na",
+                  "url": "https://github.com/idaholab/moose/discussions/17200#discussioncomment-427324",
+                  "updatedAt": "2022-06-21T16:34:37Z",
+                  "publishedAt": "2021-03-03T21:28:16Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "zhang-rite"
+                          },
+                          "bodyText": "Andy, many thanks. Yes, the suggestion helps.  This 3D problem is essentially the same as the previously posted 2D problem. After your suggestion, I have taken some time on testing the setting of the solver and preconditioner.\nBasically, I find\n petsc_options_value = 'bcgs bjacobi'\n\n\nor\n petsc_options_value = 'hypre boomeramg'\n\ncan reduce the residual.\nNow the problem is the low solver efficiency.",
+                          "url": "https://github.com/idaholab/moose/discussions/17200#discussioncomment-428124",
+                          "updatedAt": "2022-06-21T16:34:37Z",
+                          "publishedAt": "2021-03-04T06:06:49Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "[XFEM][Moving interface]",
+          "author": {
+            "login": "coskrrb2002"
+          },
+          "bodyText": "Dear Users,\nI have studied the moving interface in the XFEM app.\nBut I got some problems with domain.\nI want to simulate an expansion of domain (block) and assign material properties in the expanded domain.\nBut it seems like there is no way to apply material properties to the expanded domain.\nMore precisely, how can I apply a moving interface between two different domains?\nOne domain will expand, and the other will be shrunk...\nUntil now, I could see examples for a single domain.\nBest regards,\nNakkyu",
+          "url": "https://github.com/idaholab/moose/discussions/17162",
+          "updatedAt": "2023-03-06T14:47:02Z",
+          "publishedAt": "2021-03-01T07:47:52Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "coskrrb2002"
+                  },
+                  "bodyText": "I have read the following post.\n#16008\nIs it possible to use \"ActivateElementUserObject\" to change elements domain id from one to another?\nIf possible, I think I can use it to solve my problem.\nBest regards,\nNakkyu",
+                  "url": "https://github.com/idaholab/moose/discussions/17162#discussioncomment-420440",
+                  "updatedAt": "2023-03-06T14:47:22Z",
+                  "publishedAt": "2021-03-02T04:56:10Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "aeslaughter"
+                  },
+                  "bodyText": "@jiangwen84 Can you help out here?",
+                  "url": "https://github.com/idaholab/moose/discussions/17162#discussioncomment-422039",
+                  "updatedAt": "2023-03-06T14:47:24Z",
+                  "publishedAt": "2021-03-02T16:17:49Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "@aeslaughter Do you want to review the PR #17101 which (together with another follow-up PR) does exactly this? @coskrrb2002 hopefully we can add this capability soon...",
+                          "url": "https://github.com/idaholab/moose/discussions/17162#discussioncomment-427888",
+                          "updatedAt": "2023-03-06T14:47:25Z",
+                          "publishedAt": "2021-03-04T02:18:33Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "coskrrb2002"
+                          },
+                          "bodyText": "Thank you.\nThis is what I want to use for my modeling.\nI guess I have to wait.",
+                          "url": "https://github.com/idaholab/moose/discussions/17162#discussioncomment-427911",
+                          "updatedAt": "2023-03-06T14:47:25Z",
+                          "publishedAt": "2021-03-04T02:30:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "@coskrrb2002  Could you let us what physical problem you are trying to solve?",
+                          "url": "https://github.com/idaholab/moose/discussions/17162#discussioncomment-427949",
+                          "updatedAt": "2023-03-06T14:47:25Z",
+                          "publishedAt": "2021-03-04T02:55:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "coskrrb2002"
+                          },
+                          "bodyText": "I am trying to solve corrosion of metals in solution with oxide film formation.\nSo, that's why I need a domain growth and shrink~.\nAnd I found the way to do this in moose just today.\nSo, I am applying it my model and waiting a result.",
+                          "url": "https://github.com/idaholab/moose/discussions/17162#discussioncomment-428129",
+                          "updatedAt": "2023-03-06T14:47:51Z",
+                          "publishedAt": "2021-03-04T06:08:53Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,1136 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyNS0wMi0wNVQwOTo1NTowOC0wNjowMM4AeNow"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Total volume",
+          "author": {
+            "login": "amassaf"
+          },
+          "bodyText": "Hi I am using CZM on a cylindrical mesh and I want to find the total volume of the deformed cylinder (CZ deformation included) and I was wondering if there is a way to get this volume? I thought of using InternalVolume by setting a boundary surrounding the original cylinder but setting this boundary only seems to work with BoundingBoxNodeSetGenerator which doesn't work with cylinders ? Would you have any advice on how to get the full volume in this case ? Thank you",
+          "url": "https://github.com/idaholab/moose/discussions/29711",
+          "updatedAt": "2025-02-07T11:54:13Z",
+          "publishedAt": "2025-01-20T09:41:38Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@arovinelli do you know?",
+                  "url": "https://github.com/idaholab/moose/discussions/29711#discussioncomment-11893697",
+                  "updatedAt": "2025-01-20T17:46:30Z",
+                  "publishedAt": "2025-01-20T17:46:28Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "arovinelli"
+                  },
+                  "bodyText": "A first order approximation would be _qp_weight[_qp] times _disp_jump[_qp], Then of course you need to sum them all together. I'm not sure if there is a user object or something else already doing it for you ... Maybe @hugary1995 ?",
+                  "url": "https://github.com/idaholab/moose/discussions/29711#discussioncomment-11903341",
+                  "updatedAt": "2025-01-21T14:40:45Z",
+                  "publishedAt": "2025-01-21T14:40:45Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "We do not currently have such object, but the approach @arovinelli described would work.\nI'm however having trouble understanding the motivation for including separation volume in the total volume calculation. I think the cohesive elements are supposed to be zero-thickness dummy elements for tracking traction-separation laws. The \"volume\" of these cohesive elements are essentially void in my understanding. Maybe @amassaf could explain the motivation.",
+                          "url": "https://github.com/idaholab/moose/discussions/29711#discussioncomment-11903454",
+                          "updatedAt": "2025-01-21T14:51:43Z",
+                          "publishedAt": "2025-01-21T14:51:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "amassaf"
+                          },
+                          "bodyText": "I have a polycrystal under compression, I want to quantify the change in volume due to voids, the decrease in volume at first followed by increase in volume due to the jump",
+                          "url": "https://github.com/idaholab/moose/discussions/29711#discussioncomment-11903496",
+                          "updatedAt": "2025-01-21T14:55:36Z",
+                          "publishedAt": "2025-01-21T14:55:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Usually I wouldn't directly associate the separation across cohesive elements with voids because they are at different scales. Does the traction-separation law you are using contain some internal variables that describe void formation/evolution? I might be better to directly integrate such internal variables on the interface.",
+                          "url": "https://github.com/idaholab/moose/discussions/29711#discussioncomment-11903533",
+                          "updatedAt": "2025-01-21T15:00:04Z",
+                          "publishedAt": "2025-01-21T15:00:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "amassaf"
+                          },
+                          "bodyText": "no sorry by void I meant the separation at the interface the normal_jump or tangent_jump leading to normal_jump when there is total loss of traction (total decohesion)",
+                          "url": "https://github.com/idaholab/moose/discussions/29711#discussioncomment-11903617",
+                          "updatedAt": "2025-01-21T15:06:14Z",
+                          "publishedAt": "2025-01-21T15:06:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Okay, I think I understand now. You can create a postprocessor deriving from SideIntegralPostprocessor, in computeQpIntegral() the expression you'd want to use is\nreturn _disp_jump[_qp] * _normals[_qp];",
+                          "url": "https://github.com/idaholab/moose/discussions/29711#discussioncomment-11903770",
+                          "updatedAt": "2025-01-21T15:14:48Z",
+                          "publishedAt": "2025-01-21T15:14:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "amassaf"
+                          },
+                          "bodyText": "Ok, thank you so much for your help ! :)",
+                          "url": "https://github.com/idaholab/moose/discussions/29711#discussioncomment-11904601",
+                          "updatedAt": "2025-01-21T16:05:53Z",
+                          "publishedAt": "2025-01-21T16:05:53Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "amassaf"
+                          },
+                          "bodyText": "Hi, so I have another question regarding this sideintegralpostprocessor. I want to get this :\n but I want it in two forms:\nI want to get the components of the tensor from the outerproduct between the displacement jump  with jump_x jump_y jump_z  and the normal to the interface (n_x n_y n_z) .\nBut I also want the normal to the interface as normal (n_n and n_t) with the displacement jump from normal_jump and tangent_jump. So my question is how can I get these normals and what is the _normals[_qp] referring to. Thank you",
+                          "url": "https://github.com/idaholab/moose/discussions/29711#discussioncomment-12084682",
+                          "updatedAt": "2025-02-06T17:17:12Z",
+                          "publishedAt": "2025-02-06T17:17:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "_normals is the local normal to the face in a side-integration, at that quadrature point. For a second or higher order element, the normal is not constant along the face, but depends on the side quadrature point.\nwhat is n_n here? normal?\nand n_t ? tangeant?",
+                          "url": "https://github.com/idaholab/moose/discussions/29711#discussioncomment-12084760",
+                          "updatedAt": "2025-02-06T17:26:46Z",
+                          "publishedAt": "2025-02-06T17:26:34Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "amassaf"
+                          },
+                          "bodyText": "Oh ok. n_n and n_t would be the components in the normal and tangential direction function of unit vectors in the normal and tangential direction.",
+                          "url": "https://github.com/idaholab/moose/discussions/29711#discussioncomment-12084895",
+                          "updatedAt": "2025-02-06T17:39:20Z",
+                          "publishedAt": "2025-02-06T17:39:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I m not sure how to define the tangeant here but maybe you ll know what to pick",
+                          "url": "https://github.com/idaholab/moose/discussions/29711#discussioncomment-12084922",
+                          "updatedAt": "2025-02-06T17:41:43Z",
+                          "publishedAt": "2025-02-06T17:41:42Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Loading in RZ 2-D case",
+          "author": {
+            "login": "sidharthsarmah"
+          },
+          "bodyText": "Hi @GiudGiud , I want to do perform a tensile test of a specimen as shown.\n\n\nI want to apply a load on the end face, how do I apply a point load on the face, but it is basically an average the entire area.\nIs it enough in MOOSE the just change the coordinate to RZ type for changing the 3D to 2D as shown? How does MOOSE know which is the R or Z direction?\n\n\n[Problem]\n  type = FEProblem\n  coord_type = RZ\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/27507",
+          "updatedAt": "2025-02-06T19:41:10Z",
+          "publishedAt": "2024-04-30T01:46:09Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\n\n\nYou ll want to apply the load on a sideset then. Depending on the object you use, you will likely specify the local value of the tension, so the average\n\n\nThe coord_type is actually in the Mesh block now.\nIt should be enough to provide a 2D mesh.\nNote that you do not need the entire mesh, half is enough because of the symmetry\n\n\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/27507#discussioncomment-9269392",
+                  "updatedAt": "2024-04-30T02:26:10Z",
+                  "publishedAt": "2024-04-30T02:26:09Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sidharthsarmah"
+                          },
+                          "bodyText": "Hi @GiudGiud , thanks:\nI have modelled a quarter of the sample as shown,\n\n\nLet's say in 3D, I have a force F applied to the area of the face A, what should be the value of F1 that is should apply to the node in 2D case is it:\na) F1=F/A or b) F1=F/4A (since I am considering a quarter area?\n\n\nIs the direction R and Z implicit in this figure correct?",
+                          "url": "https://github.com/idaholab/moose/discussions/27507#discussioncomment-9279570",
+                          "updatedAt": "2024-04-30T20:17:59Z",
+                          "publishedAt": "2024-04-30T20:17:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "F/A should be correct, as long as the drawing is correct (so A is the area on only one side, and F is applied equally on both sides)\nNo the directions are not implciitly this way, you specify them using a Mesh parameter to make the Z axis the X axis it seems looking at your mesh orientation in the figure",
+                          "url": "https://github.com/idaholab/moose/discussions/27507#discussioncomment-9279667",
+                          "updatedAt": "2024-04-30T20:31:00Z",
+                          "publishedAt": "2024-04-30T20:30:59Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sidharthsarmah"
+                          },
+                          "bodyText": "Hi @GiudGiud , yes that's correct, thanks.\nIs this correct?\n[Mesh]\n  [./mesh]\n    type = FileMeshGenerator\n    file = Mesh.inp\n    coord_type = RZ\n    rz_coord_axis = X\n  [../]\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/27507#discussioncomment-9281035",
+                          "updatedAt": "2024-05-01T01:14:24Z",
+                          "publishedAt": "2024-05-01T01:14:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "no it's not. Arent you getting unused parameters warnings on the console for this? (maybe not if you are running in mesh-only mode I guess)\nIt should be\n[Mesh]\n  coord_type = RZ\n  rz_coord_axis = X\n  [load_mesh]\n    type = FileMeshGenerator\n    file = Mesh.inp\n  []\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/27507#discussioncomment-9281060",
+                          "updatedAt": "2024-05-01T01:19:41Z",
+                          "publishedAt": "2024-05-01T01:19:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sidharthsarmah"
+                          },
+                          "bodyText": "Hi @GiudGiud , thanks for the correction.",
+                          "url": "https://github.com/idaholab/moose/discussions/27507#discussioncomment-9281066",
+                          "updatedAt": "2024-05-01T01:20:48Z",
+                          "publishedAt": "2024-05-01T01:20:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sidharthsarmah"
+                          },
+                          "bodyText": "Hi @GiudGiud , one more thing, I want to impose a switching BC.\n\nThe surface of the sample indicated by the red outline, has conc, C=0.127 for time t=10s, after that the conc on the surface is C=0;\nSimilarly till t=10s, the force, F1=0 and once t>10s, F1=0.01*t, is these syntax correct?\n\n\n[NodalKernels]\n  [./force_z]\n    type = UserForcingFunctionNodalKernel\n    variable = disp_x\n    boundary = 'right'\n    function = 'if(t<10, 0, t*0.001)'\n  [../]\n[]\n\n  [./s_conc]\n    type = ADFunctionDirichletBC\n    variable = cL\n    boundary = 'Hsurface'\n    function = 'if(t<10, 0.127, 0)'\n  [../]",
+                          "url": "https://github.com/idaholab/moose/discussions/27507#discussioncomment-9281139",
+                          "updatedAt": "2024-05-01T01:39:27Z",
+                          "publishedAt": "2024-05-01T01:39:08Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "this looks fine to me, if it gets parsed. I usually write ParsedFunctions but I think these expressions in the input will be parsed",
+                          "url": "https://github.com/idaholab/moose/discussions/27507#discussioncomment-9281264",
+                          "updatedAt": "2024-05-01T02:07:29Z",
+                          "publishedAt": "2024-05-01T02:07:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "though in the post you say\n\nSimilarly till t=10s, the force, F1=0 and once t>10s, F1=0.01*t, is these syntax correct?\n\nbut in the input it's t*0.001 not 0.01",
+                          "url": "https://github.com/idaholab/moose/discussions/27507#discussioncomment-9281271",
+                          "updatedAt": "2024-05-01T02:08:12Z",
+                          "publishedAt": "2024-05-01T02:08:12Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sidharthsarmah"
+                          },
+                          "bodyText": "Hi @GiudGiud , is this correct?\n[NodalKernels]\n  [./force_z]\n    type = UserForcingFunctionNodalKernel\n    variable = disp_x\n    boundary = 'right'\n    function = 'force'\n  [../]\n[]\n\n  [./s_conc]\n    type = ADFunctionDirichletBC\n    variable = cL\n    boundary = 'Hsurface'\n    function = 'conc'\n  [../]\n\n[Materials]\n  [./force_cond]\n    type = ADParsedMaterial\n    expression = 'if(t<10, 0, t*0.001)'\n    property_name = 'force'\n  [../]\n\n  [./conc_cond]\n    type = ADParsedMaterial\n    expression = 'if(t<10, 0.127, 0)'\n    property_name = 'conc'\n  [../]",
+                          "url": "https://github.com/idaholab/moose/discussions/27507#discussioncomment-9287597",
+                          "updatedAt": "2024-05-01T17:59:54Z",
+                          "publishedAt": "2024-05-01T17:59:24Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "this looks good to me",
+                          "url": "https://github.com/idaholab/moose/discussions/27507#discussioncomment-9287643",
+                          "updatedAt": "2024-05-01T18:03:36Z",
+                          "publishedAt": "2024-05-01T18:03:35Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nWhere it applies is really defined by the sideset / node sets in use.\nSo maybe send me your mesh to check where it s being applied?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/27507#discussioncomment-9289773",
+                  "updatedAt": "2024-05-01T23:38:02Z",
+                  "publishedAt": "2024-05-01T23:38:01Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sidharthsarmah"
+                          },
+                          "bodyText": "Hi @GiudGiud , here it is, I applied it to a node ID 95.\nI applied Disp BC to boundary Load_x.\n[\nMesh.txt\n](url)",
+                          "url": "https://github.com/idaholab/moose/discussions/27507#discussioncomment-9290155",
+                          "updatedAt": "2024-05-02T01:06:20Z",
+                          "publishedAt": "2024-05-02T01:04:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "how do you read a .txt mesh in moose? do we support that?",
+                          "url": "https://github.com/idaholab/moose/discussions/27507#discussioncomment-9294755",
+                          "updatedAt": "2024-05-02T11:51:37Z",
+                          "publishedAt": "2024-05-02T11:51:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sidharthsarmah"
+                          },
+                          "bodyText": "Hi @GiudGiud , its.inp, .txt is just uploaded for you to check, you can just change it to .inp else here it is.\nMesh.inp.zip",
+                          "url": "https://github.com/idaholab/moose/discussions/27507#discussioncomment-9294797",
+                          "updatedAt": "2024-05-02T11:58:31Z",
+                          "publishedAt": "2024-05-02T11:56:33Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "boundary 'right' does not exist in your mesh.\nI see 'load_x' but that's only a single node so it wont do if you are trying to apply the force on the entire surface.\nI suggest you re-create 'right' using a mesh generator.\nSidesetFromNormalsGenerator with a normal of '1 0 0' will do it for example.\nhttps://mooseframework.inl.gov/source/meshgenerators/SideSetsFromNormalsGenerator.html",
+                          "url": "https://github.com/idaholab/moose/discussions/27507#discussioncomment-9295633",
+                          "updatedAt": "2024-05-02T13:19:48Z",
+                          "publishedAt": "2024-05-02T13:19:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@bwspenc are DirichletBC the right way to impose symmetry boundary conditions?\nI would expect something like 0 flux ? maybe 0 normal stress?",
+                          "url": "https://github.com/idaholab/moose/discussions/27507#discussioncomment-9300259",
+                          "updatedAt": "2024-05-02T21:52:21Z",
+                          "publishedAt": "2024-05-02T21:52:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sidharthsarmah"
+                          },
+                          "bodyText": "Hi @GiudGiud , I have changed the variables to r and z, can you suggest if this is correct?\n[Mesh]\n  [./Load_mesh]\n    type = FileMeshGenerator\n    file = Mesh.inp\n  [../]\n[]\n[Problem]\n  coord_type = RZ\n[]\n\n[BCs]\n  [./x_left]\n    type = ADDirichletBC\n    variable = disp_z\n    boundary = 'Sym_x'\n    value = 0  \n  [../]\n  [./y_bottom]\n    type = ADDirichletBC\n    variable = disp_r\n    boundary = 'Sym_y'\n    value = 0  \n  [../]\n  [./x_load]\n    type = ADFunctionDirichletBC\n    variable = disp_z\n    boundary = 'Load_x'\n    function = t*0.003\n  [../]\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/27507#discussioncomment-9300829",
+                          "updatedAt": "2024-05-02T23:38:42Z",
+                          "publishedAt": "2024-05-02T23:38:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Changing the names of the variables changes nothing solve-wise\nthe coord_type is a Mesh parameter, it's deprecated to have it in Problem\nhave you found a tensile test example in MOOSE by any chance?",
+                          "url": "https://github.com/idaholab/moose/discussions/27507#discussioncomment-9300877",
+                          "updatedAt": "2024-05-02T23:50:15Z",
+                          "publishedAt": "2024-05-02T23:50:15Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sidharthsarmah"
+                          },
+                          "bodyText": "Hi @GiudGiud , the disp_x and disp_y does not work with Coord_axis = x, but the disp_r and disp_z work.\nCould you suggest if I can model this bending test for the cylindrical sample as shown in 2D.\n\nI don't think the symmetry will work here as its bending. My doubt is since the load F is applied to only the top portion, can I model it for 2D case, as there is no theta to prescribe.\nCan you suggest the 2D model on the left, gives which scenario on the right A or B:\n\nHow do I get scenario A to be implemented in 2D case with RZ coord?",
+                          "url": "https://github.com/idaholab/moose/discussions/27507#discussioncomment-9308057",
+                          "updatedAt": "2024-05-03T17:28:17Z",
+                          "publishedAt": "2024-05-03T17:18:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "hello\nthe case on the left is not symmetric in any way. Not rotationally and not with the other plane.\nIt's time to make a 3D model\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/27507#discussioncomment-9308187",
+                          "updatedAt": "2024-05-03T17:33:39Z",
+                          "publishedAt": "2024-05-03T17:33:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sidharthsarmah"
+                          },
+                          "bodyText": "Hi @GiudGiud, I will first try to model the tensile test in the 3D half of the specimen before bending.\nCan you please suggest if there is a concept of a reference point coupling of the clamped portion as shown in fig for ABAQUS. This is because the top portion is clamped,\nDo we need it in MOOSE or we can just prescribed disp BC in all the nodes at the clamped portion?",
+                          "url": "https://github.com/idaholab/moose/discussions/27507#discussioncomment-9309671",
+                          "updatedAt": "2024-05-03T21:12:56Z",
+                          "publishedAt": "2024-05-03T21:04:40Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Reduced advection with new mesh",
+          "author": {
+            "login": "julianseb"
+          },
+          "bodyText": "Hello everyone,\nthis is more or less in continuation of #29720.\nI have two groundcables i simulate like heat pipes in the ground. I have three blocks, the ground (boden), the bedding (bettung), and the open water body (wasser). I have a gradient from left to right, implemented by the pore pressure. An i want to simulate the influence of the heat from ground cables on the open water body. I use mainly PorousFlow and a bit of the heat transfer module.\nSo after the coupling worked out i tried implementing a bedding material block, also with the same dictator and everything.\nThis is my modell and mesh:\n\n\nI used Gmsh to create the mesh.\nWhen i implemented the new block, suddenly my heat advection around the cable became less. Eventhoug i gave it the same properties as the sorrounding block/the ground.\n\nThere is still minimal heat advection to the right, but very limited.\n\nSo i thought it is because of extra material properties i assigned to the block, so i included the bedding and the ground block in the same material but to no avail. It looks exactly the same.\nWhen i excluded the bedding from the mesh and only had the ground and water body, the advection resumed.\n\n\nI know my initial pressure conditions are a bit of a mess, but i wanted to get all blocks working before i got to that. But it still worked for the modell without the bedding, so i think that is not the reason.\nThe flow velocitys are also nearly identical.\nWithout the bedding:\n\nWith the Bedding and in the same material:\n\nWith the bedding and different materials:\n\nSo im a bit clueless. Could it be the mesh?\nI've attached all my input and mesh files:\ncurrent_state.zip\nMesh with bedding (modell.msh/.geo) and without (modell2.msh/.geo).\nI've uploaded my output here: https://tubcloud.tu-berlin.de/s/6s22JRgz3ScCTWJ\nThanks in advance.",
+          "url": "https://github.com/idaholab/moose/discussions/29818",
+          "updatedAt": "2025-02-06T16:50:54Z",
+          "publishedAt": "2025-02-06T09:11:36Z",
+          "category": {
+            "name": "Q&A Modules: Porous Flow"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "So im a bit clueless. Could it be the mesh?\n\nyou can rename the block for the bedding to be \"ground\", using this\nhttps://mooseframework.inl.gov/source/meshgenerators/RenameBlockGenerator.html\nthen the mesh is the only difference between the two simulations.\nThe meshes are clean for diagnostics rigth?\nhttps://mooseframework.inl.gov/source/meshgenerators/MeshDiagnosticsGenerator.html",
+                  "url": "https://github.com/idaholab/moose/discussions/29818#discussioncomment-12084416",
+                  "updatedAt": "2025-02-06T16:50:55Z",
+                  "publishedAt": "2025-02-06T16:50:54Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Using Vector Variables with User-Defined Number of Components in MOOSE",
+          "author": {
+            "login": "Silverwing747"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A Navier Stokes is the most appropriate category for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (avoid screenshots if possible, triple back quotes before/after pasted text, etc)\n\nQuestion\nHello everyone, and Happy New Year!\nIn the MOOSE NS Module, I noticed that density, temperature, and velocity are typically declared as independent variables. I understand this approach provides greater flexibility. However, for tightly coupled systems of PDEs, such as the compressible Navier-Stokes equations, this requires repeatedly declaring couplings for nearly every kernel, material property, etc., which seems suboptimal.\nI noticed that MOOSE supports LAGRANGE_VEC variables, where the components are inherently coupled. This got me wondering: is it possible for a user to define a vector variable with DIM+2 components (e.g., velocity vector + density + temperature) so that these variables are coupled by default? This would allow implementing the compressible Navier-Stokes equations in their compact form, simplifying variable transformations.\nI looked through the forums and example codes but couldn\u2019t find anyone doing this. Is this approach feasible in MOOSE? If so, what would be the pros and cons? How would it effect computational efficiency? Some drawbacks I can think of is reduced efficiency in automatic differentiation, less code flexibility, but there may be others I haven\u2019t considered.\nI\u2019d love to hear your thoughts and experiences!\nAdditional information\nNo response",
+          "url": "https://github.com/idaholab/moose/discussions/29643",
+          "updatedAt": "2025-02-06T16:45:22Z",
+          "publishedAt": "2025-01-05T00:45:44Z",
+          "category": {
+            "name": "Q&A Modules: Navier-Stokes"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "ngrilli"
+                  },
+                  "bodyText": "@Silverwing747  I think what you are asking for is similar to the phase field model for grain growth, see:\nhttps://github.com/idaholab/moose/blob/next/modules/phase_field/src/kernels/ACGrGrBase.C\nA vector of coupled variables is passed to a kernel with coupledValues\nthen you can have a look at this:\nhttps://github.com/idaholab/moose/blob/next/modules/phase_field/src/kernels/ACGrGrPoly.C\nfor the calculation of residual, Jacobian and off-diagonal Jacobian using the vector variable.\nThe function coupledComponents provides the number of components of the vector,\nso it's not given a priori, but user-defined in the input file.",
+                  "url": "https://github.com/idaholab/moose/discussions/29643#discussioncomment-11738465",
+                  "updatedAt": "2025-01-05T10:22:23Z",
+                  "publishedAt": "2025-01-05T10:21:04Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Silverwing747"
+                          },
+                          "bodyText": "Hello ngrilli,\nThank you very much for your prompt response! I appreciate the example you provided and understand how it achieves a user-defined number of variables. However, I believe it does not fully address what I am trying to accomplish.\nIn the code you referenced: https://github.com/idaholab/moose/blob/next/modules/phase_field/src/kernels/ACGrGrPoly.C, I noticed that both the residual and Jacobian functions still return scalar data types.\nWhat I aim to achieve is all variables are truly coupled, such that the residual will return a RealVectorValue and the Jacobian will return a RealTensorValue, with dimensions that are consistent with a user-defined vector size.\nWould you happen to know if this is feasible within the framework? Any guidance would be greatly appreciated!\nThank you in advance for your help.",
+                          "url": "https://github.com/idaholab/moose/discussions/29643#discussioncomment-11742434",
+                          "updatedAt": "2025-01-05T22:18:01Z",
+                          "publishedAt": "2025-01-05T22:11:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "hello\nyou'll want to look at what ArrayKernels do.\nThey are usually used when each component of the array follows the same equation, but could be used with different equations for each component too",
+                          "url": "https://github.com/idaholab/moose/discussions/29643#discussioncomment-11743246",
+                          "updatedAt": "2025-01-06T00:41:50Z",
+                          "publishedAt": "2025-01-06T00:41:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Silverwing747"
+                          },
+                          "bodyText": "hello\nyou'll want to look at what ArrayKernels do. They are usually used when each component of the array follows the same equation, but could be used with different equations for each component too\n\nHello Guillaume,\nThank you for the suggestion. It's closer to what I want, but I still have a few follow-up questions:\n\nDoes ArrayKernels still support the use of ArrayKernelsValues and ArrayKernelsGrad to automatically apply the test and gradient of the test function?\nIf the answer is yes, what data type does precomputeQpJacobian return for ArrayKernelsGrad? In this context, precomputeQpResidual already returns a RealEigenMatrix, so precomputeQpJacobian should return a 3D matrix, but I am not sure how to assign the data type.\nI see when using ArrayKernels, we will need to write separate function for diagonal entry and off-diagonal entry. However, I found it's easier to compute the entire Jacobian matrix together when working with compact form. I am wondering if there is a way to achieve this?",
+                          "url": "https://github.com/idaholab/moose/discussions/29643#discussioncomment-11743459",
+                          "updatedAt": "2025-01-06T02:09:22Z",
+                          "publishedAt": "2025-01-06T01:28:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "For 1) you ll want to look at the Coupleable interface to see what's implemented\n\n\nIt would be a tensor ideally. MOOSE supports tensors at various orders which should have the generality we need. Here it's a little more complex because array variables use RealEigenVectors iirc as the backend data container.\nThe \"precomputeQp\" is a small optimization. You can work with computeQpJacobian instead as most kernels do\n\n\nYou can override the base classes if you want to modify how the assembly is done. I would recommend you follow how it's done in MOOSE now, then when it works you can optimize. There should be quite a few examples of array kernels, though for most each component will have roughly the same equation",
+                          "url": "https://github.com/idaholab/moose/discussions/29643#discussioncomment-11752138",
+                          "updatedAt": "2025-01-07T00:51:50Z",
+                          "publishedAt": "2025-01-06T18:04:12Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Silverwing747"
+                          },
+                          "bodyText": "Hello Guillaume,\nThank you very much for your detailed response and thoughtful insights. I completely agree with you that it\u2019s ideal to avoid modifying the MOOSE implementation directly.\nI wanted to ask for your opinion on the following approach: I could develop a material system to compute and store the residual and Jacobian in vector/matrix form, and then couple it with the kernel system to access the appropriate entries and apply the test functions. This approach would allow me to work with vector and matrix forms while avoiding modifications to the DiagJacobian and OffDiagJacobian implementations. It would also maintain the separation of variables for flexibility.\nHowever, I have a few questions and concerns regarding the implementation of this approach:\n\nAm I correct in assuming that the material system is only called once per Newton iteration? Otherwise, this approach might result in significant repeating computation.\nIs there a way to automatically include all variables in the material system when developing a kernel system?\nI noticed that MOOSE provides built-in output_properties for material systems, but the default output uses MONOMIAL. Is there a way to change the output to LAGRANGE?\n\nThank you in advance for your time and guidance. I look forward to hearing your thoughts on this.",
+                          "url": "https://github.com/idaholab/moose/discussions/29643#discussioncomment-11765966",
+                          "updatedAt": "2025-01-07T21:33:07Z",
+                          "publishedAt": "2025-01-07T21:33:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "The materials are computed once for the residual evaluation and once for the Jacobian evaluation. By once, I mean once per element and quadrature point.\nThere is an option in the Executioner to compute the residual and Jacobian together, which is mostly used in combination with automatic differentiation.",
+                          "url": "https://github.com/idaholab/moose/discussions/29643#discussioncomment-11771502",
+                          "updatedAt": "2025-01-08T10:04:30Z",
+                          "publishedAt": "2025-01-08T10:04:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "You need to develop objects, not \"systems\". But terminology aside I think your idea can work. In fact the residuals are computed as material properties in the Navier Stokes module.",
+                          "url": "https://github.com/idaholab/moose/discussions/29643#discussioncomment-11771508",
+                          "updatedAt": "2025-01-08T10:05:24Z",
+                          "publishedAt": "2025-01-08T10:05:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "The output of material properties cannot be changed to Lagrange properties because we do not compute material properties at nodes, but rather at quadrature points.\nThe problem with nodes is that they may be shared by elements from multiple subdomains. This could mean that multiple materials provide different definitions of the same material property for each subdomain around the node.",
+                          "url": "https://github.com/idaholab/moose/discussions/29643#discussioncomment-11771532",
+                          "updatedAt": "2025-01-08T10:07:04Z",
+                          "publishedAt": "2025-01-08T10:07:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Silverwing747"
+                          },
+                          "bodyText": "The materials are computed once for the residual evaluation and once for the Jacobian evaluation. By once, I mean once per element and quadrature point. There is an option in the Executioner to compute the residual and Jacobian together, which is mostly used in combination with automatic differentiation.\n\nHello Guillaume,\nI was wondering if you could point me to a website or example code that demonstrates how to signal the executioner to compute the Jacobian and Residual together. So far, I haven\u2019t been able to find any relevant resources.\nI noticed that the Kernel class includes a public function, virtual void computeResidualAndJacobian() override;, and some applications, like INSFVFluxKernel, seem to utilize it. However, I couldn\u2019t find anything in the executioner related to enabling or controlling this functionality.",
+                          "url": "https://github.com/idaholab/moose/discussions/29643#discussioncomment-11774702",
+                          "updatedAt": "2025-01-08T15:04:10Z",
+                          "publishedAt": "2025-01-08T15:04:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "See the executioner parameters\nhttps://mooseframework.inl.gov/source/executioners/Steady.html\nIt s called residual_and_jacobian_together",
+                          "url": "https://github.com/idaholab/moose/discussions/29643#discussioncomment-11775757",
+                          "updatedAt": "2025-01-08T16:28:45Z",
+                          "publishedAt": "2025-01-08T16:28:45Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Increase in stiffness over time",
+          "author": {
+            "login": "jmeier"
+          },
+          "bodyText": "Dear Moose Community,\nConcrete will increase its stiffness over time (and increase in strength, and shrink a little). Ignoring strength and shrinking, I'd like to model this increase in stiffness in a very simplified way just by increasing the Young's modulus of a linear-elastic material over time (using Executioner/Transient, SolidMechanics/QuasiStatic/strain = SMALL, SolidMechanics/QuasiStatic/incremental = true).\nIf I model a purely linear-elastic block under constant loading and increase the Young's modulus over time, the stresses will remain constant and the material will expand. Fixing the boundaries of this block and increasing the Young's modulus would increase the stress within the block. Both options seem not suitable to model the stiffness increase of concrete.\nWhat is the best way to model this? Do I also have to apply a negative volumetric strain? If yes, how? Are there other options?\nThanks & kind regards,\nJ\u00f6rg",
+          "url": "https://github.com/idaholab/moose/discussions/29808",
+          "updatedAt": "2025-02-06T15:37:04Z",
+          "publishedAt": "2025-02-04T07:49:20Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@bwspenc",
+                  "url": "https://github.com/idaholab/moose/discussions/29808#discussioncomment-12061444",
+                  "updatedAt": "2025-02-05T01:18:05Z",
+                  "publishedAt": "2025-02-05T01:18:04Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "bwspenc"
+                          },
+                          "bodyText": "Hmm, this is tricky! It seems like what you want is to keep the stresses that have been incurred under prior loading constant, and then have the increased stiffness only affect additional incremental strains. I assume you're using ComputeFiniteStrainElasticStress. It currently computes the stress like this:\n   intermediate_stress =\n        elasticity_tensor_rotated * (_elastic_strain_old[_qp] + _strain_increment[_qp]);\n\nYou probably want something more like this:\n   intermediate_stress =\n        _stress_old[_qp] + elasticity_tensor_rotated * _strain_increment[_qp];\n\nMaybe try this and see if that does what you want. I'm not really sure what the right way to do this is in general, but maybe we should consider doing something like that.",
+                          "url": "https://github.com/idaholab/moose/discussions/29808#discussioncomment-12076388",
+                          "updatedAt": "2025-02-06T01:51:21Z",
+                          "publishedAt": "2025-02-06T01:51:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jmeier"
+                          },
+                          "bodyText": "Dear Ben, Thanks for your answer! Yes, I'm using ComputeFiniteStrainElasticStress. I will try your suggestion.\nIn the meantime: Is there a way to apply change of (plastic) strain in Moose for a Material (e.g. introduce a user-given plastic strain increments)?",
+                          "url": "https://github.com/idaholab/moose/discussions/29808#discussioncomment-12078266",
+                          "updatedAt": "2025-02-06T07:16:28Z",
+                          "publishedAt": "2025-02-06T07:14:05Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "bwspenc"
+                          },
+                          "bodyText": "@jmeier I was thinking about this some more, and we actually do just what I proposed in some cases for inelastic models. This code is in ComputeMultipleInelasticStress:\n     if (_is_elasticity_tensor_guaranteed_isotropic || !_perform_finite_strain_rotations)\n        _stress[_qp] =\n            _elasticity_tensor[_qp] * (_elastic_strain_old[_qp] + elastic_strain_increment);\n      else\n      {\n        if (_damage_model)\n          _stress[_qp] = _undamaged_stress_old + _elasticity_tensor[_qp] * elastic_strain_increment;\n        else\n          _stress[_qp] = _stress_old[_qp] + _elasticity_tensor[_qp] * elastic_strain_increment;\n      }\n\nThe last block is the one that applies an increment to the old stress, which only happens if the elasticity tensor is not isotropic. If I remember correctly, we do that because we do not rotate the elasticity tensor. You can actually run this model on elastic problems by supplying an empty list of inelastic models (i.e., inelastic_models = \"\"), but you'd get the same thing as you're getting now if you're using isotropic elasticity.\nRegarding your second question: Probably the easiest way to do what you are asking is to have a user-defined eigenstrain model. You can set any of the components of the strain tensor that is used as an eigenstrain any way you like. That eigenstrain tensor is subtracted from the total strain before the stress calculation.",
+                          "url": "https://github.com/idaholab/moose/discussions/29808#discussioncomment-12083572",
+                          "updatedAt": "2025-02-06T15:37:06Z",
+                          "publishedAt": "2025-02-06T15:37:04Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Crystal Plasticity preconditioner and executioner",
+          "author": {
+            "login": "p-antonioni"
+          },
+          "bodyText": "Hi!\nI am performing some Crystal Plasticity simulations and I would have to run a simulation with  around some milions of dofs.\nEven for my test case, I saw that full Newton solver is faster than PJFNK (with Newton I have a quadratic convergence, with PJFNK superlinear). Maybe because I have not set it properly.\nDo you have some suggestions or experience with some solver/preconditioner to have good performances on such simulation? I mean for Newton and PJFNK\nThank you,\nPaolo\nThe set up I used for PJFNK:\n[Preconditioning]\n    [smp]\n    type = SMP\n    full = true\n    []\n[]\n\n[Executioner]\n  type = Transient\n  solve_type = 'PJFNK'\n  petsc_options_iname = '-pc_type -pc_asm_overlap -sub_pc_type -ksp_type -ksp_gmres_restart'\n  petsc_options_value = ' asm      2              lu            gmres     200'\n  nl_abs_tol = 1e-4\n ...\n[]\n\n\nNEWTON:\n[Preconditioning]\n  [smp]\n    type = SMP\n    full = true\n    petsc_options_iname = '-pc_type -pc_factor_mat_solver_package '\n    petsc_options_value = ' lu       mumps'\n  []\n[]\n\n[Executioner]\n  type = Transient\n  petsc_options_iname = '-pc_type -pc_asm_overlap -sub_pc_type -ksp_type -ksp_gmres_restart'\n  petsc_options_value = ' asm      2              lu            gmres     200'\n  solve_type = 'NEWTON'\n  use_pre_SMO_residual = false",
+          "url": "https://github.com/idaholab/moose/discussions/29755",
+          "updatedAt": "2025-02-06T13:35:07Z",
+          "publishedAt": "2025-01-27T16:33:33Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@bwspenc",
+                  "url": "https://github.com/idaholab/moose/discussions/29755#discussioncomment-11972290",
+                  "updatedAt": "2025-01-27T16:36:19Z",
+                  "publishedAt": "2025-01-27T16:36:18Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "p-antonioni"
+                          },
+                          "bodyText": "I made some tests. I saw that I am struggling to have quadratic convergence of the Full Newton method, the jacobian seems to be nice (I tested it following the procedure in the guide). I am using a sort of modified KalidindiUpdate in order to include HCP slip systems and isotropic hardening.\nCould it be to preconditioning? Do you have some suggestions?",
+                          "url": "https://github.com/idaholab/moose/discussions/29755#discussioncomment-12054376",
+                          "updatedAt": "2025-02-04T12:04:16Z",
+                          "publishedAt": "2025-02-04T12:04:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I made some tests. I saw that I am struggling to have quadratic convergence of the Full Newton method,\n\nWhat line_search are you using? It might be the default one failing. That is specified in the executioner.\nWe do expect quadratic convergence in the region of attraction when using Newton with a numerically correct Jacobian.\n\nCould it be to preconditioning? Do you have some suggestions?\n\nunlikely imo since you are using lu, equilvant to a direct solve on every linear iteration.\nHow many variables do you have?\nWhat preconditioning have you tried? Is the problem known to be elliptic or hyperbolic?",
+                          "url": "https://github.com/idaholab/moose/discussions/29755#discussioncomment-12057026",
+                          "updatedAt": "2025-02-04T16:22:11Z",
+                          "publishedAt": "2025-02-04T16:22:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "p-antonioni"
+                          },
+                          "bodyText": "Hi @GiudGiud, thank you!\n\nWhat line_search are you using?\n\nI am using the basic one right now but is still very slow, i have around 20k Nonlinear dof and another 20k dof for the auxiliary system.\nHere is what I set in the simulation:\n[Executioner]\n  type = Transient\n  solve_type = 'NEWTON'\n  petsc_options_iname = '-pc_type -pc_hypre_type -pc_hypre_boomeramg_max_levels'\n  petsc_options_value = 'hypre boomeramg 10'\n  use_pre_SMO_residual = false\n  auto_preconditioning = true\n  line_search = BASIC\n\n  nl_abs_tol = 1e-4\n  #nl_rel_step_tol = 1e-2\n  dtmax = 0.5\n  #nl_rel_tol = 1e-2\n  dtmin = 1e-8\n  end_time = 10\n\n\nWhat preconditioning have you tried?\n\nI have tried asm and smp, I also tried to use the auto_preconditioning\n\nIs the problem known to be elliptic or hyperbolic?\n\nThe physics is mostly the same of the Kalidindi model (flow rule and hardening) with exception in the hardening i use some matrix operation to calculate the slip increment for each slip system mode. Should be parabolic/hyperbolic I guess.",
+                          "url": "https://github.com/idaholab/moose/discussions/29755#discussioncomment-12058948",
+                          "updatedAt": "2025-02-04T19:32:37Z",
+                          "publishedAt": "2025-02-04T19:32:15Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "20k Nonlinear DOFs should be fast. You are right to solve it using LU (the direct solve) then, that will minimize the number of times you compute the residual / Jacobian, and it will minimize the number of material evaluations. Since you only use 20k dofs, I imagine the slow part is not the solver, but rather material properties?\nAre you using AD?\n\nwith exception in the hardening i use some matrix operation to calculate the slip increment for each slip system mode.\n\nAre your simulations significantly slower than the classic Kalindi model?",
+                          "url": "https://github.com/idaholab/moose/discussions/29755#discussioncomment-12062545",
+                          "updatedAt": "2025-02-05T04:33:05Z",
+                          "publishedAt": "2025-02-05T04:33:05Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "p-antonioni"
+                          },
+                          "bodyText": "As far I understood, crystal plasticity does not support AD and at the time i did not use it.\nIf I restrict the model to simulate an FCC crystal with same slip systems and same parameters, it takes almost the same time (60.71s Kalidindi and 61.06s mine on this 20k dof mesh (20 micron cube) to simulate until 0.1s with a rate of 2.5e-4*t).\nNow since the simulation is bi-phasic (bcc (12 slip sys) - hcp (24 slip sys)), I expect to be slower but since i need to scale up I don't think that using the direct solver will be feasible.\nI do not know if I mess around something in the boundary conditions, i do not use any offset to define the nodesets.\n [Mesh]\n  [file]\n    type = FileMeshGenerator\n    file = 'micro.msh'\n  []\n\n  # Creating boundaries\n  [create_x0]\n    type = BoundingBoxNodeSetGenerator\n    input = file # input mesh file is the file we loaded for mesh --> n10-id1.msh\n    new_boundary = x0\n    # top_right and bottom_left are vertices of the bounding box\n    top_right = '0 0.021 0.021' # box 1,1,1\n    bottom_left = '0 0 0'\n  []\n  [create_y0]\n    type = BoundingBoxNodeSetGenerator\n    # Input mesh == the one at the previous step --> create_x0 beacuse we are adding boundaries and BoundingBoxNodeSetGereator modifies directly the mesh\n    input = create_x1\n    new_boundary = y0\n    # top_right and bottom_left are vertices of the bounding box\n    top_right = '0 0 0.02' #box 1,1,1\n    bottom_left = '0.02 0 0'\n  []\n  [create_z0]\n    type = BoundingBoxNodeSetGenerator\n    input = create_y1\n    new_boundary = z0\n    top_right = '0 0.02 0'\n    bottom_left = '0.02 0 0'\n  []\n  [create_z1]\n    type = BoundingBoxNodeSetGenerator\n    input = create_z0\n    new_boundary = z1\n    top_right = '0 0.02 0.02'\n    bottom_left = '0.02 0 0.02'\n  []\n[]\n\n[BCs]\n  [lock_z0_surface]\n    type = DirichletBC\n    variable = uz\n    boundary = z0\n    value = 0\n  []\n  [tdisp]\n    type = FunctionDirichletBC\n    variable = uz\n    boundary = z1\n    function = 2.5e-4*t\n  []\n  [symmy]\n    type = DirichletBC\n    variable = uy\n    boundary = y0\n    value = 0\n  []\n  [symmx]\n    type = DirichletBC\n    variable = ux\n    boundary = x0\n    value = 0\n  []\n\nIf it can help I can show the modifications I made for calculating hardening trough the interaction matrix.",
+                          "url": "https://github.com/idaholab/moose/discussions/29755#discussioncomment-12070613",
+                          "updatedAt": "2025-02-05T14:52:40Z",
+                          "publishedAt": "2025-02-05T14:52:09Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@dewenyushu @jiangwen84 do you have any advice on performance and scaling for CP?",
+                          "url": "https://github.com/idaholab/moose/discussions/29755#discussioncomment-12071420",
+                          "updatedAt": "2025-02-05T15:55:12Z",
+                          "publishedAt": "2025-02-05T15:55:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sapitts"
+                          },
+                          "bodyText": "You are correct, the current crystal plasticity classes do not use AD.\nYou might consider running the HCP specific class, CrystalPlasticityHCPDislocationSlipBeyerleinUpdate for comparison with your modified Kalidindi model",
+                          "url": "https://github.com/idaholab/moose/discussions/29755#discussioncomment-12074487",
+                          "updatedAt": "2025-02-05T20:49:45Z",
+                          "publishedAt": "2025-02-05T20:49:44Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sapitts"
+                          },
+                          "bodyText": "The crystal plasticity models in MOOSE are unfortunately slow. In addition to the solver tolerances there are constitutive model tolerances one can adjust. See the discussion here for more information: #28534",
+                          "url": "https://github.com/idaholab/moose/discussions/29755#discussioncomment-12074544",
+                          "updatedAt": "2025-02-05T20:56:52Z",
+                          "publishedAt": "2025-02-05T20:56:51Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "p-antonioni"
+                          },
+                          "bodyText": "Hi @sapitts,\nThanks for answering. I was looking at the CrystalPlasticityHCPDislocationSlipBayerleinUpdate, with the modifications I did, they look quite similar in some parts. Could I ask you why the equivalent slip increment is calculated in this way? It is like assuming that the slip system behavior does not depend on the current hardening state ?\n  for (const auto i : make_range(_number_slip_systems))\n  {\n    if (MooseUtils::absoluteFuzzyEqual(_tau[_qp][i], 0.0))\n      dslip_dtau[i] = 0.0;\n    else\n      dslip_dtau[i] = _slip_increment[_qp][i] /\n                      (_rate_sensitivity_exponent * std::abs(_tau[_qp][i])) * _substep_dt;\n  }\n}\n\nI would expect the derivative with respect to tau of the slip increment, something like this:\n  for (const auto i : make_range(_number_slip_systems))\n  {\n    if (MooseUtils::absoluteFuzzyEqual(_tau[_qp][i], 0.0))\n      dslip_dtau[i] = 0.0;\n    else\n      dslip_dtau[i] = _ao / _xm *\n                      std::pow(std::abs(_tau[_qp][i] / _slip_resistance[_qp][i]), 1.0 / _xm - 1.0) /\n                      _slip_resistance[_qp][i];\n  }\n\nIn general, there are some preconditioning/executioner settings that you found helpful when running on many dofs?",
+                          "url": "https://github.com/idaholab/moose/discussions/29755#discussioncomment-12082039",
+                          "updatedAt": "2025-02-06T13:35:08Z",
+                          "publishedAt": "2025-02-06T13:35:07Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to ensure the displaced mesh is used",
+          "author": {
+            "login": "keassyguang"
+          },
+          "bodyText": "Hello MOOSE Community,\nI'm developing a custom material class that inherits from ADMaterial. The coordinates of the current quadrature point will be used as a condition to assign a specific value to some created variables. What I want to know is whether the coordinates of _q_point[_qp](0), _q_point[_qp](1) and _q_point[_qp](2) return the displaced mesh or the undisplaced mesh. Since I need the coordinates of the quadrature point under the displaced mesh, what should I do to ensure that the displaced mesh is always used?",
+          "url": "https://github.com/idaholab/moose/discussions/29699",
+          "updatedAt": "2025-02-06T03:04:31Z",
+          "publishedAt": "2025-01-17T10:23:27Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "For many objects, all you need to do is setting use_displaced_mesh = true\nIs that an option for your case?",
+                  "url": "https://github.com/idaholab/moose/discussions/29699#discussioncomment-11877670",
+                  "updatedAt": "2025-01-18T21:09:52Z",
+                  "publishedAt": "2025-01-18T21:09:51Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "The intended behavior is that when you set this parameter to true, the _mesh attribute in the back will refer to the displaced mesh. And the _problem or _fe_problem would refer to the displaced problem.\nSimilarly q_point and other mesh quantities would come from the displaced configuration\nIf you are not observing that, I'll look into it to make sure it is as expected.",
+                          "url": "https://github.com/idaholab/moose/discussions/29699#discussioncomment-11882880",
+                          "updatedAt": "2025-01-19T17:37:15Z",
+                          "publishedAt": "2025-01-19T17:37:14Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "keassyguang"
+                          },
+                          "bodyText": "For many objects, all you need to do is setting use_displaced_mesh = true\n\nI haven't done that yet.\n\nThe intended behavior is that when you set this parameter to true, the _mesh attribute in the back will refer to the displaced mesh. And the _problem or _fe_problem would refer to the displaced problem.\n\nThank you for your kind explanation. But do we have a parameter that can 'globally' set all objects to use the displaced mesh, as there are usually a number of objects used in an input file? Another question is since all the objects I have developed myself have no declared parameter called use_displaced_mesh and I don't know how to pass it to the parent class either. Sorry, I am not good at C++. In this case, can I just set use_displaced_mesh = true on each object to get all the physics in the simulation to use the displaced mesh? Or what else should I do?\nIn my simulation, the problem is set to FEProblem. Below are the results I saw from my simulation with use_displaced_mesh = true set for the mechanics only, but not for the rest of the physics. Here the I_aux represents the variation of the light intensity along the y-axis direction. As you can see in the zoomed image, the I_aux should be non-zero for nodes on the right-hand side of the red line. However, when I checked in the paraview, the values for the highlight element are unexpected. I_aux_node_1 = I_aux_node_4 = 0.0 whereas they should be around 10 or so.\nOverall view of the part\n\nZoom in on the top left corner",
+                          "url": "https://github.com/idaholab/moose/discussions/29699#discussioncomment-11885850",
+                          "updatedAt": "2025-01-20T03:06:56Z",
+                          "publishedAt": "2025-01-20T03:06:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "You can set use_displaced_mesh = true in the GlobalParams block to have it be applied to all objects\nThe derived classes you created do not use that parameter directly, but it is used by the parent classes to set the various attributes you use in the derived classes. So it still works as expected, unless you retrieved mesh items directly, not leveraging the base class",
+                          "url": "https://github.com/idaholab/moose/discussions/29699#discussioncomment-11885917",
+                          "updatedAt": "2025-01-20T03:20:35Z",
+                          "publishedAt": "2025-01-20T03:20:34Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "keassyguang"
+                          },
+                          "bodyText": "You can set use_displaced_mesh = true in the GlobalParams block to have it be applied to all objects\n\nThank you very much. I will test it this afternoon. I don't think the developed classes retrieve the mesh items directly as I didn't include any libmesh header files except the one dealing with moving the boundary between domains.",
+                          "url": "https://github.com/idaholab/moose/discussions/29699#discussioncomment-11886182",
+                          "updatedAt": "2025-01-20T04:13:36Z",
+                          "publishedAt": "2025-01-20T04:13:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "keassyguang"
+                          },
+                          "bodyText": "I developed a class \"PrintQuadraturePointCoordinates\" to output the _q_point[_qp](0) and _q_point[_qp](1) of the upper right corner element (ID=49) within a large deformation simulation. The use_displaced_mesh = true is defined as a global parameter. Results show the _q_point[_qp](0) and _q_point[_qp](1) return the undeformed quadrature point coordinates.\nThe geometry is 2 x 1 with a mesh size of 10 x 5, so the coordinates of the undeformed mesh can be easily calculated:\nqp = 0, x = 2 - 0.2/2 - 0.2/2/sqrt(3) =  1.842264973, y = 1 - 0.2/2 - 0.2/2/sqrt(3) = 0.842264973\nqp = 1, x = 2 - 0.2/2 + 0.2/2/sqrt(3) =  1.957735027, y = 1 - 0.2/2 + 0.2/2/sqrt(3) = 0.957735027\n\nThese results  are the same as the output from the \"PrintQuadraturePointCoordinates\" class. I append the output at the end.\nBut if I want to use the coordinates of the deformed mesh, what should I do? Do you have any suggestions?\nHeader file\n#pragma once\n\n#include \"ADMaterial.h\"\n\nclass PrintQuadraturePointCoordinates : public ADMaterial\n{\npublic:\n  static InputParameters validParams();\n  PrintQuadraturePointCoordinates(const InputParameters & parameters);\n\n  virtual void computeQpProperties() override;        \n};\n\nSource file\n#include \"PrintQuadraturePointCoordinates.h\"\n\nregisterMooseObject(\"MechanicsApp\", PrintQuadraturePointCoordinates);\n\nInputParameters\nPrintQuadraturePointCoordinates::validParams()\n{\n  InputParameters params = ADMaterial::validParams();\n  params.addClassDescription(\"Displaced mesh test\");\n\n  return params;\n}\n\nPrintQuadraturePointCoordinates::PrintQuadraturePointCoordinates(const InputParameters & parameters)\n  : ADMaterial(parameters)\n{\n}\n\nvoid PrintQuadraturePointCoordinates::computeQpProperties()\n{\n  Real x = _q_point[_qp](0);\n  Real y = _q_point[_qp](1);\n\n  const unsigned int elem_id = _current_elem->id();\n\n  if (elem_id == 49){\n    std::cout << \"Element ID = \" << elem_id \n            << \", qp = \" << _qp \n            << \", x = \" << x \n            << \", y = \" << y \n            << std::endl;\n  }\n}\n\nInput file\n[Mesh]\n  type = GeneratedMesh\n  dim = 2\n  xmin = 0\n  ymin = 0\n  xmax = 2\n  ymax = 1\n  nx = 10\n  ny = 5\n[]\n\n[GlobalParams]\n  # displacements = 'disp_x disp_y'\n  use_displaced_mesh = true\n[]\n\n[Variables]\n  [./disp_x]\n  [../]\n  [./disp_y]\n  [../]\n[]\n\n[Kernels]\n  [./stress_x]\n    type = ADStressDivergenceTensors\n    displacements = 'disp_x disp_y'\n    component = 0\n    variable = disp_x\n  [../]\n  [./stress_y]\n    type = ADStressDivergenceTensors\n    displacements = 'disp_x disp_y'\n    component = 1\n    variable = disp_y\n  [../]\n[]\n\n[BCs]\n  [./fix_bottom_x]\n    type = ADDirichletBC\n    variable = disp_x\n    boundary = bottom\n    value = 0\n  [../]\n  [./fix_bottom_y]\n    type = ADDirichletBC\n    variable = disp_y\n    boundary = bottom\n    value = 0\n  [../]\n  [top_pull_y]\n    type = FunctionDirichletBC\n    variable = disp_y\n    function = 't'\n    boundary = 'top'\n  []\n[]\n\n[Materials]\n  [./elasticity]\n    type = ADComputeIsotropicElasticityTensor\n    poissons_ratio = 0.3\n    youngs_modulus = 1e10\n  [../]\n  [./strain]\n    type = ADComputeFiniteStrain\n    displacements = 'disp_x disp_y'\n  [../]\n  [./stress]\n    type = ADComputeFiniteStrainElasticStress\n  [../]\n\n  [./print_quadrature_point_coordinates]\n    type = PrintQuadraturePointCoordinates\n  [../]\n[]\n  \n[Executioner]\n  type = Transient\n  dt = 0.05\n  solve_type = 'PJFNK'\n\n  petsc_options_iname = -pc_hypre_type\n  petsc_options_value = boomeramg\n\n  dtmin = 0.05\n  num_steps = 10\n[]\n\n[Outputs]\n  exodus = true\n[]\n\nResults of the last step\n\nOutput of the last step\nTime Step 10, time = 0.5, dt = 0.05\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n 0 Nonlinear |R| = 1.275831e+09\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n      0 Linear |R| = 1.275831e+09\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n      1 Linear |R| = 8.986137e+07\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n      2 Linear |R| = 3.584480e+07\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n      3 Linear |R| = 1.355746e+07\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n      4 Linear |R| = 3.606125e+06\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n      5 Linear |R| = 1.137058e+06\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n      6 Linear |R| = 7.392749e+05\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n      7 Linear |R| = 5.783571e+05\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n      8 Linear |R| = 2.170640e+05\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n      9 Linear |R| = 4.608134e+04\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n     10 Linear |R| = 1.596740e+04\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n     11 Linear |R| = 3.623754e+03\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n 1 Nonlinear |R| = 1.027131e+08\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n      0 Linear |R| = 1.027131e+08\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n      1 Linear |R| = 7.541895e+06\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n      2 Linear |R| = 2.955972e+06\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n      3 Linear |R| = 1.123554e+06\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n      4 Linear |R| = 3.044064e+05\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n      5 Linear |R| = 1.516029e+05\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n      6 Linear |R| = 1.120080e+05\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n      7 Linear |R| = 7.056620e+04\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n      8 Linear |R| = 2.298836e+04\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n      9 Linear |R| = 6.872351e+03\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n     10 Linear |R| = 1.323328e+03\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n     11 Linear |R| = 2.073973e+02\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n 2 Nonlinear |R| = 4.501946e+05\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n      0 Linear |R| = 4.501946e+05\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n      1 Linear |R| = 3.791349e+04\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n      2 Linear |R| = 1.398511e+04\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n      3 Linear |R| = 5.448086e+03\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n      4 Linear |R| = 1.429582e+03\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n      5 Linear |R| = 8.678582e+02\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n      6 Linear |R| = 6.107572e+02\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n      7 Linear |R| = 3.627145e+02\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n      8 Linear |R| = 1.549423e+02\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n      9 Linear |R| = 4.087554e+01\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n     10 Linear |R| = 6.516450e+00\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n     11 Linear |R| = 9.804295e-01\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\nElement ID = 49, qp = 0, x = 1.84226, y = 0.842265\nElement ID = 49, qp = 1, x = 1.95774, y = 0.842265\nElement ID = 49, qp = 2, x = 1.84226, y = 0.957735\nElement ID = 49, qp = 3, x = 1.95774, y = 0.957735\n 3 Nonlinear |R| = 9.707504e+00\n Solve Converged!",
+                          "url": "https://github.com/idaholab/moose/discussions/29699#discussioncomment-11915163",
+                          "updatedAt": "2025-01-22T11:13:24Z",
+                          "publishedAt": "2025-01-22T11:10:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "in the parameter explanation in Materials you have this\nNote that \"\n                        \"in the case this is true but no \"\n                        \"displacements are provided in the Mesh block \"\n                        \"the undisplaced mesh will still be used.\n\ncan you make sure to provide the displacements in GlobalParams/Mesh block again?",
+                          "url": "https://github.com/idaholab/moose/discussions/29699#discussioncomment-11917357",
+                          "updatedAt": "2025-01-22T14:18:16Z",
+                          "publishedAt": "2025-01-22T14:18:15Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "keassyguang"
+                          },
+                          "bodyText": "Currently the displacements = 'disp_x disp_y' in the global parameter block is commented out. I can try to provide this parameter to both global parameter and mesh blocks tomorrow.\n[Mesh]\n  displacements = 'disp_x disp_y'\n  type = GeneratedMesh\n  dim = 2\n  xmin = 0\n  ymin = 0\n  xmax = 2\n  ymax = 1\n  nx = 10\n  ny = 5\n[]\n\n[GlobalParams]\n  displacements = 'disp_x disp_y'\n  use_displaced_mesh = true\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/29699#discussioncomment-11917600",
+                          "updatedAt": "2025-01-22T14:39:55Z",
+                          "publishedAt": "2025-01-22T14:39:54Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "keassyguang"
+                          },
+                          "bodyText": "Thank you very much. After adding the displacements = 'disp_x disp_y' to either the global parameter block or the mesh block, the output of this example is correct now. But for my own application, the simulation aborted with a Segmentation fault error message at the beginning.\nWhen using parallel, the error message was:\n===================================================================================\n=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES\n=   PID 3396741 RUNNING AT IHP-SPD-C0QH6A1\n=   EXIT CODE: 9\n=   CLEANING UP REMAINING PROCESSES\n=   YOU CAN IGNORE THE BELOW CLEANUP MESSAGES\n===================================================================================\nYOUR APPLICATION TERMINATED WITH THE EXIT STRING: Segmentation fault (signal 11)\nThis typically refers to a problem with your application.\nPlease see the FAQ page for debugging suggestions\n\nWhen parallel wasn't used, the error message was:\nSegmentation fault (core dumped)",
+                          "url": "https://github.com/idaholab/moose/discussions/29699#discussioncomment-11923615",
+                          "updatedAt": "2025-01-23T01:58:38Z",
+                          "publishedAt": "2025-01-23T01:58:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "use a debugger to find which line it seg faults\nhttps://mooseframework.inl.gov/application_development/debugging.html",
+                          "url": "https://github.com/idaholab/moose/discussions/29699#discussioncomment-11923629",
+                          "updatedAt": "2025-01-23T02:00:16Z",
+                          "publishedAt": "2025-01-23T02:00:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "keassyguang"
+                          },
+                          "bodyText": "Here is the backtrace:\nStarting program: /home/liug2/projects/multi_layer_dlp_polymerization_thermal_mechanical/multi_layer_dlp_polymerization_thermal_mechanical-dbg -i test_multi_layer_polymerization_thermal_mechanical_with_AMR.i\n[Thread debugging using libthread_db enabled]\nUsing host libthread_db library \"/lib/x86_64-linux-gnu/libthread_db.so.1\".\n[New Thread 0x7fffdf400640 (LWP 3446716)]\n[Detaching after vfork from child process 3446720]\nKeeping file './tmp_jit_KP9fXi.cc' in debug mode.\n\nThread 1 \"multi_layer_dlp\" received signal SIGSEGV, Segmentation fault.\n0x00007ffff43e7cc0 in libMesh::ParallelObject::comm (this=0xa0) at /home/liug2/miniforge/envs/moose/libmesh/include/libmesh/parallel_object.h:98\n98\t  { return _communicator; }\n(gdb) where\n#0  0x00007ffff43e7cc0 in libMesh::ParallelObject::comm (this=0xa0) at /home/liug2/miniforge/envs/moose/libmesh/include/libmesh/parallel_object.h:98\n#1  0x00007ffff67d479c in Moose::PetscSupport::isSNESVI (fe_problem=...) at /home/liug2/projects/moose/framework/src/utils/PetscSupport.C:819\n#2  0x00007ffff671440d in BoundsBase::BoundsBase (this=0x5555568b1d70, parameters=...) at /home/liug2/projects/moose/framework/src/bounds/BoundsBase.C:39\n#3  0x00007ffff6715478 in ConstantBounds::ConstantBounds (this=0x5555568b1d70, parameters=...) at /home/liug2/projects/moose/framework/src/bounds/ConstantBounds.C:26\n#4  0x00007ffff6719413 in std::make_unique<ConstantBounds, InputParameters const&> ()\n    at /home/liug2/miniforge/envs/moose/x86_64-conda-linux-gnu/include/c++/12.3.0/bits/unique_ptr.h:1065\n#5  0x00007ffff6719152 in RegistryEntry<ConstantBounds>::build (this=0x5555556ee2e0, parameters=...)\n    at /home/liug2/projects/moose/framework/build/header_symlinks/Registry.h:337\n#6  0x00007ffff5102253 in Factory::createUnique (this=0x55555584dca0, obj_name=..., name=..., parameters=..., tid=0, print_deprecated=false)\n    at /home/liug2/projects/moose/framework/src/base/Factory.C:101\n#7  0x00007ffff4726fee in Factory::createUnique<AuxKernelTempl<double> > (this=0x55555584dca0, obj_name=..., name=..., parameters=..., tid=0)\n    at /home/liug2/projects/moose/framework/build/header_symlinks/Factory.h:254\n#8  0x00007ffff46faed9 in Factory::create<AuxKernelTempl<double> > (this=0x55555584dca0, obj_name=..., name=..., parameters=..., tid=0)\n    at /home/liug2/projects/moose/framework/build/header_symlinks/Factory.h:270\n#9  0x00007ffff46a6605 in AuxiliarySystem::addKernel (this=0x5555561c1020, kernel_name=..., name=..., parameters=...)\n    at /home/liug2/projects/moose/framework/src/systems/AuxiliarySystem.C:268\n#10 0x00007ffff5e57999 in FEProblemBase::addAuxKernel (this=0x55555606f8c0, kernel_name=..., name=..., parameters=...)\n    at /home/liug2/projects/moose/framework/src/problems/FEProblemBase.C:3169\n#11 0x00007ffff49790a8 in AddKernelAction::act (this=0x555555da1080) at /home/liug2/projects/moose/framework/src/actions/AddKernelAction.C:38\n#12 0x00007ffff496960f in Action::timedAct (this=0x555555da1080) at /home/liug2/projects/moose/framework/src/actions/Action.C:84\n#13 0x00007ffff496e5c6 in ActionWarehouse::executeActionsWithAction (this=0x55555584d3c8, task=...)\n    at /home/liug2/projects/moose/framework/src/actions/ActionWarehouse.C:388\n#14 0x00007ffff496e073 in ActionWarehouse::executeAllActions (this=0x55555584d3c8) at /home/liug2/projects/moose/framework/src/actions/ActionWarehouse.C:346\n#15 0x00007ffff5139a78 in MooseApp::runInputFile (this=0x55555584ccb0) at /home/liug2/projects/moose/framework/src/base/MooseApp.C:1118\n#16 0x00007ffff5141868 in MooseApp::run (this=0x55555584ccb0) at /home/liug2/projects/moose/framework/src/base/MooseApp.C:1544\n#17 0x000055555555bd8c in Moose::main<MultiLayerDLPPolymerizationThermalMechanicalTestApp> (argc=3, argv=0x7fffffffc0c8)\n    at /home/liug2/projects/moose/framework/build/header_symlinks/MooseMain.h:41\n#18 0x000055555555b2b5 in main (argc=3, argv=0x7fffffffc0c8) at /home/liug2/projects/multi_layer_dlp_polymerization_thermal_mechanical/src/main.C:17",
+                          "url": "https://github.com/idaholab/moose/discussions/29699#discussioncomment-11923792",
+                          "updatedAt": "2025-01-23T02:25:23Z",
+                          "publishedAt": "2025-01-23T02:25:22Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How MOOSE implement the 'SolidMechanicsPlasticMohrCoulomb' for Mohr-Coulomb non-association flow, any documents or equations?",
+          "author": {
+            "login": "Yulongggggg"
+          },
+          "bodyText": "Hi Guid, long time no see. Can you give me some documents or files about how MOOSE implements the Mohr-Coulomb non-association flow? I am wondering how it's implemented",
+          "url": "https://github.com/idaholab/moose/discussions/29785",
+          "updatedAt": "2025-02-05T22:12:34Z",
+          "publishedAt": "2025-01-31T23:32:53Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "I'm afraid we dont have much documentation on this.\nMaybe look for journal articles published around the time that code was added? They might explain the model and implementation\nso around 2017 by Andrew Wilkins",
+                  "url": "https://github.com/idaholab/moose/discussions/29785#discussioncomment-12023118",
+                  "updatedAt": "2025-01-31T23:49:00Z",
+                  "publishedAt": "2025-01-31T23:48:59Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Kavan-Khaledi"
+                          },
+                          "bodyText": "check this, maybe it helps:\nmodules/solid_mechanics/test/tests/capped_mohr_coulomb/capped_mohr_coulomb.pdf",
+                          "url": "https://github.com/idaholab/moose/discussions/29785#discussioncomment-12023995",
+                          "updatedAt": "2025-02-01T04:34:44Z",
+                          "publishedAt": "2025-02-01T04:34:43Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Yulongggggg"
+                          },
+                          "bodyText": "Thank you, btw do you know how MOOSE implement the CappedDruckerPragerStressUpdate, is there any documents",
+                          "url": "https://github.com/idaholab/moose/discussions/29785#discussioncomment-12075024",
+                          "updatedAt": "2025-02-05T21:59:31Z",
+                          "publishedAt": "2025-02-05T21:59:31Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "does this help?\nhttps://github.com/idaholab/moose/blob/next/modules/solid_mechanics/doc/theory/capped_weak_plane.pdf",
+                          "url": "https://github.com/idaholab/moose/discussions/29785#discussioncomment-12075105",
+                          "updatedAt": "2025-02-05T22:12:34Z",
+                          "publishedAt": "2025-02-05T22:12:34Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Can't converge when simulating the geostress in anisotropic medium",
+          "author": {
+            "login": "Yulongggggg"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\n<When I am simulating the geo-stress with a tunnel amid the domain, My model can't converge if the host medium is anisotropic or heterogeneous, I am using pressure boundary condition at the four boundaries of the domain, also a pressure boundary condition in the middle tunnel wall.>",
+          "url": "https://github.com/idaholab/moose/discussions/29815",
+          "updatedAt": "2025-02-05T22:06:27Z",
+          "publishedAt": "2025-02-05T22:06:26Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": []
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "January 2025 News",
+          "author": {
+            "login": "cticenhour"
+          },
+          "bodyText": "The January 2025 MOOSE Newsletter has been released! This is a large issue, showing a lot of development progress across MOOSE, the modules, and general bug fixes and improvements. Please see a summary below and reach out to the team with any questions.\n\nMOOSE Improvements\n\nAdded ParsedConvergence\nNew CutMeshByLevelSetGenerator\nRestart capabilities\n\n\nMOOSE Modules Changes\n\nThermal hydraulics: New FunctorClosures\nFluid properties: T_from_p_h routine added to several fluid properties, modifications to TabulatedFluidProperties\nNavier Stokes: VolumetricFlowRate extension, INSFVEnthalpyFunctorMaterial can now compute enthalpy directly, PIMPLE algorithm implementation\nSolid Mechanics: QuasiStaticSolidMechanicsPhysics no longer creating displacement variables without block restriction, Shell Elements revisions, PressureAction is now controllable\nXFEM: MeshCut2DFractureUserObject was added\n\n\nBug Fixes and Minor Enhancements",
+          "url": "https://github.com/idaholab/moose/discussions/29814",
+          "updatedAt": "2025-02-05T15:55:08Z",
+          "publishedAt": "2025-02-05T15:19:12Z",
+          "category": {
+            "name": "News"
+          },
+          "comments": {
+            "edges": []
+          }
+        }
+      }
+    ]
+  }
+}

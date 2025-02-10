@@ -1,0 +1,887 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMS0wMy0wMVQxNTo1MTo0Ny0wNjowMM4AMTNX"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Error: Can't output Elems with invalid ids!",
+          "author": {
+            "login": "Ali-toghraee"
+          },
+          "bodyText": "Hello MOOSE users,\nMy model has Phase Field+ Tensor mechanics kernels and I am using the combined module.\nWhen my Tensor mechanic is Elastic ( elastic stress and strain) I have no problem.\nBut, when I add plasticity to my model , I get this error of \"Can't output Elems with invalid ids!\" after some steps.\nWhat I figured out so far is that it is some how related to the adaptive mesh I have. For example, if I chose to update my mesh every 6 iterations, the error occurs around t = 5e-6 sec. But, if I update every 18 iterations it lasts up to  t = 5e-4 sec.\nI would appreciate any help on this matter.\nI have attached some part of my input file.\nplastic_github.txt\nP.S. My MOOSE version is kinda old!",
+          "url": "https://github.com/idaholab/moose/discussions/17158",
+          "updatedAt": "2023-06-26T15:29:22Z",
+          "publishedAt": "2021-03-01T04:11:46Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "aeslaughter"
+                  },
+                  "bodyText": "@sapitts Have you seen this before with Tensor Mechanics?",
+                  "url": "https://github.com/idaholab/moose/discussions/17158#discussioncomment-422527",
+                  "updatedAt": "2023-06-26T15:29:22Z",
+                  "publishedAt": "2021-03-02T17:53:38Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "sapitts"
+                  },
+                  "bodyText": "I have not seen this error before, but based on some discussions I've had with @laagesen and @dschwen I believe there is an issue with plasticity stateful materials and mesh adaptivity: we don't currently have the infrastructure to handle moving over stateful properties (e.g. the old plastic state from the previous timestep) to a modified mesh. Daniel or Larry, would one of you be willing to clarify/ expand on this issue please?\nIt could be that you see the difference in the \"allowable\" simulation time is a function of both the onset of plasticity and how close to that onset the mesh is modified through adaptivity. I suspect that as soon as the simulation goes to look for the old plastic state material property information on a mesh that has been modified by adaptivity. If you delay adaptivity, the simulation should be able to run longer.",
+                  "url": "https://github.com/idaholab/moose/discussions/17158#discussioncomment-422596",
+                  "updatedAt": "2023-06-26T15:29:22Z",
+                  "publishedAt": "2021-03-02T18:17:01Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Ali-toghraee"
+                          },
+                          "bodyText": "Hi sapitts,\nThanks for the explanation. You are right about the delay for adaptivity . when I set the adaptivity  from interval = 6 to interval = 36, my simulations runs for very longer time.\nIs there a way to define a fixed refined mesh at certain areas in the domain? I am not sure if the Pattern Mesh can do the trick.\nAlireza",
+                          "url": "https://github.com/idaholab/moose/discussions/17158#discussioncomment-427856",
+                          "updatedAt": "2023-07-07T20:43:43Z",
+                          "publishedAt": "2021-03-04T02:00:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "You could use initial adaptivity. I'm pretty sure that'll solve your issue here.",
+                          "url": "https://github.com/idaholab/moose/discussions/17158#discussioncomment-427864",
+                          "updatedAt": "2023-06-26T15:30:16Z",
+                          "publishedAt": "2021-03-04T02:06:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Take a look at this input file for example: https://github.com/idaholab/moose/blob/next/test/tests/adaptivity/initial_adapt/initial_adapt.i . But as Stephanie said, incremental formulations in tensor mechanics with adaptivity are still under the works.",
+                          "url": "https://github.com/idaholab/moose/discussions/17158#discussioncomment-427870",
+                          "updatedAt": "2023-06-26T15:30:17Z",
+                          "publishedAt": "2021-03-04T02:09:09Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Ali-toghraee"
+                          },
+                          "bodyText": "Thanks hungry, It helped a lot. Do you know how can I define multiple boxes instead of one?",
+                          "url": "https://github.com/idaholab/moose/discussions/17158#discussioncomment-427908",
+                          "updatedAt": "2023-06-26T15:30:26Z",
+                          "publishedAt": "2021-03-04T02:26:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Combo marker is for that exact purpose: https://mooseframework.inl.gov/source/markers/ComboMarker.html",
+                          "url": "https://github.com/idaholab/moose/discussions/17158#discussioncomment-427959",
+                          "updatedAt": "2023-06-26T15:30:26Z",
+                          "publishedAt": "2021-03-04T03:05:12Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Ali-toghraee"
+                          },
+                          "bodyText": "Thank you , yep found it 10 min ago :)",
+                          "url": "https://github.com/idaholab/moose/discussions/17158#discussioncomment-427973",
+                          "updatedAt": "2023-06-26T15:30:26Z",
+                          "publishedAt": "2021-03-04T03:20:52Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "help with compiling libmesh with boost",
+          "author": {
+            "login": "hugary1995"
+          },
+          "bodyText": "Hi all,\nI am trying to compile the libMesh on hpc with an external boost, but I ran into some issues.\nBasically, I have downloaded a boost (that is newer than the one in libMesh contrib), and the version.hpp is located at:\n/hpc/group/dolbowlab/boost_1_75_0/boost/version.hpp.\nHowever, when I try to compile libMesh using ./scripts/update_and_rebuild_libmesh.sh --with-boost=/hpc/group/dolbowlab/boost_1_75_0 it says that it cannot find an external boost therefore falling back to the internal boost:\nchecking for boostlib >= 1.57.0... configure: We could not detect the boost libraries (version 1.57 or higher). If you have a staged boost library (still not installed) please specify $BOOST_ROOT in your environment and do not give a PATH to --with-boost option.  If you are sure you have boost installed, then check your version number looking in <boost/version.hpp>. See http://randspringer.de/boost for more documentation.\n<<< External boost installation *not* found... will try to configure for libmesh's internal boost >>>\n\nWhat am I missing here?\nThanks,\nGary",
+          "url": "https://github.com/idaholab/moose/discussions/17055",
+          "updatedAt": "2021-03-04T02:47:59Z",
+          "publishedAt": "2021-02-18T14:50:33Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "According to @roystgnr there doesn't seem to be an easy fix for this. I ended up manually including boost in my Makefile.",
+                  "url": "https://github.com/idaholab/moose/discussions/17055#discussioncomment-427938",
+                  "updatedAt": "2021-03-04T02:47:59Z",
+                  "publishedAt": "2021-03-04T02:47:46Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Weird transfer behavior for multiple source/target boundaries",
+          "author": {
+            "login": "aprilnovak"
+          },
+          "bodyText": "Hi all,\nI'm hoping someone can help me figure out some strange behavior going on with the MultiAppNearestNodeTransfer when there are multiple source/target boundaries for the direction sub -> master. Let me describe the setup -\nI have a 7-pin hexagonal bundle. For sake of demonstration, I've trimmed out all the physics to just focus on the transfer issue. The domains for the master app and sub app are identical, and in my application are coupled through boundary conditions on the clad surface (boundary ID 5) and duct inner surface (boundary ID 10). The transfers are as follows:\n1: master -> sub: sends a temperature (nek_temp) from boundaries 5 and 10 in the master app to boundaries 5 and 10 in the sub app. This works just fine - the first picture below is nek_temp in the master app, while the second is nek_temp in the sub app after the transfer.\nvariable in master before transfer TO sub\n\nvariable in sub after transfer TO sub\n\n\nsub -> master: sends a flux (avg_flux) from boundaries 5 and 10 in the sub app to boundaries 5 and 10 in the master app. I cannot seem to get this to work correctly if I use a source_boundary, which I want to do because my actual problems are really big, but the boundaries I'm passing data for are a relatively small part of the problem. Before I describe what I did, here's a visual of the avg_flux in the sub that I want to get sent to the master:\n\nvariable in sub before transfer FROM sub\n\nAttempt 1: Try using source_boundary FROM sub\nFirst, I obviously tried just using source_boundary for the data transfer for both the pins and duct. But, it seems that the second transfer in the input file (for the duct) overwrites whatever transfer I had just done for the pins. This picture shows that it looks like everywhere just takes the closest value based on the duct boundary. And, it doesn't even seem like I sent data just to one boundary in the master app, because every element has flux data.\n\nAttempt 2: Try using source_boundary FROM sub, but switch the order\nTo confirm my hunch that using multiple source boundaries overwrites the first transfer, I switched the order of the pin and duct transfers, and it again seems like the duct flux in the master app is overwritten by the pin transfer based on an input file ordering. I definitely don't think there should be an order dependence-here, so this feels like a bug.\n\nAttempt 3: Get rid of source_boundary FROM sub:\nThis seems to work correctly. But, I really want to use this feature because my problems are really big, and it should reduce the transfer time.\n\nQuestions\n\nIs there a bug here? Why should the order of transfers matter (difference between attempts 1 and 2)?\nWhy does putting a source_boundary at all for sub->master seem to transfer data to the entire master domain?\nHow can I leverage the source_boundary feature from sub->master?",
+          "url": "https://github.com/idaholab/moose/discussions/17070",
+          "updatedAt": "2023-01-03T20:31:34Z",
+          "publishedAt": "2021-02-18T22:13:49Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "aprilnovak"
+                  },
+                  "bodyText": "Here are all my input files.\nexample.zip",
+                  "url": "https://github.com/idaholab/moose/discussions/17070#discussioncomment-382521",
+                  "updatedAt": "2023-01-03T20:32:02Z",
+                  "publishedAt": "2021-02-18T22:14:16Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aprilnovak"
+                          },
+                          "bodyText": "I figured this out in case anyone is interested!\nIf I change the variable I'm transferring in this example to a Lagrange variable, there's no strange transfer behavior. The issue is that target_boundary isn't used at all for elemental transfers, so because I was restricted to setting a single source/target boundary (because a vector is not yet implemented as an input option), I was basically overwriting the first transfer\nsource_boundary = '5'\ntarget_boundary = '5' # not used, so this transfer was sending from boundary 5 to everywhere\n\nwith the second one\nsource_boundary = '10'\ntarget_boundary = '10'  # not used, so this transfer was sending from boundary 10 to everywhere\n\nI'm going to add an error if target_boundary is specified but you're transferring an elemental variable, because the transfer just doesn't make sense in that case, and you can run into unexpected behavior like I was seeing.",
+                          "url": "https://github.com/idaholab/moose/discussions/17070#discussioncomment-427406",
+                          "updatedAt": "2023-01-03T23:36:25Z",
+                          "publishedAt": "2021-03-03T21:56:33Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "MPI ERROR",
+          "author": {
+            "login": "Leni-Yeo"
+          },
+          "bodyText": "Good afternoon,\nI am trying to do a simulation for polycrystal grain growth. I saw the example that applies the polycrystalvariables and polycrystalkernel actions. I modified the polycrystalkernel action to include the following kernels: ADAllenCahn, ADTimeDerivative, and ADACInterfaceKobayashi2 for a basic simulation. The problem is that I get a \"MPI had an error\" when running the simulation. I cannot find the exact problem. I assumed it is in the action kernel but still could not solve it.  Please help.\nI attached my input file and the kernel action I am using to set up the kernels.\n##################### I COPIED THE ERROR BELOW ##########################\nGeneric Warning: In ../Parallel/MPI/vtkMPICommunicator.cxx, line 69\nMPI had an error\nInvalid communicator, error stack:\nMPI_Comm_test_inter(112): MPI_Comm_test_inter(comm=0xf2e8f3e0, flag=0x7ffcce88cfc0) failed\nMPI_Comm_test_inter(70).: Invalid communicator\napplication called MPI_Abort(MPI_COMM_WORLD, 612613) - process 0\n[unset]: write_line error; fd=-1 buf=:cmd=abort exitcode=612613\n:\nsystem msg for write_line failure : Bad file descriptor\nPrimary job  terminated normally, but 1 process returned\na non-zero exit code. Per user-direction, the job has been aborted.\nGeneric Warning: In ../Parallel/MPI/vtkMPICommunicator.cxx, line 69\nMPI had an error\nInvalid communicator, error stack:\nMPI_Comm_test_inter(112): MPI_Comm_test_inter(comm=0x4ce493e0, flag=0x7ffd8f4d8be0) failed\nMPI_Comm_test_inter(70).: Invalid communicator\napplication called MPI_Abort(MPI_COMM_WORLD, 612613) - process 0\n[unset]: write_line error; fd=-1 buf=:cmd=abort exitcode=612613\n:\nsystem msg for write_line failure : Bad file descriptor\nAssertion failed in file src/mpi/comm/comm_test_inter.c at line 77: ((comm)&(0x03ffffff)) < MPIR_COMM_N_BUILTIN\n/home/user/miniconda3/envs/moose/lib/libmpi.so.12(+0x1c7d93) [0x7fa949f80d93]\n/home/user/miniconda3/envs/moose/lib/libmpi.so.12(MPL_backtrace_show+0x18) [0x7fa949f80e73]\n/home/user/miniconda3/envs/moose/lib/libmpi.so.12(+0x15bb94) [0x7fa949f14b94]\n/home/user/miniconda3/envs/moose/lib/libmpi.so.12(MPI_Comm_test_inter+0x2f0) [0x7fa949e27840]\n/lib/x86_64-linux-gnu/libmpi_cxx.so.40(_ZN3MPI9IntracommC1EP19ompi_communicator_t+0x8b) [0x7fa9443623db]\n/lib/x86_64-linux-gnu/libmpi_cxx.so.40(+0x1125a) [0x7fa94435e25a]\n/lib64/ld-linux-x86-64.so.2(+0x11b8a) [0x7fa94e9abb8a]\n/lib64/ld-linux-x86-64.so.2(+0x11c91) [0x7fa94e9abc91]\n/lib/x86_64-linux-gnu/libc.so.6(_dl_catch_exception+0xe5) [0x7fa94abed915]\n/lib64/ld-linux-x86-64.so.2(+0x160bf) [0x7fa94e9b00bf]\n/lib/x86_64-linux-gnu/libc.so.6(_dl_catch_exception+0x88) [0x7fa94abed8b8]\n/lib64/ld-linux-x86-64.so.2(+0x155fa) [0x7fa94e9af5fa]\n/lib/x86_64-linux-gnu/libdl.so.2(+0x134c) [0x7fa94717734c]\n/lib/x86_64-linux-gnu/libc.so.6(_dl_catch_exception+0x88) [0x7fa94abed8b8]\n/lib/\ninternal ABORT - process 0\n[unset]: write_line error; fd=-1 buf=:cmd=abort exitcode=1\n:\nsystem msg for write_line failure : Bad file descriptor\nGeneric Warning: In ../Parallel/MPI/vtkMPICommunicator.cxx, line 69\nMPI had an error\nInvalid communicator, error stack:\nMPI_Comm_test_inter(112): MPI_Comm_test_inter(comm=0xa292c3e0, flag=0x7ffe75b7b580) failed\nMPI_Comm_test_inter(70).: Invalid communicator\napplication called MPI_Abort(MPI_COMM_WORLD, 537483525) - process 0\n[unset]: write_line error; fd=-1 buf=:cmd=abort exitcode=537483525\n:\nsystem msg for write_line failure : Bad file descriptor\nGeneric Warning: In ../Parallel/MPI/vtkMPICommunicator.cxx, line 69\nMPI had an error\nInvalid communicator, error stack:\nMPI_Comm_test_inter(112): MPI_Comm_test_inter(comm=0x62a903e0, flag=0x7ffcd7088450) failed\nMPI_Comm_test_inter(70).: Invalid communicator\nfiles.zip",
+          "url": "https://github.com/idaholab/moose/discussions/17142",
+          "updatedAt": "2022-07-17T07:06:37Z",
+          "publishedAt": "2021-02-25T18:29:07Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "aeslaughter"
+                  },
+                  "bodyText": "It seems like you might be getting different VTK included in your build. Are you using the conda \"moose-libmesh\" package? @milljm Have you seen something like this before?",
+                  "url": "https://github.com/idaholab/moose/discussions/17142#discussioncomment-422543",
+                  "updatedAt": "2022-07-04T07:26:11Z",
+                  "publishedAt": "2021-03-02T17:59:39Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Leni-Yeo"
+                          },
+                          "bodyText": "Hi. Yes I am. Someone advised me to use the \"Adaptivity\" block (It was off on in the original input file and in mine too); and it solved it. But I am not sure where the problem was exactly considering the original version worked well without it.",
+                          "url": "https://github.com/idaholab/moose/discussions/17142#discussioncomment-422824",
+                          "updatedAt": "2022-07-04T07:26:11Z",
+                          "publishedAt": "2021-03-02T19:16:12Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "permcody"
+                          },
+                          "bodyText": "You may be running out of memory: Adaptivity can drastically increase the mesh, and everything else that goes with it.",
+                          "url": "https://github.com/idaholab/moose/discussions/17142#discussioncomment-426478",
+                          "updatedAt": "2022-07-04T07:26:12Z",
+                          "publishedAt": "2021-03-03T17:16:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Leni-Yeo"
+                          },
+                          "bodyText": "Oh, okay, I see. I have a large memory so its not a problem for now I guess.",
+                          "url": "https://github.com/idaholab/moose/discussions/17142#discussioncomment-426635",
+                          "updatedAt": "2022-07-04T07:26:12Z",
+                          "publishedAt": "2021-03-03T18:05:58Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "modeling a multi phase multi-shape initial condition",
+          "author": {
+            "login": "Ali-toghraee"
+          },
+          "bodyText": "Dear MOOSE users,\nI am trying to model a multi phase system (picture attached) that each phase has its own phase and concentration initial conditions. But I have a problem to model this IC. I could not use \"SmoothSuperellipsoidIC\" or the Circle one because I had already used \"SubdomainBoundingBox\" mesh modifier and it gave me the error of\n***** ERROR ***\nThe initial condition 'c_fe_Oxide' is being defined on a block that already has an initial condition defined.**\nCan any body help me please on     how can I implement this IC?\nBest,\nAlireza",
+          "url": "https://github.com/idaholab/moose/discussions/16771",
+          "updatedAt": "2022-06-17T08:10:01Z",
+          "publishedAt": "2021-01-21T03:31:30Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "WilkAndy"
+                  },
+                  "bodyText": "Hi Alireza,\nCould you quickly run your input file with the --mesh-only flag, load the result into paraview, and check that your subdomains (blocks) are actually as you desire?\na",
+                  "url": "https://github.com/idaholab/moose/discussions/16771#discussioncomment-297995",
+                  "updatedAt": "2022-06-17T08:10:01Z",
+                  "publishedAt": "2021-01-21T03:36:11Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Ali-toghraee"
+                          },
+                          "bodyText": "Hi Andy,\nI did that and it showed the 3 blocks as I had defined them in mesh modifier.  But no ellipsoid in the middle\nA",
+                          "url": "https://github.com/idaholab/moose/discussions/16771#discussioncomment-298007",
+                          "updatedAt": "2022-06-17T08:10:07Z",
+                          "publishedAt": "2021-01-21T03:41:52Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "So, if you need the 4th ellipsoidal block, you're going to have to use something like a ParsedSubdomainMeshModifier.  With 4 blocks, you can define an IC for each block separately.",
+                          "url": "https://github.com/idaholab/moose/discussions/16771#discussioncomment-298011",
+                          "updatedAt": "2022-06-17T08:10:12Z",
+                          "publishedAt": "2021-01-21T03:45:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Ali-toghraee"
+                          },
+                          "bodyText": "I am looking in \"https://mooseframework.inl.gov/source/\" and I could find  \"ParsedSubdomainMeshGenerator\"  did you mean that?\nIf not, can you guide to where I can find \"ParsedSubdomainMeshModifier\" and some example input files of that?\nThanks,\nA",
+                          "url": "https://github.com/idaholab/moose/discussions/16771#discussioncomment-298022",
+                          "updatedAt": "2022-06-17T08:10:12Z",
+                          "publishedAt": "2021-01-21T03:51:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Oh, i'm sorry, yes, i meant ParsedSubdomainMeshGenerator",
+                          "url": "https://github.com/idaholab/moose/discussions/16771#discussioncomment-298026",
+                          "updatedAt": "2022-06-17T08:10:22Z",
+                          "publishedAt": "2021-01-21T03:54:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Ali-toghraee"
+                          },
+                          "bodyText": "Hello again,\nSo, I followed your instruction to use \"ParsedSubdomainMeshGenerator\" , (I have attached the part of code related to that) but I keep getting the error that:\n*** ERROR ***\n4eta_cirIC.i:2: section 'Mesh/gmc' does not have an associated \"Action\".\nDid you misspell it?\n4eta_cirIC.i:16: section 'Mesh/subdomains' does not have an associated \"Action\".\nDid you misspell it?\nI have tried different combination of  [ ] [ ] and  [./] [../] for the gmc and the subdomains part but still same error.\nI was wondering if you could help on this.\nThanks,\nAli\n4eta_cirIC.txt",
+                          "url": "https://github.com/idaholab/moose/discussions/16771#discussioncomment-301236",
+                          "updatedAt": "2022-06-17T08:10:23Z",
+                          "publishedAt": "2021-01-22T04:07:50Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "It's almost right.  Use [./gmc] instead of [gmc].  Use [./subdomains] instead of [subdomains].  Also, remove the MeshModifiers and put them all in the [Mesh] block using a number of SubdomainBoundingBoxGenerator.",
+                          "url": "https://github.com/idaholab/moose/discussions/16771#discussioncomment-301248",
+                          "updatedAt": "2022-06-17T08:10:24Z",
+                          "publishedAt": "2021-01-22T04:21:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Ali-toghraee"
+                          },
+                          "bodyText": "I changed my input to:\n[Mesh]\n[./gmc]\ntype =  GeneratedMeshGenerator\ndim = 2\nnx = 100\nny = 100\nxmax = 1000\nxmin = 0\nymax = 1000\nymin = 0\nelem_type = QUAD4\n[]\n[./subdomaincir]\ntype = ParsedSubdomainMeshGenerator\ninput = gmc\ncombinatorial_geometry = '(x-400)^2+(y-500)^2<25'\nblock_id = 4\n[]\n[./Fe_bot]\n  type = SubdomainBoundingBoxGenerator\n  block_id = 1\n  block_name = bot\n  bottom_left = '0 0 0'\n  top_right = '400 500 0'\n[../]\n\n[./Fe_top]\n  type = SubdomainBoundingBoxGenerator\n  block_id = 2\n  block_name = up\n  bottom_left = '0 500 0'\n  top_right = '400 1000 0'\n[../]\n\n[./air]\n  type = SubdomainBoundingBoxGenerator\n  block_id = 3\n  block_name = air\n  bottom_left = '400 0 0 '\n  top_right = '1000 1000 0'\n[../]\n\n[]\nBut I still get the same error!\n*** ERROR ***\n4eta_cirIC.i:2: section 'Mesh/gmc' does not have an associated \"Action\".\nDid you misspell it?\n4eta_cirIC.i:14: section 'Mesh/subdomaincir' does not have an associated \"Action\".\nDid you misspell it?\n4eta_cirIC.i:21: section 'Mesh/Fe_bot' does not have an associated \"Action\".\nDid you misspell it?\n4eta_cirIC.i:29: section 'Mesh/Fe_top' does not have an associated \"Action\".\nDid you misspell it?\n4eta_cirIC.i:37: section 'Mesh/air' does not have an associated \"Action\".\nDid you misspell it?",
+                          "url": "https://github.com/idaholab/moose/discussions/16771#discussioncomment-301311",
+                          "updatedAt": "2022-06-17T08:10:24Z",
+                          "publishedAt": "2021-01-22T04:49:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Hey,\nHopefully this helps...  This is my input file:\n[Mesh]\n[./gmc]\ntype = GeneratedMeshGenerator\ndim = 2\nnx = 100\nny = 100\nxmax = 1000\nxmin = 0\nymax = 1000\nymin = 0\nelem_type = QUAD4\n[]\n\n[./Fe_bot]\n  type = SubdomainBoundingBoxGenerator\n  input = gmc\n  block_id = 1\n  block_name = bot\n  bottom_left = '0 0 0'\n  top_right = '400 500 0'\n[../]\n\n[./Fe_top]\n  type = SubdomainBoundingBoxGenerator\n  input = Fe_bot\n  block_id = 2\n  block_name = up\n  bottom_left = '0 500 0'\n  top_right = '400 1000 0'\n[../]\n\n[./air]\n  type = SubdomainBoundingBoxGenerator\n  input = Fe_top\n  block_id = 3\n  block_name = air\n  bottom_left = '400 0 0 '\n  top_right = '1000 1000 0'\n[../]\n[./subdomaincir]\ntype = ParsedSubdomainMeshGenerator\ninput = air\n  combinatorial_geometry = '((x-400)/0.5)^2+(y-500)^2<10000'\nblock_id = 4\n[]\n\n\n[]\n\nI run it with this command:\nmyapp-opt -i tmp.i --mesh-only\n\nand it produces this figure:",
+                          "url": "https://github.com/idaholab/moose/discussions/16771#discussioncomment-301348",
+                          "updatedAt": "2022-06-17T08:10:30Z",
+                          "publishedAt": "2021-01-22T05:22:27Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Ali-toghraee"
+                          },
+                          "bodyText": "Thanks Andy,\nI copy and pasted your input but it still shows the same error. Is this a new feature added to moose? since I have not updated the moose in last 12 months.\nBest\nAli",
+                          "url": "https://github.com/idaholab/moose/discussions/16771#discussioncomment-303322",
+                          "updatedAt": "2022-06-17T08:10:31Z",
+                          "publishedAt": "2021-01-22T19:35:27Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Yes, that is almost definitely the problem.   You can continue with the old MOOSE but the above stuff won't work as i'm pretty sure the MeshGenerator stuff wasn't completed at that time.",
+                          "url": "https://github.com/idaholab/moose/discussions/16771#discussioncomment-303486",
+                          "updatedAt": "2022-06-17T08:10:32Z",
+                          "publishedAt": "2021-01-22T20:42:39Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "A better way to export many \"PointValue\" to csv?",
+          "author": {
+            "login": "zhang-rite"
+          },
+          "bodyText": "Hi MOOSE community\nHere what I want to get from the output csv file are the time-changes of several variables at many selected points. For fewer points,  I can do this by repeatedly setting several \"PointValue\" in Postprocessors. However, if there are many points,  (e.g., 100),  the list becomes very long. Could anyone tell me is there a more convenient way for the purpose already designed in MOOSE?\nps: If I use VectorPostprocessors's PointValueSampler or LineValueSampler, there will be many csv files and lack time information. I want one csv file with time information.\nThank you!",
+          "url": "https://github.com/idaholab/moose/discussions/17163",
+          "updatedAt": "2024-06-03T14:02:28Z",
+          "publishedAt": "2021-03-01T08:14:10Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "aeslaughter"
+                  },
+                  "bodyText": "For Vectorpostprocessors you can enable \"time_data\" in the CSV block to create an additional file that gives you the time information.\n[Outputs]\n  [out]\n    type = CSV\n    time_data = true\n  []\n[]\n\nYou can also output using the JSON format, which should give you the time information and only contain a single file. You will need to set the \"vectorpostprocessors_as_reporters\" option.\n[Outputs]\n  [out]\n     type = JSON\n    vectorpostprocessors_as_reporters = true\n  []\n[]",
+                  "url": "https://github.com/idaholab/moose/discussions/17163#discussioncomment-422476",
+                  "updatedAt": "2024-06-03T14:02:28Z",
+                  "publishedAt": "2021-03-02T17:40:25Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aeslaughter"
+                          },
+                          "bodyText": "I third option would be to create a custom Reporter that allows you to list the points you want to report and store those in a vector. This would be a nice contribution for MOOSE. https://mooseframework.inl.gov/syntax/Reporters/index.html",
+                          "url": "https://github.com/idaholab/moose/discussions/17163#discussioncomment-422481",
+                          "updatedAt": "2024-06-03T14:02:44Z",
+                          "publishedAt": "2021-03-02T17:41:34Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to start a phase field fracture analysis?",
+          "author": {
+            "login": "rh201"
+          },
+          "bodyText": "Hello all,\nI'm new to MOOSE and want to do phase field fracture analysis, but I have no idea how to start and what should I do for now. I was wondering if there are any simple examples or tutorials to shed light on me. Any advice or comments will be highly appreciated.\nThanks,\nRH",
+          "url": "https://github.com/idaholab/moose/discussions/17169",
+          "updatedAt": "2022-07-07T14:47:26Z",
+          "publishedAt": "2021-03-01T15:28:14Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "cticenhour"
+                  },
+                  "bodyText": "If you are looking for help specific to the phase field module, the main documentation page for that module might be a good place to start: https://mooseframework.inl.gov/modules/phase_field/index.html\nIf you want to work through a generic MOOSE tutorial and see other \"getting started\" resources, then I would go here: https://mooseframework.inl.gov/getting_started/examples_and_tutorials/index.html",
+                  "url": "https://github.com/idaholab/moose/discussions/17169#discussioncomment-419010",
+                  "updatedAt": "2022-07-07T14:47:23Z",
+                  "publishedAt": "2021-03-01T17:55:19Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rh201"
+                          },
+                          "bodyText": "Thanks @cticenhour .\nI've learned the basic parts of MOOSE already, including the page you linked,and now I want to proceed to phase field fracture, wondering if there are any related examples.",
+                          "url": "https://github.com/idaholab/moose/discussions/17169#discussioncomment-419125",
+                          "updatedAt": "2022-07-07T14:48:44Z",
+                          "publishedAt": "2021-03-01T18:28:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cticenhour"
+                          },
+                          "bodyText": "Excellent - just wanted to make sure you had seen these since you said you were new to the framework! I'll let someone with experience in phase field continue the conversation. Perhaps @laagesen can chime in or recommend other resources?",
+                          "url": "https://github.com/idaholab/moose/discussions/17169#discussioncomment-419157",
+                          "updatedAt": "2022-07-07T14:49:40Z",
+                          "publishedAt": "2021-03-01T18:36:27Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "laagesen"
+                          },
+                          "bodyText": "Probably @jiangwen84 is the best person to highlight some PF fracture examples",
+                          "url": "https://github.com/idaholab/moose/discussions/17169#discussioncomment-419370",
+                          "updatedAt": "2022-07-07T14:49:46Z",
+                          "publishedAt": "2021-03-01T19:33:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "We have a few regression tests located at moose/modules/combined/test/tests/phase_field_fracture/\nThe document of phase-field fracture is at https://mooseframework.inl.gov/source/materials/ComputeLinearElasticPFFractureStress.html",
+                          "url": "https://github.com/idaholab/moose/discussions/17169#discussioncomment-419591",
+                          "updatedAt": "2022-10-11T08:15:04Z",
+                          "publishedAt": "2021-03-01T20:38:59Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rh201"
+                          },
+                          "bodyText": "Thank you.",
+                          "url": "https://github.com/idaholab/moose/discussions/17169#discussioncomment-422591",
+                          "updatedAt": "2022-10-11T08:15:04Z",
+                          "publishedAt": "2021-03-02T18:15:11Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Python error while building MOOSE",
+          "author": {
+            "login": "hsheldon"
+          },
+          "bodyText": "I am attempting to build MOOSE on a linux cluster where I have not previously had any problems. I have checked out the latest version and built lib mesh, but now I am getting the following error during make:\nFatal Python error: Py_Initialize: Unable to get the locale encoding\nImportError: No module named 'encodings'\nAny ideas how to fix this?",
+          "url": "https://github.com/idaholab/moose/discussions/17180",
+          "updatedAt": "2021-03-02T05:49:48Z",
+          "publishedAt": "2021-03-02T04:11:53Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hsheldon"
+                  },
+                  "bodyText": "Found the answer: I had to \"unset PYTHONHOME\"\nAll working now.",
+                  "url": "https://github.com/idaholab/moose/discussions/17180#discussioncomment-420494",
+                  "updatedAt": "2021-03-02T05:49:43Z",
+                  "publishedAt": "2021-03-02T05:49:30Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Spherical Precipitate inside a matrix Mesh?",
+          "author": {
+            "login": "naveeniisc"
+          },
+          "bodyText": "Dear Moose Experts,\nI would like to create  Spherical Precipitate inside a matrix. I have checked all meshing options available in the mesh  ( https://mooseframework.inl.gov/syntax/Mesh/index.html ).  it is possible to create this kind of meshing in the moose? if yes then can someone guide me how can I achieve this mesh with moose?\nThanks for the assistance!\nNaveen",
+          "url": "https://github.com/idaholab/moose/discussions/16479",
+          "updatedAt": "2022-08-11T08:43:08Z",
+          "publishedAt": "2020-12-14T08:27:11Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GregVernon"
+                  },
+                  "bodyText": "Hi @naveeniisc,\nOne option available to you is to use Coreform Cubit - a meshing software that natively produces the Exodus mesh format that MOOSE prefers (for file-mesh anyways).   You can get a free copy of Coreform Cubit Learn for non-commercial use, or a free-trial of Coreform Cubit for commercial use by following the links below.  Once you have Coreform Cubit, there are several options for mesh generation - tetrahedral meshing, multi-block hex-meshing, or automatic \"sculpt meshing\" which is particularly useful for complex material science meshes -- see images below.\nAbout Coreform Cubit https://coreform.com/products/coreform-cubit/\nCoreform Cubit Learn: https://coreform.com/products/coreform-cubit/free-meshing-software/\nCoreform Cubit trial: https://coreform.com/products/trial/\nI'm happy to help any questions you may have regarding Coreform Cubit meshing.\nBest regards,\nGreg Vernon\nDirector of Product Management\nCoreform LLC\nImages\n\n\nTetrahedral meshing\n\n\n\nMulti-block hex-meshing\n\n\n\nSculpt automatic hex-meshing",
+                  "url": "https://github.com/idaholab/moose/discussions/16479#discussioncomment-216911",
+                  "updatedAt": "2022-08-11T08:43:09Z",
+                  "publishedAt": "2020-12-16T19:16:52Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "naveeniisc"
+                          },
+                          "bodyText": "Hi Greg,\nThank you for reply, yes I want the same mesh as you shown here. let me check cCoreform Cubit Learn.\nNaveen",
+                          "url": "https://github.com/idaholab/moose/discussions/16479#discussioncomment-218158",
+                          "updatedAt": "2022-08-11T08:43:18Z",
+                          "publishedAt": "2020-12-17T06:25:38Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "Ali-toghraee"
+                  },
+                  "bodyText": "HI naveeniisc,\nIf they are separate phases (different order parameters if you use PF) you can define it in you initial conditions using  \"SpecifiedSmoothSuperellipsoidIC\" . Look at \"https://mooseframework.inl.gov/source/ics/SpecifiedSmoothSuperellipsoidIC.html for more details.\n\nI have done that in 2D.",
+                  "url": "https://github.com/idaholab/moose/discussions/16479#discussioncomment-420387",
+                  "updatedAt": "2022-08-11T08:43:18Z",
+                  "publishedAt": "2021-03-02T03:59:22Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Defining two phase material for crystal plasticity",
+          "author": {
+            "login": "Aayush-T"
+          },
+          "bodyText": "Hi everyone,\nI wanted to understand how to define a dual-phase material for crystal plasticity that can be used to find stresses in the A and B phases as well as combined stress and strain across the whole domain. I can see there are files such as TwoPhaseStressMaterial.C and MultiPhaseStressMaterial.C, but unable to apply them for a randomly oriented Voronoi tesselation mesh. I want to do it for Ti64.",
+          "url": "https://github.com/idaholab/moose/discussions/17014",
+          "updatedAt": "2022-08-03T06:41:41Z",
+          "publishedAt": "2021-02-16T05:54:30Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "aeslaughter"
+                  },
+                  "bodyText": "@sapitts Can you help with this?",
+                  "url": "https://github.com/idaholab/moose/discussions/17014#discussioncomment-374360",
+                  "updatedAt": "2022-08-03T06:41:40Z",
+                  "publishedAt": "2021-02-16T17:21:05Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sapitts"
+                          },
+                          "bodyText": "Hi @Aayush-T, I'm always glad to hear of more folks doing crystal plasticity work! Could you give me a few more details about your plans please? E.g. will you explicitly mesh the two different phases as separate material blocks? Are you planning to use a particular crystal plasticity material model or a more general homogeneous plasticity model? These answers will help me better know what capabilities in MOOSE to suggest for your simulation",
+                          "url": "https://github.com/idaholab/moose/discussions/17014#discussioncomment-374712",
+                          "updatedAt": "2022-08-03T06:41:40Z",
+                          "publishedAt": "2021-02-16T19:08:34Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Aayush-T"
+                          },
+                          "bodyText": "Hi, thanks for the reply.\nI would like to explicitly mesh the two different phases as separate material blocks. I am planning to use the available Kalidindi model in MOOSE without homogenization. I want to use the full field.",
+                          "url": "https://github.com/idaholab/moose/discussions/17014#discussioncomment-375018",
+                          "updatedAt": "2022-08-03T06:41:41Z",
+                          "publishedAt": "2021-02-16T20:47:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sapitts"
+                          },
+                          "bodyText": "In that case I'd recommend using the crystal plasticity model on each of the blocks, with the appropriate different properties for the different phases, something along the lines of the following. Key to your case will be the use of the elasticity tensor: here I've used the example of ComputeElasticityTensorConstantRotationCP, and the euler_angle or 'rotation_matrix' parameters can be used to set the rotation for the different phases in the Voronoi tessellation. As an example for a simple simulation with only two phases:\n[./elasticity_tensor_phaseA]\n  type = ComputeElasticityTensorConstantRotationCP\n  C_ijkl = '1.684e5 1.214e5 1.214e5 1.684e5 1.214e5 1.684e5 0.754e5 0.754e5 0.754e5'\n  fill_method = symmetric9\n  euler_angle_1 = {phaseA}\n  euler_angle_2 = {phaseA}\n  euler_angle_3 = {phaseA}\n[../]\n[./stress_phaseA]\n  type = ComputeCrystalPlasticityStress\n  crystal_plasticity_update_model = 'trial_xtalpl_phaseA'\n  block = phaseA\n[../]\n[./trial_xtalpl_phaseA]\n  type = CrystalPlasticityKalidindiUpdate\n  number_slip_systems = 12\n  slip_sys_file_name = input_slip_sys.txt\n  ao = {phaseA}\n  gss_a = {phaseA}\n  gss_initial = {phaseA}\n  h = {phaseA}\n  r = {phaseA}\n  t_sat = {phaseA}\n  xm= {phaseA}\n  tan_mod_type = exact\n[../]\n\n[./elasticity_tensor_phaseB]\n  type = ComputeElasticityTensorConstantRotationCP\n  C_ijkl = '1.684e5 1.214e5 1.214e5 1.684e5 1.214e5 1.684e5 0.754e5 0.754e5 0.754e5'\n  fill_method = symmetric9\n  euler_angle_1 = {phaseB}\n  euler_angle_2 = {phaseB}\n  euler_angle_3 = {phaseB}\n[../]\n[./stressB]\n  type = ComputeCrystalPlasticityStress\n  crystal_plasticity_update_model = 'trial_xtalpl_phaseB'\n  block = phaseB\n[../]\n[./trial_xtalpl_phaseB]\n  type = CrystalPlasticityKalidindiUpdate\n  number_slip_systems = 12\n  slip_sys_file_name = input_slip_sys.txt\n  ao = {phaseB}\n  gss_a = {phaseB}\n  gss_initial = {phaseB}\n  h = {phaseB}\n  r = {phaseB}\n  t_sat = {phaseB}\n  xm= {phaseB}\n  tan_mod_type = exact\n[../]\n\nwhere the values in the curly braces should be set to the proper values for each phase. Then with a proper set of postprocessors you can extract the stress and strain measures across the domain. With these crystal plasticity models, I'd recommend using the Lagrangian strain and second Piola-Kirchoff stress measures; some of the regression tests use postprocessors to output these quantities as a reference example for you.\nAs you've probably seen, the documentation for these classes are here:\n\nComputeElasticityTensorConstantRotationCP\nComputeCrystalPlasticityStress\nCrystalPlasticityKalidindiUpdate\n\nDo you have an example input file snippet you'd be willing to share, or a schematic?",
+                          "url": "https://github.com/idaholab/moose/discussions/17014#discussioncomment-375363",
+                          "updatedAt": "2022-08-03T06:41:41Z",
+                          "publishedAt": "2021-02-16T22:49:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Aayush-T"
+                          },
+                          "bodyText": "Hi, since they don't allow *.i attachments, I am changing it to *.txt to attach.\nThe modifications in Euler angles that you see are due to the reason that I used 2-grains in 2 phases for simplicity of mesh. I also tried this input file with 8 grains, 2 phase Voronoi tessellation mesh, but the same errors were observed. (Euler angles were defined with the help of input txt file here).\nmade_file_updated.txt\nThe error message is also attached below.\n*** ERROR ***\nThe following error occurred in the object \"MOOSE Problem\", of type \"FEProblem\".\nMaterial property 'stress', requested by 'TM_TensorMechanics0' is not defined on block face1_QUAD4",
+                          "url": "https://github.com/idaholab/moose/discussions/17014#discussioncomment-377566",
+                          "updatedAt": "2022-08-22T11:48:00Z",
+                          "publishedAt": "2021-02-17T13:31:44Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sapitts"
+                          },
+                          "bodyText": "Remove the instances of FiniteStrainCrystalPlasticity from your input file: that's an older version of the crystal plasticity code that is no recommend for use. I also highly recommend the use of the TensorMechanics MasterAction which will set up your displacement variables and strain calculator in a sane manner.\nTake a look at some of the regression test input files provided in the repository, such as update_method_011orientation.i and others like it in the tensor_mechanics/test/tests/crystal_plasticity/stress_update_material_based directory",
+                          "url": "https://github.com/idaholab/moose/discussions/17014#discussioncomment-378798",
+                          "updatedAt": "2022-08-22T11:48:00Z",
+                          "publishedAt": "2021-02-17T18:55:31Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Aayush-T"
+                          },
+                          "bodyText": "Very thanks, will do the necessary changes and update to you.",
+                          "url": "https://github.com/idaholab/moose/discussions/17014#discussioncomment-380006",
+                          "updatedAt": "2022-08-22T11:48:00Z",
+                          "publishedAt": "2021-02-18T05:59:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Aayush-T"
+                          },
+                          "bodyText": "Hi, so, I tried all these changes, but again the problem persists. It asks for extra definitions. I am attaching the error snippet here too. Also, I have been recommended UO based model as the latest. So, could you advise me on using continue using KalidindiUpdate, or can use UO based crysp model.\n Also, attaching all the files related to my model as maybe I am missing something.\ncrysp_multiphase.zip\nThanks and Regards,\nAayush Trivedi",
+                          "url": "https://github.com/idaholab/moose/discussions/17014#discussioncomment-394964",
+                          "updatedAt": "2022-08-22T11:48:00Z",
+                          "publishedAt": "2021-02-22T20:16:14Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "sapitts"
+                  },
+                  "bodyText": "Here's a minimum working example input file (that uses the same text files as the regression tests in this folder ) for a two grain crystal plasticity problem using square shaped grains. The key correction made from the last attached input file is the removal of the ComputeDeformGradBasedStress input file section: the ComputeCrystalPlasticityStress already computes the stress. Also make sure that the different elasticity tensor and ComputeCrystalPlasticityStress input file sections for the different phases are restricted to different mesh blocks (e.g. block = 1 and block = 2 in the example below)\n[GlobalParams]\n  displacements = 'disp_x disp_y disp_z'\n[]\n\n[Mesh]\n  [two_block]\n    type = CartesianMeshGenerator\n    dim = 3\n    dx = '1.0 1.0'\n    dy = '1.0'\n    dz = '1.0'\n    ix = '2 2'\n    iy = '2'\n    iz = '2'\n    subdomain_id = '1 2'\n  []\n[]\n\n[AuxVariables]\n  [pk2]\n    order = CONSTANT\n    family = MONOMIAL\n  []\n  [fp_zz]\n    order = CONSTANT\n    family = MONOMIAL\n  []\n  [lagrangian_strain_zz]\n    order = CONSTANT\n    family = MONOMIAL\n  []\n  [gss]\n    order = CONSTANT\n    family = MONOMIAL\n  []\n  [slip_increment]\n   order = CONSTANT\n   family = MONOMIAL\n  []\n[]\n\n[Modules/TensorMechanics/Master/all]\n  strain = FINITE\n  add_variables = true\n  generate_output = stress_zz\n[]\n\n[AuxKernels]\n  [pk2]\n    type = RankTwoAux\n    variable = pk2\n    rank_two_tensor = pk2\n    index_j = 2\n    index_i = 2\n    execute_on = timestep_end\n  []\n  [fp_zz]\n    type = RankTwoAux\n    variable = fp_zz\n    rank_two_tensor = fp\n    index_j = 2\n    index_i = 2\n    execute_on = timestep_end\n  []\n  [lagrangian_strain_zz]\n    type = RankTwoAux\n    variable = lagrangian_strain_zz\n    rank_two_tensor = total_lagrangian_strain\n    index_j = 2\n    index_i = 2\n    execute_on = timestep_end\n  []\n  [gss]\n    type = MaterialStdVectorAux\n    variable = gss\n    property = slip_system_resistance\n    index = 0\n    execute_on = timestep_end\n  []\n  [slip_inc]\n   type = MaterialStdVectorAux\n   variable = slip_increment\n   property = plastic_slip_increment\n   index = 0\n   execute_on = timestep_end\n  []\n[]\n\n[BCs]\n  [symmy]\n    type = DirichletBC\n    variable = disp_y\n    boundary = bottom\n    value = 0\n  []\n  [symmx]\n    type = DirichletBC\n    variable = disp_x\n    boundary = left\n    value = 0\n  []\n  [symmz]\n    type = DirichletBC\n    variable = disp_z\n    boundary = back\n    value = 0\n  []\n  [tdisp]\n    type = FunctionDirichletBC\n    variable = disp_z\n    boundary = front\n    function = '0.01*t'\n  []\n[]\n\n[Materials]\n  [elasticity_tensor_phaseA]\n    type = ComputeElasticityTensorConstantRotationCP\n    C_ijkl = '1.684e5 1.214e5 1.214e5 1.684e5 1.214e5 1.684e5 0.754e5 0.754e5 0.754e5'\n    fill_method = symmetric9\n    # base_name = A\n    block = 1\n  []\n  [stress_phaseA]\n    type = ComputeCrystalPlasticityStress\n    crystal_plasticity_update_model = 'trial_xtalpl_phaseA'\n    # base_name = A\n    block = 1\n  []\n  [trial_xtalpl_phaseA]\n    type = CrystalPlasticityKalidindiUpdate\n    number_slip_systems = 12\n    slip_sys_file_name = input_slip_sys.txt\n    tan_mod_type = exact\n    # base_name = A\n    block = 1\n  []\n  [elasticity_tensor_phaseB]\n    type = ComputeElasticityTensorConstantRotationCP\n    C_ijkl = '1.684e5 1.214e5 1.214e5 1.684e5 1.214e5 1.684e5 0.754e5 0.754e5 0.754e5'\n    fill_method = symmetric9\n    euler_angle_1 = 120.0\n    euler_angle_2 = 125.264\n    euler_angle_3 =  45.0\n    # base_name = B\n    block = 2\n  []\n  [stress_phaseB]\n    type = ComputeCrystalPlasticityStress\n    crystal_plasticity_update_model = 'trial_xtalpl_phaseB'\n    # base_name = B\n    block = 2\n  []\n  [trial_xtalpl_phaseB]\n    type = CrystalPlasticityKalidindiUpdate\n    number_slip_systems = 12\n    slip_sys_file_name = input_slip_sys.txt\n    tan_mod_type = exact\n    # base_name = B\n    block = 2\n  []\n[]\n\n[Postprocessors]\n  [stress_zz]\n    type = ElementAverageValue\n    variable = stress_zz\n  []\n  [pk2]\n   type = ElementAverageValue\n   variable = pk2\n  []\n  [fp_zz]\n    type = ElementAverageValue\n    variable = fp_zz\n  []\n  [lagrangian_strain_zz]\n    type = ElementAverageValue\n    variable = lagrangian_strain_zz\n  []\n  [gss]\n    type = ElementAverageValue\n    variable = gss\n  []\n  [slip_increment]\n   type = ElementAverageValue\n   variable = slip_increment\n  []\n[]\n\n[Preconditioning]\n  [smp]\n    type = SMP\n    full = true\n  []\n[]\n\n[Executioner]\n  type = Transient\n  solve_type = 'PJFNK'\n\n  petsc_options_iname = '-pc_type -pc_asm_overlap -sub_pc_type -ksp_type -ksp_gmres_restart'\n  petsc_options_value = ' asm      2              lu            gmres     200'\n  nl_abs_tol = 1e-10\n  nl_rel_tol = 1e-10\n  nl_abs_step_tol = 1e-10\n\n  dt = 0.05\n  dtmin = 0.01\n  dtmax = 10.0\n  num_steps = 100\n[]\n\n[Outputs]\n  exodus = true\n[]\n\nNote that the Kalidindi model (in both the material-based stress update and in the user-object based model) is formulated for a 12 slip system FCC crystal. If you want to use 24 slip systems in a BCC lattice you may want to consider changing to a different crystal plasticity model once you have the proof-of-concept input file up and running.",
+                  "url": "https://github.com/idaholab/moose/discussions/17014#discussioncomment-403293",
+                  "updatedAt": "2022-08-03T06:42:03Z",
+                  "publishedAt": "2021-02-24T22:03:56Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sapitts"
+                          },
+                          "bodyText": "If you are willing to accommodate a few input file and base class changes in the next six months or so, I'd recommend using the material based Update version over the user-object based version. @dewenyushu and I are actively developing the material-based Update version, and the INL team is transistioning away from the user-object based version. Both versions will work well, however, and at present more constitutive models are available in the user-object version (e.g. Voce model). We are working on transitioning these models to the material-based version, and any new constitutive models we add will be only in the material-based Update version.\nThe material-based Update version has been developed to have a complete constitutive model within a material class. This implementation more closely aligns with the descriptions of a constitutive model that one might read in a journal article. This collection of all the constitutive model details within a material class has a couple of main benefits:\n\nMore direct storage of state variables (e.g. slip system resistance), and our initial results show some speed up with the material-based version\nEasier to modify and implement new constitutive models\n\nHope this helps!",
+                          "url": "https://github.com/idaholab/moose/discussions/17014#discussioncomment-403371",
+                          "updatedAt": "2022-08-22T11:48:15Z",
+                          "publishedAt": "2021-02-24T22:29:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Aayush-T"
+                          },
+                          "bodyText": "Hi, by material-based Update version, you mean CrystalPlasticityKalidindiUpdate, right? Or is there any other material-based new version? Yes, I am willing to accommodate that. Also, for the model, I wanted to use the CrystalPlasticityUObased for plasticity in dual-phase to check its stability, but it always gives similar errors as before.\nError_file.zip\nMoreover, I was wondering if I could get the values of stresses in A and B section in KalidindiUpdateModel for two-phase that was being developed. I have found a way to get it through exodus file output but is it also possible to get it with moose postprocessors. I did it previously in my models, but there seems to be some error this time. Also, it may look incomplete in the postprocessor as I was still trying to do it.\nerror_stressA.zip",
+                          "url": "https://github.com/idaholab/moose/discussions/17014#discussioncomment-407122",
+                          "updatedAt": "2022-08-22T11:48:15Z",
+                          "publishedAt": "2021-02-25T20:27:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ngrilli"
+                          },
+                          "bodyText": "Dear @Aayush-T and @sapitts\nMy understanding is that you cannot use together\nComputeCrystalPlasticityStress and FiniteStrainUObasedCP on the same block\nbecause they both declare stress as material property.\nI think FiniteStrainUObasedCP is not needed anymore. Isn't it?\nThat should be the reason you get that error.\nI am really interested to see the new implementation\nof the crystal plasticity model in MOOSE.\nBest Regards,\nNicol\u00f2 Grilli\nNational University of Singapore",
+                          "url": "https://github.com/idaholab/moose/discussions/17014#discussioncomment-408713",
+                          "updatedAt": "2022-08-22T11:48:16Z",
+                          "publishedAt": "2021-02-26T11:08:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Aayush-T"
+                          },
+                          "bodyText": "Yes, that is right. I was initiating it twice. I removed the ComputeCrystalPlasticityStress to utilize FiniteStrainUObasedCP. It solves the issue, thank you. Also, the issue for stress values can be resolved by using exodus file as I was getting the average value for overall elements in the MOOSE output, I did try to get the A_stress values and I failed the model there. It won't affect anything else though.\n[./A_stress_yy]\ntype = RankTwoAux\nvariable =A_stress_yy\nrank_two_tensor = A_stress\nindex_j = 1\nindex_i = 1\nexecute_on = timestep_end\nblock = 'face1_QUAD4'\n[../]\nI used this as the Kernal.\nMoreover, I am also interested in the new implementation of the crystal plasticity model in MOOSE.",
+                          "url": "https://github.com/idaholab/moose/discussions/17014#discussioncomment-409427",
+                          "updatedAt": "2022-08-22T11:48:20Z",
+                          "publishedAt": "2021-02-26T14:36:48Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sapitts"
+                          },
+                          "bodyText": "Hi @Aayush-T  you can also get the values of the stresses in the different blocks by \"block restricting\" postprocessors. If you wanted the average stress value in the entire domain and two individual blocks, something like the following ought to create those three values:\n[Postprocessors]\n  [pk2_entire_domain]\n    type = ElementAverageValue\n    variable = pk2\n    block = ' 1 2' ## the default is all blocks in a mesh, so this line isn't strictly necessary here\n  []\n  [./pk2_block1]\n   type = ElementAverageValue\n   variable = pk2\n   block = 1\n  []\n  [pk2_block2]\n   type = ElementAverageValue\n   variable = pk2\n   block = 2\n  []\n\nFrom the input file you attached in a previous post it looks like you were quite close to this format with the stress_B postprocessor.\nHope this helps!",
+                          "url": "https://github.com/idaholab/moose/discussions/17014#discussioncomment-419738",
+                          "updatedAt": "2022-08-22T11:48:21Z",
+                          "publishedAt": "2021-03-01T21:26:07Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "sapitts"
+                  },
+                  "bodyText": "@ngrilli and @Aayush-T I'm glad to hear that you are both interested in the material based CrystalPlasticity{...}Update classes. We're working to retain the flexibility provided by the user-object (the FiniteStrainUObasedCP version) while giving the code a more \"material-scientist friendly\" structure and format.  As @dewenyushu and I get working examples added to the MOOSE repository we will add that information to the MOOSE newsletter",
+                  "url": "https://github.com/idaholab/moose/discussions/17014#discussioncomment-419813",
+                  "updatedAt": "2022-08-22T11:48:18Z",
+                  "publishedAt": "2021-03-01T21:51:47Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

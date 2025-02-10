@@ -1,0 +1,614 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyNC0xMC0yMVQwMzozNjo1My0wNTowMM4AcBM-"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "apply initial stress fields on a 2D mesh boundary in form of expressions",
+          "author": {
+            "login": "Aayush-T"
+          },
+          "bodyText": "Hi Everyone,\nSo, I am trying to apply an initial force condition to one of the surfaces of mesh in my simulations. This example that I made for now is for a 2D case; I will modify it for 3D.\nI am working with a 2D mesh and I need to apply initial stress fields (\u03c3_xx, \u03c3_yy, \u03c3_xy) on the right boundary. These stress fields are expressed as functions of the length of the mesh (i.e., vary along the boundary).\nI've been unable to find an example that demonstrates how to specify these stress fields correctly. The closest example I found was in issue #26104 , but I still couldn't figure out how to properly define and apply the stress expressions on the boundary.\nTo give an idea, this is my mesh.\n\nOne method I tried to think was to get reaction forces from these stresses and then apply these forces as the function of length over mesh in the boundary condition. Is this correct?\nand this is my code:\n[Mesh]\n  type = GeneratedMesh\n  dim = 2\n  elem_type = QUAD4\n  displacements = 'disp_x disp_y'\n  nx = 10\n  ny = 10\n[]\n\n[Variables]\n  [./disp_x]\n  [../]\n  [./disp_y]\n  [../]\n[]\n\n[GlobalParams]\n  volumetric_locking_correction = true\n[]\n\n[AuxVariables]\n[./tdisp]\n    order = CONSTANT\n    family = MONOMIAL\n  [../]\n  [./stress_yy]\n    order = CONSTANT\n    family = MONOMIAL\n  [../]\n  [./e_yy]\n    order = CONSTANT\n    family = MONOMIAL\n  [../]\n  [./fp_yy]\n    order = CONSTANT\n    family = MONOMIAL\n  [../]\n  [./gss]\n    order = CONSTANT\n    family = MONOMIAL\n  [../]\n  [./euler1]\n    order = CONSTANT\n    family = MONOMIAL\n  [../]\n  [./euler2]\n    order = CONSTANT\n    family = MONOMIAL\n  [../]\n  [./euler3]\n    order = CONSTANT\n    family = MONOMIAL\n  [../]\n[]\n\n[Functions]\n  [./tdisp]\n    type = ParsedFunction\n    expression = 0.01*t\n  [../]\n[]\n\n[UserObjects]\n  [./prop_read]\n    type = PropertyReadFile\n    prop_file_name = 'euler_ang_file_2.txt'\n    # Enter file data as prop#1, prop#2, .., prop#nprop\n    nprop = 3\n    read_type = element\n  [../]\n[]\n\n[AuxKernels]\n  [./stress_yy]\n    type = RankTwoAux\n    variable = stress_yy\n    rank_two_tensor = stress\n    index_j = 1\n    index_i = 1\n    execute_on = timestep_end\n  [../]\n  [./e_yy]\n    type = RankTwoAux\n    variable = e_yy\n    rank_two_tensor = lage\n    index_j = 1\n    index_i = 1\n    execute_on = timestep_end\n  [../]\n  [./fp_yy]\n    type = RankTwoAux\n    variable = fp_yy\n    rank_two_tensor = fp\n    index_j = 1\n    index_i = 1\n    execute_on = timestep_end\n  [../]\n  [./gss]\n    type = MaterialStdVectorAux\n    variable = gss\n    property = state_var_gss\n    index = 0\n    execute_on = timestep_end\n  [../]\n  [./euler1]\n    type = MaterialRealVectorValueAux\n    variable = euler1\n    property = Euler_angles\n    component = 0\n    execute_on = timestep_end\n  [../]\n  [./euler2]\n    type = MaterialRealVectorValueAux\n    variable = euler2\n    property = Euler_angles\n    component = 1\n    execute_on = timestep_end\n  [../]\n  [./euler3]\n    type = MaterialRealVectorValueAux\n    variable = euler3\n    property = Euler_angles\n    component = 2\n    execute_on = timestep_end\n  [../]\n[]\n\n[BCs]\n  [./fix_x]\n    type = DirichletBC\n    variable = disp_x\n    boundary = 'left'\n    value = 0\n  [../]\n  [./fix_y]\n    type = DirichletBC\n    variable = disp_y\n    boundary = 'bottom'\n    value = 0\n  [../]\n\n  [./tdisp]\n    type = FunctionDirichletBC\n    variable = disp_y\n    boundary = top\n    function = tdisp\n  [../]\n  [./pre_load]\n    type = FunctionNeumannBC\n    variable = disp_x\n    boundary = right\n    function = -50*y #This is for F_x. Similarly, we can do variable =  disp_y for F_y\n  [../]\n[]\n\n[UserObjects]\n  [./slip_rate_gss]\n    type = CrystalPlasticitySlipRateGSS\n    variable_size = 12\n    slip_sys_file_name = input_slip_sys.txt\n    num_slip_sys_flowrate_props = 2\n    flowprops = '1 4 0.001 0.1 5 8 0.001 0.1 9 12 0.001 0.1'\n    uo_state_var_name = state_var_gss\n  [../]\n  [./slip_resistance_gss]\n    type = CrystalPlasticitySlipResistanceGSS\n    variable_size = 12\n    uo_state_var_name = state_var_gss\n  [../]\n  [./state_var_gss]\n    type = CrystalPlasticityStateVariable\n    variable_size = 12\n    groups = '0 4 8 12'\n    group_values = '60.8 60.8 60.8'\n    uo_state_var_evol_rate_comp_name = state_var_evol_rate_comp_gss\n    scale_factor = 1.0\n  [../]\n  [./state_var_evol_rate_comp_gss]\n    type = CrystalPlasticityStateVarRateComponentGSS\n    variable_size = 12\n    hprops = '1.0 541.5 109.8 2.5'\n    uo_slip_rate_name = slip_rate_gss\n    uo_state_var_name = state_var_gss\n  [../]\n[]\n\n[Materials]\n  [./crysp]\n    type = FiniteStrainUObasedCP\n    stol = 1e-2\n    tan_mod_type = exact\n    uo_slip_rates = 'slip_rate_gss'\n    uo_slip_resistances = 'slip_resistance_gss'\n    uo_state_vars = 'state_var_gss'\n    uo_state_var_evol_rate_comps = 'state_var_evol_rate_comp_gss'\n  [../]\n  [./strain]\n    type = ComputeFiniteStrain\n    displacements = 'disp_x disp_y'\n  [../]\n  [./elasticity_tensor]\n    type = ComputeElasticityTensorCP\n    C_ijkl = '1.684e5 1.214e5 1.214e5 1.684e5 1.214e5 1.684e5 0.754e5 0.754e5 0.754e5'\n    fill_method = symmetric9\n    read_prop_user_object = prop_read\n  [../]\n[]\n\n[Postprocessors]\n[./tdisp]\n    type = ElementAverageValue\n    variable = tdisp\n  [../]\n  [./stress_yy]\n    type = ElementAverageValue\n    variable = stress_yy\n  [../]\n  [./e_yy]\n    type = ElementAverageValue\n    variable = e_yy\n  [../]\n  [./fp_yy]\n    type = ElementAverageValue\n    variable = fp_yy\n  [../]\n  [./gss]\n    type = ElementAverageValue\n    variable = gss\n  [../]\n[]\n\n[Preconditioning]\n  [./smp]\n    type = SMP\n    full = true\n  [../]\n[]\n\n[Executioner]\n  type = Transient\n  dt = 0.01\n  solve_type = 'PJFNK'\n\n  petsc_options_iname = -pc_hypre_type\n  petsc_options_value = boomerang\n  nl_abs_tol = 1e-10\n  nl_rel_step_tol = 1e-10\n  dtmax = 10.0\n  nl_rel_tol = 1e-10\n  end_time = 1\n  dtmin = 0.01\n  num_steps = 100\n  nl_abs_step_tol = 1e-10\n[]\n\n[Outputs]\n  exodus = true\n  csv = true\n[]\n\n[Kernels]\n  [./TensorMechanics]\n    displacements = 'disp_x disp_y'\n    use_displaced_mesh = true\n  [../]\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/28812",
+          "updatedAt": "2024-12-15T09:32:29Z",
+          "publishedAt": "2024-10-09T11:55:17Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThis can be done by using Functions to create the boundary stress values, since they are only functions of space and are pre-determined at the beginning of the simulation.\nWhen solving the solid mechanics equations, these stresses can be applied using the Pressure action for boundary conditions\nhttps://mooseframework.inl.gov/syntax/BCs/Pressure/index.html\nwith the function parameter\nThere is also more documentation here\nhttps://mooseframework.inl.gov/source/bcs/Pressure.html\nI am actually not sure how to apply sigma_xy. This should work for xx and yy.\n@gambka do you know?",
+                  "url": "https://github.com/idaholab/moose/discussions/28812#discussioncomment-10910131",
+                  "updatedAt": "2024-10-11T01:39:57Z",
+                  "publishedAt": "2024-10-11T01:39:56Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Aayush-T"
+                          },
+                          "bodyText": "Hi @GiudGiud\nThanks for the response.\nTill now, I have been unsuccesful in getting it done for stress_xy and stress_yz.\nI thought of this approach. I would like to know your thoughts on this:\nLet us say that I somehow obtain the force distribution F_x, F_y, F_z from these stresses and apply them like this:\n[./pre_load_x]\ntype = FunctionNeumannBC\nvariable = disp_x\nboundary = right\nfunction = -50y + 40z #This is for F_x. Similarly, we can do variable =  disp_y for F_y\n[../]\n[./pre_load_y]\ntype = FunctionNeumannBC\nvariable = disp_y\nboundary = right\nfunction = -40x +30y\n[../]\n[./pre_load_z]\ntype = FunctionNeumannBC\nvariable = disp_y\nboundary = right\nfunction = -50z + 23y\n[../]\nWhat do you think of this implementation?",
+                          "url": "https://github.com/idaholab/moose/discussions/28812#discussioncomment-11004499",
+                          "updatedAt": "2024-10-21T11:42:15Z",
+                          "publishedAt": "2024-10-21T11:40:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I think this are still stress_xx/yy/zz terms, they just depends spatially on the two other dimensions\n@recuero do you know how to apply off-diagonal stresses at the boundary?",
+                          "url": "https://github.com/idaholab/moose/discussions/28812#discussioncomment-11004519",
+                          "updatedAt": "2024-10-21T11:43:13Z",
+                          "publishedAt": "2024-10-21T11:43:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Aayush-T"
+                          },
+                          "bodyText": "[./pre_load_z]\ntype = FunctionNeumannBC\nvariable = disp_y\nboundary = right\nfunction = -50z + 23y\n[../]\nIs it not the load (in a way Force?)",
+                          "url": "https://github.com/idaholab/moose/discussions/28812#discussioncomment-11004528",
+                          "updatedAt": "2024-10-21T11:44:21Z",
+                          "publishedAt": "2024-10-21T11:44:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "maxnezdyur"
+                          },
+                          "bodyText": "Are we sure that\n[pre_load_y]\ntype = FunctionNeumannBC\nvariable = disp_y\nboundary = right\nfunction = -40x +30y\n[../]\n\nis not applying the sigma_xy stress instead? I don't think you can apply sigma_yy on the right boundary when the normals are [1,0,0].\nFor 2d, if we want to apply sigma_xx, sigma_yy, sigma_xy on a surface of normal (nx,ny), you would do T = sigma dot n. Then apply T_x and T_y, when the normal is [1,0] then T_y = sigma_xy * 1 + simga_yy * 0.",
+                          "url": "https://github.com/idaholab/moose/discussions/28812#discussioncomment-11004870",
+                          "updatedAt": "2024-10-21T12:19:23Z",
+                          "publishedAt": "2024-10-21T12:19:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "ah good point. I didnt think that the normal was not aligned",
+                          "url": "https://github.com/idaholab/moose/discussions/28812#discussioncomment-11005329",
+                          "updatedAt": "2024-10-21T13:06:36Z",
+                          "publishedAt": "2024-10-21T13:06:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Aayush-T"
+                          },
+                          "bodyText": "So, I have to eventually apply it for 3D. So, technically it is based on surface roughness but, here, I can assume that the normals are aligned.\nBased on what you have explained above, I came up with this:\n@GiudGiud @maxnezdyur\nRight Face in 3D:\nNormal vector will be: n = [1,0,0] (n_x = 1, n_y = 0, n_z = 0)\nand thus traction components will be:\nT_x = sigma_xx * 1 + sigma_xy * 0 + sigma_xz * 0\nT_y = sigma_xy * 1 + sigma_yy * 0 + sigma_yz * 0\nT_z = sigma_xz * 1 + sigma_yz * 0 + sigma_zz * 0\nand thus the overall stress map will be:\n[BCs]\n[./pre_load_x]\ntype = FunctionNeumannBC\nvariable = disp_x\nboundary = right\nfunction = T_x\n[../]\n[./pre_load_y]\ntype = FunctionNeumannBC\nvariable = disp_y\nboundary = right\nfunction = T_y\n[../]\n[./pre_load_z]\ntype = FunctionNeumannBC\nvariable = disp_z\nboundary = right\nfunction = T_z\n[../]\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/28812#discussioncomment-11005805",
+                          "updatedAt": "2024-10-21T13:51:01Z",
+                          "publishedAt": "2024-10-21T13:45:24Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Loss of subdomain names after MeshCollectionGenerator",
+          "author": {
+            "login": "mshtx-mdacc"
+          },
+          "bodyText": "Howdy,\nI'm trying to model the displacement of a 3D mesh that has a 2D contact boundary. I create both the meshes using GMSH, read in the files, and then use MeshCollectionGenerator to \"combine\" them. The subdomain for the 3D mesh, the second file read, aren't kept after using MeshCollectionGenerator. I can see the subdomain names before, but not after. The input file  and results of --mesh-only is below. This might have something to do with #24174 but I'm not sure.\ninput file:\n[GlobalParams]\n  displacements = 'disp_x disp_y disp_z'\n[]\n\n[Mesh]\n  construct_side_list_from_node_list = true\n  [dura]\n    type = FileMeshGenerator\n    file = 'cranDura.msh'\n    show_info = true\n  []\n  [duraBoundRename]\n    type = RenameBoundaryGenerator\n    input = dura\n    old_boundary = '1 2'\n    new_boundary = 'DuraBoundary CranBoundary'\n  []\n  [whole]\n    type = FileMeshGenerator\n    file = 'test.msh'\n    show_info = true\n  []\n  [wholeBoundRename]\n    type = RenameBoundaryGenerator\n    input = whole\n    old_boundary = '3 4 5'\n    new_boundary = 'PialBoundary BSBoundary TumorBoundary'\n  []\n  [combinedMesh]\n    type = MeshCollectionGenerator\n    inputs = 'duraBoundRename wholeBoundRename'\n  []\n  [scaled]\n    type = TransformGenerator\n    input = combinedMesh\n    transform = SCALE\n    vector_value = '.001 .001 .001'\n  []\n  [diag]\n    type = MeshDiagnosticsGenerator\n    input = scaled\n    examine_element_overlap = WARNING\n    examine_element_types = WARNING\n    examine_element_volumes = WARNING\n    examine_non_conformality = WARNING\n    # examine_nonplanar_sides = INFO\n    # examine_sidesets_orientation = WARNING\n    # check_for_watertight_sidesets = WARNING\n    search_for_adaptivity_nonconformality = WARNING\n    check_local_jacobian = WARNING\n  []    \n[]\n\n[Outputs]\n  exodus = true\n[]\n\nResult of --mesh-only:\nFileMeshGenerator 'dura':  Mesh Information:\nFileMeshGenerator 'dura':   elem_dimensions()={2}\nFileMeshGenerator 'dura':   spatial_dimension()=3\nFileMeshGenerator 'dura':   n_nodes()=3779\nFileMeshGenerator 'dura':     n_local_nodes()=3779\nFileMeshGenerator 'dura':   n_elem()=7554\nFileMeshGenerator 'dura':     n_local_elem()=7554\nFileMeshGenerator 'dura':     n_active_elem()=7554\nFileMeshGenerator 'dura':   n_subdomains()=2\nFileMeshGenerator 'dura':   n_elemsets()=0\nFileMeshGenerator 'dura':   n_partitions()=1\nFileMeshGenerator 'dura':   n_processors()=1\nFileMeshGenerator 'dura':   n_threads()=1\nFileMeshGenerator 'dura':   processor_id()=0\nFileMeshGenerator 'dura':   is_prepared()=true\nFileMeshGenerator 'dura':   is_replicated()=true\nFileMeshGenerator 'dura': \nFileMeshGenerator 'dura':  Mesh Bounding Box:\nFileMeshGenerator 'dura':   Minimum: (x,y,z)=(-83.8355, -66.2539, -94.3885)\nFileMeshGenerator 'dura':   Maximum: (x,y,z)=( 80.3826,  62.7265,  36.9526)\nFileMeshGenerator 'dura':   Delta:   (x,y,z)=( 164.218,   128.98,  131.341)\nFileMeshGenerator 'dura': \nFileMeshGenerator 'dura':  Mesh Element Type(s):\nFileMeshGenerator 'dura':   TRI3\nFileMeshGenerator 'dura': \nFileMeshGenerator 'dura':  Mesh Nodesets:\nFileMeshGenerator 'dura':   Nodeset 1, 2877 nodes\nFileMeshGenerator 'dura':    Bounding box minimum: (x,y,z)=(-83.8355, -66.2539, -94.3885)\nFileMeshGenerator 'dura':    Bounding box maximum: (x,y,z)=( 80.3826,  62.7265,  36.9526)\nFileMeshGenerator 'dura':    Bounding box delta: (x,y,z)=( 164.218,   128.98,  131.341)\nFileMeshGenerator 'dura':   Nodeset 2, 567 nodes\nFileMeshGenerator 'dura':    Bounding box minimum: (x,y,z)=(-39.5638, -61.0486, -43.3316)\nFileMeshGenerator 'dura':    Bounding box maximum: (x,y,z)=(-20.1436, -54.1499, -23.5906)\nFileMeshGenerator 'dura':    Bounding box delta: (x,y,z)=( 19.4201,  6.89868,   19.741)\nFileMeshGenerator 'dura': \nFileMeshGenerator 'dura':  Mesh Sidesets:\nFileMeshGenerator 'dura':   Sideset 1, 16388 sides (EDGE2), 5769 elems (TRI3), 2877 nodes\nFileMeshGenerator 'dura':    Side volume: 83616.3\nFileMeshGenerator 'dura':    Bounding box minimum: (x,y,z)=(-83.8355, -66.2539, -94.3885)\nFileMeshGenerator 'dura':    Bounding box maximum: (x,y,z)=( 80.3826,  62.7265,  36.9526)\nFileMeshGenerator 'dura':    Bounding box delta: (x,y,z)=( 164.218,   128.98,  131.341)\nFileMeshGenerator 'dura':   Sideset 2, 1516 sides (EDGE2), 1034 elems (TRI3), 567 nodes\nFileMeshGenerator 'dura':    Side volume: 1189.93\nFileMeshGenerator 'dura':    Bounding box minimum: (x,y,z)=(-39.5638, -61.0486, -43.3316)\nFileMeshGenerator 'dura':    Bounding box maximum: (x,y,z)=(-20.1436, -54.1499, -23.5906)\nFileMeshGenerator 'dura':    Bounding box delta: (x,y,z)=( 19.4201,  6.89868,   19.741)\nFileMeshGenerator 'dura': \nFileMeshGenerator 'dura':  Mesh Edgesets:\nFileMeshGenerator 'dura':   None\nFileMeshGenerator 'dura': \nFileMeshGenerator 'dura':  Mesh Subdomains:\nFileMeshGenerator 'dura':   Subdomain 1 (duraSurf): 5998 elems (TRI3, 5998 active), 3039 active nodes\nFileMeshGenerator 'dura':    Volume: 62476.6\nFileMeshGenerator 'dura':    Bounding box minimum: (x,y,z)=(-83.8355, -66.2539, -94.3885)\nFileMeshGenerator 'dura':    Bounding box maximum: (x,y,z)=( 80.3826,  62.7265,  36.9526)\nFileMeshGenerator 'dura':    Bounding box delta: (x,y,z)=( 164.218,   128.98,  131.341)\nFileMeshGenerator 'dura':   Subdomain 2 (cranSurf): 1556 elems (TRI3, 1556 active), 818 active nodes\nFileMeshGenerator 'dura':    Volume: 314.514\nFileMeshGenerator 'dura':    Bounding box minimum: (x,y,z)=(-39.5638, -61.0486, -43.3316)\nFileMeshGenerator 'dura':    Bounding box maximum: (x,y,z)=(-20.1436, -54.1499, -23.5906)\nFileMeshGenerator 'dura':    Bounding box delta: (x,y,z)=( 19.4201,  6.89868,   19.741)\nFileMeshGenerator 'dura':   Global mesh volume = 62791.1\nFileMeshGenerator 'whole':  Mesh Information:\nFileMeshGenerator 'whole':   elem_dimensions()={3}\nFileMeshGenerator 'whole':   spatial_dimension()=3\nFileMeshGenerator 'whole':   n_nodes()=38280\nFileMeshGenerator 'whole':     n_local_nodes()=38280\nFileMeshGenerator 'whole':   n_elem()=209824\nFileMeshGenerator 'whole':     n_local_elem()=209824\nFileMeshGenerator 'whole':     n_active_elem()=209824\nFileMeshGenerator 'whole':   n_subdomains()=3\nFileMeshGenerator 'whole':   n_elemsets()=0\nFileMeshGenerator 'whole':   n_partitions()=1\nFileMeshGenerator 'whole':   n_processors()=1\nFileMeshGenerator 'whole':   n_threads()=1\nFileMeshGenerator 'whole':   processor_id()=0\nFileMeshGenerator 'whole':   is_prepared()=true\nFileMeshGenerator 'whole':   is_replicated()=true\nFileMeshGenerator 'whole': \nFileMeshGenerator 'whole':  Mesh Bounding Box:\nFileMeshGenerator 'whole':   Minimum: (x,y,z)=(-80.7964, -64.0602, -93.3826)\nFileMeshGenerator 'whole':   Maximum: (x,y,z)=( 78.8199,  60.4492,  29.9999)\nFileMeshGenerator 'whole':   Delta:   (x,y,z)=( 159.616,  124.509,  123.382)\nFileMeshGenerator 'whole': \nFileMeshGenerator 'whole':  Mesh Element Type(s):\nFileMeshGenerator 'whole':   TET4\nFileMeshGenerator 'whole': \nFileMeshGenerator 'whole':  Mesh Nodesets:\nFileMeshGenerator 'whole':   Nodeset 3, 3473 nodes\nFileMeshGenerator 'whole':    Bounding box minimum: (x,y,z)=(-80.7964, -64.0602, -93.3826)\nFileMeshGenerator 'whole':    Bounding box maximum: (x,y,z)=( 78.8199,  60.4492,  29.9999)\nFileMeshGenerator 'whole':    Bounding box delta: (x,y,z)=( 159.616,  124.509,  123.382)\nFileMeshGenerator 'whole':   Nodeset 4, 294 nodes\nFileMeshGenerator 'whole':    Bounding box minimum: (x,y,z)=( -9.1497,  -18.484, -93.1502)\nFileMeshGenerator 'whole':    Bounding box maximum: (x,y,z)=( 17.6961,  14.3159, -36.3622)\nFileMeshGenerator 'whole':    Bounding box delta: (x,y,z)=( 26.8458,  32.7999,   56.788)\nFileMeshGenerator 'whole':   Nodeset 5, 2049 nodes\nFileMeshGenerator 'whole':    Bounding box minimum: (x,y,z)=(-48.5839, -44.3544, -47.9526)\nFileMeshGenerator 'whole':    Bounding box maximum: (x,y,z)=(-19.4787, -10.9121, -19.6036)\nFileMeshGenerator 'whole':    Bounding box delta: (x,y,z)=( 29.1052,  33.4423,   28.349)\nFileMeshGenerator 'whole': \nFileMeshGenerator 'whole':  Mesh Sidesets:\nFileMeshGenerator 'whole':   None\nFileMeshGenerator 'whole': \nFileMeshGenerator 'whole':  Mesh Edgesets:\nFileMeshGenerator 'whole':   None\nFileMeshGenerator 'whole': \nFileMeshGenerator 'whole':  Mesh Subdomains:\nFileMeshGenerator 'whole':   Subdomain 3 (pial): 156404 elems (TET4, 156404 active), 31334 active nodes\nFileMeshGenerator 'whole':    Volume: 1.06977e+06\nFileMeshGenerator 'whole':    Bounding box minimum: (x,y,z)=(-80.7964, -64.0602, -93.3826)\nFileMeshGenerator 'whole':    Bounding box maximum: (x,y,z)=( 78.8199,  60.4492,  29.9999)\nFileMeshGenerator 'whole':    Bounding box delta: (x,y,z)=( 159.616,  124.509,  123.382)\nFileMeshGenerator 'whole':   Subdomain 4 (brainstem): 1375 elems (TET4, 1375 active), 419 active nodes\nFileMeshGenerator 'whole':    Volume: 16806.4\nFileMeshGenerator 'whole':    Bounding box minimum: (x,y,z)=( -9.1497,  -18.484, -93.1502)\nFileMeshGenerator 'whole':    Bounding box maximum: (x,y,z)=( 17.6961,  14.3159, -36.3622)\nFileMeshGenerator 'whole':    Bounding box delta: (x,y,z)=( 26.8458,  32.7999,   56.788)\nFileMeshGenerator 'whole':   Subdomain 5 (tumor): 52045 elems (TET4, 52045 active), 11193 active nodes\nFileMeshGenerator 'whole':    Volume: 13789.4\nFileMeshGenerator 'whole':    Bounding box minimum: (x,y,z)=(-48.5839, -44.3544, -47.9526)\nFileMeshGenerator 'whole':    Bounding box maximum: (x,y,z)=(-19.4787, -10.9121, -19.6036)\nFileMeshGenerator 'whole':    Bounding box delta: (x,y,z)=( 29.1052,  33.4423,   28.349)\nFileMeshGenerator 'whole':   Global mesh volume = 1.10036e+06\n\n\n*** Info ***\nNumber of elements below prescribed minimum volume : 0\n\n\n*** Info ***\nNumber of elements with negative volume : 0\n\n\n*** Info ***\nNumber of elements above prescribed maximum volume : 0\nElement type in subdomain duraSurf (1) : TRI3\nElement type in subdomain cranSurf (2) : TRI3\nElement type in subdomain  (3) : TET4\nElement type in subdomain  (4) : TET4\nElement type in subdomain  (5) : TET4\n\n\n*** Info ***\nNumber of elements overlapping (node-based heuristics): 0\n\n\n*** Info ***\nNumber of elements overlapping (centroid-based heuristics): 0\n\n\n*** Info ***\nNumber of non-conformal nodes: 0\n\n\n*** Info ***\nNumber of non-conformal nodes likely due to mesh refinement detected by heuristic: 0\n\n\n*** Info ***\nNumber of elements with a negative Jacobian: 0\nStill Setting Up\n\n*** Info ***\nNumber of element sides with negative Jacobians: 0\n\n Mesh Information:\n  elem_dimensions()={2, 3}\n  spatial_dimension()=3\n  n_nodes()=42059\n    n_local_nodes()=42059\n  n_elem()=217378\n    n_local_elem()=217378\n    n_active_elem()=217378\n  n_subdomains()=5\n  n_elemsets()=0\n  n_partitions()=1\n  n_processors()=1\n  n_threads()=1\n  processor_id()=0\n  is_prepared()=true\n  is_replicated()=true\n\n Mesh Bounding Box:\n  Minimum: (x,y,z)=(-0.0838355, -0.0662539, -0.0943885)\n  Maximum: (x,y,z)=(0.0803826, 0.0627265, 0.0369526)\n  Delta:   (x,y,z)=(0.164218,  0.12898, 0.131341)\n\n Mesh Element Type(s):\n  TRI3, TET4\n\n Mesh Nodesets:\n  Nodeset 1 (DuraBoundary), 2877 nodes\n   Bounding box minimum: (x,y,z)=(-0.0838355, -0.0662539, -0.0943885)\n   Bounding box maximum: (x,y,z)=(0.0803826, 0.0627265, 0.0369526)\n   Bounding box delta: (x,y,z)=(0.164218,  0.12898, 0.131341)\n  Nodeset 2 (CranBoundary), 567 nodes\n   Bounding box minimum: (x,y,z)=(-0.0395638, -0.0610486, -0.0433316)\n   Bounding box maximum: (x,y,z)=(-0.0201436, -0.0541499, -0.0235906)\n   Bounding box delta: (x,y,z)=(0.0194201, 0.00689868, 0.019741)\n  Nodeset 3 (PialBoundary), 3473 nodes\n   Bounding box minimum: (x,y,z)=(-0.0807964, -0.0640602, -0.0933826)\n   Bounding box maximum: (x,y,z)=(0.0788199, 0.0604492, 0.0299999)\n   Bounding box delta: (x,y,z)=(0.159616, 0.124509, 0.123382)\n  Nodeset 4 (BSBoundary), 294 nodes\n   Bounding box minimum: (x,y,z)=(-0.0091497, -0.018484, -0.0931502)\n   Bounding box maximum: (x,y,z)=(0.0176961, 0.0143159, -0.0363622)\n   Bounding box delta: (x,y,z)=(0.0268458, 0.0327999, 0.056788)\n  Nodeset 5 (TumorBoundary), 2049 nodes\n   Bounding box minimum: (x,y,z)=(-0.0485839, -0.0443544, -0.0479526)\n   Bounding box maximum: (x,y,z)=(-0.0194787, -0.0109121, -0.0196036)\n   Bounding box delta: (x,y,z)=(0.0291052, 0.0334423, 0.028349)\n\n Mesh Sidesets:\n  Sideset 1 (DuraBoundary), 16624 sides (EDGE2), 5858 elems (TRI3), 2877 nodes\n   Side volume: 83.936\n   Bounding box minimum: (x,y,z)=(-0.0838355, -0.0662539, -0.0943885)\n   Bounding box maximum: (x,y,z)=(0.0803826, 0.0627265, 0.0369526)\n   Bounding box delta: (x,y,z)=(0.164218,  0.12898, 0.131341)\n  Sideset 2 (CranBoundary), 2474 sides (EDGE2), 1430 elems (TRI3), 567 nodes\n   Side volume: 1.86332\n   Bounding box minimum: (x,y,z)=(-0.0395638, -0.0610486, -0.0433316)\n   Bounding box maximum: (x,y,z)=(-0.0201436, -0.0541499, -0.0235906)\n   Bounding box delta: (x,y,z)=(0.0194201, 0.00689868, 0.019741)\n  Sideset 3 (PialBoundary), 5716 sides (TRI3), 5713 elems (TET4), 3110 nodes\n   Side volume: 0.0567317\n   Bounding box minimum: (x,y,z)=(-0.0807964, -0.0640602, -0.0933826)\n   Bounding box maximum: (x,y,z)=(0.0788199, 0.0604492, 0.0299999)\n   Bounding box delta: (x,y,z)=(0.159616, 0.124509, 0.123382)\n  Sideset 4 (BSBoundary), 1096 sides (TRI3), 1081 elems (TET4), 294 nodes\n   Side volume: 0.00732088\n   Bounding box minimum: (x,y,z)=(-0.0091497, -0.018484, -0.0931502)\n   Bounding box maximum: (x,y,z)=(0.0176961, 0.0143159, -0.0363622)\n   Bounding box delta: (x,y,z)=(0.0268458, 0.0327999, 0.056788)\n  Sideset 5 (TumorBoundary), 1808 sides (TRI3), 1808 elems (TET4), 1079 nodes\n   Side volume: 0.000624876\n   Bounding box minimum: (x,y,z)=(-0.0485839, -0.0443544, -0.0479526)\n   Bounding box maximum: (x,y,z)=(-0.0194787, -0.0109121, -0.0196036)\n   Bounding box delta: (x,y,z)=(0.0291052, 0.0334423, 0.028349)\n\n Mesh Edgesets:\n  None\n\n Mesh Subdomains:\n  Subdomain 1 (duraSurf): 5998 elems (TRI3, 5998 active), 3039 active nodes\n   Volume: 0.0624766\n   Bounding box minimum: (x,y,z)=(-0.0838355, -0.0662539, -0.0943885)\n   Bounding box maximum: (x,y,z)=(0.0803826, 0.0627265, 0.0369526)\n   Bounding box delta: (x,y,z)=(0.164218,  0.12898, 0.131341)\n  Subdomain 2 (cranSurf): 1556 elems (TRI3, 1556 active), 818 active nodes\n   Volume: 0.000314514\n   Bounding box minimum: (x,y,z)=(-0.0395638, -0.0610486, -0.0433316)\n   Bounding box maximum: (x,y,z)=(-0.0201436, -0.0541499, -0.0235906)\n   Bounding box delta: (x,y,z)=(0.0194201, 0.00689868, 0.019741)\n  Subdomain 3 (): 156404 elems (TET4, 156404 active), 31334 active nodes\n   Volume: 0.00106977\n   Bounding box minimum: (x,y,z)=(-0.0807964, -0.0640602, -0.0933826)\n   Bounding box maximum: (x,y,z)=(0.0788199, 0.0604492, 0.0299999)\n   Bounding box delta: (x,y,z)=(0.159616, 0.124509, 0.123382)\n  Subdomain 4 (): 1375 elems (TET4, 1375 active), 419 active nodes\n   Volume: 1.68064e-05\n   Bounding box minimum: (x,y,z)=(-0.0091497, -0.018484, -0.0931502)\n   Bounding box maximum: (x,y,z)=(0.0176961, 0.0143159, -0.0363622)\n   Bounding box delta: (x,y,z)=(0.0268458, 0.0327999, 0.056788)\n  Subdomain 5 (): 52045 elems (TET4, 52045 active), 11193 active nodes\n   Volume: 1.37894e-05\n   Bounding box minimum: (x,y,z)=(-0.0485839, -0.0443544, -0.0479526)\n   Bounding box maximum: (x,y,z)=(-0.0194787, -0.0109121, -0.0196036)\n   Bounding box delta: (x,y,z)=(0.0291052, 0.0334423, 0.028349)\n  Global mesh volume = 0.0638914\n\n\nFinished Setting Up                                                                      [ 11.67 s] [  317 MB]",
+          "url": "https://github.com/idaholab/moose/discussions/28905",
+          "updatedAt": "2024-10-22T17:38:16Z",
+          "publishedAt": "2024-10-22T15:44:12Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nMeshCollectionGenerator is hardly used. Can you try using the CombinerGenerator instead?",
+                  "url": "https://github.com/idaholab/moose/discussions/28905#discussioncomment-11019943",
+                  "updatedAt": "2024-10-22T17:02:57Z",
+                  "publishedAt": "2024-10-22T17:02:56Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mshtx-mdacc"
+                          },
+                          "bodyText": "CombinerGenerator worked.",
+                          "url": "https://github.com/idaholab/moose/discussions/28905#discussioncomment-11020255",
+                          "updatedAt": "2024-10-22T17:38:17Z",
+                          "publishedAt": "2024-10-22T17:38:16Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Fully periodic Boundary Conditions",
+          "author": {
+            "login": "RavisCPP"
+          },
+          "bodyText": "Hello everyone,\nI wish to apply fully periodic Boundary conditions in the solid mechanics module. I followed different discussions and came across this one discussion:\n#22496\n[BCs]\n  [./Periodic]\n    [./x_1]\n      variable = disp_x\n      primary = 'z0'\n      secondary = 'z1'\n      translation = '0 0 12'\n    [../]\n    [./x_2]\n      variable = disp_x\n      primary = 'y0'\n      secondary = 'y1'\n      translation = '0 12 0'\n    [../]\n    [./y_1]\n      variable = disp_y\n      primary = 'x0'\n      secondary = 'x1'\n      translation = '12 0 0'\n    [../]\n    [./y_2]\n      variable = disp_y\n      primary = 'z0'\n      secondary = 'z1'\n      translation = '0 0 12'\n    [../]\n    [./z_1]\n      variable = disp_z\n      primary = 'x0'\n      secondary = 'x1'\n      translation = '12 0 0'\n    [../]\n    [./z_2]\n      variable = disp_z\n      primary = 'y0'\n      secondary = 'y1'\n      translation = '0 12 0'\n    [../]\n  [../]\n  [symmx] \n    type = DirichletBC\n    variable = disp_x\n    boundary = x0\n    value = 0\n  []\n\n  [symmy] \n    type = DirichletBC\n    variable = disp_y\n    boundary = y0\n    value = 0\n  []\n\n  [symmz] \n    type = DirichletBC\n    variable = disp_z\n    boundary = z0\n    value = 0\n  []\n\n  [tdisp]\n    type = FunctionDirichletBC\n    variable = disp_z\n    boundary = z1\n    function = tdisp\n  []\n[]\n\nThe problem is this way I am able to apply BC in two directions, but not in the loading direction (Z-direction) because as soon as I apply periodic BC in Z direction. When using PBCs, the deformation on one boundary is matched by an equal and opposite deformation on the opposing boundary, leading to zero average stress, which is problematic in this case, where we are aiming for a non-zero stress state, especially in the loading direction.\nIs there a way where we just apply the displacement in Z so that I can have periodicity around disp_z for Z face too?\nCan anyone help me with that?",
+          "url": "https://github.com/idaholab/moose/discussions/28763",
+          "updatedAt": "2024-10-22T15:07:13Z",
+          "publishedAt": "2024-10-03T06:38:23Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\n\nWhen using PBCs, the deformation on one boundary is matched by an equal and opposite deformation on the opposing boundary, leading to zero average stress,\n\nSure but that's what the periodic boundary condition means. If this is not the desired situation, then the system is simply not periodic.\nIf you applied a load on the bottom towards the interior of the system, and expected a load on the top towards the interior of the system as well, then the system would not be periodic?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/28763#discussioncomment-10835836",
+                  "updatedAt": "2024-10-03T20:04:19Z",
+                  "publishedAt": "2024-10-03T20:04:18Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "RavisCPP"
+                          },
+                          "bodyText": "I would like to clarify my question. I'm aiming for fully periodic boundary conditions while introducing a non-zero stress state. One approach that I tried was to apply the load to the middle elements of the mesh.\nThis completely periodic BC is important for minimising surface effects in the simulations. I am looking for that kind of strategy, if possible. Thanks.",
+                          "url": "https://github.com/idaholab/moose/discussions/28763#discussioncomment-10840793",
+                          "updatedAt": "2024-10-04T07:13:22Z",
+                          "publishedAt": "2024-10-04T07:13:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@gambka do you know what they should do to achieve that?",
+                          "url": "https://github.com/idaholab/moose/discussions/28763#discussioncomment-10846711",
+                          "updatedAt": "2024-10-04T16:47:25Z",
+                          "publishedAt": "2024-10-04T16:47:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "gambka"
+                          },
+                          "bodyText": "I'm not sure. I'm still trying to wrap my head around the loading conditions. If possible, a diagram illustrating the desired BCs/loading conditions would be helpful for me to best provide guidance on how to achieve it in MOOSE.",
+                          "url": "https://github.com/idaholab/moose/discussions/28763#discussioncomment-11018724",
+                          "updatedAt": "2024-10-22T15:07:17Z",
+                          "publishedAt": "2024-10-22T15:07:13Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Subgrain boundaries",
+          "author": {
+            "login": "Sabalei"
+          },
+          "bodyText": "Dear Moose Team,\nI am a new user of Moose and currently learning how to utilize it effectively.\nI wonder if there is a way to identify and visualize subgrain boundaries from the EBSDReader.\nI highly appreciate any help i can get.",
+          "url": "https://github.com/idaholab/moose/discussions/28899",
+          "updatedAt": "2024-12-03T08:21:24Z",
+          "publishedAt": "2024-10-21T14:40:25Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nShould you see those from the values of the order parameters? Maybe I m mistaking grain and sub-grain boundaries.\nMy understanding is that you load the Mesh with the EBSDMG then use the EBSDReader to help set all the initial conditions, after which you can just visualize the system using the Exodus output\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/28899#discussioncomment-11010021",
+                  "updatedAt": "2024-10-21T21:28:02Z",
+                  "publishedAt": "2024-10-21T21:27:41Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Environment solve failed when installing MOOSE",
+          "author": {
+            "login": "ver2king"
+          },
+          "bodyText": "Bug Description\nWhen installing MOOSE to the Linux distribution (as first image), creating the MOOSE environment failed and had to try with next repodata source. After this try, the solving environment just did not finish (as second image).\n\n\nSteps to Reproduce\nSteps are followed from this tutorial:\nhttps://mooseframework.inl.gov/getting_started/installation/conda.html\nUntil the following command:\nconda create -n moose moose-dev=2024.10.01=mpich\nImpact\nPrevention of installing MOOSE sucessfully\n[Optional] Diagnostics\nNo response",
+          "url": "https://github.com/idaholab/moose/discussions/28823",
+          "updatedAt": "2024-10-21T18:17:52Z",
+          "publishedAt": "2024-10-09T22:29:47Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "milljm"
+                  },
+                  "bodyText": "What version of Conda are you using?\nconda info --all\nOlder versions of Conda, or Miniconda (Anaconda's variant) exhibit slow dependency solving. If you are using Anaconda, this can take anywhere up to 40 minutes.",
+                  "url": "https://github.com/idaholab/moose/discussions/28823#discussioncomment-10903572",
+                  "updatedAt": "2024-10-10T12:13:20Z",
+                  "publishedAt": "2024-10-10T12:13:19Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "ver2king"
+                  },
+                  "bodyText": "Please find the version of my Conda as below:",
+                  "url": "https://github.com/idaholab/moose/discussions/28823#discussioncomment-10919678",
+                  "updatedAt": "2024-10-11T22:35:00Z",
+                  "publishedAt": "2024-10-11T22:34:59Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "Yep, 23.x is old... I would advise updating to 24.x\nWhat you want to see is the mamba solver:\n$ conda info --all\n\n     active environment : base\n    active env location : /data/milljm/host_conda\n            shell level : 1\n       user config file : /home/milljm/.condarc\n populated config files : /data/milljm/host_conda/.condarc\n                          /home/milljm/.condarc\n          conda version : 24.9.1\n    conda-build version : 24.7.1\n         python version : 3.10.14.final.0\n                 solver : libmamba (default)       <-------------- this\n       virtual packages : __archspec=1=zen4\n                          __conda=24.9.1=0\n                          __cuda=12.4=0\n                          __glibc=2.28=0\n                          __linux=4.18.0=0\n                          __unix=0=0\n\nThe version you have will eventually finish. But it can take upwards of 40 minutes to an hour.",
+                          "url": "https://github.com/idaholab/moose/discussions/28823#discussioncomment-10937467",
+                          "updatedAt": "2024-10-14T14:05:33Z",
+                          "publishedAt": "2024-10-14T14:05:33Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "gsgall"
+                          },
+                          "bodyText": "I had the same issue when trying to help a colleague update MOOSE. This worked for me.",
+                          "url": "https://github.com/idaholab/moose/discussions/28823#discussioncomment-11008641",
+                          "updatedAt": "2024-10-21T18:17:54Z",
+                          "publishedAt": "2024-10-21T18:17:52Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "HTTP 502 error when trying access INL conda channel",
+          "author": {
+            "login": "stephen-dixon"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n I have consulted the Posting Guidelines.\n I have searched the Discussions Forum and MOOSE Framework Troubleshooting and have not found what I was looking for\n Q&A Getting Started is the most appropriate category for my question (trouble installing, beginner user, ...)\n\nIssue or question about MOOSE\nI can't currently access the INL conda channel to create a new conda-based moose installation.\nThe down for everyone website seems to say this isn't just me here\nIs this a known issue and do you know when service might resume?\n(Optional) code in question / simulation log / errors\nCondaHTTPError: HTTP 502 BAD GATEWAY for url <https://conda.software.inl.gov/public/osx-arm64/current_repodata.json>\nElapsed: 00:00.643889\nCF-RAY: 8d4878fdcb0c7d1c-EWR\n\nA remote server error occurred when trying to retrieve this URL.\n\nA 500-type error (e.g. 500, 501, 502, 503, etc.) indicates the server failed to\nfulfill a valid request.  The problem may be spurious, and will resolve itself if you\ntry your request again.  If the problem persists, consider notifying the maintainer\nof the remote server.\nEncountering Errors? Please include diagnostic output\nNo response",
+          "url": "https://github.com/idaholab/moose/discussions/28885",
+          "updatedAt": "2024-10-21T16:20:08Z",
+          "publishedAt": "2024-10-18T12:25:58Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "TheGreatCid"
+                  },
+                  "bodyText": "I came here for a sanity check to make sure it wasn't just me. Just have to wait for it to come back up",
+                  "url": "https://github.com/idaholab/moose/discussions/28885#discussioncomment-10984245",
+                  "updatedAt": "2024-10-18T14:12:36Z",
+                  "publishedAt": "2024-10-18T14:12:35Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "pecan-zq"
+                          },
+                          "bodyText": "same error for me!",
+                          "url": "https://github.com/idaholab/moose/discussions/28885#discussioncomment-10985501",
+                          "updatedAt": "2024-10-18T16:02:35Z",
+                          "publishedAt": "2024-10-18T16:02:33Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "TLWise"
+                          },
+                          "bodyText": "Same here. Sanity checks are good.",
+                          "url": "https://github.com/idaholab/moose/discussions/28885#discussioncomment-10989146",
+                          "updatedAt": "2024-10-19T04:07:18Z",
+                          "publishedAt": "2024-10-19T04:07:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mmunerato"
+                          },
+                          "bodyText": "Me too. Same problem starting from Friday.",
+                          "url": "https://github.com/idaholab/moose/discussions/28885#discussioncomment-11001766",
+                          "updatedAt": "2024-10-21T07:33:06Z",
+                          "publishedAt": "2024-10-21T07:33:05Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "loganharbour"
+                  },
+                  "bodyText": "Thanks for the report. We're aware of an outage and are investigating it.",
+                  "url": "https://github.com/idaholab/moose/discussions/28885#discussioncomment-10988285",
+                  "updatedAt": "2024-10-18T22:31:32Z",
+                  "publishedAt": "2024-10-18T22:31:31Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xbryne"
+                          },
+                          "bodyText": "Is there any time line currently?",
+                          "url": "https://github.com/idaholab/moose/discussions/28885#discussioncomment-10993049",
+                          "updatedAt": "2024-10-19T19:52:16Z",
+                          "publishedAt": "2024-10-19T19:52:16Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "milljm"
+                  },
+                  "bodyText": "https://conda.software.inl.gov/public is back online.",
+                  "url": "https://github.com/idaholab/moose/discussions/28885#discussioncomment-11006168",
+                  "updatedAt": "2024-10-21T14:14:58Z",
+                  "publishedAt": "2024-10-21T14:14:57Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Subgrain boundaries",
+          "author": {
+            "login": "Sabalei"
+          },
+          "bodyText": "Dear Moose Team,\nI am a new user of Moose and currently learning how to utilize it effectively.\nI wonder if there is a way to identify and visualize subgrain boundaries.\nI highly appreciate any help i can get.",
+          "url": "https://github.com/idaholab/moose/discussions/28898",
+          "updatedAt": "2024-10-21T14:34:32Z",
+          "publishedAt": "2024-10-21T14:33:11Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": []
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "moose about re-compile",
+          "author": {
+            "login": "wftxd"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n I have consulted the Posting Guidelines.\n I have searched the Discussions Forum and MOOSE Framework Troubleshooting and have not found what I was looking for\n Q&A Getting Started is the most appropriate category for my question (trouble installing, beginner user, ...)\n\nIssue or question about MOOSE\nHello,\nI have been learning MOOSE recently, but I encountered a problem. Every time I modify a header file or source file, I have to enter the following commands from the official website:\nmake clobberall\nmake -j 6\nto achieve recompilation. However, I realize that this takes too much time. How can I improve this?\nFor example, if I only modify example.h, using\nmake clobberall\nmake -j 6\nwill recompile all my files, which takes a lot of time. Is there a command that allows me to only recompile the example.h file?\nI believe this will greatly increase my efficiency. Much appreciated for advice.\n(Optional) code in question / simulation log / errors\nNo response\nEncountering Errors? Please include diagnostic output\nNo response",
+          "url": "https://github.com/idaholab/moose/discussions/28897",
+          "updatedAt": "2024-10-21T13:49:54Z",
+          "publishedAt": "2024-10-21T12:49:33Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "hello\nyou should not need to make clobberall.\nmake -j6 should be enough to recompile for most cases\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/28897#discussioncomment-11005338",
+                  "updatedAt": "2024-10-21T13:07:26Z",
+                  "publishedAt": "2024-10-21T13:07:26Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "wftxd"
+                          },
+                          "bodyText": "Do you mean that every time I modify a header file or source file, I have to enter make -j6 to recompile? Is there no way to perform this operation for just a single file?",
+                          "url": "https://github.com/idaholab/moose/discussions/28897#discussioncomment-11005571",
+                          "updatedAt": "2024-10-21T13:26:04Z",
+                          "publishedAt": "2024-10-21T13:26:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "It s very fast.\nIt should only recompile the one file (or one unity file) that got changed + any file that depends on that header\nWhen you used make clobberall you were forcing it to recompile everything",
+                          "url": "https://github.com/idaholab/moose/discussions/28897#discussioncomment-11005742",
+                          "updatedAt": "2024-10-21T13:38:52Z",
+                          "publishedAt": "2024-10-21T13:38:52Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "wftxd"
+                  },
+                  "bodyText": "Oh, I see. Thank you!",
+                  "url": "https://github.com/idaholab/moose/discussions/28897#discussioncomment-11005862",
+                  "updatedAt": "2024-10-21T13:49:56Z",
+                  "publishedAt": "2024-10-21T13:49:54Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Error with Input Script in Non Homogeneous Elasticity",
+          "author": {
+            "login": "ppandit95"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nHi Developers\nIn my attempt to solve steady state mechanical equilibrium equation in a domain with circular precipitate,I ended up with the input script as -\n[GlobalParams]\ndisplacements = \"ux uy\"\n[]\n[Variables]\n[./ux]\nfamily = LAGRANGE\norder = FIRST\n[../]\n[./uy]\nfamily = LAGRANGE\norder = FIRST\n[../]\n[]\n[Mesh]\ntype = GeneratedMesh\ndim = 2\nnx = 500\nny = 500\nelem_type = QUAD4\n[]\n[AuxVariables]\n[./phi]\norder = CONSTANT\nfamily = MONOMIAL\n[../]\n[]\n[AuxKernels]\n[./phi_aux]\ntype = FunctionAux\nvariable = phi\nfunction = circle_function\n[../]\n[]\n[Functions]\n[./circle_function]\ntype = ParsedFunction\nexpression = \"sqrt(pow(x-250,2) + pow(y-250,2)) < 50 ? 1.0 : 0.0\"\n[../]\n[]\n[Materials]\n[./matrix]\ntype = ComputeIsotropicElasticityTensor\nyoungs_modulus = \"210000\"\npoissons_ratio = \"0.3\"\nblock = 0\n[../]\n[./precipitate]\ntype = ComputeIsotropicElasticityTensor\nyoungs_modulus = \"300000\"\npoissons_ratio = \"0.3\"\nblock = 0\n[../]\n[./variable_elasticity]\ntype = ComputeVariableIsotropicElasticityTensor\nyoungs_modulus = \"210000 + (300000 - 210000) * phi\"\npoissons_ratio = \"0.3\"\nargs = \"phi\"\nblock = 0\n[../]\n[]\n[Physics/SolidMechanics/QuasiStatic]\n[./block1]\nstrain = SMALL\nadd_variables = true\nincremental = true\ngenerate_output = \"stress_xx stress_xy stress_yy\"\n[../]\n[]\n[Executioner]\ntype = Steady\nsolve_type = PJFNK\npetsc_options_iname = \"-pc_type\"\npetsc_options_value = \"jacobi\"\n[]\n[Outputs]\n[./vtk]\ntype = VTK\nfile_base = \"test\"\n[../]\n[]\n[BCs]\n[./left]\ntype = DirichletBC\nvariable = \"ux\"\nvalue = \"0\"\nboundary = \"left\"\n[../]\n[./bottom]\ntype = DirichletBC\nvariable = \"uy\"\nvalue = \"0\"\nboundary = \"bottom\"\n[../]\n[./right]\ntype = FunctionDirichletBC\nvariable = \"ux\"\nfunction = \"disp_x\"\nboundary = \"right\"\n[../]\n[./top]\ntype = FunctionDirichletBC\nvariable = \"uy\"\nfunction = \"disp_y\"\nboundary = \"top\"\n[../]\n[]\n[Functions]\n[./disp_x]\ntype = ParsedFunction\nexpression = \"0.5\"\n[../]\n[./disp_y]\ntype = ParsedFunction\nexpression = \"0.5\"\n[../]\n[]\nBut still I m facing the following error and I m not able to debug it so any help in this regard will be appreciated.\nMany Thanks\nPushkar",
+          "url": "https://github.com/idaholab/moose/discussions/28896",
+          "updatedAt": "2024-10-21T11:26:35Z",
+          "publishedAt": "2024-10-21T11:26:34Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": []
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "metal cutting simulation",
+          "author": {
+            "login": "chuang05"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nDoes moose support modeling the process of metal cutting? any suggestions?",
+          "url": "https://github.com/idaholab/moose/discussions/28895",
+          "updatedAt": "2024-10-21T08:36:53Z",
+          "publishedAt": "2024-10-21T03:26:36Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nI have not seen such simulations performed with moose",
+                  "url": "https://github.com/idaholab/moose/discussions/28895#discussioncomment-11002378",
+                  "updatedAt": "2024-10-21T08:31:17Z",
+                  "publishedAt": "2024-10-21T08:31:16Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "chuang05"
+                          },
+                          "bodyText": "Thank you very much.",
+                          "url": "https://github.com/idaholab/moose/discussions/28895#discussioncomment-11002423",
+                          "updatedAt": "2024-10-21T08:36:53Z",
+                          "publishedAt": "2024-10-21T08:36:52Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

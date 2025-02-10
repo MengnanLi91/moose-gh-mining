@@ -1,0 +1,1170 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyNC0xMC0wOFQxMDoyMTozMS0wNTowMM4AbcNO"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Previous and current variable values in pre-SMO calculation",
+          "author": {
+            "login": "NateAM"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nI'm using the automatic scaling calculation for a simulation using a custom kernel which requires both the previous and current value of the field variables and their gradients. When the pre-SMO calculation runs I've noticed that that the previous and current field variable values are the same. Is this intended behavior or does it seem like there is a bug somewhere?\nThe executioner part of my input deck is\n[Executioner]\n  type = Transient\n  solve_type = NEWTON\n  petsc_options_iname = \"-pc_type -pc_factor_mat_solver_package\"\n  petsc_options_value = \"lu       superlu_dist                 \"\n  line_search = none\n  automatic_scaling = true\n  nl_rel_tol = 1e-5\n  nl_abs_tol = 1e-7\n  nl_max_its = 50\n  start_time = 0.0\n  end_time = 1.0\n  dtmin = 1e-12\n  dtmax= 0.1\n  [TimeStepper]\n    type = IterationAdaptiveDT\n    optimal_iterations = 4\n    iteration_window = 3\n    linear_iteration_ratio = 1000\n    growth_factor=1.2\n    cutback_factor=0.5\n    dt = 0.1\n  []\n[]\n\nI'm not completely sure that the identical values are happening during the pre-SMO calculation because my kernel fails to converge (due to the two deformations being the same) and it throws an exception that MOOSE catches. I recognize that the kernel-specific output won't make much sense, but you can see that the variables u and phi, and their gradients are identical for the current and previous timestep. All of the messages from my kernel are between the \"=\"s.\nTime Step 1, time = 0.1, dt = 0.1\nPre-SMO residual: 0.318904\nCurrently Executing\n    Computing Pre-SMO Residual\n      Finished Computing Residual                                                        [  9.47 s] [  174 MB]\n    Finished Computing Pre-SMO Residual                                                  [  9.47 s] [  174 MB]\n\nPerforming automatic scaling calculation\n\n    Computing Automatic Scaling\n      Computing Jacobian                                                                 [  7.42 s] [  174 MB]\n    Finished Computing Automatic Scaling                                                 [  7.42 s] [  174 MB]\n    Computing Residual.                                                                  [ 12.47 s] [  174 MB]\n 0 Nonlinear |R| = 1.696577e-01\n    Computing Jacobian...                                                                [ 20.69 s] [  202 MB]\n      0 Linear |R| = 1.696577e-01\n      1 Linear |R| = 1.391660e-16\n    Finished Computing Residual                                                          [  9.52 s] [  555 MB]\n 1 Nonlinear |R| = 3.266552e-03\n    Computing Jacobian..                                                                 [ 19.01 s] [  557 MB]\n      0 Linear |R| = 3.266552e-03\n      1 Linear |R| = 2.854340e-18\n    Finished Computing Residual                                                          [  9.45 s] [  557 MB]\n 2 Nonlinear |R| = 1.907495e-05\n    Computing Jacobian..                                                                 [ 19.00 s] [  558 MB]\n      0 Linear |R| = 1.907495e-05\n      1 Linear |R| = 2.836699e-20\n    Finished Computing Residual                                                          [  9.45 s] [  557 MB]\n 3 Nonlinear |R| = 8.579929e-08\n Solve Converged!\n  Finished Solving                                                                       [126.32 s] [  408 MB]\n\nOutlier Variable Residual Norms:\n  disp_z: 8.389971e-08\n\nPostprocessor Values:\n+----------------+----------------+\n| time           | bot_react_z    |\n+----------------+----------------+\n|   0.000000e+00 |   0.000000e+00 |\n|   1.000000e-01 |   5.104526e+02 |\n+----------------+----------------+\n\n\nTime Step 2, time = 0.2, dt = 0.1\n\n    Computing Pre-SMO Residual\n      Computing Residual.                                                                [ 10.11 s] [  408 MB]\nPre-SMO residual: 0.322034\n    Finished Computing Pre-SMO Residual                                                  [ 10.12 s] [  408 MB]\n\nA MooseException was raised during FEProblemBase::computeResidualTags\n\n==========================\nConvergence not achieved in material model. Requesting timestep cutback.\n0 : Failure in relaxed solve\nINPUT PARAMETERS FOLLOW:\ntime:\n 2.000000e-01, 1.000000e-01,\n\nfparams:\n 2.000000e+00, 1.000000e+04, 1.000000e-08, 2.000000e+00, 3.192203e+00, -3.167845e+01, 2.000000e+00, 1.000000e+04, 1.000000e-08, 2.000000e+00, 0.000000e+00, 0.000000e+00, 2.000000e+00, 0.000000e+00, 0.000000e+00, 2.000000e+00, 0.000000e+00, 0.000000e+00, 2.000000e+00, 0.000000e+00, 0.000000e+00, 2.000000e+00, 0.000000e+00, 0.000000e+00, 2.000000e+00, 0.000000e+00, 0.000000e+00, 2.000000e+00, 6.964416e+02, 1.267138e+02, 5.000000e+00, -1.867498e+01, -3.781732e+01, 1.517765e+01, -2.407120e+01, -5.861821e+00, 1.100000e+01, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 7.925235e+02, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 2.000000e+00, -3.781732e+01, -5.861821e+00, 5.000000e-01, 5.000000e-01, 5.000000e-01, 1.000000e-09, 1.000000e-09,\n\ncurrent_grad_u:\n 1.055797e-03, 5.136526e-04, 1.843982e-03,\n 4.002290e-04, 1.684113e-03, 2.357700e-03,\n -2.437182e-05, -9.028907e-05, -7.940004e-02,\n\ncurrent_phi:\n -1.956531e-04, 3.049702e-06, 1.765037e-05, 2.840806e-06, -1.943198e-04, 2.230603e-05, -1.359193e-05, -1.715515e-05, -3.393720e-04,\n\ncurrent_grad_phi:\n -1.945539e-05, -2.592158e-05, -5.862817e-05,\n -3.320356e-06, -3.467268e-06, -2.339044e-07,\n -2.038262e-05, -4.046447e-06, 1.301341e-05,\n -3.317225e-06, -1.923737e-06, -2.083438e-07,\n -1.566101e-05, -3.290013e-05, -5.876160e-05,\n -3.335579e-06, -2.500360e-05, 1.655791e-05,\n 1.558924e-05, 2.839010e-06, -7.544714e-06,\n 2.378279e-06, 1.869235e-05, -9.588049e-06,\n -1.327543e-05, -2.236166e-05, -8.576912e-05,\n\nprevious_grad_u:\n 1.055797e-03, 5.136526e-04, 1.843982e-03,\n 4.002290e-04, 1.684113e-03, 2.357700e-03,\n -2.437182e-05, -9.028907e-05, -2.470542e-02,\n\nprevious_phi:\n -1.956531e-04, 3.049702e-06, 1.765037e-05, 2.840806e-06, -1.943198e-04, 2.230603e-05, -1.359193e-05, -1.715515e-05, -3.393720e-04,\n\nprevious_grad_phi:\n -1.945539e-05, -2.592158e-05, -5.862817e-05,\n -3.320356e-06, -3.467268e-06, -2.339044e-07,\n -2.038262e-05, -4.046447e-06, 1.301341e-05,\n -3.317225e-06, -1.923737e-06, -2.083438e-07,\n -1.566101e-05, -3.290013e-05, -5.876160e-05,\n -3.335579e-06, -2.500360e-05, 1.655791e-05,\n 1.558924e-05, 2.839010e-06, -7.544714e-06,\n 2.378279e-06, 1.869235e-05, -9.588049e-06,\n -1.327543e-05, -2.236166e-05, -8.576912e-05,\n\nSDVS:\n 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00,\n\ncurrent_ADD_DOF:\n\ncurrent_ADD_grad_DOF:\n\nprevious_ADD_DOF:\n\nprevious_ADD_grad_DOF:\n\n\nTo recover, the solution will fail and then be re-attempted with a reduced time step.\n==========================\n\n  Nonlinear solve did not converge due to DIVERGED_FUNCTION_DOMAIN iterations 0\n Solve Did NOT Converge!\n  Finished Solving                                                                       [ 13.82 s] [  408 MB]\nAborting as solve did not converge",
+          "url": "https://github.com/idaholab/moose/discussions/28762",
+          "updatedAt": "2024-10-11T03:13:10Z",
+          "publishedAt": "2024-10-03T05:23:13Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nWhat is SDVs?\nAnd ADD?\nIn any case, you should not be using the pre-SMO residual?\nuse_pre_SMO_residual should be set to False by default.\nI think you may be using a legacy application that still uses those. See this announcement for the deprecation of using the pre-SMO residual\nhttps://mooseframework.inl.gov/newsletter/2024/2024_04.html\nOtherwise, how do you retrieve the current and previous value in the code?",
+                  "url": "https://github.com/idaholab/moose/discussions/28762#discussioncomment-10836196",
+                  "updatedAt": "2024-10-03T20:28:34Z",
+                  "publishedAt": "2024-10-03T20:28:32Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "NateAM"
+                          },
+                          "bodyText": "@GiudGiud\nSorry for the confusion, those are internal variables that are passed from my kernel to a material.\n\nIn any case, you should not be using the pre-SMO residual?\nuse_pre_SMO_residual should be set to False by default.\nI think you may be using a legacy application that still uses those. See this announcement for the deprecation of using the pre-SMO residual\nhttps://mooseframework.inl.gov/newsletter/2024/2024_04.html\n\nOh, okay. I wanted to get the values of my materials as outputs in the initial state. Is there a correct way to do this or will it always be assumed that they are zero to start?\n\nOtherwise, how do you retrieve the current and previous value in the code?\n\nI collect the previous and current values of the degrees of freedom by declaring in myKernel.h:\n        const VariableValue    & _u1;\n        const VariableValue    & _u2;\n        const VariableValue    & _u3;\n        const VariableGradient & _grad_u1;\n        const VariableGradient & _grad_u2;\n        const VariableGradient & _grad_u3;\n\n        ...\n\n        const VariableValue    & _old_u1;\n        const VariableValue    & _old_u2;\n        const VariableValue    & _old_u3;\n        const VariableGradient & _old_grad_u1;\n        const VariableGradient & _old_grad_u2;\n        const VariableGradient & _old_grad_u3;\n        ...\n\nand then in myKernel.C in the constructor\nmyKernel::myKernel( const InputParameters & parameters ){\n    ...\n    _u1(coupledValue(\"u1\")),\n    _u2(coupledValue(\"u2\")),\n    _u3(coupledValue(\"u3\")),\n    _grad_u1(coupledGradient(\"u1\")),\n    _grad_u2(coupledGradient(\"u2\")),\n    _grad_u3(coupledGradient(\"u3\")),\n    ...\n    _old_u1(coupledValueOld(\"u1\")),\n    _old_u2(coupledValueOld(\"u2\")),\n    _old_u3(coupledValueOld(\"u3\")),\n    _old_grad_u1(coupledGradientOld(\"u1\")),\n    _old_grad_u2(coupledGradientOld(\"u2\")),\n    _old_grad_u3(coupledGradientOld(\"u3\")),\n    ...\n\nMaybe it's just because the pre-SMO calculation is depreciated that there is this problem at all?",
+                          "url": "https://github.com/idaholab/moose/discussions/28762#discussioncomment-10837480",
+                          "updatedAt": "2024-10-03T20:58:59Z",
+                          "publishedAt": "2024-10-03T20:58:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I wanted to get the values of my materials as outputs in the initial state.\n\nYou can work on setting an initial state of stateful material properties using this action\nhttps://mooseframework.inl.gov/source/actions/ProjectedStatefulMaterialStorageAction.html\nand using the use_interpolated_state parameter on consumers of material properties\nIt's complicated. Do you really need the old value? Is this for a restart simulation?\nCould you just use a different expression for the material on the first time step?",
+                          "url": "https://github.com/idaholab/moose/discussions/28762#discussioncomment-10837670",
+                          "updatedAt": "2024-10-03T21:29:49Z",
+                          "publishedAt": "2024-10-03T21:29:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I collect the previous and current values of the degrees of freedom by declaring in myKernel.h:\n\nok this looks correct.\n\nMaybe it's just because the pre-SMO calculation is depreciated that there is this problem at all?\n\nIt's not deprecated, it's just that the old values of anything is not generally used on the first time step, because they dont generally exist. I would expect them to return 0, but turns out they return the current value. This is probably a safer value for most problems, just not for yours",
+                          "url": "https://github.com/idaholab/moose/discussions/28762#discussioncomment-10837678",
+                          "updatedAt": "2024-10-03T21:31:12Z",
+                          "publishedAt": "2024-10-03T21:31:12Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "NateAM"
+                          },
+                          "bodyText": "It's complicated. Do you really need the old value? Is this for a restart simulation?\nCould you just use a different expression for the material on the first time step?\n\nOkay, it's mostly just for plotting purposes so maybe I don't. I don't explicitly ask for Pre-SMO anywhere in my input deck so this could be a function of my main.C not being updated to the new standard. I'll try and update and see what happens.\n\nIt's not deprecated, it's just that the old values of anything is not generally used on the first time step, because they dont generally exist. I would expect them to return 0, but turns out they return the current value. This is probably a safer value for most problems, just not for yours\n\nThat makes sense to me. What is confusing to me is that at every time step the pre-SMO residual is called and if my kernel can't converge locally in the pre-SMO residual I find that the current and previous values are the same even when it isn't the first time step. Is that expected?",
+                          "url": "https://github.com/idaholab/moose/discussions/28762#discussioncomment-10839365",
+                          "updatedAt": "2024-10-04T03:09:17Z",
+                          "publishedAt": "2024-10-04T03:09:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I dont think so.\nIf you could make a minimal non-working example I can take a look",
+                          "url": "https://github.com/idaholab/moose/discussions/28762#discussioncomment-10839502",
+                          "updatedAt": "2024-10-04T03:34:43Z",
+                          "publishedAt": "2024-10-04T03:34:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "NateAM"
+                          },
+                          "bodyText": "@GiudGiud\nSorry it's taken me a while to respond. I updated to the most recent version of MOOSE and I'm not able to reproduce the error so maybe this was something that was fixed. I'm still getting the warnings:\nLEGACY MODES ENABLED:\n This application uses the legacy material output option: material properties are output only on TIMESTEP_END, not INITIAL. To remove this message, set 'use_legacy_material_output' to false in this application. If there are gold output files that contain material property output for which output occurs on INITIAL, then these will generate diffs due to zero values being stored, and these tests should be re-golded.\n\nLEGACY MODES ENABLED:\n This application uses the legacy initial residual evaluation behavior. The legacy behavior performs an often times redundant residual evaluation before the solution modifying objects are executed prior to the initial (0th nonlinear iteration) residual evaluation. The new behavior skips that redundant residual evaluation unless the parameter Executioner/use_pre_smo_residual is set to true. To remove this message and enable the new behavior, set the parameter 'use_legacy_initial_residual_evaluation_behavior' to false in *App.C. Some tests that rely on the side effects of the legacy behavior may fail/diff and should be re-golded.\n\n\nThough I don't think I have enabled the pre-SMO explicitly. My executioner has the form:\n[Executioner]\n  type = Transient\n  solve_type = NEWTON\n  petsc_options_iname = \"-pc_type -pc_factor_mat_solver_package\"\n  petsc_options_value = \"lu       superlu_dist                 \"\n  line_search = none\n  automatic_scaling = true\n  nl_rel_tol = 1e-5\n  nl_abs_tol = 1e-7\n  nl_max_its = 10\n  start_time = 0.0\n  end_time = 1.0\n  dtmin = 1e-12\n  dtmax= 0.1\n  [TimeStepper]\n    type = IterationAdaptiveDT\n    optimal_iterations = 5\n    iteration_window = 1\n    linear_iteration_ratio = 1000\n    growth_factor=1.2\n    cutback_factor=0.5\n    dt = 0.1\n  []\n[]\n\nSo does it have to do with using automatic_scaling?",
+                          "url": "https://github.com/idaholab/moose/discussions/28762#discussioncomment-10910456",
+                          "updatedAt": "2024-10-11T02:40:59Z",
+                          "publishedAt": "2024-10-11T02:40:59Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Automatic scaling does trigger an earlier Jacobian evaluation . So a similar effect as the legacy preSMO behavior",
+                          "url": "https://github.com/idaholab/moose/discussions/28762#discussioncomment-10910649",
+                          "updatedAt": "2024-10-11T03:13:11Z",
+                          "publishedAt": "2024-10-11T03:13:10Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Error with AuxKernal: Invalid function, Syntax error: Unknown identifier",
+          "author": {
+            "login": "wlindqwister"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n I have consulted the Posting Guidelines.\n I have searched the Discussions Forum and MOOSE Framework Troubleshooting and have not found what I was looking for\n Q&A Getting Started is the most appropriate category for my question (trouble installing, beginner user, ...)\n\nIssue or question about MOOSE\nHello everyone, I'm relatively new with MOOSE and am trying to calculate an auxiliary variable 'density' based off of nodal distance from a boundary using the the NearestNodeDistanceAux aux kernal paired with ParsedAux (one step beyond what is demonstrated here. I keep running into the following error when trying to calculate:\n\"The following error occurred in the AuxKernel 'density' of type ParsedAux.\nInvalid function\ndistance^2\nin ParsedAux density.\nSyntax error: Unknown identifier\"\nHere is the input file I've been using:\n[Mesh]\n    [file_mesh]\n        type = FileMeshGenerator\n        file = meshes/1H_test.msh\n    []\n    [interior_nodeset]\n        type = BoundingBoxNodeSetGenerator\n        new_boundary = interior_nodeset\n        bottom_left = '-0.01 -0.01 -0.01'\n        top_right = '1.01 1.01 1.01'\n        input = file_mesh\n    []\n[]\n\n[Variables]\n    [./u]\n    [../]\n[]\n\n[AuxVariables]\n    [./distance]\n    [../]\n    [./penetration]\n    [../]\n    [./density]\n    [../]\n[]\n\n[AuxKernels]\n    [./nodal_distance_aux]\n        type = NearestNodeDistanceAux\n        variable = distance\n        boundary = interior_nodeset\n        paired_boundary = hydrosurf\n    [../]\n    [./penetration_aux]\n        type = PenetrationAux\n        variable = penetration\n        boundary = interior_nodeset\n        paired_boundary = hydrosurf\n    [../]\n    [./density]\n        type = ParsedAux\n        variable = density\n        coupled_variable = 'distance'\n        expression = 'distance^2'\n    [../]\n[]\n\n[Problem]\n    type = FEProblem\n    solve = false\n[]\n\n[Executioner]\n    type = Steady\n[]\n\n[Outputs]\n    file_base = densityTest1Hole\n    execute_on = 'timestep_end'\n    exodus = true\n[]\n\nI've looked through the examples on the website and I can't find where my syntax is incorrect. Any help would be greatly appreciated!\n(Optional) code in question / simulation log / errors\nNo response\nEncountering Errors? Please include diagnostic output\nNo response",
+          "url": "https://github.com/idaholab/moose/discussions/28157",
+          "updatedAt": "2024-10-10T10:30:35Z",
+          "publishedAt": "2024-07-17T10:28:13Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "wlindqwister"
+                  },
+                  "bodyText": "Never mind, I found a small syntax error in ParsedAux that I overlooked. My bad!",
+                  "url": "https://github.com/idaholab/moose/discussions/28157#discussioncomment-10072564",
+                  "updatedAt": "2024-07-17T11:27:13Z",
+                  "publishedAt": "2024-07-17T11:27:12Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "EDIT: (I'm replying to another poster who seemed to have deleted their message)\nYou either have a typo in the expression\nOr one of the terms in the expression should be in one of the other parameters that describe what type it is\nFor example a variable should be specified in coupled_variables, a functor in functor_symbols",
+                          "url": "https://github.com/idaholab/moose/discussions/28157#discussioncomment-10902555",
+                          "updatedAt": "2024-10-10T10:44:47Z",
+                          "publishedAt": "2024-10-10T10:13:01Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "MOOSE on copenhagen university HPC",
+          "author": {
+            "login": "AndreasHjortsoe"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n I have consulted the Posting Guidelines.\n I have searched the Discussions Forum and MOOSE Framework Troubleshooting and have not found what I was looking for\n Q&A Getting Started is the most appropriate category for my question (trouble installing, beginner user, ...)\n\nIssue or question about MOOSE\nIssue description\nI am trying to install MOOSE on a HPC cluster in copenhagen.\nI initialize with:\n\nmodule load mpi/mpich-x86_64\nexport CC=mpicc CXX=mpicxx FC=mpif90 F90=mpif90 F77=mpif77\nexport HDF5_DIR=/usr (i tried fixing my issues with this, in order to make sure HDF5 was the correct version, but to no avail)\n\nWhen i run \"./update_and_rebuild_petsc.sh\":\n\nI have added \"  CC=$CC CXX=$CXX FC=$FC F77=$F77 F90=$F90 \" to the configure line in configure_petc.sh\nThere might be issues with HDF5, and this may be the cause. This is the reason i added export HDF5_DIR.\n\nWhen i run \"./update_and_rebuild_libmesh.sh\":\ni got errors, showing that there was no available MPI_Comm, indicating that there are issues with libmesh finding my MPI.\n\nI fixed this by adding  \"--with-mpi-include=\"/usr/include/mpich-x86_64\" to the configure line in moose/scripts/configure_libmesh.sh\n\nNow i can run \"./update_and_rebuild_wasp.sh\", and make without errors.\nRunning tests\nAfter running make, i tried ./run_tests, which yeilded 51/51 failed tests. Can anyone help with troubleshooting please?\nOutput from running ./run_tests -i always_bad: i am unsure why it takes so long to run. Yesterday it ran much faster, but today it is slow. Yesterday i got CODE 1 error for both, instead of the TIMEOUT error.\n[hjortso@hep03 test]$ ./run_tests -i always_bad\ntests/test_harness.always_ok ......................................................................... RUNNING\ntests/test_harness.always_ok: Working Directory: /lustre/hpc/hep/hjortso/temp_dir/moose/test/tests/test_harness\ntests/test_harness.always_ok: Running command: /lustre/hpc/hep/hjortso/temp_dir/moose/test/moose_test-opt -i good.i --error --error-override --libtorch-device cpu\ntests/test_harness.always_ok:\ntests/test_harness.always_ok ..................................................... [FINISHED] FAILED (TIMEOUT)\ntests/test_harness.always_bad: Working Directory: /lustre/hpc/hep/hjortso/temp_dir/moose/test/tests/test_harness\ntests/test_harness.always_bad: Running command: false\ntests/test_harness.always_bad:\ntests/test_harness.always_bad: ################################################################################\ntests/test_harness.always_bad: Tester failed, reason: CODE 1\ntests/test_harness.always_bad:\ntests/test_harness.always_bad ................................................................ FAILED (CODE 1)\n\n\nFinal Test Results:\n--------------------------------------------------------------------------------------------------------------\ntests/test_harness.always_ok ..................................................... [FINISHED] FAILED (TIMEOUT)\ntests/test_harness.always_bad ................................................................ FAILED (CODE 1)\n--------------------------------------------------------------------------------------------------------------\nRan 2 tests in 571.9 seconds. Average test time 150.0 seconds, maximum test time 300.0 seconds.\n0 passed, 0 skipped, 0 pending, 2 FAILED\n\nDiagnostics output - i see nothing out of the ordinary here, but there might be\n####################################################################################################\nInfluential Environment Variables\nCC=mpicc\nCONDA_CHANNEL=https://conda.software.inl.gov/public\nCURL_CA_BUNDLE=\nCXX=mpicxx\nF77=mpif77\nF90=mpif90\nFC=mpif90\nFI_PROVIDER=tcp\nHDF5_DIR=/usr\nLD_LIBRARY_PATH=/usr/lib64/mpich/lib\nMODULESHOME=/usr/share/lmod/lmod\nMOOSE_JOBS=6\nPATH=/usr/lib64/mpich/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/groups/hep/hjortso/bin\nREQUESTS_CA_BUNDLE=\nSSL_CERT_FILE=\n####################################################################################################\nCompiler(s) (CC CXX FC F77 F90):\nwhich $CC; /usr/lib64/mpich/bin/mpicc\n$CC --version; gcc (GCC) 11.4.1 20231218 (Red Hat 11.4.1-3)\n$CC -show; gcc -O2 -flto=auto -ffat-lto-objects -fexceptions -g -grecord-gcc-switches -pipe -Wall -Werror=format-security -Wp,-D_FORTIFY_SOURCE=2 -Wp,-D_GLIBCXX_ASSERTIONS -specs=/usr/lib/rpm/redhat/redhat-hardened-cc1 -fstack-protector-strong -specs=/usr/lib/rpm/redhat/redhat-annobin-cc1 -m64 -march=x86-64-v2 -mtune=generic -fasynchronous-unwind-tables -fstack-clash-protection -fcf-protection -Wl,-z,relro -Wl,--as-needed -Wl,-z,now -specs=/usr/lib/rpm/redhat/redhat-hardened-ld -specs=/usr/lib/rpm/redhat/redhat-annobin-cc1 -I/usr/include/mpich-x86_64 -L/usr/lib64/mpich/lib -Wl,-rpath -Wl,/usr/lib64/mpich/lib -Wl,--enable-new-dtags -lmpi\nwhich $CXX; /usr/lib64/mpich/bin/mpicxx\n$CXX --version; g++ (GCC) 11.4.1 20231218 (Red Hat 11.4.1-3)\n$CXX -show; g++ -O2 -flto=auto -ffat-lto-objects -fexceptions -g -grecord-gcc-switches -pipe -Wall -Werror=format-security -Wp,-D_FORTIFY_SOURCE=2 -Wp,-D_GLIBCXX_ASSERTIONS -specs=/usr/lib/rpm/redhat/redhat-hardened-cc1 -fstack-protector-strong -specs=/usr/lib/rpm/redhat/redhat-annobin-cc1 -m64 -march=x86-64-v2 -mtune=generic -fasynchronous-unwind-tables -fstack-clash-protection -fcf-protection -Wl,-z,relro -Wl,--as-needed -Wl,-z,now -specs=/usr/lib/rpm/redhat/redhat-hardened-ld -specs=/usr/lib/rpm/redhat/redhat-annobin-cc1 -I/usr/include/mpich-x86_64 -L/usr/lib64/mpich/lib -lmpicxx -Wl,-rpath -Wl,/usr/lib64/mpich/lib -Wl,--enable-new-dtags -lmpi\nwhich $FC; /usr/lib64/mpich/bin/mpif90\n$FC --version; GNU Fortran (GCC) 11.4.1 20231218 (Red Hat 11.4.1-3)\n$FC -show; gfortran -O2 -flto=auto -ffat-lto-objects -fexceptions -g -grecord-gcc-switches -pipe -Wall -Werror=format-security -Wp,-D_FORTIFY_SOURCE=2 -Wp,-D_GLIBCXX_ASSERTIONS -specs=/usr/lib/rpm/redhat/redhat-hardened-cc1 -fstack-protector-strong -specs=/usr/lib/rpm/redhat/redhat-annobin-cc1 -m64 -march=x86-64-v2 -mtune=generic -fasynchronous-unwind-tables -fstack-clash-protection -fcf-protection -I/usr/lib64/gfortran/modules -Wl,-z,relro -Wl,--as-needed -Wl,-z,now -specs=/usr/lib/rpm/redhat/redhat-hardened-ld -specs=/usr/lib/rpm/redhat/redhat-annobin-cc1 -I/usr/include/mpich-x86_64 -I/usr/lib64/gfortran/modules/mpich -L/usr/lib64/mpich/lib -lmpifort -Wl,-rpath -Wl,/usr/lib64/mpich/lib -Wl,--enable-new-dtags -lmpi\nwhich $F77; /usr/lib64/mpich/bin/mpif77\n$F77 --version; GNU Fortran (GCC) 11.4.1 20231218 (Red Hat 11.4.1-3)\n$F77 -show; gfortran -O2 -flto=auto -ffat-lto-objects -fexceptions -g -grecord-gcc-switches -pipe -Wall -Werror=format-security -Wp,-D_FORTIFY_SOURCE=2 -Wp,-D_GLIBCXX_ASSERTIONS -specs=/usr/lib/rpm/redhat/redhat-hardened-cc1 -fstack-protector-strong -specs=/usr/lib/rpm/redhat/redhat-annobin-cc1 -m64 -march=x86-64-v2 -mtune=generic -fasynchronous-unwind-tables -fstack-clash-protection -fcf-protection -I/usr/lib64/gfortran/modules -fallow-argument-mismatch -Wl,-z,relro -Wl,--as-needed -Wl,-z,now -specs=/usr/lib/rpm/redhat/redhat-hardened-ld -specs=/usr/lib/rpm/redhat/redhat-annobin-cc1 -I/usr/include/mpich-x86_64 -I/usr/lib64/gfortran/modules/mpich -L/usr/lib64/mpich/lib -lmpifort -Wl,-rpath -Wl,/usr/lib64/mpich/lib -Wl,--enable-new-dtags -lmpi\nwhich $F90; /usr/lib64/mpich/bin/mpif90\n$F90 --version; GNU Fortran (GCC) 11.4.1 20231218 (Red Hat 11.4.1-3)\n$F90 -show; gfortran -O2 -flto=auto -ffat-lto-objects -fexceptions -g -grecord-gcc-switches -pipe -Wall -Werror=format-security -Wp,-D_FORTIFY_SOURCE=2 -Wp,-D_GLIBCXX_ASSERTIONS -specs=/usr/lib/rpm/redhat/redhat-hardened-cc1 -fstack-protector-strong -specs=/usr/lib/rpm/redhat/redhat-annobin-cc1 -m64 -march=x86-64-v2 -mtune=generic -fasynchronous-unwind-tables -fstack-clash-protection -fcf-protection -I/usr/lib64/gfortran/modules -Wl,-z,relro -Wl,--as-needed -Wl,-z,now -specs=/usr/lib/rpm/redhat/redhat-hardened-ld -specs=/usr/lib/rpm/redhat/redhat-annobin-cc1 -I/usr/include/mpich-x86_64 -I/usr/lib64/gfortran/modules/mpich -L/usr/lib64/mpich/lib -lmpifort -Wl,-rpath -Wl,/usr/lib64/mpich/lib -Wl,--enable-new-dtags -lmpi\nOK\n####################################################################################################\nPython Sanity Checks\n/usr/bin/env python3 --version; (reporting as: Python 3.9.18) matches\nwhich python3 python;\n/usr/bin/python3 --version; == Python 3.9.18\n/usr/bin/python --version; == Python 3.9.18\nOK\n####################################################################################################\nPython Modules (TestHarness, run-ability)\nOK\nchecks PASSED\nNo response",
+          "url": "https://github.com/idaholab/moose/discussions/28805",
+          "updatedAt": "2024-10-10T10:09:18Z",
+          "publishedAt": "2024-10-08T07:26:28Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nCan you please attach the logs for building petsc (if you think there were issues), libmesh (there is a configure.log) that should help and moose?",
+                  "url": "https://github.com/idaholab/moose/discussions/28805#discussioncomment-10879901",
+                  "updatedAt": "2024-10-08T12:57:46Z",
+                  "publishedAt": "2024-10-08T12:57:45Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "also what does ldd moose_test-opt return ?",
+                          "url": "https://github.com/idaholab/moose/discussions/28805#discussioncomment-10881640",
+                          "updatedAt": "2024-10-08T15:16:23Z",
+                          "publishedAt": "2024-10-08T15:16:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "AndreasHjortsoe"
+                          },
+                          "bodyText": "petcs\nPetsc is building fine, and running the \"make test\" commands stated at the end of the \"update_and_rebuild_petcs\" file work without errors, so petcs probably works, but i have added the configure.log anyways as configure(petcs).\nconfigure(petsc).log\nlibmesh\nI found the output of configure from libmesh in here (libmesh_diagnostic.log):\nlibmesh_diagnostic.log\nMOOSE\nI have now run ./configure in the moose directory to generate the configure file for moose:\nconfig(moose).log\nI found config.status as well, maybe that is usefull for you:\nconfig(moose)txt.txt\nmoose_test yeilds a segmentation error, and ldd_moose_test is below:\nldd_moose_test.out.txt\nThanks for taking a look, i hope this is sufficient! Otherwise please let me know what you need.\nRegards Andreas",
+                          "url": "https://github.com/idaholab/moose/discussions/28805#discussioncomment-10891435",
+                          "updatedAt": "2024-10-09T11:50:41Z",
+                          "publishedAt": "2024-10-09T11:42:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Nothing obvious to me.\nCan you run an input in a debugger and get us a backtrace for the error?\nThis is a recent version of moose right?\nhttps://mooseframework.inl.gov/application_development/debugging.html",
+                          "url": "https://github.com/idaholab/moose/discussions/28805#discussioncomment-10894596",
+                          "updatedAt": "2024-10-09T16:05:11Z",
+                          "publishedAt": "2024-10-09T16:05:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "AndreasHjortsoe"
+                          },
+                          "bodyText": "Okay, here it is. It looks like the error is in libmesh, in netgen?\ndebug_info.txt\nI believe the version is the most recent one yes. I have done the steps from \"common installation issues (#27046) \"",
+                          "url": "https://github.com/idaholab/moose/discussions/28805#discussioncomment-10901214",
+                          "updatedAt": "2024-10-10T08:17:27Z",
+                          "publishedAt": "2024-10-10T08:17:09Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Yes it does look like it's coming from netgen.\nSo for now, I recommend you disable netgen by passing --disable-netgen to update_and_rebuild_libmesh.sh\nYou ll have to check the log to check if it actually worked because I seem to remember the option was not listed in the help page though it should be working still\nI ll take care of creating an issue so this can be looked at",
+                          "url": "https://github.com/idaholab/moose/discussions/28805#discussioncomment-10902515",
+                          "updatedAt": "2024-10-10T10:09:19Z",
+                          "publishedAt": "2024-10-10T10:09:17Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "mangerij"
+                  },
+                  "bodyText": "Hi @AndreasHjortsoe\nI'm actually local up at DTU. Are you using Niflheim? If so, I can probably help out.",
+                  "url": "https://github.com/idaholab/moose/discussions/28805#discussioncomment-10882122",
+                  "updatedAt": "2024-10-08T15:57:50Z",
+                  "publishedAt": "2024-10-08T15:57:49Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "AndreasHjortsoe"
+                          },
+                          "bodyText": "No, unfortunately i am on a small local HPC here at KU",
+                          "url": "https://github.com/idaholab/moose/discussions/28805#discussioncomment-10891444",
+                          "updatedAt": "2024-10-09T11:43:34Z",
+                          "publishedAt": "2024-10-09T11:43:34Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "LineValueSampler with Threshold problem",
+          "author": {
+            "login": "TFdvd"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nHello MOOSE community!\nI have tried to extend and customize the LineValueSampler function. I would like to filter its results by imposing a user-defined threshold and save only the first value above the threshold. After compiling the function and finding no errors, the end result is always a .csv with values = num_points (input parameter) and not the desired single value.\nI enclose the .h and .C in question. Any suggestions?\nThanks! :)\n#pragma once\n\n#include \"VectorPostprocessor.h\"\n\n\n// MOOSE includes\n#include \"PointVariableSamplerBase.h\"\n\nclass NeckLineValueSampler : public PointVariableSamplerBase\n{\npublic:\n  static InputParameters validParams();\n\n  NeckLineValueSampler(const InputParameters & parameters);\n\n  /**\n   * Helper function to generate the list of points along a line and a unique ID for each point.\n   * @param start_point The beginning of the line\n   * @param end_point The end of the line\n   * @param num_points The number of points along the line\n   * @param points The vector of points to fill in\n   * @param ids The vector of ids to fill in\n   */\n  static void generatePointsAndIDs(const Point & start_point,\n                                   const Point & end_point,\n                                   unsigned int num_points,\n                                   std::vector<Point> & points,\n                                   std::vector<Real> & ids);\n\n  /**\n   * Gets the value of the variable at a point p.\n   * Used with MultiAppUserObjectTransfer to transfer\n   * variable information from one domain to another.\n   **/\n  virtual Real spatialValue(const Point & p) const override { return getValue(p); }\n\n  /**\n   * Gets the value of the variable at a point p.\n   * Returns zero if p does not lie along the line segment or if no value is above the threshold.\n   **/\n  Real getValue(const Point & p) const;\n\nprotected:\n  const Point _start_point;\n  const Point _end_point;\n\n  unsigned int & _num_points;\n  \n\n  /// Vector connecting the start and end points of the line segment\n  const RealVectorValue _line_vector;\n\n  /// Zero vector\n  const RealVectorValue _zero;\n\n  /// Length of line segment\n  const Real _line_vector_norm;\n\n \n  /// User-defined threshold\n  \n\nprivate:\n\n  Real _threshold;\n  \n  const VectorPostprocessorValue & _vpp_value;\n    \n};\n\n---------------------------------------------------------------\n#include \"NeckLineValueSampler.h\"\n#include <limits>\n#include \"libmesh/utility.h\"\n\nregisterMooseObject(\"ParrotApp\", NeckLineValueSampler);\n\nInputParameters\nNeckLineValueSampler::validParams()\n{\n  InputParameters params = PointVariableSamplerBase::validParams();\n\n  params.addRequiredParam<Point>(\"start_point\", \"The beginning of the line\");\n  params.addRequiredParam<Point>(\"end_point\", \"The ending of the line\");\n\n  params.addRequiredParam<unsigned int>(\"num_points\",\n                                        \"The number of points to sample along the line\");\n\n  params.addRequiredParam<Real>(\"threshold\", \"The threshold value for sampling\");\n\n  params.addClassDescription(\"Samples variable(s) along a specified line and returns the first value greater than or equal to the threshold.\");\n\n  return params;\n}\n\nNeckLineValueSampler::NeckLineValueSampler(const InputParameters & parameters)\n  : PointVariableSamplerBase(parameters),\n    _start_point(getParam<Point>(\"start_point\")),\n    _end_point(getParam<Point>(\"end_point\")),\n    _num_points(declareRestartableData<unsigned int>(\"num_points\", getParam<unsigned int>(\"num_points\"))),\n    _threshold(getParam<Real>(\"threshold\")),\n    _line_vector(_end_point - _start_point),\n    _line_vector_norm(_line_vector.norm()),  \n    _vpp_value(getVectorPostprocessorValueByName(_vpp_name, _variable_names[0]))\n{\n  if (MooseUtils::absoluteFuzzyEqual(_line_vector_norm, 0.0))\n    mooseError(\"NeckLineValueSampler: `start_point` and `end_point` must be different.\");\n\n  generatePointsAndIDs(_start_point, _end_point, _num_points, _points, _ids);\n}\n\n\nvoid\nNeckLineValueSampler::generatePointsAndIDs(const Point & start_point,\n                                       const Point & end_point,\n                                       unsigned int num_points,\n                                       std::vector<Point> & points,\n                                       std::vector<Real> & ids)\n{\n\n  Point difference = end_point - start_point;\n\n  Point delta = difference / Real(num_points - 1);\n\n  points.resize(num_points);\n  ids.resize(num_points);\n\n\n  for (unsigned int i = 0; i < num_points - 1;\n       i++) // -1 so that we can manually put in the end point to get it perfect\n  {\n    Point p = start_point + (i * delta);\n\n    points[i] = p;\n    ids[i] = (p - start_point).norm(); // The ID is the distance along the line \n  }\n\n  // Add the end point explicitly\n  points[num_points - 1] = end_point;\n  ids[num_points - 1] = (end_point - start_point).norm();\n\n}\n\nReal\nNeckLineValueSampler::getValue(const Point & p) const\n{\n  if (_values.size() != 1)\n    mooseError(\"NeckLineValueSampler: When calling getValue() on NeckLineValueSampler, \"\n               \"only one variable can be provided as input to NeckLineValueSampler.\");\n\n  // Check if vectors are sorted by id\n  if (_sort_by != 3)\n    mooseError(\"NeckLineValueSampler: When calling getValue() on NeckLineValueSampler, \"\n               \"`sort_by` should be set to `id`.\");\n\n  Real value = std::numeric_limits<Real>::infinity();\n\n  Real position =\n      (p - _points[0]) * (_points.back() - _points[0]) / Utility::pow<2>(_line_vector_norm);\n\n  if (position >= 0.0 and position <= 1.0)\n  {\n    unsigned int vec_pos =\n        std::lower_bound(_id.begin(), _id.end(), position * _line_vector_norm) - _id.begin();\n\n    if (MooseUtils::absoluteFuzzyEqual(_id[vec_pos], position * _line_vector_norm))\n      value = _vpp_value[vec_pos];\n    else\n    {\n      mooseWarning(\"Value requested outside of sampled points\");\n      value = (_vpp_value[vec_pos - 1] + _vpp_value[vec_pos]) * 0.5;\n    }\n  }\n\nfor (unsigned int i = 0; i < value; ++i)\n  {\n    if (value >= _threshold)\n    { \n      return value; \n    }\n  }",
+          "url": "https://github.com/idaholab/moose/discussions/28818",
+          "updatedAt": "2024-10-11T11:38:31Z",
+          "publishedAt": "2024-10-09T21:54:22Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\n\nAfter compiling the function and finding no errors, the end result is always a .csv with values = num_points (input parameter) and not the desired single value.\n\nThe number of points comes from the points vector. You did not modify it so that list is the same size as it was.\nfor (unsigned int i = 0; i < value; ++i)\n  {\n    if (value >= _threshold)\n    { \n      return value; \n    }\n  } \n\nThis is very curious logic? You go through every integer under value, then check if value is bigger than a certain number?\nWhy do you need the integer loop?",
+                  "url": "https://github.com/idaholab/moose/discussions/28818#discussioncomment-10898968",
+                  "updatedAt": "2024-10-10T02:59:17Z",
+                  "publishedAt": "2024-10-10T02:59:15Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to solve ODEs with spatial variables coupled",
+          "author": {
+            "login": "keassyguang"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nHi everyone,\nI am new to the MOOSE framework, and I am dealing with a set of ODEs with spatial variables. As shown in the example below, x is the spatial position, y is the coordinate in Y direction. m, n, and q are the constants. I want to solve B(x,t) and C(x,t) with given initializations as these two variables will be further used in my material models. I have tried to read the tutorials on the MOOSE website, but I cannot find any relevant examples. Can anyone tell me which Kernels should I use? It will be a great help if someone can show me some examples of how to solve it. Many thanks.\nA(x,t) = A(x,t=0)exp(-y);\ndB(x,t) / dt = mA(x,t)B(x,t) + nB(x,t)C(x,t);\ndC(x,t) / dt = qB(x,t)C(x,t)",
+          "url": "https://github.com/idaholab/moose/discussions/28695",
+          "updatedAt": "2024-10-10T01:59:56Z",
+          "publishedAt": "2024-09-24T12:54:45Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nODEs in moose are solved by:\n\nscalar kernels for a single ODE with a single degree of freedom for the entire mesh\nnodal kernels for ODEs that live on every node of the mesh\nI think you are in the second case here.\nUse\nhttps://mooseframework.inl.gov/source/nodalkernels/TimeDerivativeNodalKernel.html for dB/dt\nthen modify https://mooseframework.inl.gov/source/nodalkernels/CoupledForceNodalKernel.html to create mAB and nBC terms. Right now this kernel only supports something like mA\n\nDo you want to solve for A? It seems like it's entirely predetermined from its initial condition?",
+                  "url": "https://github.com/idaholab/moose/discussions/28695#discussioncomment-10739054",
+                  "updatedAt": "2024-09-24T13:13:12Z",
+                  "publishedAt": "2024-09-24T13:13:11Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "keassyguang"
+                          },
+                          "bodyText": "Hi @GiudGiud,\nThank you for your reply.\nAccording to your suggestions, I have checked the ODE related kernels, such as the ODEKernel, ODETimeKernel, and ODETimeDerivative, however, there is no access to the coordinate options provided by these kernels. In that case, how can I calculate A(x,t)? Since B(x,t) is directly related with A(x,t), and A(x,t) is determined by it initial condition and the y coordinate, I am not sure if I can solve the problem within these ODE kernels.\nI want to solve B(x,t) and C(x,t) with given initializations",
+                          "url": "https://github.com/idaholab/moose/discussions/28695#discussioncomment-10740041",
+                          "updatedAt": "2024-09-24T14:34:04Z",
+                          "publishedAt": "2024-09-24T14:33:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "The ODETimeDerivative only does the dB/dt (and dC/dt) term. They are applied on each node, (x,t) is automatically used.\nyou then use another kernel for each term, for example mA(x,t)B(x,t)\n\nI want to solve B(x,t) and C(x,t) with given initializations\n\ngreat. I would recommend you use an auxiliary 1st order lagrange for A, and work on setting its value using an auxiliary kernel. For example the ParsedAux auxkernel",
+                          "url": "https://github.com/idaholab/moose/discussions/28695#discussioncomment-10740200",
+                          "updatedAt": "2024-09-24T14:47:58Z",
+                          "publishedAt": "2024-09-24T14:47:08Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "keassyguang"
+                          },
+                          "bodyText": "Thank you very much for your further explanation.\nFor A(x,t), do you mean use the AuxKernel? I can have a try later. But I have another question, I see the _coord member variable in AuxKernel.h. How do I index it? Normally for the coordinates of the current quadrature point, we can use y = _q_point left square bracket _qp right square bracket(1), but for the coordinate of a node, should I use y = _coord(1)?",
+                          "url": "https://github.com/idaholab/moose/discussions/28695#discussioncomment-10740416",
+                          "updatedAt": "2024-09-24T15:06:14Z",
+                          "publishedAt": "2024-09-24T15:03:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "should be something like\n_coord_qp for y.\nbut this might be meant for elemental variables, i dont recall\nuse this for nodes\n  (*_current_node)(1)",
+                          "url": "https://github.com/idaholab/moose/discussions/28695#discussioncomment-10740527",
+                          "updatedAt": "2024-09-24T15:11:44Z",
+                          "publishedAt": "2024-09-24T15:11:43Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "keassyguang"
+                          },
+                          "bodyText": "I would recommend you use an auxiliary 1st order lagrange for A, and work on setting its value using an auxiliary kernel. For example the ParsedAux auxkernel\n\nBased on your advice:\nFor A(x,t), I create a class, variable = A, requiredParam = A0\n// A(x,t) = A(x,t=0)exp(-y);\nclass AParsedAux: public ParsedAux\nAParsedAux::computeValue()\n{return A0 * std::exp(-_coord(1));}. // not sure for the index of y coord\nFor right hand side of second equation, I also create a class, variable = B, requiredParam = m, n,  requiredCoupledVar = A, C\n// dB(x,t) / dt = mA(x,t)B(x,t) + nB(x,t)C(x,t);\nclass BParsedAux: public ParsedAux\nBParsedAux::computeValue()\n{return - _m*_A*_u - _n*_u*_C;}\nFor right hand side of third equation, I also create a class, variable = C, requiredParam = q,  requiredCoupledVar = B\n// dC(x,t) / dt = qB(x,t)C(x,t)\nclass CParsedAux: public ParsedAux\nCParsedAux::computeValue()\n{return - _q*_B*_u;}\nFor the left side of the second and third equation, ODETimeDerivative kernel will be used. Can you help me check the above simplified code?",
+                          "url": "https://github.com/idaholab/moose/discussions/28695#discussioncomment-10751873",
+                          "updatedAt": "2024-09-25T13:55:16Z",
+                          "publishedAt": "2024-09-25T13:55:15Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "you cant use ParsedAux for B and C, you need to solve the equation there, so you need to use kernels\nA parsedAux for A makes sense because A is not coupled to other variables",
+                          "url": "https://github.com/idaholab/moose/discussions/28695#discussioncomment-10752249",
+                          "updatedAt": "2024-09-25T14:24:26Z",
+                          "publishedAt": "2024-09-25T14:24:26Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "keassyguang"
+                          },
+                          "bodyText": "Thanks. Should I choose a ODEKernel? For example, ODEKernel, ParsedODEKernel, and so on.\n// dB(x,t) / dt = mA(x,t)B(x,t) + nB(x,t)C(x,t);\nclass BODEKernel: public ODEKernel\nBODEKernel::computeQpResidual()\n{return - _m*_A[_i]_u[_i] - _n_u[_i]_C[_i];}\nBODEKernel::omputeQpJacobian()\n{return - _m_A[_i] - _n*_C[_i];}\n// dC(x,t) / dt = qB(x,t)C(x,t)\nclass CODEKernel: public ODEKernel\nCODEKerne::omputeQpResidual()\n{return - _q*_B[_i]_u[_i];}\nCODEKernel::omputeQpJacobian()\n{return  - _q_B[_i];}",
+                          "url": "https://github.com/idaholab/moose/discussions/28695#discussioncomment-10752563",
+                          "updatedAt": "2024-09-25T14:48:28Z",
+                          "publishedAt": "2024-09-25T14:48:28Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "ODEKernel is only for a single DOFs. It s not for a field, with an ODE at each node",
+                          "url": "https://github.com/idaholab/moose/discussions/28695#discussioncomment-10753200",
+                          "updatedAt": "2024-09-25T15:40:45Z",
+                          "publishedAt": "2024-09-25T15:40:44Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "keassyguang"
+                          },
+                          "bodyText": "Sorry, I am a bit confused with these kernels. Could you recommend a suitable kernel for this problem? It will be better if the ADKernel can be used as the Jacobian is not easy to get under some situations.",
+                          "url": "https://github.com/idaholab/moose/discussions/28695#discussioncomment-10753319",
+                          "updatedAt": "2024-09-25T15:48:25Z",
+                          "publishedAt": "2024-09-25T15:48:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Use an ADNodalKernel then. The nodal kernel i mentioned at the beginning is still the recommended one",
+                          "url": "https://github.com/idaholab/moose/discussions/28695#discussioncomment-10753653",
+                          "updatedAt": "2024-09-25T16:16:26Z",
+                          "publishedAt": "2024-09-25T16:16:25Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Array nodal bcs for eigenproblem",
+          "author": {
+            "login": "xieeeect"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nHello,\nI'm working on a array nodal boundary condition for eigenvalue problems, it describes like: M * U = 0 , M is an n*n matrix, and U is an array variable. However, I didn't find any BCS about it, and when developing a new bcs with 'ArrayNodalBC', I got an error:\n\"Invalid NodalBC for eigenvalue problems, please use homogeneous (array) Dirichlet.\"\nThanks for your time,\nxieeeect",
+          "url": "https://github.com/idaholab/moose/discussions/28455",
+          "updatedAt": "2024-10-10T01:52:55Z",
+          "publishedAt": "2024-08-22T09:32:12Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@YaqiWang I think we have had this conversation before.\nDo you recall the conclusions? What kind of BCs can be used for eigenvalue problems?",
+                  "url": "https://github.com/idaholab/moose/discussions/28455#discussioncomment-10419142",
+                  "updatedAt": "2024-08-22T12:58:05Z",
+                  "publishedAt": "2024-08-22T12:58:04Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "or @lindsayad I think you know exactly what's up  here considering your latest work",
+                          "url": "https://github.com/idaholab/moose/discussions/28455#discussioncomment-10420753",
+                          "updatedAt": "2024-08-22T15:15:28Z",
+                          "publishedAt": "2024-08-22T15:15:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "The short answer is that I do not know the theory well enough to say what BCs can theoretically be used for eigenvalue problems. I can only speak to the implementation which is that we only allow homogeneous BCs in MOOSE.\nFrom the libMesh side we now allow solving eigenproblems with arbitrary constraints in which we condense out the constrained degrees of freedom when performing the eigensolve. We then enforce the constraints post-eigensolve on the requested eigenvector",
+                          "url": "https://github.com/idaholab/moose/discussions/28455#discussioncomment-10896790",
+                          "updatedAt": "2024-10-09T20:13:58Z",
+                          "publishedAt": "2024-10-09T20:13:44Z",
+                          "isAnswer": true
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xieeeect"
+                          },
+                          "bodyText": "Thanks for the answer, I have a general understanding of the rules for handling BCs for eigenvalue problems, and next I will study the idea you said.  : )",
+                          "url": "https://github.com/idaholab/moose/discussions/28455#discussioncomment-10898572",
+                          "updatedAt": "2024-10-10T01:52:55Z",
+                          "publishedAt": "2024-10-10T01:52:55Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Accessing global stiffness and mass matrix for debugging",
+          "author": {
+            "login": "adhithya96"
+          },
+          "bodyText": "Is there a way to access the global jacobian or stiffness matrix and mass matrix in MOOSE ? I am trying to solve eigenvalue problem and I am not getting the results as expected.",
+          "url": "https://github.com/idaholab/moose/discussions/27407",
+          "updatedAt": "2024-10-09T20:02:01Z",
+          "publishedAt": "2024-04-18T11:54:17Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "hello\nyou can print it with -ksp_view_pmat in the petsc options or on the command line\nyou can also output to a matlab readable format iirc\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/27407#discussioncomment-9154275",
+                  "updatedAt": "2024-04-18T12:07:03Z",
+                  "publishedAt": "2024-04-18T12:06:44Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "adhithya96"
+                          },
+                          "bodyText": "Thanks for the input. I checked petsc manual and found the solution. Adding  -mat_view ::ascii_matlab. in command line while running the executable works. -mat_view :filename.m:ascii_matlab. prints the data into a matlab file.\nI was going through the source files of MOOSE to see where I can use std::cout for a few hours",
+                          "url": "https://github.com/idaholab/moose/discussions/27407#discussioncomment-9154768",
+                          "updatedAt": "2024-04-18T12:52:53Z",
+                          "publishedAt": "2024-04-18T12:52:52Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "adhithya96"
+                          },
+                          "bodyText": "Is there anyway I can see how the global stiffness matrix  is solved  from the source code file ? Or  are the calls being made to slepc and slepc solves the problem ?",
+                          "url": "https://github.com/idaholab/moose/discussions/27407#discussioncomment-9154883",
+                          "updatedAt": "2024-04-18T13:04:39Z",
+                          "publishedAt": "2024-04-18T13:04:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Back to your first question, I should know about how to print mass matrix but I dont\n@lindsayad if you have time to teach us\nYou can use the Debug/show_execution_order flag to see a little bit of how the Jacobian is assembled.\nOtherwise you need to dig into the code\nSLEPc definitely solves eigenvalue problems, with callbacks to moose to compute various quantities like the residual and the Jacobian\nAre eigenvalue problems what you are doing?",
+                          "url": "https://github.com/idaholab/moose/discussions/27407#discussioncomment-9156502",
+                          "updatedAt": "2024-04-18T15:26:15Z",
+                          "publishedAt": "2024-04-18T15:23:52Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "In almost all MOOSE simulations only a single matrix is formed for solving the linear problem at each Newton iteration: $J \\delta u = -R$ where $J$ is the Jacobian, $\\delta u$ is the (candidate) solution update, and $R$ is the residual. We do not separate a mass matrix or stiffness matrix. There are ways you can create those matrices, but before we talk about how to do that, it's probably worthwhile to learn more about what your problem is.\nMost people doing eigenvalue calculations in MOOSE do some free power iterations to generate a good initial guess and then do a Newton solve to get the fundamental mode. Is this what you're doing? In such a case, when solving the generalized eigenvalue problem $(Ax) = \\lambda (Bx)$, MOOSE provides function evaluations for $Ax$ and $Bx$ and then preconditioning is usually done only with some approximation of $A$ so again only a single matrix data structure is formed",
+                          "url": "https://github.com/idaholab/moose/discussions/27407#discussioncomment-9157476",
+                          "updatedAt": "2024-04-18T16:48:37Z",
+                          "publishedAt": "2024-04-18T16:48:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "adhithya96"
+                          },
+                          "bodyText": "@lindsayad\nYes. I am solving eigenvalue problem. I am evaluating the stiffness matrix using MatDiffusion and  mass matrix using CoefReaction. I have been trying to implement the bloch type periodic boundary condition. Trying to print matrices  to see if I can figure out where I am going wrong.",
+                          "url": "https://github.com/idaholab/moose/discussions/27407#discussioncomment-9162150",
+                          "updatedAt": "2024-04-19T05:07:10Z",
+                          "publishedAt": "2024-04-19T05:07:09Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "periodic boundary conditions introduce constraints that the current eigen classes in MOOSE have problems solving. In order to correctly solve problems with constraints, we have libMesh/libmesh#3821 and #27276 in progress",
+                          "url": "https://github.com/idaholab/moose/discussions/27407#discussioncomment-9169053",
+                          "updatedAt": "2024-04-19T17:04:03Z",
+                          "publishedAt": "2024-04-19T17:04:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "alimostafavi24"
+                          },
+                          "bodyText": "In almost all MOOSE simulations only a single matrix is formed for solving the linear problem at each Newton iteration: J \u03b4 u = \u2212 R where J is the Jacobian, \u03b4 u is the (candidate) solution update, and R is the residual. We do not separate a mass matrix or stiffness matrix. There are ways you can create those matrices, but before we talk about how to do that, it's probably worthwhile to learn more about what your problem is.\nMost people doing eigenvalue calculations in MOOSE do some free power iterations to generate a good initial guess and then do a Newton solve to get the fundamental mode. Is this what you're doing? In such a case, when solving the generalized eigenvalue problem ( A x ) = \u03bb ( B x ) , MOOSE provides function evaluations for A x and B x and then preconditioning is usually done only with some approximation of A so again only a single matrix data structure is formed\n\nDoes -mat_view return the sum of the mass and stiffness matrices? What would be the way to obtain them separately?",
+                          "url": "https://github.com/idaholab/moose/discussions/27407#discussioncomment-10698558",
+                          "updatedAt": "2024-09-19T23:09:27Z",
+                          "publishedAt": "2024-09-19T23:09:27Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "It will return the sum. You could explore the tagging system if you want to separate out contributions to the system matrix",
+                          "url": "https://github.com/idaholab/moose/discussions/27407#discussioncomment-10896692",
+                          "updatedAt": "2024-10-09T20:02:02Z",
+                          "publishedAt": "2024-10-09T20:02:01Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to Solve a 4th-Order Partial Differential Equation in MOOSE",
+          "author": {
+            "login": "zzzmx-josh"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nHi MOOSE team and community,\nI am trying to solve a 4th-order partial differential equation of the form:\n\nwith periodic boundary conditions for \ud835\udc62. I would like to ask if there is a straightforward way to solve such an equation in MOOSE? I understand that typically, this kind of high-order equation might be challenging to solve directly. Is the only viable approach to introduce intermediate variables and reduce the system into lower-order equations (for example, by introducing new variables for the second derivatives)?\nAny guidance or suggestions on how to implement this in MOOSE would be greatly appreciated!\nThank you!",
+          "url": "https://github.com/idaholab/moose/discussions/28788",
+          "updatedAt": "2024-10-09T01:15:10Z",
+          "publishedAt": "2024-10-06T16:54:36Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nI can't think of a direct way here\n\nIs the only viable approach to introduce intermediate variables and reduce the system into lower-order equations (for example, by introducing new variables for the second derivatives)?\n\nthis should work. We have coupledSecond in the coupleable API to let you represent these terms.\nstart with a second order mesh (Mesh/second_order = true) and have at least 2nd order variables for the intermediate variable(s)",
+                  "url": "https://github.com/idaholab/moose/discussions/28788#discussioncomment-10859901",
+                  "updatedAt": "2024-10-06T17:34:10Z",
+                  "publishedAt": "2024-10-06T17:34:09Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "zzzmx-josh"
+                          },
+                          "bodyText": "Thank you for the guidance! But I\u2019m still not sure how coupledSecond works. Do I need to write a new Kernel to introduce intermediate variables? Or could you please provide a simple example of setting up the intermediate variables and Kernels in MOOSE?\nThanks for your help!",
+                          "url": "https://github.com/idaholab/moose/discussions/28788#discussioncomment-10862226",
+                          "updatedAt": "2024-10-07T02:28:16Z",
+                          "publishedAt": "2024-10-07T02:28:14Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "You ll want to solve a system with additional variables for the second order derivatives\n[Variables]\n  [u]\n    order = SECOND\n  []\n  [d2udx2]\n    order = SECOND\n  []\n  [d2udy2]\n    order = SECOND\n  []\n  [d2udz2]\n    order = SECOND\n  []\n[]\n\nthen make new kernels for using coupledSecond (I didnt find any that fits)\nYou ll need kernels for four equations.\nd2udx2 = u_xx (if you know what I mean, one is the variable, the other is from coupledSecond)\nd2udy2 = u_yy\nd2udz2 = u_zz\nd2udx2_xx + d2udy2_yy + d2udz2_zz = f\n\nso 10 kernels, with at least one new one to make for the double derivative operation (add a component parameter to avoid having to make 3)",
+                          "url": "https://github.com/idaholab/moose/discussions/28788#discussioncomment-10862305",
+                          "updatedAt": "2024-10-07T02:50:19Z",
+                          "publishedAt": "2024-10-07T02:50:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "zzzmx-josh"
+                          },
+                          "bodyText": "I have two follow-up questions regarding the previous response:\n\n\nWhen solving the first three equations (e.g., d2udx2=u_xx), should I use coupledGradient(\"u\") * grad_test to represent u_xx, or can I directly use coupledSecond(\"u\")  in computeQpResidual?\n\n\nFor the equation  d2udx2_xx + d2udy2_yy + d2udz2_zz = f, how do I solve for the three variables? Since each Kernel in MOOSE can only act on one variable, do I need to solve this equation three separate times for d2udx2, d2udy2, and d2udz2?\nIn that case, why are 10 Kernels needed as mentioned earlier?\n\n\nThank you for your help!",
+                          "url": "https://github.com/idaholab/moose/discussions/28788#discussioncomment-10862459",
+                          "updatedAt": "2024-10-07T03:29:16Z",
+                          "publishedAt": "2024-10-07T03:29:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "you should use \"coupledSecond(\"u\")\" in the constructor's initializer's list to initialize a reference to this value, rather than use it in computeQpResidual\nplease see how coupledValue is used in the coupledForce kernel for example\nyou do not need grad_test\n\nhow do I solve for the three variables\n\nthe \"variable\" parameter of the kernel is first and foremost the equation number. You can have variables in that equation that are coupled in. I would expect this syntax for this last equation\n[Kernels]\n  [d4udx4]\n    type = SecondDerivative\n    variable = u\n    variable_to_take_the_derivative_of = d2udx2\n    component = 'x'\n   []\n  [d4udy4]\n    type = SecondDerivative\n    variable = u\n    variable_to_take_the_derivative_of = d2udy2\n    component = 'y'\n   []\n  [d4udz4]\n    type = SecondDerivative\n    variable = u\n    variable_to_take_the_derivative_of = d2udz2\n    component = 'z'\n   []\n   [f]\n    type = BodyForce\n    variable = u \n    function = f\n  []\n[]\n\nI m picking 'u' as the variable for that equation but that might not be the better choice, since u does not appear in it so there will be 0 on the diagonal of the Jacobian and it will struggle for the inversion",
+                          "url": "https://github.com/idaholab/moose/discussions/28788#discussioncomment-10862615",
+                          "updatedAt": "2024-10-07T04:19:24Z",
+                          "publishedAt": "2024-10-07T04:06:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "zzzmx-josh"
+                          },
+                          "bodyText": "it's a little weird for me to understand that in the equation d2udx2_xx + d2udy2_yy + d2udz2_zz = f, there is no variable u, but can this equation still be used to solve for u?\nI would like to know if my implementation of SecondDerivative is correct according to my understanding:\nReal SecondDerivative::SecondDerivative(const InputParameters &parameters)\n    : Kernel(parameters),\n      _v(coupledValue(\"variable_to_take_the_derivative_of\")),\n      _grad_v(coupledGradient(\"variable_to_take_the_derivative_of\")),\n      _component(getParam<unsigned int>(\"component\")),\n      _ii(_component)\n{\n}\n\nReal SecondDerivative::computeQpResidual()\n{\n  return -_grad_v[_qp](_ii) * _grad_test[_i][_qp](_ii);\n}\n\nReal SecondDerivative::computeQpJacobian()\n{\n}",
+                          "url": "https://github.com/idaholab/moose/discussions/28788#discussioncomment-10863243",
+                          "updatedAt": "2024-10-07T05:53:48Z",
+                          "publishedAt": "2024-10-07T05:53:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "it's a little weird for me to understand that in the equation d2udx2_xx + d2udy2_yy + d2udz2_zz = f, there is no variable u, but can this equation still be used to solve for u?\n\nIt still works because all the equations are solved together. If you dont like that choice, you can use d2udx2 as the variable for that equation\n\nI would like to know if my implementation of SecondDerivative is correct according to my understanding:\n\nIt's not, it does not compile.\nTry starting from this, which uses automatic differentiation for simplicity\nSecondDerivative::SecondDerivative(const InputParameters &parameters)\n    : ADKernel(parameters),\n      _grad_v(adCoupledGradient(\"variable_to_take_the_derivative_of\")),\n      _component(getParam<unsigned int>(\"component\"))\n{\n}\n\nADReal SecondDerivative::computeQpResidual()\n{\n  return -_grad_v[_qp](_ii) * _grad_test[_i][_qp](_ii);\n}",
+                          "url": "https://github.com/idaholab/moose/discussions/28788#discussioncomment-10866939",
+                          "updatedAt": "2024-10-07T12:20:28Z",
+                          "publishedAt": "2024-10-07T12:20:26Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "zzzmx-josh"
+                          },
+                          "bodyText": "Thank you for your previous response.\nBased on the previous replies, I wrote two kernels, which are as follows:\nD2udi2Uii.h\n#ifndef D2udi2Uii_H\n#define D2udi2Uii_H\n\n#include \"Kernel.h\"\n\nclass D2udi2Uii : public Kernel\n{\npublic:\n  D2udi2Uii(const InputParameters & parameters);\n  static InputParameters validParams();\n\nprotected:\n\n  virtual Real computeQpResidual() override;\n  virtual Real computeQpJacobian() override;\n\nprivate:\n  // The component (0: x, 1: y, 2: z) to apply this kernel to\n  const unsigned int _ii;\n\n  // Reference to the second derivative (or gradient coupling) of variable 'w'\n  const VariableSecond & _second_grad_couple_w;\n};\n\n#endif\n\nD2udi2Uii.C\n#include \"D2udi2Uii.h\"\n\n// Register the kernel with the application\nregisterMooseObject(\"babblerApp\", D2udi2Uii);\n\n// Method to define valid input parameters for this kernel\nInputParameters\nD2udi2Uii::validParams()\n{\n  InputParameters params = Kernel::validParams();\n  \n  // Add a description for this kernel\n  params.addClassDescription(\"Split formulation D2udi2Uii for polar component Kernel\");\n\n  // Add required parameter to specify which component (x, y, z) this kernel applies to\n  params.addRequiredParam<unsigned int>(\"component\", \"The component (0: x, 1: y, 2: z) to apply this kernel to.\");\n  params.addRequiredCoupledVar(\"w\", \"e.g., vx\");\n\n  return params;\n}\n\n// Constructor for D2udi2Uii\nD2udi2Uii::D2udi2Uii(const InputParameters & parameters)\n  : Kernel(parameters),\n    _ii(getParam<unsigned int>(\"component\")),  // Get the component (x, y, z)\n    _second_grad_couple_w(coupledSecond(\"w\"))  // Get second derivative of coupled variable 'w'\n{\n}\n\nReal\nD2udi2Uii::computeQpResidual()\n{\n  Real residual = (_u[_qp] - _second_grad_couple_w[_qp](_ii, _ii)) * _test[_i][_qp];\n  return residual;\n}\n\n// Method to compute the Jacobian at a quadrature point\nReal\nD2udi2Uii::computeQpJacobian()\n{\n  Real jacobian = _phi[_j][_qp] * _test[_i][_qp];\n  \n  return jacobian;\n}\n\n\nSecondDerivative.h\n#pragma once\n\n#include \"ADKernel.h\"\n\n/// Class for computing the second derivative kernel\nclass SecondDerivative : public ADKernel\n{\npublic:\n  // Method to define valid input parameters for this kernel\n  static InputParameters validParams();\n\n  SecondDerivative(const InputParameters & parameters);\n\nprotected:\n\n  virtual ADReal computeQpResidual() override;\n  virtual Real computeQpJacobian() override;\n\nprivate:\n  // Index for variable component (e.g., 0: x, 1: y, etc.)\n  const unsigned int _ii;\n\n  // Gradient of the coupled variable 'v'\n  const VariableGradient & _grad_v;\n};\n\nSecondDerivative.C\n#include \"SecondDerivative.h\"\n\n// Register the SecondDerivative kernel with the application\nregisterMooseObject(\"babblerApp\", SecondDerivative);\n\n// Method to define valid input parameters for this ADKernel\nInputParameters SecondDerivative::validParams()\n{\n  // Initialize parameters from the base ADKernel\n  InputParameters params = ADKernel::validParams();\n\n  // Add a required parameter to specify which component (x, y, z) this kernel applies to\n  params.addRequiredParam<unsigned int>(\"component\", \"The component (0: x, 1: y, 2: z) to apply this ADKernel to.\");\n\n  params.addRequiredCoupledVar(\"variable_to_take_the_derivative_of\", \"The coupled velocity variable v.\");\n\n  return params;\n}\n\n// Constructor for SecondDerivative\nSecondDerivative::SecondDerivative(const InputParameters &parameters)\n    : ADKernel(parameters),\n      _ii(getParam<unsigned int>(\"component\")),   // Get the specified component (x, y, or z)\n      _grad_v(coupledGradient(\"variable_to_take_the_derivative_of\")) // Get the gradient of the coupled velocity variable\n{\n}\n\n// Method to compute the residual at a quadrature point\nADReal SecondDerivative::computeQpResidual()\n{\n  return -_grad_v[_qp](_ii) * _grad_test[_i][_qp](_ii);\n}\n\nReal SecondDerivative::computeQpJacobian()\n{\n  return 0;\n}\n\nAnd the corresponding input file:\n[Mesh]\n  type = GeneratedMesh\n  dim = 2\n  nx = 20\n  ny = 20\n  nz = 2\n  xmin = -20\n  xmax = 20\n  ymin = -20\n  ymax = 20\n  zmin = -1\n  zmax = 1\n  second_order = true\n  # elem_type = HEX8\n[]\n[Variables]\n  [u]\n    order = SECOND\n  []\n  [d2udx2]\n    order = SECOND\n  []\n  [d2udy2]\n    order = SECOND\n  []\n  [d2udz2]\n    order = SECOND\n  []\n[]\n[Kernels]\n  [u_xx]\n    type = D2udi2Uii\n    variable = d2udx2\n    w = u\n    component = 0\n  []\n  [u_yy]\n    type = D2udi2Uii\n    variable = d2udy2\n    w = u\n    component = 1\n  []\n  [u_zz]\n    type = D2udi2Uii\n    variable = d2udz2\n    w = u\n    component = 2\n  []\n  [d4udx4]\n    type = SecondDerivative\n    variable = u\n    variable_to_take_the_derivative_of = d2udx2\n    component = 0\n   []\n  [d4udy4]\n    type = SecondDerivative\n    variable = u\n    variable_to_take_the_derivative_of = d2udy2\n    component = 1\n   []\n  [d4udz4]\n    type = SecondDerivative\n    variable = u\n    variable_to_take_the_derivative_of = d2udz2\n    component = 2\n   []\n   [f]\n    type = BodyForce\n    variable = u \n    function = f\n  []\n[]\n\nIt looks like there might still be some issues in the code. Could you please help me identify and resolve them?\nYour expertise would be greatly appreciated!",
+                          "url": "https://github.com/idaholab/moose/discussions/28788#discussioncomment-10880137",
+                          "updatedAt": "2024-10-08T13:18:11Z",
+                          "publishedAt": "2024-10-08T13:18:09Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "For ADkernels you do not need to add the computeQpJacobian routine",
+                          "url": "https://github.com/idaholab/moose/discussions/28788#discussioncomment-10880953",
+                          "updatedAt": "2024-10-08T14:18:13Z",
+                          "publishedAt": "2024-10-08T14:18:12Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "zzzmx-josh"
+                          },
+                          "bodyText": "Thanks!  I will remove the computeQpJacobian function from the ADKernel.\nAside from that, is everything else okay?",
+                          "url": "https://github.com/idaholab/moose/discussions/28788#discussioncomment-10881158",
+                          "updatedAt": "2024-10-08T14:34:37Z",
+                          "publishedAt": "2024-10-08T14:34:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Are you sure about taking the component in second derivative?\nNow that you use these intermediate variable then do an integration by parts, you should see something like:\n  return _grad_d2udx2[_qp] * _grad_test[_i][_qp];",
+                          "url": "https://github.com/idaholab/moose/discussions/28788#discussioncomment-10881433",
+                          "updatedAt": "2024-10-08T14:56:54Z",
+                          "publishedAt": "2024-10-08T14:56:54Z",
+                          "isAnswer": true
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Thermal expansion to a plastic material",
+          "author": {
+            "login": "haqfariha"
+          },
+          "bodyText": "I am using two blocks of material and applying crystal plasticity to both. I have applied a thermal expansion rate of 15% to the IMC block. The code is running however, IMC is not expanding, so any stresses or strains are not developing. Everything is 0.\n[Mesh]\n    type = FileMesh\n    file = 2phase_2D.msh\n[]\n\n[GlobalParams]\n  displacements = 'disp_x disp_y'\n[]\n\n[Variables]\n  [disp_x]\n  []\n  [disp_y]\n  []\n[]\n\n[AuxVariables] \n  [temp]\n    family = LAGRANGE\n    order = FIRST\n  []\n[]\n\n[Functions]\n  [./temperature_load]\n    type = ParsedFunction\n    value = 0.1*t  \n  [../]\n[]\n\n[AuxKernels]  \n  [./temp_aux]\n    type = FunctionAux\n    variable = temp\n    function = temperature_load \n    block = 'IMC'  \n  [../]\n[]\n\n[BCs]\n  [./x_disp]\n    type = FunctionDirichletBC\n    variable = disp_x\n    boundary = 'Left Right'\n    function = 0.0\n  [../]\n\n  [./y_anchor]\n    type = DirichletBC\n    variable = disp_y\n    boundary = 'Bottom Top'\n    value = 0.0\n  [../]\n[]\n\n[Materials]\n  [./elastic_tensor1]\n    type = ComputeElasticityTensorCP\n    C_ijkl = '72300 59400 35800 72300 35800 88400 22000 22000 24000'\n    fill_method = symmetric9\n    block = 'Sn'\n  [../]\n\n  [./stress1]\n    type = ComputeMultipleCrystalPlasticityRotation\n    crystal_plasticity_models = 'trial_xtalpl'\n    tan_mod_type = exact\n    block = 'Sn'\n  [../]\n\n  [./trial_xtalpl]\n    type = CrystalPlasticityKalidindiUpdate\n    number_slip_systems = 32\n    slip_sys_file_name = slip_sys_tin.txt\n    ao = 2.5e-4\n    gss_a = 2\n    r = 1.4\n    h = 80\n    gss_initial = 23\n    t_sat = 30\n    crystal_lattice_type = BCC\n    unit_cell_dimension = '0.583 0.583 0.318'\n    xm = 0.4\n    block = 'Sn'\n  [../]\n\n  [./elastic_tensor2]\n    type = ComputeElasticityTensorCP\n    C_ijkl = '97300 59400 55800 97300 55800 118400 35000 35000 38000'\n    fill_method = symmetric9\n    block = 'IMC'\n  [../]\n\n  [./stress2]\n    type = ComputeMultipleCrystalPlasticityRotation\n    crystal_plasticity_models = 'trial_xtalpl1'\n    tan_mod_type = exact\n    block = 'IMC'\n  [../]\n\n    [./trial_xtalpl1]\n    type = CrystalPlasticityKalidindiUpdate\n    number_slip_systems = 32\n    slip_sys_file_name = slip_sys_tin.txt\n    ao = 0  \n    gss_a = 2 \n    r = 1.4\n    h = 120  \n    gss_initial = 28  \n    t_sat = 30\n    xm = 0.4\n    block = 'IMC'\n  [../]\n\n  [./volumExp_strainIMC]\n    type = ComputeThermalExpansionEigenstrain\n    temperature = temp\n    thermal_expansion_coeff = 0.15\n    stress_free_temperature = 0.0\n    eigenstrain_name = eigenstrain1\n    block = 'IMC'\n  [../]\n[]\n\n[Modules/TensorMechanics/Master]\n    strain = Finite\n    displacements = 'disp_x disp_y'\n    add_variables = true\n    planar_formulation = PLANE_STRAIN\n    generate_output = 'stress_xx stress_xy stress_yy strain_xx strain_xy strain_yy vonmises_stress hydrostatic_stress'\n    [./block1]\n      block = 'IMC'\n      eigenstrain_names = 'eigenstrain1'\n      temperature = temp \n    [../]\n    [./block2]\n      block = 'Sn'\n    [../]  \n[]\n\n[Preconditioning]\n  [./SMP]\n    type = SMP\n    full = true\n  [../]\n[]\n\n[Executioner]\n  type = Transient\n  solve_type = 'PJFNK'\n  petsc_options_iname = '-pc_type -pc_hypre_type -ksp_gmres_restart -pc_hypre_boomeramg_strong_threshold'\n  petsc_options_value = 'hypre boomeramg 3100 0.7'\n  nl_rel_tol = 1e-6\n  start_time = 0.0\n  num_steps = 10000\n  dt = 0.1\n[]\n\n[Outputs]\n  exodus = true\n  checkpoint = true\n  interval = 50\n[]\n\n[Debug]\n  show_var_residual_norms = true\n[]\n\n\nHowever, when I applied the elasticity model to the IMC, I got proper stress-strain values.\n[./elastic_tensor2]\n    type = ComputeIsotropicElasticityTensor\n    poissons_ratio = 0.31\n    youngs_modulus = 97000\n    block = 'IMC'\n  [../]\n [./stress2]\n    type = ComputeFiniteStrainElasticStress\n    block = 'IMC'\n  [../]\n  [./volumExp_strainIMC]\n    type = ComputeThermalExpansionEigenstrain\n    temperature = temp\n    thermal_expansion_coeff = 0.15\n    stress_free_temperature = 0.0\n    eigenstrain_name = eigenstrain1\n    block = 'IMC'\n  [../]\n\nBut I need to update the model to plasticity. I have also tried \"ComputeCrystalPlasticityThermalEigenstrain\", the same thing! Am I missing something when I am trying to incorporate expansion with plasticity? Nothing happens.\n[thermal_eigenstrain_1]\n    type = ComputeCrystalPlasticityThermalEigenstrain\n    eigenstrain_name = thermal_eigenstrain_1\n    deformation_gradient_name = thermal_deformation_gradient_1\n    temperature = temp  \n    thermal_expansion_coefficients = '0.15 0.15 0.15'  \n    block = 'IMC'\n  [../]\n[]\n\n[Modules/TensorMechanics/Master]\n    strain = Finite\n    displacements = 'disp_x disp_y'\n    add_variables = true\n    planar_formulation = PLANE_STRAIN\n    generate_output = 'stress_xx stress_xy stress_yy strain_xx strain_xy strain_yy vonmises_stress hydrostatic_stress'\n    [./block1]\n      block = 'IMC'\n      eigenstrain_names = 'thermal_eigenstrain_1'\n      temperature = temp \n    [../]\n    [./block2]\n      block = 'Sn'\n    [../]  \n[]",
+          "url": "https://github.com/idaholab/moose/discussions/28776",
+          "updatedAt": "2024-10-08T22:03:02Z",
+          "publishedAt": "2024-10-04T18:19:46Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "sapitts"
+                  },
+                  "bodyText": "Hi @haqfariha,\nIn general, use the ComputeCrystalPlasticityThermalEigenstrain class, and \"tell\" the ComputeMultipleCrystalPlasticityStress class about the eigenstrain with the parameter eigenstrain_names; see the example at the bottom of the documentation page here: https://mooseframework.inl.gov/source/materials/crystal_plasticity/ComputeCrystalPlasticityThermalEigenstrain.html\nNote that your input file is missing the ComputeMultipleCrystalPlasticityStress crystal plasticity specific stress calculator class. If the class ComputeMultipleCrystalPlasticityStressRotation is your own constitutive class that you wrote based on ComputeMultipleCrystalPlasticityStress, you will need to make sure that it can accommodate the eigenstrain.\nFinally, I am not aware of testing with the crystal plasticity models using the plane strain assumption. I would urge caution when using this option and would recommend using the 3D strain formulation",
+                  "url": "https://github.com/idaholab/moose/discussions/28776#discussioncomment-10885645",
+                  "updatedAt": "2024-10-08T22:03:03Z",
+                  "publishedAt": "2024-10-08T22:03:02Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Error : \"The variable must be elemental\" for ForcingFunctionAux AuxKernel - With a digression into Functors",
+          "author": {
+            "login": "EdSheltonUKAEA"
+          },
+          "bodyText": "I've been running into some errors trying to use a combination of Variables, AuxVariables and Materials.  I know not all these things can talk to each other, or use each other as inputs.\nI thought I had found a work around, but my current stumbling block is in an AuxKernel with type ForcingFunctionAux. The error message is \"The variable must be elemental\".\nI assume this means the AuxVariable I'm using is nodal, but there doesn't seem to be any mention of the elemental variable requirement in the page for the AuxKernel:\nhttps://mooseframework.inl.gov/source/auxkernels/ForcingFunctionAux.html\nIs there a way to define whether an AuxVariable is nodal or elemental?  I can't see anything obvious here:\n\u2060https://mooseframework.inl.gov/source/variables/AuxVariable.html\nI have created the AuxVariable with default settings.  If it defaults to nodal, is it odd that an AuxKernel wants an elemental variable?\nIs there a way to make sure my AuxVariable is elemental for the ForcingFunctionAux, but can still work as a nodal variable where this is needed in for other functions or calculations?",
+          "url": "https://github.com/idaholab/moose/discussions/28627",
+          "updatedAt": "2024-10-08T15:21:31Z",
+          "publishedAt": "2024-09-16T09:02:12Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "EdSheltonUKAEA"
+                  },
+                  "bodyText": "I've  got an initial answer to this from a colleague.  By setting the AuxVariable to have parameters:\norder = CONSTANT\nfamily = MONOMIAL\nI have made it elemental.  And by changing a few other things I now have a model which is running, but not converging.  This is likely to be because of some other problem.",
+                  "url": "https://github.com/idaholab/moose/discussions/28627#discussioncomment-10659042",
+                  "updatedAt": "2024-09-16T12:19:22Z",
+                  "publishedAt": "2024-09-16T12:19:03Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "A nodal variable is defined with the dofs at the nodals, for example a lagrange family variable.\nAn elemental variable would tentatively be a variable where all the dofs are inside the element.\nThe pickle is that there are many variable types which have nodal dofs, side dofs and elemental dofs, so the nodal/elemental distinction is not quite enough.\nI m not sure why ForcingFunctionAux is elemental-only. I ll take a look",
+                          "url": "https://github.com/idaholab/moose/discussions/28627#discussioncomment-10659437",
+                          "updatedAt": "2024-09-16T12:59:18Z",
+                          "publishedAt": "2024-09-16T12:59:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "so there is nothing \"elemental\"-only about it, if only that it's been implemented for working on qps\n  return _u_old[_qp] + _dt * _func.value(_t, _q_point[_qp]);\n\nfor nodals we would want something like below for the function\n_func.value(_t, *_current_node);",
+                          "url": "https://github.com/idaholab/moose/discussions/28627#discussioncomment-10659502",
+                          "updatedAt": "2024-09-16T13:03:44Z",
+                          "publishedAt": "2024-09-16T13:03:43Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "EdSheltonUKAEA"
+                          },
+                          "bodyText": "Thanks for the comments on this.  I'm not sure if the second one means that ForcingFunctionAux should work with Lagrangian AuxVariables.  But even if it \"should\", for whatever reason in my model if I allow the AuxVariable family to default to LAGRANGE I get the \"must be elemental\" error when I try to run it.\nIf I'm stuck with using a MONOMIAL AuxVariable, is there a way of converting this into another AuxVariable which is LAGRANGE and so outputs nodal values?\nOr perhaps I can achieve what I want another way.  I'm using ForcingFunctionAux to obtain the value of the AuxVariable at the end of the previous timestep (i.e. start of the current time step) by setting the function, f, to zero, i.e.  V(t+\u0394t)=V(t)+f\u0394t = V(t) .\nI expect there is a simpler or more elegant way of getting the value at the start of the current timestep of an AuxVariable (or a MaterialProperty might work) at every node.  But looking through the Source Documentation page I haven't found one yet.  I don't think I can use a Postprocessor for this, as I need this value at every node to be available for calculations within the solve.  Postprocessors giving average, integral or extreme values over a domain won't give me what I want.\nIs there a way of calling the value at the start of the current time step of an AuxVariable of any type?",
+                          "url": "https://github.com/idaholab/moose/discussions/28627#discussioncomment-10690614",
+                          "updatedAt": "2024-09-19T08:31:02Z",
+                          "publishedAt": "2024-09-19T08:31:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "But even if it \"should\", for whatever reason in my model if I allow the AuxVariable family to default to LAGRANGE I get the \"must be elemental\" error when I try to run it.\n\nError is good, it is not currently implemented for nodal variables. I can take a look at making it work for nodal variables if you want.\n\nIf I'm stuck with using a MONOMIAL AuxVariable, is there a way of converting this into another AuxVariable which is LAGRANGE and so outputs nodal values?\n\nThere is the ProjectionAux to go from elemental to nodal variables. This will incur some projection error of course.\n\nIs there a way of calling the value at the start of the current time step of an AuxVariable of any type?\n\nIf you execute (execute_on parameter) the auxkernel that sets that variable on timestep_begin only, it will retrain the value at the start of the time step",
+                          "url": "https://github.com/idaholab/moose/discussions/28627#discussioncomment-10692318",
+                          "updatedAt": "2024-09-19T11:17:18Z",
+                          "publishedAt": "2024-09-19T11:17:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "EdSheltonUKAEA"
+                          },
+                          "bodyText": "Thank you.  This is really helpful and gives me some other options to try.  So I probably don't need the ForcingFunctionAux in a nodal version right now.",
+                          "url": "https://github.com/idaholab/moose/discussions/28627#discussioncomment-10692697",
+                          "updatedAt": "2024-09-19T11:53:47Z",
+                          "publishedAt": "2024-09-19T11:53:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "EdSheltonUKAEA"
+                          },
+                          "bodyText": "Using execute_on = timestep_begin looks like it should let me do what I want much more elegantly that using ForcingFunctionAux.  But there doesn't seem to be an execute_on parameter for Material properties.  So ideally I need to convert a material property into a nodal AuxVariable.  However, it looks like this isn't currently possible where is says here: https://mooseframework.inl.gov/source/auxkernels/ParsedAux.html\n\"Material properties are currently not supported, but it would be really easy to add it so feel free to contact us.\"\nThis could be really helpful!  How easy and quick could it be to implement this?  Days? Hours?\nAltenatively, I'm looking at the newer(?) concept of Functors, where it looks like Material Properties, AuxVariables and Functions all become more interchangeable as nodal parameters.  What is the first step to either defining a Material property as a Functor or making a copy of a conventional Material property as a Functor?  As I read it, a FunctorMaterial can use as inputs existing FunctorMaterials, but not non-Functors, so I always seem to be one step away from converting my conventional Materials into a Functor then to use with AuxVariables.",
+                          "url": "https://github.com/idaholab/moose/discussions/28627#discussioncomment-10702194",
+                          "updatedAt": "2024-09-20T08:53:51Z",
+                          "publishedAt": "2024-09-20T08:30:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "EdSheltonUKAEA"
+                          },
+                          "bodyText": "I've just found this: https://mooseframework.inl.gov/source/materials/MaterialFunctorConverter.html\n\"This Material handles the conversion from functor material properties to regular material properties. Unfortunately, the conversion in the other direction, from regular material properties to functors, is not implemented and would be quite challenging notably because of the need to handle complex material property dependency resolution.\"  [My bold.]\nThis seems to answer my second question.  So it looks like being able to include MatProps in a ParsedAux is my best option.",
+                          "url": "https://github.com/idaholab/moose/discussions/28627#discussioncomment-10702432",
+                          "updatedAt": "2024-09-20T08:54:37Z",
+                          "publishedAt": "2024-09-20T08:54:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "EdSheltonUKAEA"
+                          },
+                          "bodyText": "As I read more about Functors and FunctorMaterials, I'm wondering if for the calculations I want to do, using FunctorMaterials might in fact be a better option.  Many of the \"Materials properties\" I'm using during each time step solve are just temporary parameters used in calculation, not something that needs to be output or plotted, or even saved into the next time step.  As it describes FunctorMaterials as being calculated \"on the fly\", does this mean using them in calculations like this should be less demanding on memory and make a solve faster?",
+                          "url": "https://github.com/idaholab/moose/discussions/28627#discussioncomment-10704203",
+                          "updatedAt": "2024-09-20T11:31:41Z",
+                          "publishedAt": "2024-09-20T11:31:40Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "So ideally I need to convert a material property into a nodal AuxVariable\n\nKeep in mind there are no nodal material properties. You can convert to an elemental variable using a MaterialRealAux\n\n\"Material properties are currently not supported, but it would be really easy to add it so feel free to contact us.\"\nThis could be really helpful! How easy and quick could it be to implement this? Days? Hours?\n\nProbably less than a day thing. Seems like the ideal way for me to procrastinate making slides. I'll let you know how it goes.\nI m not sure you really need it though? It wont offer that much more than a MaterialRealAux, then chained with a ParsedAux\n\nAltenatively, I'm looking at the newer(?) concept of Functors\n\nDefinitely newer. We have been using them for ~2 years now.\n\n. What is the first step to either defining a Material property as a Functor or making a copy of a conventional Material property as a Functor?\n\nRegular material properties cannot be defined as functors unfortunately.\n\nAs I read more about Functors and FunctorMaterials, I'm wondering if for the calculations I want to do, using FunctorMaterials might in fact be a better option.\n\nTransitioning from Materials to FunctorMaterials is an option. You just have to take a look at your Materials in the Materials block to see how big of a task it will be to change that code.\n\ndoes this mean using them in calculations like this should be less demanding on memory and make a solve faster?\n\nPre-computing properties can be an optimization for some problems with expensive constitutive models. So functor materials are not always faster. However, functor materials only compute the 1 property you need, while materials always computed every single properties no matter what.  That can be an improvement",
+                          "url": "https://github.com/idaholab/moose/discussions/28627#discussioncomment-10707216",
+                          "updatedAt": "2024-09-20T17:16:11Z",
+                          "publishedAt": "2024-09-20T16:23:52Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "#28673\nplease let me know if it does not work. It will error if you try to set a nodal variable, because material properties are not defined at nodes. If you need that, then set an elemental variable first, then use a ProjectionAux to get to a nodal variable",
+                          "url": "https://github.com/idaholab/moose/discussions/28627#discussioncomment-10707687",
+                          "updatedAt": "2024-09-20T17:15:59Z",
+                          "publishedAt": "2024-09-20T17:15:58Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "I saw the message in my email. Please keep in mind execute_on for FunctorMaterial relates to refreshing the caching of element and face values.\nIt's generally easier to leave that setting to the default, in which case the FunctorMaterial does not use any caching",
+                  "url": "https://github.com/idaholab/moose/discussions/28627#discussioncomment-10821626",
+                  "updatedAt": "2024-10-02T14:33:34Z",
+                  "publishedAt": "2024-10-02T14:33:33Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "EdSheltonUKAEA"
+                          },
+                          "bodyText": "Thanks.  I found a fix which by calling the corresponding elemental AuxVariable as the functor to give the value at timestep_begin.\nNow I get non-zero values for the rate of change over the timestep, but back to the usual problem of the solve not converging.\nThe error message is:\n\nNonlinear solve did not converge due to DIVERGED_LINE_SEARCH iterations 0\nSolve Did NOT Converge!\nAborting as solve did not converge",
+                          "url": "https://github.com/idaholab/moose/discussions/28627#discussioncomment-10821686",
+                          "updatedAt": "2024-10-02T14:37:55Z",
+                          "publishedAt": "2024-10-02T14:37:54Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "EdSheltonUKAEA"
+                          },
+                          "bodyText": "Should I use the AuxVariable which duplicates the FunctorMaterial also to give the timestep_end \"now\" value?",
+                          "url": "https://github.com/idaholab/moose/discussions/28627#discussioncomment-10821696",
+                          "updatedAt": "2024-10-02T14:39:33Z",
+                          "publishedAt": "2024-10-02T14:39:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Is the value of the auxvariable dependent on the nonlinear variables? Because if so, no derivative information is propagated and the Jacobian would be missing terms.\nWhere are you in the process of troubleshooting the nonconvergence?\nwrt this page\nhttps://mooseframework.inl.gov/moose/application_usage/failed_solves.html",
+                          "url": "https://github.com/idaholab/moose/discussions/28627#discussioncomment-10821713",
+                          "updatedAt": "2024-10-02T14:40:56Z",
+                          "publishedAt": "2024-10-02T14:40:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "EdSheltonUKAEA"
+                          },
+                          "bodyText": "Is the value of the auxvariable dependent on the nonlinear variables? Because if so, no derivative information is propagated and the Jacobian would be missing terms.\n\nIndirectly, yes.  In my simplified example, x is the non-linear variable being solved.  So the FunctorMaterial is calculated as a function of this.  Then the AuxVariable takes the value of FunctorMaterials using FunctorMaterialRealAux.\n\nWhere are you in the process of troubleshooting the nonconvergence?\nwrt this page\nhttps://mooseframework.inl.gov/moose/application_usage/failed_solves.html\n\nI'll have to work through that and get back to you!",
+                          "url": "https://github.com/idaholab/moose/discussions/28627#discussioncomment-10821777",
+                          "updatedAt": "2024-10-02T14:46:54Z",
+                          "publishedAt": "2024-10-02T14:46:53Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Instead of using an auxiliary variable, could you please use a functor material for this value?\nThe ADParsedFunctorMaterial is likely flexible enough to replace the auxkernel?\nAnd it will conserve derivatives",
+                          "url": "https://github.com/idaholab/moose/discussions/28627#discussioncomment-10821824",
+                          "updatedAt": "2024-10-02T14:51:50Z",
+                          "publishedAt": "2024-10-02T14:51:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "EdSheltonUKAEA"
+                          },
+                          "bodyText": "Instead of using an auxiliary variable, could you please use a functor material for this value?\n\nFor which value?  If you mean the value at the start of the timestep, that's what I tried first, but always got zeros for the change over the timestep.  If I understood your previous message correctly, FunctorMaterials \"execute_on\" don't remember values from the end of the previous timestep, they calculated new each time.\nShould I call back a new FunctorMaterial for the start of the timestep using the AuxVariable at timestep_begian, and then use that is the rate of change calculation?",
+                          "url": "https://github.com/idaholab/moose/discussions/28627#discussioncomment-10821894",
+                          "updatedAt": "2024-10-02T14:56:41Z",
+                          "publishedAt": "2024-10-02T14:56:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "For every value that is using an auxiliary variable right now.\nSince functor materials are evaluated on-the-fly (unless you specified an execute_on, in which case there was caching), the zeros must come from whatever is being input in the functor material.\nIf you call a functor material from an auxkernel, you will lose derivative information.\nIn the troubleshooting instructions, you can look at the Jacobian analyser section, to see if that is the current problem you are facing",
+                          "url": "https://github.com/idaholab/moose/discussions/28627#discussioncomment-10821954",
+                          "updatedAt": "2024-10-02T15:01:25Z",
+                          "publishedAt": "2024-10-02T15:01:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "EdSheltonUKAEA"
+                          },
+                          "bodyText": "Ultimately, as I need the rate value as a conventional material property to use in ADMatHeatSource kernel, could I call both \"then\" and \"now\" values as other conventional materials properties from the AuxKernel and FunctorMaterial respectively, and calculate the difference and rate in the [Materials] block rather than [FunctorMaterials] block?  Would doing it this way provide what's needed for the solve to work?",
+                          "url": "https://github.com/idaholab/moose/discussions/28627#discussioncomment-10821968",
+                          "updatedAt": "2024-10-02T15:02:08Z",
+                          "publishedAt": "2024-10-02T15:02:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "oh you are computing the rate manually?\nIn a functor material, you can do functor.dot(arg, state) to get the time derivative.\nComputing the rates manually could be done in Materials as well.\nI suspect you would not be able to get second order time integration if you compute rates manually instead of using the dot() / coupledDot routines",
+                          "url": "https://github.com/idaholab/moose/discussions/28627#discussioncomment-10822228",
+                          "updatedAt": "2024-10-02T15:17:50Z",
+                          "publishedAt": "2024-10-02T15:17:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "EdSheltonUKAEA"
+                          },
+                          "bodyText": "OK.  Thanks.  I'll take a look at these tomorrow as about to head home.\nCan you show the \"functor.dot(arg, state)\" in an example input file?\nBut it looks like that might be something in a C++ file, and I don't work with that.  I can only use \"off the shelf\" MOOSE.",
+                          "url": "https://github.com/idaholab/moose/discussions/28627#discussioncomment-10822267",
+                          "updatedAt": "2024-10-02T15:21:23Z",
+                          "publishedAt": "2024-10-02T15:21:23Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

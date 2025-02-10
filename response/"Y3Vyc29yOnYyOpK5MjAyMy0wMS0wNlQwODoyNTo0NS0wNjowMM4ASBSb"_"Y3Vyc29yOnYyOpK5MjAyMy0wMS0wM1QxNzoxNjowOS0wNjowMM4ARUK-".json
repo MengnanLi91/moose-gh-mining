@@ -1,0 +1,1062 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMy0wMS0wM1QxNzoxNjowOS0wNjowMM4ARUK-"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "wrong result and convergence issues for single-phase 1D flow",
+          "author": {
+            "login": "Raven-pro"
+          },
+          "bodyText": "Hi, I am opening a new topic from the previous thread [#22648]. The previous problem is about implementing AD to the fp coefficients so that the jacobian shall be formed properly, and I tried, but it turned out not so many differences were made on my issues.\nI am trying to build a single-phase 1D 3Eqns flow application based on MOOSE, the governing equations are as follows.\nAnd transforming the equations to the weak forms, with the divergence theorem, I have\n\nThen I wrote kernels and BCS based on the above weak-formed equations, with ICs and BCs, set as in the input file below.\n\n    p_init = 15.5e6       # Pa\n    h_init = 1133820    # J/kg \n    v_init = 1                 # m/s\n    De = 0.025             # m\n    U = 0.0785398      # m\n    A = 0.00049087    # m2\n    q = 1273239.545   # W/m2\n\n\n[Mesh]\n    type = GeneratedMesh\n    dim = 1\n    nx = 50\n    # ny = 12\n    # ymax = 0.012\n    # ymin = 0\n    xmax = 1.0\n    xmin = 0\n    elem_type = EDGE\n[]\n\n[Modules]\n    [FluidProperties]\n        [water]\n            type = Water97FluidProperties\n        []\n    []\n[]\n\n[Materials]\n    [fp_mat]\n        type = Water97\n        p = P\n        h = H\n        fluid = water\n    []\n[]\n\n[Variables]\n    [P]\n        order = FIRST\n        family = LAGRANGE\n        scaling = 1\n        initial_condition = ${p_init}\n    []\n    [V]\n        order = FIRST\n        family = LAGRANGE\n        scaling = 1e-3\n        initial_condition = ${v_init}\n    []\n    [H]\n        order = FIRST\n        family = LAGRANGE\n        scaling = 1e-6\n        initial_condition = ${h_init}\n    []\n[]\n\n\n[Kernels]\n    [MassTime]\n        type = MassTime\n        variable = P\n        dot_h = H\n    []\n    [MassAdvection]\n        type = MassAdvection\n        variable = P\n        v = V\n    []\n    [MassPSPG]\n        type = MassPSPG\n        variable = P\n        dot_h = H\n        v = V\n        grad_v = V\n        De = ${De}\n    []\n    [MomentumTime]\n        type = MomentumTime\n        variable = V\n        dot_p = P\n        dot_h = H\n    []\n    [MomentumAdvection]\n        type = MomentumAdvection\n        variable = V\n    []\n    [MomentumSource]\n        type = MomentumSource\n        variable = V\n        grad_p = P\n        De = ${De}\n    []\n    [MomentumSUPG]\n        type = MomentumSUPG\n        variable = V\n        grad_p = P\n        De = ${De}\n    []\n    [EnergyTime]\n        type = EnergyTime\n        variable = H\n        dot_p = P\n    []\n    [EnergyAdvection]\n        type = EnergyAdvection\n        variable = H\n        v = V\n    []\n    [EnergySource]\n        type = EnergySource\n        variable = H\n        U = ${U}\n        A = ${A}\n        q = ${q}\n    []\n    [EnergySUPG]\n        type = EnergySUPG\n        variable = H\n        v = V\n        U = ${U}\n        A = ${A}\n        q = ${q}\n    []\n[]\n\n[BCs]\n    [bc1]\n        type = DirichletBC\n        variable = H\n        value = ${h_init}\n        boundary = \"left\"\n    []\n    [bc2]\n        type = DirichletBC\n        variable = P\n        value = ${p_init}\n        boundary = \"right\"\n    []\n    [bc3]\n        type = DirichletBC\n        variable = V\n        value = ${v_init}\n        boundary = \"left\"\n    []\n    [bc4]\n        type = MassBC\n        variable = P\n        v = V\n        boundary = \"right\"\n    []\n    [bc5]\n        type = MomentumBC\n        variable = V\n        boundary = \"right\"\n    []\n    [bc6]\n        type = EnergyBC\n        variable = H\n        v = V\n        boundary = \"right\"\n    []\n[]\n\n#[VectorPostprocessors]\n  #[H]\n    #type = NodalValueSampler\n    #variable = H\n    #boundary = 'bottom'\n    #block = 0\n    #execute_on = 'initial timestep_end' \n    #use_displaced_mesh = true\n    #sort_by = x\n  #[]\n  #[P]\n    #type = NodalValueSampler\n    #variable = P\n    #boundary = 'bottom'\n    #block = 0\n    #execute_on = 'initial timestep_end' \n    #use_displaced_mesh = true\n    #sort_by = x\n  #[]\n#[]\n\n[Problem]\n    type = FEProblem\n    coord_type = XYZ\n[]\n\n[Preconditioning]\n    [./SMP]\n        type = SMP\n        full = true\n        solve_type = 'PJFNK'\n        petsc_options_iname = '-pc_type'\n        petsc_options_value = 'lu'\n    [../]\n[]\n\n[Executioner]\n    type = Transient\n    solve_type =  'PJFNK'\n    # compute_scaling_once = false\n    automatic_scaling = true\n    scheme = bdf2\n    dt = 1e-5\n    dtmin = 1e-5\n    petsc_options_iname = '-ksp_gmres_restart'\n    petsc_options_value = '100'\n    nl_rel_tol = 1e-7\n    nl_abs_tol = 1e-6\n    nl_max_its = 20\n\n    l_tol = 1e-4\n    l_max_its = 100\n\n    start_time = 0.0\n    num_steps = 200\n    end_time = 1e-3\n\n    [./Quadrature]\n        type = TRAP\n        order = FIRST\n    [../]\n[]\n\n[Outputs]\n    exodus = true\n    csv = true\n[]\n\nBut the results are wrong in the ParaView. If the code runs longer, it will not converge, the results are like that, we have negative velocity values intermittently, and the enthalpy oscillated, which is obviously wrong.\n\nI tried adding the PSPG term and SUPG term, but it didn't work. Can anybody knows how to make it converge? I will really appreciate it.\nThe code of my application is uploaded below (Mostly several kernels and three IntegratedBCs), can anybody check it a little? THX!\nSF",
+          "url": "https://github.com/idaholab/moose/discussions/22682",
+          "updatedAt": "2023-01-05T16:40:53Z",
+          "publishedAt": "2022-11-13T06:08:47Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "Raven-pro"
+                  },
+                  "bodyText": "I have just tested the use of stabilization and it turned out useful in stabilizing the oscillation of pressure. But oscillations of enthalpy and velocity are still unsolved.\nWhat's more, if I set the inlet pressure boundary condition instead of the outlet, the pressure will oscillate as well.\nSo how to get rid of this kind of abnormal oscillation?",
+                  "url": "https://github.com/idaholab/moose/discussions/22682#discussioncomment-4127762",
+                  "updatedAt": "2022-11-13T10:45:20Z",
+                  "publishedAt": "2022-11-13T10:45:20Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nso the nonlinear solves are converging but the result is oscillating unphysically?\nif you are hitting convergence issues, you will want to check the Jacobian for accuracy\nhttps://mooseframework.inl.gov/help/development/analyze_jacobian.html\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/22682#discussioncomment-4140639",
+                          "updatedAt": "2022-11-14T20:59:45Z",
+                          "publishedAt": "2022-11-14T20:59:45Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Raven-pro"
+                          },
+                          "bodyText": "Yes, when I set d_t to be 1e-5 or lower. running for like 200 steps, the nonlinear solves converge with oscillating results.\nIf the code runs longer for like 300 steps, the solves will not converge.  I don't know if it truly is a converging issues since the code can converge at first several hundreds of steps.",
+                          "url": "https://github.com/idaholab/moose/discussions/22682#discussioncomment-4142325",
+                          "updatedAt": "2022-11-15T02:24:56Z",
+                          "publishedAt": "2022-11-15T02:24:55Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "Raven-pro"
+                  },
+                  "bodyText": "I don't know if it's because I have missed something about MOOSE.\nI have read papers about SAM, which is also based on MOOSE and can solve single-phase compressible problems, and it implements the same three governing equations in the applications, which runs well.\nSo I think this kind of problem maybe is because of my limited knowledge of MOOSE.\nI am just thinking, If it's really about jacobian, is it better to hand-code jaboian than AD?",
+                  "url": "https://github.com/idaholab/moose/discussions/22682#discussioncomment-4144420",
+                  "updatedAt": "2022-11-15T09:12:47Z",
+                  "publishedAt": "2022-11-15T09:12:46Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "It's not better to hand code the Jacobian. The AD Jacobian is numerically perfect. If you are using AD the script I linked to should have reported a perfect Jacobian\nHowever, you are using PJFNK which does not fully leverage the potential of AD. I recommend you try Newton's method instead, which will benefit from these accurate Jacobians from AD.\nYou may want to tighten the linear tolerances and increase the order of the quadrature as well, I m not sure",
+                          "url": "https://github.com/idaholab/moose/discussions/22682#discussioncomment-4147355",
+                          "updatedAt": "2022-11-15T14:46:23Z",
+                          "publishedAt": "2022-11-15T14:46:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Raven-pro"
+                          },
+                          "bodyText": "Thank you, I will try your suggestions!",
+                          "url": "https://github.com/idaholab/moose/discussions/22682#discussioncomment-4148149",
+                          "updatedAt": "2022-11-15T16:00:09Z",
+                          "publishedAt": "2022-11-15T16:00:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "hello\nwhere do we stand on this?\nwhere you able to get a non-oscillating profile?\nwhich numerical scheme are you using now?\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/22682#discussioncomment-4586468",
+                          "updatedAt": "2023-01-03T23:14:43Z",
+                          "publishedAt": "2023-01-03T23:14:43Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Raven-pro"
+                          },
+                          "bodyText": "Hello GiudGiud\nYes, I've worked out the problems using SUPG method. The calculation can get the right solution now.",
+                          "url": "https://github.com/idaholab/moose/discussions/22682#discussioncomment-4603469",
+                          "updatedAt": "2023-01-05T16:40:40Z",
+                          "publishedAt": "2023-01-05T16:40:40Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "THM Elbows",
+          "author": {
+            "login": "makeclean"
+          },
+          "bodyText": "Hi Folks\nQuick one, the documentation for Elbow1Phase seems to be incorrect, or at the very least confusing. Direction - Direction of axis from start position to end position (no need to normalize). Maybe I'm not clear about the co-ordinate system, usually I've seen tori referred to as the direction being the vector orthogonal to broadest part of the ring, i.e.\n\nThe image above would be a torus with a direction of [0,0,1] or equally [0,0,-1]. For the system that I've built, see the image below, I have two pipes connected to the elbow (with VolumeJunction1Phase)\n\nAs can be seen, the elbows are in the y-z plane, and thus (I would) described as a x-torus or a torus with a direction of [1,0,0], however when I input that into MOOSE, the network looks as thus;\n\nWhich clearly isn't right, the values are fine, the geometry is clearly wrong, if I change instead the direction to be that of a z torus, i.e. [0,0,1], then all is well;\n\nSo, I guess I'm confused why the direction should be what it is, what is the underlying coordinate system that makes this make sense?\nAlso, why can't I use regular connections between straight pipes and elbow bends, given that they are indeed parallel where they meet? Am I confused as what parallel means in this context?",
+          "url": "https://github.com/idaholab/moose/discussions/22787",
+          "updatedAt": "2023-01-05T15:10:50Z",
+          "publishedAt": "2022-11-24T10:22:18Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@licharlot @joshuahansel",
+                  "url": "https://github.com/idaholab/moose/discussions/22787#discussioncomment-4228911",
+                  "updatedAt": "2022-11-24T16:44:58Z",
+                  "publishedAt": "2022-11-24T16:44:58Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "licharlot"
+                  },
+                  "bodyText": "Hi,\nI don't know the exact reason for direction being defined as it is. direction describes the direction at the start of the elbow.\nWith the current logic that is implemented in THM, you cannot use the OneToOneJunction1Phase or JunctionParallelChannels1Phase to connect the elbows to a straight pipe because of the discretization of the elbow. The first element is not exactly parallel to that direction.  So you need to use the VolumeJunction1Phase component.",
+                  "url": "https://github.com/idaholab/moose/discussions/22787#discussioncomment-4233749",
+                  "updatedAt": "2022-11-25T03:56:38Z",
+                  "publishedAt": "2022-11-25T03:51:38Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "makeclean"
+                          },
+                          "bodyText": "Perfect, thanks that makes at least some sense - one suggestion is to update the documentation to reflect that, along with a note that position in this context means the origin of the circle that would make the elbow.",
+                          "url": "https://github.com/idaholab/moose/discussions/22787#discussioncomment-4248532",
+                          "updatedAt": "2022-11-27T20:43:11Z",
+                          "publishedAt": "2022-11-27T20:43:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "joshuahansel"
+                          },
+                          "bodyText": "We use the direction definition that we do because it could be used universally. It sounds like the definition you mention only pertains to tori. I agree that we should clarify the description - it makes perfect sense for straight pipes, but for curved pipes, it's wrong. I propose \"Direction of axis from start position to end position (no need to normalize). For curved channels, it is the inward tangent vector at the start position.\" Does that sound clear?\nWe should also at least add an option to make those first elements straight.",
+                          "url": "https://github.com/idaholab/moose/discussions/22787#discussioncomment-4253221",
+                          "updatedAt": "2022-11-28T13:04:00Z",
+                          "publishedAt": "2022-11-28T13:04:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "makeclean"
+                          },
+                          "bodyText": "Yeah much more clear",
+                          "url": "https://github.com/idaholab/moose/discussions/22787#discussioncomment-4337472",
+                          "updatedAt": "2022-12-07T21:35:55Z",
+                          "publishedAt": "2022-12-07T21:35:55Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "makeclean"
+                  },
+                  "bodyText": "Sorry to re-invigorate this one, I'm still quite confused about elbows and the 'inward directed tangent at the start position' - consider the below diagram\n\nI've drawn in red, what I consider given our discussions about what the inward directed tangent from the start position. Thus I would say following the flow direction, the directions for the elbows would be [0 -1 0], [0 0 1], [0 1 0], and [0 0 1]. However MOOSE does not agree, it wants them to be Z directed. What key piece of information am I missing? @joshuahansel",
+                  "url": "https://github.com/idaholab/moose/discussions/22787#discussioncomment-4567267",
+                  "updatedAt": "2023-01-01T21:25:54Z",
+                  "publishedAt": "2023-01-01T21:25:54Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "joshuahansel"
+                          },
+                          "bodyText": "Your red arrows are not tangent - they are orthogonal to your curve. The black arrow is the correct vector for your first segment.",
+                          "url": "https://github.com/idaholab/moose/discussions/22787#discussioncomment-4581792",
+                          "updatedAt": "2023-01-03T13:37:55Z",
+                          "publishedAt": "2023-01-03T13:37:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "makeclean"
+                          },
+                          "bodyText": "So these would be right?\n\nMOOSE still wants them to be all [0,0,1] though, that's what I'm really not getting.\nI've build half the network in MOOSE;\n\nBut it needs those tori to be both z-directed, which is inconsistent with above.",
+                          "url": "https://github.com/idaholab/moose/discussions/22787#discussioncomment-4584184",
+                          "updatedAt": "2023-01-03T17:36:43Z",
+                          "publishedAt": "2023-01-03T17:36:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "joshuahansel"
+                          },
+                          "bodyText": "Your red arrows are correct. What do you mean by \"MOOSE wants/needs\"? What is requiring the z direction?",
+                          "url": "https://github.com/idaholab/moose/discussions/22787#discussioncomment-4584315",
+                          "updatedAt": "2023-01-03T17:50:07Z",
+                          "publishedAt": "2023-01-03T17:50:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "makeclean"
+                          },
+                          "bodyText": "Well to properly create the pipe network shown above (red-white-green-blue) I have to use the following (shortened) components with directions\n[Components]\n[pipe_1]\n....\ntype=FlowChannel1Phase\norientation=\"0.0 0.0 1.0\"\n...\n[]\n[pipe_2]\n...\ntype=ElbowPipe1Phase\norientation=\"0.0 0.0 1.0\"\n...\n[]\n[pipe_3]\n...\ntype=FlowChannel1Phase\norientation=\"0.0 -1.0 0.0\"\n...\n[]\n[pipe_4]\n...\ntype=ElbowPipe1Phase\norientation=\"0.0 0.0 1.0\"\n....\n[]\n[]\n\nSee the second elbow needs to be [0,0,1] rather than [0,1,0] in order to get the view shown in the Paraview plot above. See the input here - https://drive.google.com/file/d/1eLtEVeUawnikdwAKmP7dP1YgnTWN9-Au/view?usp=sharing\nSo if for input consistency the elbows should follow my second diagram, then I think there must be a bug somewhere, because if I use the direction as I should, the exodus file out is incorrect.",
+                          "url": "https://github.com/idaholab/moose/discussions/22787#discussioncomment-4585491",
+                          "updatedAt": "2023-01-03T20:34:37Z",
+                          "publishedAt": "2023-01-03T20:34:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "makeclean"
+                          },
+                          "bodyText": "Do you follow @joshuahansel ?",
+                          "url": "https://github.com/idaholab/moose/discussions/22787#discussioncomment-4595508",
+                          "updatedAt": "2023-01-04T20:47:30Z",
+                          "publishedAt": "2023-01-04T20:40:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "joshuahansel"
+                          },
+                          "bodyText": "Ok, interesting, that sounds like a meshing bug in ElbowPipe1Phase. I'll look into this and get back to you.",
+                          "url": "https://github.com/idaholab/moose/discussions/22787#discussioncomment-4596082",
+                          "updatedAt": "2023-01-04T22:25:34Z",
+                          "publishedAt": "2023-01-04T22:25:34Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "joshuahansel"
+                          },
+                          "bodyText": "I've looked into this. It's very confusing. From what I can tell, here's how the points are generated for the elbow:\n\nGenerate an arc in the XY plane (at z=0) about the origin, from start_angle to end_angle with radius radius.\nApply rotation about the x-axis using rotation\nApply directional transformation using orientation\nApply translation using position\n\nIf you're really interested, see ElbowPipe1Phase::buildMeshNodes() for step 1 and DiscreteLineSegmentInterface::computeRealPointFromReferencePoint() for steps 2-4.\nBut I assume you want a solution :)\nI think what this needs is a refactor to make the curve specification much more clear... I'll think about a good way to do this.\nI apologize for all of the confusion. This is a component that we admittedly have not used very much, so we probably only tested it for a more restricted setup (like oriented in the x-direction maybe).",
+                          "url": "https://github.com/idaholab/moose/discussions/22787#discussioncomment-4596337",
+                          "updatedAt": "2023-01-04T23:20:32Z",
+                          "publishedAt": "2023-01-04T23:20:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "joshuahansel"
+                          },
+                          "bodyText": "I don't have any quick solution to this. I think this needs some refactoring to do right. I'm not sure if I'll get to it soon. If you want to make your own version of ElbowPipe1Phase that fixes it for your case, you can do that. There's not much to that class.\nHere's what I'm dreaming up here: the user only specifies the ends of the flow channels to connect to, and then a smooth transition is found between these two points such that the directions at the connection points match. For example, I'm wondering if I can use Bezier curves or something to accomplish this.",
+                          "url": "https://github.com/idaholab/moose/discussions/22787#discussioncomment-4596497",
+                          "updatedAt": "2023-01-04T23:58:36Z",
+                          "publishedAt": "2023-01-04T23:58:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "joshuahansel"
+                          },
+                          "bodyText": "On second thought, I'd probably start with something very simple: the user specifies\n\nposition: the start position\nperpindicular_clockwise_direction: the direction that is perpindicular to the arc, for which the arc goes in a clockwise direction from the start position\nradius: the radius of the arc\ndegrees: the degrees of the arc",
+                          "url": "https://github.com/idaholab/moose/discussions/22787#discussioncomment-4602491",
+                          "updatedAt": "2023-01-05T15:10:50Z",
+                          "publishedAt": "2023-01-05T15:10:49Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Is it possible to select outputs for the vtk file ?",
+          "author": {
+            "login": "AlexSacMorane"
+          },
+          "bodyText": "Dear all,\nI am working with the phase-field module of Moose. I need to work on specific data from the output file. I have a python script to automatize the file reading, so I use a VTK file.\nThe file is large, and I do not use most of it. In fact, I need only etai, c, Ed_mec and Ed_prec. Is there a way to filter the VTK file writing to reduce the size?\nI know I can reduce the size by commenting lines about the [GlobalParams] part. But Ed_mec and Ed_prec are not some variables, that is why I print all the data.\nMy .i file and some vtk outputs are in the attachments.\nI stay available\nThanks in advance\nAlexandre SM\nSelect_Outputs.zip",
+          "url": "https://github.com/idaholab/moose/discussions/23067",
+          "updatedAt": "2023-01-05T08:39:30Z",
+          "publishedAt": "2023-01-04T16:48:36Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nIn the Outputs block you can specify which fields you want to include or hide using the hide and show parameters\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/23067#discussioncomment-4593720",
+                  "updatedAt": "2023-01-04T16:52:24Z",
+                  "publishedAt": "2023-01-04T16:52:23Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "AlexSacMorane"
+                          },
+                          "bodyText": "Thank for your answer",
+                          "url": "https://github.com/idaholab/moose/discussions/23067#discussioncomment-4599258",
+                          "updatedAt": "2023-01-05T08:39:30Z",
+                          "publishedAt": "2023-01-05T08:39:30Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "whether there is a Normalization operator that can fix my total power at a certain value",
+          "author": {
+            "login": "js-jixu"
+          },
+          "bodyText": "I want to obtain power data from an exodus file through SolutionUserObject for another simulation of thermal expansion. Since the power is a MONOMIAL variable, when the volume of an element becomes larger, the power represented by this element will also become larger. So I want to know whether there is a Normalization operator that can fix my total power at a certain value",
+          "url": "https://github.com/idaholab/moose/discussions/23068",
+          "updatedAt": "2023-02-03T05:22:57Z",
+          "publishedAt": "2023-01-04T16:56:18Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "There s a NormalizationAux you can use. A parsedAux will also work with a postprocessor computing the norm",
+                  "url": "https://github.com/idaholab/moose/discussions/23068#discussioncomment-4593858",
+                  "updatedAt": "2023-01-04T17:07:15Z",
+                  "publishedAt": "2023-01-04T17:07:14Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "js-jixu"
+                          },
+                          "bodyText": "Can one AuxVariable use two AuxKernels? Because power needs to use SolutionAux to obtain the power distribution in the exodus file.\n[AuxVariables]\n  [power]\n    family = MONOMIAL\n    order = FIRST\n  []\n[]\n\n[AuxKernels]\n  [power_auxk]\n    type = SolutionAux\n    variable = power\n    solution = power_uo\n  []\n[]\n\n[UserObjects]\n  [power_uo]\n    type = SolutionUserObject\n    mesh = initial.e\n    system_variables = power\n    timestep = LATEST\n    execute_on = INITIAL\n  []\n[]\n\nIn this case, can power use NormalizationAux for normalization?",
+                          "url": "https://github.com/idaholab/moose/discussions/23068#discussioncomment-4593914",
+                          "updatedAt": "2023-01-04T17:13:40Z",
+                          "publishedAt": "2023-01-04T17:13:26Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Just use two variables to be safe",
+                          "url": "https://github.com/idaholab/moose/discussions/23068#discussioncomment-4594136",
+                          "updatedAt": "2023-01-04T17:38:13Z",
+                          "publishedAt": "2023-01-04T17:38:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "But yeah we can on paper we just have to be careful to order them properly so it might be disallowed",
+                          "url": "https://github.com/idaholab/moose/discussions/23068#discussioncomment-4594141",
+                          "updatedAt": "2023-01-04T17:38:42Z",
+                          "publishedAt": "2023-01-04T17:38:42Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "It's okay to have multiple AuxKernels operating on the same AuxVariable as long as they do not overlap in space (subdomains) or in time (execute_on).\nI'd think carefully about this statement \"Since the power is a MONOMIAL variable, when the volume of an element becomes larger, the power represented by this element will also become larger\". The power density is a volumetric quantity, it is independent of the element size unless you integrate it in space.",
+                  "url": "https://github.com/idaholab/moose/discussions/23068#discussioncomment-4596829",
+                  "updatedAt": "2023-01-05T00:57:58Z",
+                  "publishedAt": "2023-01-05T00:57:58Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "He's in the right for 2. If you keep the same power density in an element but grow the element you are increasing power for no good reason.",
+                          "url": "https://github.com/idaholab/moose/discussions/23068#discussioncomment-4596861",
+                          "updatedAt": "2023-01-05T01:05:57Z",
+                          "publishedAt": "2023-01-05T01:05:56Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Actually using a full domain renormalization might not be the best way to do this.\nI think we would rather normalize element by element, to make sure the power in each element stays the same",
+                          "url": "https://github.com/idaholab/moose/discussions/23068#discussioncomment-4596866",
+                          "updatedAt": "2023-01-05T01:06:57Z",
+                          "publishedAt": "2023-01-05T01:06:57Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "import results",
+          "author": {
+            "login": "selarem"
+          },
+          "bodyText": "Hello moose community,\nI would like to model impact of solid1 on solid2. I have meshed with abaqus both and got some problems because, looks like, having two parts in a mesh does not work in moose. So I am trying to make an elastic analysis with a single part mesh composed of two ELSETs (solid1 and solid2). After a first elastic computation, in the second part of this work, I would like to import displacements but considering exclusively the solid2 elset  during all the new analysis. In fact, solid1 models the impactor that is not needed in the second analysis.\nthank you for any help.\nRegards,\nSab",
+          "url": "https://github.com/idaholab/moose/discussions/23040",
+          "updatedAt": "2023-02-04T15:46:18Z",
+          "publishedAt": "2022-12-29T10:47:37Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nWhat do you mean by having two parts in a mesh does not work in MOOSE?\nDo you mean that the Abaqus mesh does not load in MOOSE?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/23040#discussioncomment-4555836",
+                  "updatedAt": "2022-12-30T13:12:57Z",
+                  "publishedAt": "2022-12-30T13:12:56Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "selarem"
+                  },
+                  "bodyText": "Hi,\nI remembrement receiving a message saying (almost) that a problem is raised\nby libmesh because the mesh is composed of two parts. I think I will try\nwithout impactor, just an imposed displacement on the zone of impact, this\nwill avoid dealing with contact problems which are not the main concern in\nour analysis.\n\nThanks for reply,\nRegards\n\nLe ven. 30 d\u00e9c. 2022, 14:13, Guillaume Giudicelli ***@***.***>\na \u00e9crit :\n\u2026\n Hello\n\n What do you mean by having two parts in a mesh does not work in MOOSE?\n Do you mean that the Abaqus mesh does not load in MOOSE?\n\n Guillaume\n\n \u2014\n Reply to this email directly, view it on GitHub\n <#23040 (comment)>,\n or unsubscribe\n <https://github.com/notifications/unsubscribe-auth/AFBUGDGSJ2NKXNLRCA2HI6LWP3NWJANCNFSM6AAAAAATL7W664>\n .\n You are receiving this because you authored the thread.Message ID:\n ***@***.***>",
+                  "url": "https://github.com/idaholab/moose/discussions/23040#discussioncomment-4556168",
+                  "updatedAt": "2022-12-30T14:28:51Z",
+                  "publishedAt": "2022-12-30T14:28:51Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@jwpeterson do you know of plans to support multi-parts from Abaqus? Out of curiosity, @selarem has found a workaround",
+                          "url": "https://github.com/idaholab/moose/discussions/23040#discussioncomment-4586818",
+                          "updatedAt": "2023-01-04T00:08:01Z",
+                          "publishedAt": "2023-01-04T00:08:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jwpeterson"
+                          },
+                          "bodyText": "There is currently a hard-coded error for multi-PART Abaqus files in the libmesh AbaqusIO reader:\n          // 0.) Look for the \"*Part\" section\n          if (upper.find(\"*PART\") == static_cast<std::string::size_type>(0))\n            {\n              libmesh_error_msg_if\n                (_already_seen_part,\n                 \"We currently don't support reading Abaqus files with multiple PART sections\");\n\n              _already_seen_part = true;\n            }\n\nbut I think this is mainly due to not having a good test case in the past to develop the reader from, rather than any fundamental reason why they could not be supported.\nI don't know of any current plans to add support for this type of file.",
+                          "url": "https://github.com/idaholab/moose/discussions/23040#discussioncomment-4593125",
+                          "updatedAt": "2023-01-04T15:55:25Z",
+                          "publishedAt": "2023-01-04T15:55:24Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "WARN| MPI had an error",
+          "author": {
+            "login": "js-jixu"
+          },
+          "bodyText": "Hi, experts.\nI want to use FSP in eigenvalue calculation and the splitting type is multiplicative. When I put pressure, velocity, T_solid, T_fluid in one splitting block, it works well:\n    [pvt]\n      vars = 'p velocity Ts Tf'\n      petsc_options = '-ksp_monitor'\n      petsc_options_iname = '-pc_type -pc_factor_shift_type -pc_factor_mat_solver_type'\n      petsc_options_value = 'lu       NONZERO               superlu_dist'\n    []\n\nBut when I split them into three blocks\n    [p]\n      vars = 'p'\n      petsc_options = '-ksp_monitor'\n      petsc_options_iname = '-pc_type -pc_factor_shift_type -pc_factor_mat_solver_type'\n      petsc_options_value = 'lu       NONZERO               superlu_dist'\n    []\n    [v]\n      vars = 'velocity'\n      petsc_options = '-ksp_monitor'\n      petsc_options_iname = '-pc_type -pc_factor_shift_type -pc_factor_mat_solver_type'\n      petsc_options_value = 'lu       NONZERO               superlu_dist'\n    []\n    [t]\n      vars = 'Ts Tf'\n      petsc_options = '-ksp_monitor'\n      petsc_options_iname = '-pc_type -pc_factor_shift_type -pc_factor_mat_solver_type'\n      petsc_options_value = 'lu       NONZERO               superlu_dist'\n    []\n\nthere is a warning and the calculation aborts:\n      0 Linear |R| = 7.692958e+01\n2022-12-08 19:10:37.562 (  18.354s) [        DB5178C0] vtkMPICommunicator.cxx:64    WARN| MPI had an error\n------------------------------------------------\nInvalid count, error stack:\ninternal_Alltoallv(158): MPI_Alltoallv(sendbuf=0x7f18d82e2960, sendcounts=0x7f18d78f00e0, sdispls=0x7f18d78f0120, MPI_LONG_LONG_INT, recvbuf=0x7f18d70344f0, recvcounts=0x7f18d78f00c0, rdispls=0x7f18d78f0100, MPI_LONG_LONG_INT, comm=0xc400000a) failed\ninternal_Alltoallv(88).: Negative count, value is -4424\n------------------------------------------------\n2022-12-08 19:10:37.562 (  18.354s) [        890B78C0] vtkMPICommunicator.cxx:64    WARN| MPI had an error\n------------------------------------------------\nInvalid count, error stack:\ninternal_Alltoallv(158): MPI_Alltoallv(sendbuf=0x7f668463c9d0, sendcounts=0x7fffd662bef0, sdispls=0x7fffd662bf30, MPI_LONG_LONG_INT, recvbuf=0x7fffd56411c0, recvcounts=0x7fffd662bed0, rdispls=0x7fffd662bf10, MPI_LONG_LONG_INT, comm=0xc4000009) failed\ninternal_Alltoallv(88).: Negative count, value is -4422\n------------------------------------------------\n2022-12-08 19:10:37.562 (  18.354s) [        A5F478C0] vtkMPICommunicator.cxx:64    WARN| MPI had an error\n------------------------------------------------\nInvalid count, error stack:\ninternal_Alltoallv(158): MPI_Alltoallv(sendbuf=0x7fffdc69c680, sendcounts=0x7fffde0d30e0, sdispls=0x7fffde0d3120, MPI_LONG_LONG_INT, recvbuf=0x7fffdc6a6090, recvcounts=0x7fffde0d30c0, rdispls=0x7fffde0d3100, MPI_LONG_LONG_INT, comm=0xc4000009) failed\ninternal_Alltoallv(88).: Negative count, value is -4424\n------------------------------------------------\n2022-12-08 19:10:37.562 (  18.337s) [        7D4778C0] vtkMPICommunicator.cxx:64    WARN| MPI had an error\n------------------------------------------------\nInvalid count, error stack:\ninternal_Alltoallv(158): MPI_Alltoallv(sendbuf=0x7fffe36e3c10, sendcounts=0x7fffe329f500, sdispls=0x7fffe329f540, MPI_LONG_LONG_INT, recvbuf=0x7fffe1c852c0, recvcounts=0x7fffe329f4e0, rdispls=0x7fffe329f520, MPI_LONG_LONG_INT, comm=0xc4000009) failed\ninternal_Alltoallv(88).: Negative count, value is -4422\n------------------------------------------------\n\nI use eight core parallel computing.",
+          "url": "https://github.com/idaholab/moose/discussions/22915",
+          "updatedAt": "2023-01-04T15:00:52Z",
+          "publishedAt": "2022-12-08T13:33:13Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nSeems like a bug. We ll need a minimal non-working example to look at it\nJust out of curiosity, can you please try\n\nin serial\n'Ts Tf p' and 'velocity'. They should be the same size matrices right? (in 3D)\n\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22915#discussioncomment-4344587",
+                  "updatedAt": "2022-12-08T15:48:39Z",
+                  "publishedAt": "2022-12-08T15:48:39Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "js-jixu"
+                          },
+                          "bodyText": "We ll need a minimal non-working example to look at it\n\nI'm glad to provide my input file, but it needed to be run in Moltres. I'm not confident that I can reproduce a similar problem only with moose but I can make my problem smaller for you to test.\n\nin serial\n\nWhen I run it in serial, it reports this at the beginning of the simulation:\nStack frames: 13\n0: libMesh::print_trace(std::ostream&)\n1: void moose::internal::mooseDeprecatedStream<libMesh::BasicOStreamProxy<char, std::char_traits<char> >, char const (&) [97]>(libMesh::BasicOStreamProxy<char, std::char_traits<char> >&, bool, char const (&) [97])\n2: AddVariableAction::determineType[abi:cxx11](libMesh::FEType const&, unsigned int, bool)\n3: VariableNotAMooseObjectAction::addVariable(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)\n4: NtAction::act()\n5: Action::timedAct()\n6: ActionWarehouse::executeActionsWithAction(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)\n7: ActionWarehouse::executeAllActions()\n8: MooseApp::runInputFile()\n9: MooseApp::run()\n10: main\n11: __libc_start_main\n12: /home/jixu/projects/moltres/moltres-opt(+0x33ef) [0x7f9961f013ef]\n\nThen the second power iteration suddenly fails to converge. I see that the residual error has been decreasing, and I don't know why it is suddenly judged as non-convergence.\n\n'Ts Tf p' and 'velocity'. They should be the same size matrices right? (in 3D)\n\nI use the following splitting blocks to run in 8-cores:\n    [pt]\n      vars = 'p Ts Tf'\n      petsc_options_iname = '-pc_type -pc_factor_shift_type -pc_factor_mat_solver_type'\n      petsc_options_value = 'lu       NONZERO               superlu_dist'\n    []\n    [v]\n      vars = 'velocity'\n      petsc_options_iname = '-pc_type -pc_factor_shift_type -pc_factor_mat_solver_type'\n      petsc_options_value = 'lu       NONZERO               superlu_dist'\n    []\n\nThe terminal reports that:\n===================================================================================\n=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES\n=   PID 29838 RUNNING AT DESKTOP-9HFBUBM\n=   EXIT CODE: 139\n=   CLEANING UP REMAINING PROCESSES\n=   YOU CAN IGNORE THE BELOW CLEANUP MESSAGES\n===================================================================================\nYOUR APPLICATION TERMINATED WITH THE EXIT STRING: Segmentation fault (signal 11)\nThis typically refers to a problem with your application.\nPlease see the FAQ page for debugging suggestions",
+                          "url": "https://github.com/idaholab/moose/discussions/22915#discussioncomment-4345008",
+                          "updatedAt": "2022-12-08T16:32:47Z",
+                          "publishedAt": "2022-12-08T16:32:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Suddenly judged as non convergence in serial makes me think the line search is declaring that.\nCan you turn it off? or is it off already?",
+                          "url": "https://github.com/idaholab/moose/discussions/22915#discussioncomment-4348226",
+                          "updatedAt": "2022-12-09T01:57:09Z",
+                          "publishedAt": "2022-12-09T01:57:09Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "js-jixu"
+                          },
+                          "bodyText": "I have already used line_search = none to turn it off",
+                          "url": "https://github.com/idaholab/moose/discussions/22915#discussioncomment-4348512",
+                          "updatedAt": "2022-12-09T03:02:26Z",
+                          "publishedAt": "2022-12-09T03:02:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "ok then you may add more verbose flag to petsc to get more info.\nwrt to a MWE in moltres, I think that will be ok since moltres is open source",
+                          "url": "https://github.com/idaholab/moose/discussions/22915#discussioncomment-4352911",
+                          "updatedAt": "2022-12-09T15:06:31Z",
+                          "publishedAt": "2022-12-09T15:06:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "the important part is that it should be as minimal as possible",
+                          "url": "https://github.com/idaholab/moose/discussions/22915#discussioncomment-4352913",
+                          "updatedAt": "2022-12-09T15:06:47Z",
+                          "publishedAt": "2022-12-09T15:06:45Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "js-jixu"
+                          },
+                          "bodyText": "I will try to reduce the scale of this problem tomorrow. But I'm afraid the problem will still be big in the end. Because it has so many variables, there are about 17 variables.",
+                          "url": "https://github.com/idaholab/moose/discussions/22915#discussioncomment-4353298",
+                          "updatedAt": "2022-12-09T15:57:52Z",
+                          "publishedAt": "2022-12-09T15:57:51Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Any luck with that?",
+                          "url": "https://github.com/idaholab/moose/discussions/22915#discussioncomment-4586640",
+                          "updatedAt": "2023-01-03T23:50:49Z",
+                          "publishedAt": "2023-01-03T23:50:48Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "js-jixu"
+                          },
+                          "bodyText": "I failed to make a small non-working example to reproduce this problem. Fortunately, I am now bypassing this issue. If I encounter similar problems later, I will inform you.",
+                          "url": "https://github.com/idaholab/moose/discussions/22915#discussioncomment-4592576",
+                          "updatedAt": "2023-01-04T15:00:49Z",
+                          "publishedAt": "2023-01-04T15:00:49Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Porosity Calculation during the simulation",
+          "author": {
+            "login": "avtarsinghh1991"
+          },
+          "bodyText": "Hello MOOSE experts,\nI have a porous microstructure which is expanding and contracting during the simulation.\nI want to track its average porosity change. Can you please suggest me an example to do so?\nI shall be very thankful.\nBest,\nAvtar",
+          "url": "https://github.com/idaholab/moose/discussions/23014",
+          "updatedAt": "2023-01-04T00:07:13Z",
+          "publishedAt": "2022-12-22T07:13:11Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nSo you already have the simulation and just need to measure the change?\nWhat is porosity in your simulation? A material property? An auxvariable? Or is it not computed currently\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/23014#discussioncomment-4476321",
+                  "updatedAt": "2022-12-22T14:48:19Z",
+                  "publishedAt": "2022-12-22T14:48:18Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "avtarsinghh1991"
+                          },
+                          "bodyText": "Hello Guillaume,\nI have porous microstructure (Solid material with voids). Currently, I am not computing the porosity parameter.\nBasically, I want to track the change in porosity upon swelling and contraction process that I am doing through lithiation and delithiation phenomena.\nAny suggestions?\nBest,\nAvtar",
+                          "url": "https://github.com/idaholab/moose/discussions/23014#discussioncomment-4477564",
+                          "updatedAt": "2022-12-22T17:12:56Z",
+                          "publishedAt": "2022-12-22T17:12:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@jiangwen84 @sapitts on modeling a porous microstructure",
+                          "url": "https://github.com/idaholab/moose/discussions/23014#discussioncomment-4586620",
+                          "updatedAt": "2023-01-03T23:48:03Z",
+                          "publishedAt": "2023-01-03T23:48:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "avtarsinghh1991"
+                          },
+                          "bodyText": "Thanks,\nI could do it through total volume expansion of mesh elements which I can calculate through volume postprocessor and then substracting from the total volume bound as I am working on cube. But the cube distorts a lot during the swelling and contraction makes it difficult to work through that route.\nBest,\nAvtar",
+                          "url": "https://github.com/idaholab/moose/discussions/23014#discussioncomment-4586816",
+                          "updatedAt": "2023-01-04T00:07:13Z",
+                          "publishedAt": "2023-01-04T00:07:13Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Non convergence in Tensor Mechanics and Heat Conduction coupling",
+          "author": {
+            "login": "Salma-Mao"
+          },
+          "bodyText": "Hi\uff01\nI am trying to make a code using Tensor Mechanics Action to calculate the thermal expansion with a temperature transient.  When I do the simulation\uff0cthe case does not converge. I found something wrong with the mesh as shown the below figure. If I increase the size of the mesh, the accuracy of the case  will not be reached. How can I deal with the problem.\nThanks in advance for your help!\n\nMao",
+          "url": "https://github.com/idaholab/moose/discussions/22554",
+          "updatedAt": "2023-02-04T15:45:54Z",
+          "publishedAt": "2022-11-01T11:56:31Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nWhat are seeing on this figure?\nIs this a slice of a 3D mesh? Are these elements?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22554#discussioncomment-4027552",
+                  "updatedAt": "2022-11-01T13:25:59Z",
+                  "publishedAt": "2022-11-01T13:25:58Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Salma-Mao"
+                          },
+                          "bodyText": "This is a slice of a 3D mesh. The shape of the mesh is rectangle.   When I do the simulation, the shape of mesh is changed. The case cannot converge.",
+                          "url": "https://github.com/idaholab/moose/discussions/22554#discussioncomment-4028049",
+                          "updatedAt": "2022-11-01T14:28:05Z",
+                          "publishedAt": "2022-11-01T14:28:05Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "what are the curved surfaces showing? are they cuts of elements? why are they so thin? Do they start out like this?\nDeformed mesh issues are often solved by reducing the time step.\nCould you please attach the (non)convergence simulation log?",
+                          "url": "https://github.com/idaholab/moose/discussions/22554#discussioncomment-4052678",
+                          "updatedAt": "2022-11-04T01:53:57Z",
+                          "publishedAt": "2022-11-04T01:53:56Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Salma-Mao"
+                          },
+                          "bodyText": "what are the curved surfaces showing? are they cuts of elements? why are they so thin? Do they start out like this?\nThe mesh is shown as below at the beginning.  I cut elements  in the paraview. Then, I found the shape of the mesh had been changed.\n\nDeformed mesh issues are often solved by reducing the time step.\nCould you please attach the (non)convergence simulation log?\nI reduce the time step, but the case still does not converge.\nthe (non)convergence simulation log\nTime Step 8129, time = 0.00162408, dt = 1.95312e-10\nSolve Converged!\nFinished Solving                                                                       [ 10.81 s] [   28 MB]\nTime Step 8130, time = 0.00162408, dt = 3.90625e-10\nNonlinear solve did not converge due to DIVERGED_MAX_IT iterations 50\nSolve Did NOT Converge!\nFinished Solving                                                                       [166.16 s] [  -15 MB]\nAborting as solve did not converge\nTime Step 8130, time = 0.00162408, dt = 1.95312e-10\nNonlinear solve did not converge due to DIVERGED_MAX_IT iterations 50\nSolve Did NOT Converge!\nFinished Solving                                                                       [165.35 s] [  -13 MB]\nAborting as solve did not converge\nTime Step 8130, time = 0.00162408, dt = 1e-10\nNonlinear solve did not converge due to DIVERGED_MAX_IT iterations 50\n**Time Step 8129, time = 0.00162408, dt = 1.95312e-10\nSolve Converged!\nFinished Solving                                                                       [ 10.81 s] [   28 MB]\nTime Step 8130, time = 0.00162408, dt = 3.90625e-10\nNonlinear solve did not converge due to DIVERGED_MAX_IT iterations 50\nSolve Did NOT Converge!\nFinished Solving                                                                       [166.16 s] [  -15 MB]\nAborting as solve did not converge\nTime Step 8130, time = 0.00162408, dt = 1.95312e-10\nNonlinear solve did not converge due to DIVERGED_MAX_IT iterations 50\nSolve Did NOT Converge!\nFinished Solving                                                                       [165.35 s] [  -13 MB]\nAborting as solve did not converge\nTime Step 8130, time = 0.00162408, dt = 1e-10\nNonlinear solve did not converge due to DIVERGED_MAX_IT iterations 50\n*** ERROR ***\nThe following error occurred in the object \"TimeStepper\", of type \"ConstantDT\".\nSolve failed and timestep already at or below dtmin, cannot continue!\n*** ERROR ***\nThe following error occurred in the object \"TimeStepper\", of type \"ConstantDT\".\nSolve failed and timestep already at or below dtmin, cannot continue!",
+                          "url": "https://github.com/idaholab/moose/discussions/22554#discussioncomment-4092590",
+                          "updatedAt": "2022-11-09T02:32:28Z",
+                          "publishedAt": "2022-11-09T02:32:26Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "can you print the non linear residual in Outputs\nalso is 1e-10 appropriate? A time step that is too small can also be an issue",
+                          "url": "https://github.com/idaholab/moose/discussions/22554#discussioncomment-4092614",
+                          "updatedAt": "2022-11-09T02:36:18Z",
+                          "publishedAt": "2022-11-09T02:36:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Salma-Mao"
+                          },
+                          "bodyText": "The time step is 1e-7. The non linear residual in Outputs can not be printed. Because the interval is 40 in Outputs.",
+                          "url": "https://github.com/idaholab/moose/discussions/22554#discussioncomment-4092639",
+                          "updatedAt": "2022-11-09T02:41:44Z",
+                          "publishedAt": "2022-11-09T02:41:44Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "ok let s have a timestep slightly close to 1e-7 then.\nThe interval in Outputs can be removed so we can see the log",
+                          "url": "https://github.com/idaholab/moose/discussions/22554#discussioncomment-4092650",
+                          "updatedAt": "2022-11-09T02:44:30Z",
+                          "publishedAt": "2022-11-09T02:44:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Salma-Mao"
+                          },
+                          "bodyText": "Hello, the log\nTime Step 860, time = 0.00017175, dt = 5e-08\n0 Nonlinear |R| = 7.093705e-01\n0 Linear |R| = 7.093705e-01\n1 Linear |R| = 2.733138e-02\n1 Nonlinear |R| = 2.767147e-02\n0 Linear |R| = 2.767147e-02\n1 Linear |R| = 2.010860e-03\n2 Nonlinear |R| = 4.485534e-03\n0 Linear |R| = 4.485534e-03\n1 Linear |R| = 3.930144e-04\n2 Linear |R| = 4.065825e-05\n3 Nonlinear |R| = 3.846285e-03\n0 Linear |R| = 3.846285e-03\n1 Linear |R| = 3.266360e-04\n4 Nonlinear |R| = 3.956858e-03\n0 Linear |R| = 3.956858e-03\n1 Linear |R| = 3.038938e-04\n5 Nonlinear |R| = 3.806141e-03\n0 Linear |R| = 3.806141e-03\n1 Linear |R| = 2.947303e-04\n6 Nonlinear |R| = 3.935276e-03\n0 Linear |R| = 3.935276e-03\n1 Linear |R| = 3.073631e-04\n7 Nonlinear |R| = 3.807751e-03\n0 Linear |R| = 3.807751e-03\n1 Linear |R| = 2.939515e-04\n8 Nonlinear |R| = 3.935097e-03\n0 Linear |R| = 3.935097e-03\n1 Linear |R| = 3.075556e-04\n9 Nonlinear |R| = 3.807777e-03\n0 Linear |R| = 3.807777e-03\n1 Linear |R| = 2.938990e-04\n10 Nonlinear |R| = 3.935089e-03\n0 Linear |R| = 3.935089e-03\n1 Linear |R| = 3.075705e-04\n11 Nonlinear |R| = 3.807779e-03\n0 Linear |R| = 3.807779e-03\n1 Linear |R| = 2.938939e-04\n12 Nonlinear |R| = 3.935089e-03\n0 Linear |R| = 3.935089e-03\n1 Linear |R| = 3.075706e-04\n13 Nonlinear |R| = 3.807779e-03\n0 Linear |R| = 3.807779e-03\n1 Linear |R| = 2.938941e-04\n14 Nonlinear |R| = 3.935089e-03\n0 Linear |R| = 3.935089e-03\n1 Linear |R| = 3.075712e-04\n15 Nonlinear |R| = 3.807779e-03\n0 Linear |R| = 3.807779e-03\n1 Linear |R| = 2.938940e-04\n16 Nonlinear |R| = 3.935089e-03\n0 Linear |R| = 3.935089e-03\n1 Linear |R| = 3.075715e-04\n17 Nonlinear |R| = 3.807779e-03\n0 Linear |R| = 3.807779e-03\n1 Linear |R| = 2.938937e-04\n18 Nonlinear |R| = 3.935089e-03\n0 Linear |R| = 3.935089e-03\n1 Linear |R| = 3.075716e-04\n19 Nonlinear |R| = 3.807779e-03\n0 Linear |R| = 3.807779e-03\n1 Linear |R| = 2.938938e-04\n20 Nonlinear |R| = 3.935089e-03\n0 Linear |R| = 3.935089e-03\n1 Linear |R| = 3.075716e-04\n21 Nonlinear |R| = 3.807779e-03\n0 Linear |R| = 3.807779e-03\n1 Linear |R| = 2.938938e-04\n22 Nonlinear |R| = 3.935089e-03\n0 Linear |R| = 3.935089e-03\n1 Linear |R| = 3.075716e-04\n23 Nonlinear |R| = 3.807779e-03\n0 Linear |R| = 3.807779e-03\n1 Linear |R| = 2.938938e-04\n24 Nonlinear |R| = 3.935089e-03\n0 Linear |R| = 3.935089e-03\n1 Linear |R| = 3.075716e-04\n25 Nonlinear |R| = 3.807779e-03\n0 Linear |R| = 3.807779e-03\n1 Linear |R| = 2.938938e-04\n26 Nonlinear |R| = 3.935089e-03\n0 Linear |R| = 3.935089e-03\n1 Linear |R| = 3.075716e-04\n27 Nonlinear |R| = 3.807779e-03\n0 Linear |R| = 3.807779e-03\n1 Linear |R| = 2.938938e-04\n28 Nonlinear |R| = 3.935089e-03\n0 Linear |R| = 3.935089e-03\n1 Linear |R| = 3.075716e-04\n29 Nonlinear |R| = 3.807779e-03\n0 Linear |R| = 3.807779e-03\n1 Linear |R| = 2.938938e-04\n30 Nonlinear |R| = 3.935089e-03\n0 Linear |R| = 3.935089e-03\n1 Linear |R| = 3.075716e-04\n31 Nonlinear |R| = 3.807779e-03\n0 Linear |R| = 3.807779e-03\n1 Linear |R| = 2.938938e-04\n32 Nonlinear |R| = 3.935089e-03\n0 Linear |R| = 3.935089e-03\n1 Linear |R| = 3.075716e-04\n33 Nonlinear |R| = 3.807779e-03\n0 Linear |R| = 3.807779e-03\n1 Linear |R| = 2.938938e-04\n34 Nonlinear |R| = 3.935089e-03\n0 Linear |R| = 3.935089e-03\n1 Linear |R| = 3.075716e-04\n35 Nonlinear |R| = 3.807779e-03\n0 Linear |R| = 3.807779e-03\n1 Linear |R| = 2.938938e-04\n36 Nonlinear |R| = 3.935089e-03\n0 Linear |R| = 3.935089e-03\n1 Linear |R| = 3.075716e-04\n37 Nonlinear |R| = 3.807779e-03\n0 Linear |R| = 3.807779e-03\n1 Linear |R| = 2.938938e-04\n38 Nonlinear |R| = 3.935089e-03\n0 Linear |R| = 3.935089e-03\n1 Linear |R| = 3.075716e-04\n39 Nonlinear |R| = 3.807779e-03\n0 Linear |R| = 3.807779e-03\n1 Linear |R| = 2.938938e-04\n40 Nonlinear |R| = 3.935089e-03\n0 Linear |R| = 3.935089e-03\n1 Linear |R| = 3.075716e-04\n41 Nonlinear |R| = 3.807779e-03\n0 Linear |R| = 3.807779e-03\n1 Linear |R| = 2.938938e-04\n42 Nonlinear |R| = 3.935089e-03\n0 Linear |R| = 3.935089e-03\n1 Linear |R| = 3.075716e-04\n43 Nonlinear |R| = 3.807779e-03\n0 Linear |R| = 3.807779e-03\n1 Linear |R| = 2.938938e-04\n44 Nonlinear |R| = 3.935089e-03\n0 Linear |R| = 3.935089e-03\n1 Linear |R| = 3.075716e-04\n45 Nonlinear |R| = 3.807779e-03\n0 Linear |R| = 3.807779e-03\n1 Linear |R| = 2.938938e-04\n46 Nonlinear |R| = 3.935089e-03\n0 Linear |R| = 3.935089e-03\n1 Linear |R| = 3.075716e-04\n47 Nonlinear |R| = 3.807779e-03\n0 Linear |R| = 3.807779e-03\n1 Linear |R| = 2.938938e-04\n48 Nonlinear |R| = 3.935089e-03\n0 Linear |R| = 3.935089e-03\n1 Linear |R| = 3.075716e-04\n49 Nonlinear |R| = 3.807779e-03\n0 Linear |R| = 3.807779e-03\n1 Linear |R| = 2.938938e-04\n50 Nonlinear |R| = 3.935089e-03\nNonlinear solve did not converge due to DIVERGED_MAX_IT iterations 50\nSolve Did NOT Converge!\nFinished Solving                                                                       [324.84 s] [   20 MB]\nAborting as solve did not converge\nTime Step 860, time = 0.000171725, dt = 2.5e-08\n0 Nonlinear |R| = 7.091746e-01\n0 Linear |R| = 7.091746e-01\n1 Linear |R| = 2.408680e-02\n1 Nonlinear |R| = 2.446325e-02\n0 Linear |R| = 2.446325e-02\n1 Linear |R| = 1.940166e-03\n2 Nonlinear |R| = 4.499643e-03\n0 Linear |R| = 4.499643e-03\n1 Linear |R| = 3.886310e-04\n2 Linear |R| = 4.095673e-05\n3 Nonlinear |R| = 3.845086e-03\n0 Linear |R| = 3.845086e-03\n1 Linear |R| = 3.295423e-04\n4 Nonlinear |R| = 3.959255e-03\n0 Linear |R| = 3.959255e-03\n1 Linear |R| = 3.059037e-04\n5 Nonlinear |R| = 3.804623e-03\n0 Linear |R| = 3.804623e-03\n1 Linear |R| = 2.970830e-04\n6 Nonlinear |R| = 3.937440e-03\n0 Linear |R| = 3.937440e-03\n1 Linear |R| = 3.094788e-04\n7 Nonlinear |R| = 3.806273e-03\n0 Linear |R| = 3.806273e-03\n1 Linear |R| = 2.962768e-04\n8 Nonlinear |R| = 3.937257e-03\n0 Linear |R| = 3.937257e-03\n1 Linear |R| = 3.096787e-04\n9 Nonlinear |R| = 3.806300e-03\n0 Linear |R| = 3.806300e-03\n1 Linear |R| = 2.962212e-04\n10 Nonlinear |R| = 3.937249e-03\n0 Linear |R| = 3.937249e-03\n1 Linear |R| = 3.096943e-04\n11 Nonlinear |R| = 3.806302e-03\n0 Linear |R| = 3.806302e-03\n1 Linear |R| = 2.962162e-04\n12 Nonlinear |R| = 3.937248e-03\n0 Linear |R| = 3.937248e-03\n1 Linear |R| = 3.096957e-04\n13 Nonlinear |R| = 3.806302e-03\n0 Linear |R| = 3.806302e-03\n1 Linear |R| = 2.962162e-04\n14 Nonlinear |R| = 3.937248e-03\n0 Linear |R| = 3.937248e-03\n1 Linear |R| = 3.096960e-04\n15 Nonlinear |R| = 3.806302e-03\n0 Linear |R| = 3.806302e-03\n1 Linear |R| = 2.962151e-04\n16 Nonlinear |R| = 3.937249e-03\n0 Linear |R| = 3.937249e-03\n1 Linear |R| = 3.096962e-04\n17 Nonlinear |R| = 3.806302e-03\n0 Linear |R| = 3.806302e-03\n1 Linear |R| = 2.962154e-04\n18 Nonlinear |R| = 3.937248e-03\n0 Linear |R| = 3.937248e-03\n1 Linear |R| = 3.096964e-04\n19 Nonlinear |R| = 3.806302e-03\n0 Linear |R| = 3.806302e-03\n1 Linear |R| = 2.962154e-04\n20 Nonlinear |R| = 3.937248e-03\n0 Linear |R| = 3.937248e-03\n1 Linear |R| = 3.096965e-04\n21 Nonlinear |R| = 3.806302e-03\n0 Linear |R| = 3.806302e-03\n1 Linear |R| = 2.962154e-04\n22 Nonlinear |R| = 3.937248e-03\n0 Linear |R| = 3.937248e-03\n1 Linear |R| = 3.096965e-04\n23 Nonlinear |R| = 3.806302e-03\n0 Linear |R| = 3.806302e-03\n1 Linear |R| = 2.962154e-04\n24 Nonlinear |R| = 3.937248e-03\n0 Linear |R| = 3.937248e-03\n1 Linear |R| = 3.096965e-04\n25 Nonlinear |R| = 3.806302e-03\n0 Linear |R| = 3.806302e-03\n1 Linear |R| = 2.962154e-04\n26 Nonlinear |R| = 3.937248e-03\n0 Linear |R| = 3.937248e-03\n1 Linear |R| = 3.096965e-04\n27 Nonlinear |R| = 3.806302e-03\n0 Linear |R| = 3.806302e-03\n1 Linear |R| = 2.962154e-04\n28 Nonlinear |R| = 3.937248e-03\n0 Linear |R| = 3.937248e-03\n1 Linear |R| = 3.096965e-04\n29 Nonlinear |R| = 3.806302e-03\n0 Linear |R| = 3.806302e-03\n1 Linear |R| = 2.962154e-04\n30 Nonlinear |R| = 3.937248e-03\n0 Linear |R| = 3.937248e-03\n1 Linear |R| = 3.096965e-04\n31 Nonlinear |R| = 3.806302e-03\n0 Linear |R| = 3.806302e-03\n1 Linear |R| = 2.962154e-04\n32 Nonlinear |R| = 3.937248e-03\n0 Linear |R| = 3.937248e-03\n1 Linear |R| = 3.096965e-04\n33 Nonlinear |R| = 3.806302e-03\n0 Linear |R| = 3.806302e-03\n1 Linear |R| = 2.962154e-04\n34 Nonlinear |R| = 3.937248e-03\n0 Linear |R| = 3.937248e-03\n1 Linear |R| = 3.096965e-04\n35 Nonlinear |R| = 3.806302e-03\n0 Linear |R| = 3.806302e-03\n1 Linear |R| = 2.962154e-04\n36 Nonlinear |R| = 3.937248e-03\n0 Linear |R| = 3.937248e-03\n1 Linear |R| = 3.096965e-04\n37 Nonlinear |R| = 3.806302e-03\n0 Linear |R| = 3.806302e-03\n1 Linear |R| = 2.962154e-04\n38 Nonlinear |R| = 3.937248e-03\n0 Linear |R| = 3.937248e-03\n1 Linear |R| = 3.096965e-04\n39 Nonlinear |R| = 3.806302e-03\n0 Linear |R| = 3.806302e-03\n1 Linear |R| = 2.962154e-04\n40 Nonlinear |R| = 3.937248e-03\n0 Linear |R| = 3.937248e-03\n1 Linear |R| = 3.096964e-04\n41 Nonlinear |R| = 3.806302e-03\n0 Linear |R| = 3.806302e-03\n1 Linear |R| = 2.962154e-04\n42 Nonlinear |R| = 3.937248e-03\n0 Linear |R| = 3.937248e-03\n1 Linear |R| = 3.096965e-04\n43 Nonlinear |R| = 3.806302e-03\n0 Linear |R| = 3.806302e-03\n1 Linear |R| = 2.962154e-04\n44 Nonlinear |R| = 3.937248e-03\n0 Linear |R| = 3.937248e-03\n1 Linear |R| = 3.096964e-04\n45 Nonlinear |R| = 3.806302e-03\n0 Linear |R| = 3.806302e-03\n1 Linear |R| = 2.962154e-04\n46 Nonlinear |R| = 3.937248e-03\n0 Linear |R| = 3.937248e-03\n1 Linear |R| = 3.096965e-04\n47 Nonlinear |R| = 3.806302e-03\n0 Linear |R| = 3.806302e-03\n1 Linear |R| = 2.962154e-04\n48 Nonlinear |R| = 3.937248e-03\n0 Linear |R| = 3.937248e-03\n1 Linear |R| = 3.096964e-04\n49 Nonlinear |R| = 3.806302e-03\n0 Linear |R| = 3.806302e-03\n1 Linear |R| = 2.962154e-04\n50 Nonlinear |R| = 3.937248e-03\nNonlinear solve did not converge due to DIVERGED_MAX_IT iterations 50\nSolve Did NOT Converge!\nFinished Solving                                                                       [324.88 s] [  -20 MB]\nAborting as solve did not converge",
+                          "url": "https://github.com/idaholab/moose/discussions/22554#discussioncomment-4126223",
+                          "updatedAt": "2022-11-13T02:27:24Z",
+                          "publishedAt": "2022-11-13T02:27:24Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "What are the executioner parameters? The linear residuals don\u2019t decrease enough",
+                          "url": "https://github.com/idaholab/moose/discussions/22554#discussioncomment-4129160",
+                          "updatedAt": "2022-11-13T16:55:33Z",
+                          "publishedAt": "2022-11-13T16:55:33Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Salma-Mao"
+                          },
+                          "bodyText": "Hello\uff0c The executioner is below.\n[Executioner]\n  type = Transient\n  solve_type = PJFNK\n  petsc_options = '-snes_ksp_ew'\n  nl_rel_tol = 1e-3\n  nl_abs_tol = 1e-3\n\n  petsc_options_iname = '-pc_type -pc_hypre_type'\n  petsc_options_value = 'hypre  boomeramg '\n\n   line_search = 'none'\n\n  l_max_its = 100\n\n  end_time = 6.9e-3\n  dt = 1e-7\n  dtmin = 1e-10\n  automatic_scaling = true\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/22554#discussioncomment-4130875",
+                          "updatedAt": "2022-11-14T16:00:54Z",
+                          "publishedAt": "2022-11-14T00:55:24Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "the non linear convergence criteria are very coarse. Especially with automatic scaling active. Can you tighten that a lot? Maybe 1e-8 instead of 1e-3",
+                          "url": "https://github.com/idaholab/moose/discussions/22554#discussioncomment-4138303",
+                          "updatedAt": "2022-11-14T16:02:02Z",
+                          "publishedAt": "2022-11-14T16:02:01Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Separate boundary ids for different blocks in the mesh",
+          "author": {
+            "login": "avtarsinghh1991"
+          },
+          "bodyText": "Hello MOOSE Experts,\nThere are two materials in my mesh and I want to separate the boundary ids for both the domains.\nCan you please suggest, how should I proceed?\nBest,\nAvtar",
+          "url": "https://github.com/idaholab/moose/discussions/23051",
+          "updatedAt": "2023-01-03T23:36:55Z",
+          "publishedAt": "2023-01-02T02:36:48Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nI think you are looking for this mesh generator\nhttps://mooseframework.inl.gov/source/meshgenerators/BreakBoundaryOnSubdomainGenerator.html\nThe materials are defined on different subdomains right?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/23051#discussioncomment-4571353",
+                  "updatedAt": "2023-01-02T12:47:42Z",
+                  "publishedAt": "2023-01-02T12:47:42Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "avtarsinghh1991"
+                          },
+                          "bodyText": "Yes, materials are defined on different subdomains.\nThank you very much.\nBest,\nAvtar",
+                          "url": "https://github.com/idaholab/moose/discussions/23051#discussioncomment-4586563",
+                          "updatedAt": "2023-01-03T23:36:54Z",
+                          "publishedAt": "2023-01-03T23:36:54Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Loop over all nodal values of material property in a user object",
+          "author": {
+            "login": "FHilty"
+          },
+          "bodyText": "Hi All,\nI am working with discrete nucleation for recrystallization and would like to prevent new grains from overlapping with existing recrystallized grains. My thought to do this was related to the nucleation probability, which is already known to DiscreteNucleationInserter and in my model it becomes 0 in recrystallized grains. So I am coding an optional loop that would check if any points inside a proposed nucleus have a 0 probability (or less than some threshold), and if so it would either eliminate the nucleus or resize its radius to not overlap, depending on user options.\nWhat i am unsure of is how to access the value of _probability at different elements? I only ever see material property values being looped over the qp n one element. As a follow up question, if I can access any elements material property value is there a way to create a subset of elements to check. Ideally, I would only check elements that fall within a box around the proposed nucleus, and not the entire domain.\nThanks,\nFloyd",
+          "url": "https://github.com/idaholab/moose/discussions/22602",
+          "updatedAt": "2023-01-03T23:16:11Z",
+          "publishedAt": "2022-11-04T16:15:45Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThere have been a few posts on grain nucleation overlap on the discussion forum. Did you have the chance to take a look?\nYou could block restrict the object instead of looking at the entire domain.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22602#discussioncomment-4150306",
+                  "updatedAt": "2022-11-15T20:24:58Z",
+                  "publishedAt": "2022-11-15T20:24:57Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "FHilty"
+                          },
+                          "bodyText": "Hi @GiudGiud after looking into possible solutions what I settled on was using the RadialAverage user object. I will create a material property that is 1 in the recrystallized grains and 0 outside, then the RadialAverage user object will take that and perform a spatial averaging, such that the value is between 0 and 1 as you approach the new grain areas. In this way when a new grain is being proposed it can check that averaging map to know how close it is to an existing recrystallized grain and adjust accordingly.\nI will have to modify the DiscreteNucleationInserter to access RadialAverage and then it should be straightforward to perform the checks and operations i need.",
+                          "url": "https://github.com/idaholab/moose/discussions/22602#discussioncomment-4150486",
+                          "updatedAt": "2022-11-15T20:50:35Z",
+                          "publishedAt": "2022-11-15T20:50:34Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "This seems like a working solution. I dont see a spatialValue() API in that user object unfortunately, that would have been the cannon way of accessing the data.\nThe issue I think is that this UO only computes a single average, near desired coordinates, instead of the average at every location. Am I correct?",
+                          "url": "https://github.com/idaholab/moose/discussions/22602#discussioncomment-4184616",
+                          "updatedAt": "2022-11-19T15:36:46Z",
+                          "publishedAt": "2022-11-19T15:35:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "FHilty"
+                          },
+                          "bodyText": "What I found is there is a RadialAverageAux kernel that calls RadialAverage for each point in the domain and stores the result in an Aux variable. So what is collected is a local average for every point in the domain. One issue is the RadialAverageAux is it is registered to the MooseTestApp, so thats an easy enough change for me to use it, but i opened an issue to have it registered to MooseApp so that others can find it and make use the RadialAverage functionality.",
+                          "url": "https://github.com/idaholab/moose/discussions/22602#discussioncomment-4185475",
+                          "updatedAt": "2022-11-19T19:24:11Z",
+                          "publishedAt": "2022-11-19T19:24:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "The NearestPointAverage UO got merged btw, which does have the spatialValue() API which you can call from your object to get local averages",
+                          "url": "https://github.com/idaholab/moose/discussions/22602#discussioncomment-4586472",
+                          "updatedAt": "2023-01-03T23:16:09Z",
+                          "publishedAt": "2023-01-03T23:16:09Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

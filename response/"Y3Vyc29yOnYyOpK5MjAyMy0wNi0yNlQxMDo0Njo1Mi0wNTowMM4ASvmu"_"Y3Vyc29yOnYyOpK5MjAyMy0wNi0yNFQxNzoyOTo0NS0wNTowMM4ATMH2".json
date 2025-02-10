@@ -1,0 +1,760 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMy0wNi0yNFQxNzoyOTo0NS0wNTowMM4ATMH2"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "How is 'use displaced mesh' implemented?",
+          "author": {
+            "login": "Eilloo"
+          },
+          "bodyText": "Hello all,\nWhilst experimenting with FSI in the FE Navier-Stokes module, I have encountered a situation where setting use_displaced_mesh = true for the Navier-Stokes kernels gives me different solutions when using the vector family of kernels, compared to the field variable family.\nAs in my other recent posts, the testing ground has been the flat channel example discussed here.\nRunning the original, and vector variable versions of this file with use_displaced_mesh = false everywhere produces identical results in both the solid and fluid domains. This is great news, and I believe indicates that the custom interface kernels (thanks again for the input here!) are doing exactly the same thing as the original versions.\nHowever, when I turn on use_displaced_mesh, the solutions become different.\nI am therefore wondering if the displaced mesh system should behave any differently with either vector variables, or for some reason specifically in the vector family of Navier-Stokes kernels? So far, I haven't found anything in the code that would suggest this...\nThanks!",
+          "url": "https://github.com/idaholab/moose/discussions/24042",
+          "updatedAt": "2023-06-26T07:58:25Z",
+          "publishedAt": "2023-04-12T16:20:30Z",
+          "category": {
+            "name": "Q&A Modules: Navier-Stokes"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "lindsayad"
+                  },
+                  "bodyText": "Conceptually they should not behave differently; in practice ... well it seems like they do \ud83d\ude26",
+                  "url": "https://github.com/idaholab/moose/discussions/24042#discussioncomment-5596573",
+                  "updatedAt": "2023-04-12T19:26:11Z",
+                  "publishedAt": "2023-04-12T19:26:10Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "One thing I will say is that the vector kernels have built-in addition of derivatives with respect to the mesh displacements to the jacobian, whereas the scalar field kernels do not. However, that should only impact the convergence efficiency, and if both solves converge then the solutions should compare equal within a tolerance.",
+                          "url": "https://github.com/idaholab/moose/discussions/24042#discussioncomment-5596592",
+                          "updatedAt": "2023-04-12T19:28:02Z",
+                          "publishedAt": "2023-04-12T19:28:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Eilloo"
+                          },
+                          "bodyText": "Interesting... Yes, I've seen some cases where the convergence is different depending on which kernels I turn on displaced mesh for. In fact, the interface diffusion kernels seem to have the biggest effect here, with the non-vector version failing to converge at all when displaced mesh is on (by default and in the example file though, it's off). Nice to know where that might be coming from.\nIf I uncover anything explaining the differences in the actual solutions, I'll keep you updated.\nFor these simple test cases with very few elements, the differences are noticeable, but pretty small. Going up to more complex cases though, these differences seem to compound resulting in wildly different behaviour between vector and non-vector stuff. (Of course, that's assuming this discrepancy is the cause, and not some other mistake \ud83d\ude06)",
+                          "url": "https://github.com/idaholab/moose/discussions/24042#discussioncomment-5604159",
+                          "updatedAt": "2023-04-13T12:56:53Z",
+                          "publishedAt": "2023-04-13T12:56:53Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Eilloo"
+                          },
+                          "bodyText": "Following up on this, does anyone know where I can look for the code implementation of use_displaced_mesh = true compared to false?\nI can see that displaced_problem seems to be a whole system of its own, but I can't find anything vector or non-vector specific so far.\nIn the kernel base class, I can see the declaration of use_displaced_mesh, but not the code where things are calculated differently based on whether this is true or false.\nThanks!",
+                          "url": "https://github.com/idaholab/moose/discussions/24042#discussioncomment-5733077",
+                          "updatedAt": "2023-04-26T15:18:25Z",
+                          "publishedAt": "2023-04-26T15:18:24Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nThis will very much depend on the object type.\nFor example for ADKernels:\nADKernelTempl<T>::computeResidual()\n{\n  precalculateResidual();\n\n  std::vector<Real> residuals(_test.size(), 0);\n\n  if (_use_displaced_mesh)\n    for (_qp = 0; _qp < _qrule->n_points(); _qp++)\n      for (_i = 0; _i < _test.size(); _i++)\n        residuals[_i] += raw_value(_ad_JxW[_qp] * _ad_coord[_qp] * computeQpResidual());\n\nthe difference here is the use of the local element jacobian/weights with AD derivatives with regards to the displacements of the mesh\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/24042#discussioncomment-5733367",
+                          "updatedAt": "2023-04-26T15:40:48Z",
+                          "publishedAt": "2023-04-26T15:40:48Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Eilloo"
+                          },
+                          "bodyText": "Thanks Guillaume,\nThis does make me think, if the Jacobian is used in the computeResidual() method, does this mean that the addition of derivatives mentioned by Alex above could in fact impact the solution, rather than just the convergence? Or have I misunderstood this...",
+                          "url": "https://github.com/idaholab/moose/discussions/24042#discussioncomment-5740372",
+                          "updatedAt": "2023-04-27T08:56:17Z",
+                          "publishedAt": "2023-04-27T08:56:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "The solution doesnt change, as the residual is the same.\nThis of an AD number for the contribution to the residual as :  (residual, d_residual_variable_1_local_cell, d_residual_variable_2_local_cell ...)\nonly the first component gets used to compute the residual, then the derivatives are used to build the Jacobian",
+                          "url": "https://github.com/idaholab/moose/discussions/24042#discussioncomment-5742102",
+                          "updatedAt": "2023-04-27T11:49:48Z",
+                          "publishedAt": "2023-04-27T11:49:48Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "@Eilloo are you setting use_displaced_mesh on the INSAD material? This is essential to get the same results as when using the INS objects since the INSAD material computes the strong residuals that are used by most of the INSAD kernels, e.g. the INSAD objects rarely do computations themselves. I made this mistake myself yesterday",
+                          "url": "https://github.com/idaholab/moose/discussions/24042#discussioncomment-5745446",
+                          "updatedAt": "2023-04-27T17:00:25Z",
+                          "publishedAt": "2023-04-27T17:00:24Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Eilloo"
+                          },
+                          "bodyText": "This is a very good point and no, I haven't been - I'll test that as soon as I can and confirm any improvement.\nThanks also for highlighting 24024 - I'll add a link here too in case anyone finds this thread in future",
+                          "url": "https://github.com/idaholab/moose/discussions/24042#discussioncomment-5753144",
+                          "updatedAt": "2023-04-28T10:47:47Z",
+                          "publishedAt": "2023-04-28T10:47:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@Eilloo is this resolved?",
+                          "url": "https://github.com/idaholab/moose/discussions/24042#discussioncomment-6271091",
+                          "updatedAt": "2023-06-24T22:31:52Z",
+                          "publishedAt": "2023-06-24T22:31:52Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Eilloo"
+                          },
+                          "bodyText": "Hi yes, sorry - forgot to mark as answer",
+                          "url": "https://github.com/idaholab/moose/discussions/24042#discussioncomment-6279136",
+                          "updatedAt": "2023-06-26T07:58:16Z",
+                          "publishedAt": "2023-06-26T07:58:15Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Singular shape tensor in Peridynamics",
+          "author": {
+            "login": "Yunlong010413"
+          },
+          "bodyText": "I'm a newbie, but I'm currently experiencing the following problems.What can I do if the following problems occur? Thank you.\n*** ERROR ***\nThe following error occurred in the object \"strain\", of type \"ComputePlaneSmallStrainNOSPD\".\nSingular shape tensor is detected in ComputeStrainBaseNOSPD! Use SingularShapeTensorEliminatorUserObjectPD to avoid singular shape tensor!\n\nI've tried everything I can, but to no avail, it seems that I can only modify the number of grids to work properly. This is an example from the most common tests, just increasing the number of meshes, but this problem occurs. Is there any other solution?",
+          "url": "https://github.com/idaholab/moose/discussions/24004",
+          "updatedAt": "2023-06-26T06:30:08Z",
+          "publishedAt": "2023-04-07T15:22:52Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "lindsayad"
+                  },
+                  "bodyText": "@hchen139 do you have any suggestions for this user?",
+                  "url": "https://github.com/idaholab/moose/discussions/24004#discussioncomment-5562384",
+                  "updatedAt": "2023-04-09T03:17:14Z",
+                  "publishedAt": "2023-04-09T03:17:13Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Is this an issue with uniform refinement?",
+                          "url": "https://github.com/idaholab/moose/discussions/24004#discussioncomment-6271086",
+                          "updatedAt": "2023-06-24T22:30:30Z",
+                          "publishedAt": "2023-06-24T22:30:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hchen139"
+                          },
+                          "bodyText": "I don't think PD uses any refinement. Proper use of the 'SingularShapeTensorEliminatorUserObjectPD' should be able to avoid the singularity issue.",
+                          "url": "https://github.com/idaholab/moose/discussions/24004#discussioncomment-6271726",
+                          "updatedAt": "2023-06-25T02:45:23Z",
+                          "publishedAt": "2023-06-25T02:45:22Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "andrisfreimanis"
+                  },
+                  "bodyText": "I had a similar issue a while ago. The problem was that the SingularShapeTensorEliminatorUserObjectPD was not the first user object executed. Maybe this helps #24239",
+                  "url": "https://github.com/idaholab/moose/discussions/24004#discussioncomment-6278392",
+                  "updatedAt": "2023-06-26T06:30:08Z",
+                  "publishedAt": "2023-06-26T06:30:08Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Automatic reply with \"most relevant posts\"",
+          "author": {
+            "login": "hugary1995"
+          },
+          "bodyText": "So just now I came up with this idea of letting a bot reply to every post with \"the most relevant posts\" before @GiudGiud gets to every one of them. I did a little bit of search online, and I found that this is very much doable. The steps are\n\nCollect all the discussion posts, comments, and replies. Github GraphQL can do this very easily. I'm attaching an example query json in the end.\nFormat useful information into a dataset. Say username, title, body text, etc.\nUse a popular model to extract features and compute post similarities. scipy can do this fairly easily, for example.\nSet up a github bot to automatically reply every new post with the most similar posts.\n\nApparently, we need to periodically re-index database by running steps 1-3, but that should be an easy job for CIVET. Any ideas/suggestions, or anyone wants to collaborate on this fun little weekend project?\nquery { \n  rateLimit {\n    limit\n    cost\n    remaining\n    resetAt\n  }\n  repository(owner: \"idaholab\", name: \"moose\") {\n    discussions(first: 10) {\n      pageInfo {\n        hasNextPage\n        endCursor\n      }\n      edges {\n        node {\n          title\n          author {\n            login\n          }\n          bodyText\n          url\n          updatedAt\n          publishedAt\n          category {\n            name\n          }\n          comments(first: 100) {\n            edges {\n              node {\n                author {\n                  login\n                }\n                bodyText\n                url\n                updatedAt\n                publishedAt\n                isAnswer\n                replies(first: 100) {\n                  edges {\n                    node {\n                      author {\n                        login\n                      }\n                      bodyText\n                      url\n                      updatedAt\n                      publishedAt\n                      isAnswer\n                    }\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}",
+          "url": "https://github.com/idaholab/moose/discussions/24823",
+          "updatedAt": "2023-06-26T03:30:21Z",
+          "publishedAt": "2023-06-26T02:35:24Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "dschwen"
+                  },
+                  "bodyText": "Are you using word2vec?",
+                  "url": "https://github.com/idaholab/moose/discussions/24823#discussioncomment-6277400",
+                  "updatedAt": "2023-06-26T03:14:08Z",
+                  "publishedAt": "2023-06-26T03:14:07Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "I'm thinking of doc2vec from gensim. But ya, basically the same thing.",
+                          "url": "https://github.com/idaholab/moose/discussions/24823#discussioncomment-6277452",
+                          "updatedAt": "2023-06-26T03:30:22Z",
+                          "publishedAt": "2023-06-26T03:30:21Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Double inner product of two RankTwotensor",
+          "author": {
+            "login": "Bigdogcat"
+          },
+          "bodyText": "Hi moose community,\nI would like to ask what's the command for the double inner product of two RankTwotensor.\nHere I want to calculate the plastic work increment _plastic_work_incr = _stress_old[_qp] : _plastic_strain_incr[_qp], where _plastic_work_incr is a scalar and _stress_old and _plastic_strain_incr are RankTwotensor.\nThanks very much!",
+          "url": "https://github.com/idaholab/moose/discussions/24822",
+          "updatedAt": "2023-06-26T02:42:12Z",
+          "publishedAt": "2023-06-26T02:30:37Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "_stress_old[_qp].doubleContraction(_plastic_strain_incr[_qp])",
+                  "url": "https://github.com/idaholab/moose/discussions/24822#discussioncomment-6277265",
+                  "updatedAt": "2023-06-26T02:38:22Z",
+                  "publishedAt": "2023-06-26T02:38:21Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Bigdogcat"
+                          },
+                          "bodyText": "Thanks!",
+                          "url": "https://github.com/idaholab/moose/discussions/24822#discussioncomment-6277276",
+                          "updatedAt": "2023-06-26T02:42:03Z",
+                          "publishedAt": "2023-06-26T02:42:02Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Use `use_displaced_mesh` in `StressDivergenceTensors`",
+          "author": {
+            "login": "HemiaoZhang"
+          },
+          "bodyText": "Hi moose community,\nI have three questions regarding the kernel calculation based on current/reference in StressDivergenceTensors for finite strain plasticity.\nThe first one is whether the gradient of the test function is taken w.r.t. the current or reference configuration? I tried to trace the definition for  _grad_test to Kernel.C where it is defined in the initialization list as,\n_test(_var.phi()),\n_grad_test(_var.gradPhi()),\nHowever, I was unable to find detailed documentation for gradPhi() except for it being a member function of MooseVariableData. Therefore, could you suggest which gradPhi() is taken w.r.t to?\nThe second question is about the use_displaced_mesh. From the note, I suppose it is a switch to control which configuration to use. However, from the code snippet below, it seems that such switch is only applicable when the mesh dimension is less than 3.\nReal\nStressDivergenceTensors::computeQpResidual()\n{\n  Real residual = _stress[_qp].row(_component) * _grad_test[_i][_qp];\n  // volumetric locking correction\n  if (_volumetric_locking_correction)\n    residual += _stress[_qp].trace() / 3.0 *\n                (_avg_grad_test[_i][_component] - _grad_test[_i][_qp](_component));\n\n  if (_ndisp != 3 && _out_of_plane_strain_coupled && _use_displaced_mesh)\n  {\n    const Real out_of_plane_thickness = std::exp((*_out_of_plane_strain)[_qp]);\n    residual *= out_of_plane_thickness;\n  }\n\n  return residual;\n}\nFurthermore, adding use_displaced_mesh = true to the master action results in an error.\n*** ERROR ***\n/Users/hemiaozhang/projects/finite_plasticity/problems/finite_dp_ver1.i:30: unused parameter 'Modules/TensorMechanics/Master/all/use_displaced_mesh'\n\nMy last question is, therefore, which stress should we feed the StressDivergenceTensors? In other words, when we are defining a new material, which stress should be the final result?\nMany thanks in advance.",
+          "url": "https://github.com/idaholab/moose/discussions/24804",
+          "updatedAt": "2023-06-26T02:13:22Z",
+          "publishedAt": "2023-06-23T18:46:59Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@recuero @hugary1995",
+                  "url": "https://github.com/idaholab/moose/discussions/24804#discussioncomment-6265994",
+                  "updatedAt": "2023-06-23T20:55:15Z",
+                  "publishedAt": "2023-06-23T20:55:14Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "The first one is whether the gradient of the test function is taken w.r.t. the current or reference configuration?\n\nThe gradient is wrt the current configuration if use_displaced_mesh = true, wrt reference configuration otherwise.\n\nThe second question ... However, from the code snippet below, it seems that such switch is only applicable when the mesh dimension is less than 3.\n\nThat's not true.\n\nFurthermore, adding use_displaced_mesh = true to the master action results in an error.\n\nThe action will set the appropriate configuration for you based on other parameters. Hence the error.\n\nMy last question is, therefore, which stress should we feed the StressDivergenceTensors? In other words, when we are defining a new material, which stress should be the final result?\n\nThe Cauchy stress.",
+                  "url": "https://github.com/idaholab/moose/discussions/24804#discussioncomment-6266157",
+                  "updatedAt": "2023-06-23T21:17:45Z",
+                  "publishedAt": "2023-06-23T21:17:44Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "HemiaoZhang"
+                          },
+                          "bodyText": "Thank you so much for the answers!\nI have a further question. Could you help suggest which setting in the input file might conflict with use_displaced_mesh = true? The input file is listed pasted.\n[Mesh]\n  [generated_mesh]\n    type = GeneratedMeshGenerator\n    elem_type = HEX8\n    dim = 3\n    nx = 1\n    ny = 1\n    nz = 1\n    xmin = 0.0\n    xmax = 1.0\n    ymin = 0.0\n    ymax = 1.0\n    zmin = 0.0\n    zmax = 1.0\n  []\n[]\n\n[GlobalParams]\n  displacements = 'disp_x disp_y disp_z'\n[]\n\n[Modules/TensorMechanics/Master]\n  [all]\n    strain = FINITE\n    displacements = 'disp_x disp_y disp_z'\n    decomposition_method = EigenSolution\n    #use_displaced_mesh = true\n    add_variables = true\n    use_finite_deform_jacobian = true\n    volumetric_locking_correction = false\n    generate_output = 'stress_xx stress_yy stress_zz stress_xy stress_xz'\n  []\n[]\n\n[Materials]\n  [stress]\n    type = ComputeFiniteDruckerPragerStress\n    displacements = 'disp_x disp_y disp_z'\n    cohesion_c = 1e+7        # [Pa]\n    friction_phi = 0.5236    # [rad]\n    dilatancy_psi = 0        # [rad]\n    circle_choice = Inner\n    hardening_n = 1e+15\n    lame_lambda = 8.0769e+9  # [Pa]\n    lame_mu = 5.3846e+9      # [Pa]\n    elasticity_model = Hencky\n    etol = 1e-10\n    ptol = 1e-10\n    ftol = 1e-10\n  []\n  [elasticity_tensor]\n    type = ComputeIsotropicElasticityTensor\n    lambda = 8.0769e+9        # [Pa]\n    shear_modulus = 5.3846e+9 # [Pa]\n  []\n[]\n\n[BCs]\n  [top]\n    type = FunctionDirichletBC\n    variable = disp_z\n    boundary = top\n    function = '0.001 * t'\n  []\n  [bottom_x]\n    type = DirichletBC\n    variable = disp_x\n    boundary = bottom\n    value = 0.0\n  []\n  [bottom_y]\n    type = DirichletBC\n    variable = disp_y\n    boundary = bottom\n    value = 0.0\n  []\n  [bottom_z]\n    type = DirichletBC\n    variable = disp_z\n    boundary = bottom\n    value = 0.0\n  []\n[]\n\n[Preconditioning]\n  [./SMP]\n   type = SMP\n   full=true\n  [../]\n[]\n\n[Executioner]\n  type = Transient\n  dt=1\n  end_time=10\n  #nl_abs_tol = 1e-8\n[]\n\n[Outputs]\n  [exodus]\n    type = Exodus\n  []\n[]\n\n[Debug]\n  show_material_props = true\n[]\n\nAlso, since the algorithm I have is based on the total strain not the incremental strain, I added displacements = 'disp_x disp_y disp_z' in [Materials/stress], will it possibly be inconsistent with ComputeFiniteStrain?\nAnd one last general question on the Executioner. In the output, there is usually a linear solver nested within a nonlinear one. I can understand that the nonlinear solver is to solve for displacement from the global stiffness matrix and the right hand side. What is the linear solver for? I saw from previous discussion that the convergence issue is usually with the nonlinear solver and not the linear one and am having the same issue myself. What could possibly cause that?",
+                          "url": "https://github.com/idaholab/moose/discussions/24804#discussioncomment-6266274",
+                          "updatedAt": "2023-06-23T21:40:35Z",
+                          "publishedAt": "2023-06-23T21:40:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "I have a further question. Could you help suggest which setting in the input file might conflict with use_displaced_mesh = true? The input file is listed pasted.\n\nWhat do you mean by \"conflict with use_displaced_mesh = true\"? Where and why do you want to manipulate use_displaced_mesh yourself. We typically advise against that.\n\nAlso, since the algorithm I have is based on the total strain not the incremental strain, I added displacements = 'disp_x disp_y disp_z' in [Materials/stress], will it possibly be inconsistent with ComputeFiniteStrain\n\nThis question along with the previous one are very difficult to answer in general. Please clarify:\n\nAre you dealing with small deformation or large deformation?\nIf large deformation, which strain/stress measures are you working with?\nWhy do you insist on computing the stress on the deformed configuration?\n\n\nAnd one last general question on the Executioner. In the output, there is usually a linear solver nested within a nonlinear one. I can understand that the nonlinear solver is to solve for displacement from the global stiffness matrix and the right hand side. What is the linear solver for?\n\nNo, the linear system is the traditional K u = f taught in old-school engineer classes. For a general nonlinear system, R(u) = 0, you need to iteratively update it (hence the nonlinear loop). See https://en.wikipedia.org/wiki/Newton%27s_method\n\nI saw from previous discussion that the convergence issue is usually with the nonlinear solver and not the linear one and am having the same issue myself. What could possibly cause that?\n\nThis is again very difficult to answer because the cause of convergence issues can vary dramatically from problem to problem. The troubleshooting page should be a good starting point: https://mooseframework.inl.gov/application_usage/failed_solves.html",
+                          "url": "https://github.com/idaholab/moose/discussions/24804#discussioncomment-6277165",
+                          "updatedAt": "2023-06-26T02:13:23Z",
+                          "publishedAt": "2023-06-26T02:13:22Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Assigning boundary names for subdomains created in a mesh",
+          "author": {
+            "login": "ananthanarasimhanj"
+          },
+          "bodyText": "How to give boundary conditions (top, bottom, left and right) for the subdomain  blocks too ? E.g. for a mesh shown below, Is it possible to assign boundary names to the sides of the subdomains too? I am not sure if \"SideSetsFromBoundingBoxGenerator\" is the option to do this. I tried my best to find reading documentation and forum here and I couldn't.\n[Mesh]\n[air_block]\ntype = GeneratedMeshGenerator\ndim = 2\nnx = 100\nny = 100\nxmax = 0.04\nymax = 0.1\n[]\n[water_block]\ntype = SubdomainBoundingBoxGenerator\ninput = air_block\nblock_id = 1\nbottom_left = '0 0 0'\ntop_right = '0.04 0.039 0'\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/24821",
+          "updatedAt": "2023-06-26T00:55:08Z",
+          "publishedAt": "2023-06-26T00:35:47Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "For something simple like left / bottom etc boundaries you can work with that one but also with those generators\nSidesetFromNormals\nSidesetsaroundSubdomain\nParsedGenerateSideset",
+                  "url": "https://github.com/idaholab/moose/discussions/24821#discussioncomment-6276652",
+                  "updatedAt": "2023-06-26T00:46:52Z",
+                  "publishedAt": "2023-06-26T00:46:51Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ananthanarasimhanj"
+                          },
+                          "bodyText": "Thanks I will try. I want to give boundary conditions for top of both the air_block and water_block, and I assume, if I mentioned bottom, it naturally be referring the bottom of water_block and not the air_block. Isnt it?",
+                          "url": "https://github.com/idaholab/moose/discussions/24821#discussioncomment-6276665",
+                          "updatedAt": "2023-06-26T00:51:34Z",
+                          "publishedAt": "2023-06-26T00:51:33Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "You ll have to work with the parameters of these objects. The defaults, unless there s a block parameter, is to consider the whole mesh",
+                          "url": "https://github.com/idaholab/moose/discussions/24821#discussioncomment-6276679",
+                          "updatedAt": "2023-06-26T00:55:08Z",
+                          "publishedAt": "2023-06-26T00:55:08Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "meshing in porous flow module",
+          "author": {
+            "login": "lupeom"
+          },
+          "bodyText": "Hello moose community,\nI am new comer to moose and i would like to use porous flow to simulation the injection of CO2 in brine-saturated reservoir. I found all the geometry/meshes in the tutorials are horizontal and regular geometry. I am kindly wondering if it possible to include some titling meshed geometry-- a case where the mesh has a fold- (or dome-) shape? Can we do that in moose or one needs a third-party software?\nthanks and I will much appreciate your help in advance.\nBest, Lupeom",
+          "url": "https://github.com/idaholab/moose/discussions/16897",
+          "updatedAt": "2023-06-25T04:36:28Z",
+          "publishedAt": "2021-02-04T20:26:33Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "WilkAndy"
+                  },
+                  "bodyText": "Hi Lupeom,\nAlmost all of the PorousFlow tests and examples use MOOSE's inbuilt meshing capability.  While that is suitable for highly idealised situations, you almost always need something more sophisticated when dealing with real geology and hydrostratigraphy, as you have found.\nYou will need to use an external meshing software package.  I have built many models of the subsurface, and have found that meshing often takes a significant fraction of the time spent modelling, so don't think that meshing is a trivial, quick task!\nSome people can get Cubit free, while others (like me) have to pay lots of $$$ for it.  There is a \"sibling\" product called coreform that has free aspects.  Many MOOSE people use the excellent and free tool called gmsh that works well for PorousFlow type of problems.  If you are going to be in this field for many years, you might like to make your own mesh-translation tools (between different formatting) and mesh-building tools, probably based on the exodus or VTK libraries, since none of the aforementioned packages easily handle subsurface hydrostratigraphy with faults and so on.\na",
+                  "url": "https://github.com/idaholab/moose/discussions/16897#discussioncomment-339367",
+                  "updatedAt": "2022-07-10T18:42:12Z",
+                  "publishedAt": "2021-02-04T21:32:55Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aeslaughter"
+                          },
+                          "bodyText": "Coreform Cubit is the commercial version of Cubit: https://cubit.sandia.gov/licensing.html",
+                          "url": "https://github.com/idaholab/moose/discussions/16897#discussioncomment-339920",
+                          "updatedAt": "2022-07-10T18:42:16Z",
+                          "publishedAt": "2021-02-05T00:37:56Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GregVernon"
+                  },
+                  "bodyText": "@lupeom\nAs mentioned above, we (Coreform) provide a non-commercial license for Coreform Cubit.  It's fully-functional but is limited to exporting 50k elements.  If this limit is too restricting, contact us and we can discuss temporarily removing this restriction (especially if it's for a dissertation or thesis).  If you're interested in the Coreform Cubit route, you can find Cubit tutorials on our website and you can post Cubit-specific questions on our forum for the Cubit community to answer.",
+                  "url": "https://github.com/idaholab/moose/discussions/16897#discussioncomment-340065",
+                  "updatedAt": "2022-07-10T18:42:42Z",
+                  "publishedAt": "2021-02-05T01:43:02Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "liaohaiyang1534"
+                          },
+                          "bodyText": "Can I apply for the temporary removal of the export restriction? I am writing a research paper on numerical simulations.\nThanks!",
+                          "url": "https://github.com/idaholab/moose/discussions/16897#discussioncomment-6272107",
+                          "updatedAt": "2023-06-25T04:36:28Z",
+                          "publishedAt": "2023-06-25T04:36:28Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "lupeom"
+                  },
+                  "bodyText": "Thanks so much @WilkAndy and @GregVernon  for your valuable comments, so much appreciated.",
+                  "url": "https://github.com/idaholab/moose/discussions/16897#discussioncomment-341516",
+                  "updatedAt": "2022-07-10T18:42:43Z",
+                  "publishedAt": "2021-02-05T13:06:41Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mcacace"
+                          },
+                          "bodyText": "@lupeom you could also try our open source meshing generator (look here #16537 (comment)). It has been developed for similar applications as those you are interested and it is fully Moose compatibile. Let me know if you would have any questions",
+                          "url": "https://github.com/idaholab/moose/discussions/16897#discussioncomment-346800",
+                          "updatedAt": "2022-07-10T18:42:48Z",
+                          "publishedAt": "2021-02-07T13:44:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lupeom"
+                          },
+                          "bodyText": "Thanks so much @mcacace, very interesting.",
+                          "url": "https://github.com/idaholab/moose/discussions/16897#discussioncomment-371906",
+                          "updatedAt": "2022-07-10T18:42:49Z",
+                          "publishedAt": "2021-02-15T22:13:43Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "show_var_residual for variables of type LAGRANGE_VEC",
+          "author": {
+            "login": "raj-anant"
+          },
+          "bodyText": "Dear MOOSE Team,\nWe are using MALAMUTE for melt pool simulations and needed to study how the residuals vary in response to random perturbations to the solution. We are using show_var_residual in the Debug block for dumping the residuals to the Exodus file. It works well for scalar variables like temperature and pressure but gives error for vector variables like velocity. For instance, if we use the following:\n[Variables]\n  [velocity]\n    family = LAGRANGE_VEC\n  []\n[]\n[Debug]\n  show_var_residual =  'velocity'\n[]\n\nIt gives the error: \"No standard variable named velocity found. Did you specify a vector variable when you meant to specify a standard variable\"\nWe tried using specific components like show_var_residual =  'velocity_x', but that leads to a segmentation fault.\nIs there a workaround for this issue? We would appreciate any help on this.\nThanks,\nAnant",
+          "url": "https://github.com/idaholab/moose/discussions/24817",
+          "updatedAt": "2023-06-24T22:40:41Z",
+          "publishedAt": "2023-06-24T18:35:54Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nWe have no implemented variable residual debugging for vector variables.\nYou ll want to modify the DebugResidualAux to make it work for vector variables\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/24817#discussioncomment-6271120",
+                  "updatedAt": "2023-06-24T22:40:41Z",
+                  "publishedAt": "2023-06-24T22:40:41Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Generate new boundary (sideset) from current boundary",
+          "author": {
+            "login": "lyyc199586"
+          },
+          "bodyText": "Hi all,\nI am trying to find a way to generate a new boundary from an existing boundary. To be specific, I want to 'cut' part of the exist boundary:\n\nIs there an easy way to do so?",
+          "url": "https://github.com/idaholab/moose/discussions/24350",
+          "updatedAt": "2023-06-24T22:36:48Z",
+          "publishedAt": "2023-05-13T15:40:16Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nIf you know a good analytical expression for it, like \"x > 3.2\" for example, then you can use the ParsedGenerateSideset\nhttps://mooseframework.inl.gov/source/meshgenerators/ParsedGenerateSideset.html\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/24350#discussioncomment-5892783",
+                  "updatedAt": "2023-05-13T16:04:15Z",
+                  "publishedAt": "2023-05-13T16:04:14Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lyyc199586"
+                          },
+                          "bodyText": "Can I use old boundary with the expression \"x > 3.2\" to generate a new boundary with ParsedGenerateSideset?",
+                          "url": "https://github.com/idaholab/moose/discussions/24350#discussioncomment-5892841",
+                          "updatedAt": "2023-05-13T16:20:27Z",
+                          "publishedAt": "2023-05-13T16:20:26Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "unfortunately not.\nIt's definitely something we're missing",
+                          "url": "https://github.com/idaholab/moose/discussions/24350#discussioncomment-5893075",
+                          "updatedAt": "2023-05-13T17:14:35Z",
+                          "publishedAt": "2023-05-13T17:14:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lyyc199586"
+                          },
+                          "bodyText": "I feel like it shouldn't be too hard to add an option included_boundaries similar to included_subdomians. Let me try to add it",
+                          "url": "https://github.com/idaholab/moose/discussions/24350#discussioncomment-5893206",
+                          "updatedAt": "2023-05-13T17:51:47Z",
+                          "publishedAt": "2023-05-13T17:51:47Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Functionality was added",
+                  "url": "https://github.com/idaholab/moose/discussions/24350#discussioncomment-6271108",
+                  "updatedAt": "2023-06-24T22:36:47Z",
+                  "publishedAt": "2023-06-24T22:36:46Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Gas mixing with immobile water in PorousFlow module",
+          "author": {
+            "login": "sinaomrani96"
+          },
+          "bodyText": "Dear all,\nHope you are doing well.\nI wanted to simulate a 2-phase system of immobile water and two gases. At first gases are separated and then they get mixed. I am using PorousFlow module, and the problem is that I cannot define fluid properties for each component, and it only accepts for phases. How I can define material property for each gas in my system since they are after all in the same phase. I was wondering if can be done with PorousFlow.\nThanks,\nSina",
+          "url": "https://github.com/idaholab/moose/discussions/23920",
+          "updatedAt": "2023-06-24T22:29:45Z",
+          "publishedAt": "2023-03-31T15:17:56Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "sinaomrani96"
+                  },
+                  "bodyText": "Dear all,\nHope you are doing well.\nI was wondering if there is a solution for this or if not how the code should be modified. Thanks again for your insight.\nSina",
+                  "url": "https://github.com/idaholab/moose/discussions/23920#discussioncomment-5595080",
+                  "updatedAt": "2023-04-12T16:40:01Z",
+                  "publishedAt": "2023-04-12T16:40:00Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@cpgr",
+                          "url": "https://github.com/idaholab/moose/discussions/23920#discussioncomment-5615220",
+                          "updatedAt": "2023-04-14T11:51:45Z",
+                          "publishedAt": "2023-04-14T11:51:45Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@WilkAndy @cpgr",
+                          "url": "https://github.com/idaholab/moose/discussions/23920#discussioncomment-6271084",
+                          "updatedAt": "2023-06-24T22:29:46Z",
+                          "publishedAt": "2023-06-24T22:29:45Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

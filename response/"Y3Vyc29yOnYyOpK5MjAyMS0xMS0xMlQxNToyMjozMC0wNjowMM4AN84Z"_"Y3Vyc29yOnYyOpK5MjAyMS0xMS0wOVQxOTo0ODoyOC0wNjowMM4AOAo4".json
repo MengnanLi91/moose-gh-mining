@@ -1,0 +1,1035 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMS0xMS0wOVQxOTo0ODoyOC0wNjowMM4AOAo4"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Shallow Water Equations and Moose Vector Variables",
+          "author": {
+            "login": "DamynChipman"
+          },
+          "bodyText": "I am attempting to model the shallow water equations (SWE) with Moose (I'm a PhD student at Boise State University). I've used Moose for a variety of other geophysics, but the SWE are slightly more complicated. I mention that to say that I'm familiar with Moose, having gone through most of the tutorials.\nHere's my problem setup. I have the strong form that I use to generate the weak form of the equations. The weak form takes the following form (using inner product notation):\n(dqdt, \\psi) + <F(q) * n, \\psi> - (F(q), \\nabla \\psi) - (b + s, \\psi) = 0\n\\psi is the test function.\nq is the variable vector: [h, hu, hv].\nF(q) is the flux tensor: [ [hu, hv], [hu^2 + (1/2)gh^2, huv], [huv, hv^2 + (1/2)gh^2] ].\nh is water height.\nu and v are velocities.\nb and s are bathymetry and (friction) source terms.\nThese would be my questions:\nHow do I work with vector valued variables in Moose? What classes can I work with/ derive from?\nWhat about for vectors like q where the entries aren't necessarily physically related (like components of a velocity field)?\nWould I be able to use some of the tensor functionality to do this? I have briefly looked over it.\nI will continue to pour over tutorials and documentation, but any guidance would be appreciated.\nAnd finally, I read somewhere that a SWE module is in the works. Any word on progress there?\nMany thanks!",
+          "url": "https://github.com/idaholab/moose/discussions/19356",
+          "updatedAt": "2022-06-18T06:12:29Z",
+          "publishedAt": "2021-11-11T06:35:39Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nFirst, since you only have 3 components and the equation seems to be writable in a vector-formulation, vector is the right choice and should give you better performance over implementing 3 scalar equations.\nI m a little concerned that having h and hu hv, which could be of different orders of magnitude since they have a different unit / physical meaning, will lead to convergence/scaling issues. You won't be able to scale the equations separately if you lump them in a vector\nI m not sure if we have documentation specially for implementing vector equations. If you find it please let me know. The process is mostly the same, you create a vector variable, then vector kernels to implement your equation etc. There is a VectorKernel base class you can inherit from for your kernels.\nIf you have a tensor anisotropic diffusivity for example, you will be able to use the tensor utilities (in utils/) for that.\nWe support the lagrange variables as vector variables. There are vector versions of kernels, bcs, auxkernels etc.\nAn example of a vector BC:\nhttps://mooseframework.inl.gov/source/bcs/VectorDirichletBC.html\nvector kernel:\nhttps://mooseframework.inl.gov/moose/source/kernels/VectorDiffusion.html\nAuxKernel has an example of a vector aux in the text:\nhttps://mooseframework.inl.gov/syntax/AuxKernels/\nWhere did you read about the SWE? It d be easier to tag the person who was talking about it here\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/19356#discussioncomment-1627135",
+                  "updatedAt": "2022-10-10T20:04:58Z",
+                  "publishedAt": "2021-11-11T17:17:09Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "Yes I would only ever use a vector variable if the governing equation can logically be written in vector form like the momentum equation in Navier-Stokes. Speaking of which, the AD version of finite element incompressible Navier-Stokes in the navier_stokes module is probably one of the better places to look if you're curious about using vector variables.",
+                          "url": "https://github.com/idaholab/moose/discussions/19356#discussioncomment-1627341",
+                          "updatedAt": "2021-11-11T18:03:46Z",
+                          "publishedAt": "2021-11-11T18:03:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "Our shallow water equation modeling with finite elements never really got off the ground. For modeling of hyperbolic-character equations we're going more and more towards our finite volume implementation.",
+                          "url": "https://github.com/idaholab/moose/discussions/19356#discussioncomment-1627353",
+                          "updatedAt": "2022-10-10T20:04:59Z",
+                          "publishedAt": "2021-11-11T18:05:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "DamynChipman"
+                          },
+                          "bodyText": "Thanks for the resources on the vector variables and kernels. I'll dive into those objects to see what I can get done. All of the tutorials work with scalar variables and kernels, so thanks for pointing me towards the vector stuff. I hadn't considered the different orders of magnitude in h and u/v; I will keep that in mind moving forward.\nI saw in one of the tutorial presentations that SWE was a work in progress. I don't know who was working on it (or if that is still the case).\nI did see that Moose supports FV modeling, but I haven't looked into it much. I'll have to do that. That's how we normally solve the SWE anyways.\nRegardless, thanks for the direction! If I get any good results/progress, or if I have any further questions, I'll post them here.",
+                          "url": "https://github.com/idaholab/moose/discussions/19356#discussioncomment-1627558",
+                          "updatedAt": "2022-10-10T20:05:00Z",
+                          "publishedAt": "2021-11-11T18:56:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dschwen"
+                          },
+                          "bodyText": "Yeah, I implemented a shallow water model years ago, but I didn't know what I was doing and It had horrible artifacts with kilometer waves after some time :-D. I suppose the formulation was not stable with regular Galerkin FEM. \ud83e\udd37\u200d\u2642\ufe0f",
+                          "url": "https://github.com/idaholab/moose/discussions/19356#discussioncomment-1629154",
+                          "updatedAt": "2022-10-10T20:05:24Z",
+                          "publishedAt": "2021-11-12T03:15:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dschwen"
+                          },
+                          "bodyText": "Here is the tidal model (it was done just for fun!)\n\n  \n    \n    \n\n    globe.mp4",
+                          "url": "https://github.com/idaholab/moose/discussions/19356#discussioncomment-1629161",
+                          "updatedAt": "2022-10-10T20:05:24Z",
+                          "publishedAt": "2021-11-12T03:18:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "@aeslaughter had also worked on SWE",
+                          "url": "https://github.com/idaholab/moose/discussions/19356#discussioncomment-1629412",
+                          "updatedAt": "2022-10-10T20:05:25Z",
+                          "publishedAt": "2021-11-12T04:27:17Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to use variable in parsed function?",
+          "author": {
+            "login": "aiskhak"
+          },
+          "bodyText": "I want to implement the Boussinesq approximation in a MOOSE-based SAM. TO do so I have the equation of state with constant density, but I want to define body force that depends on temperature:\n[GlobalParams]\n  temperature = T \n  ...\n[]\n\n[Functions]\n  [./body_f]\n    # Boussinesq body force\n    type = ParsedFunction\n    value = 9.8*0.38*T\n    vars = 'T'\n    vals = T\n  [../]\n[]\n\n[Variables]\n  [./T]\n    initial_condition = 0.0\n  [../]\n  ...\n[]\n\n[Kernels]\n  ...\n  [./body_force]\n    type = BodyForce\n    variable = v\n    function = body_f\n  [../]\n\nHowever, MOOSE does not allow using variables in parsed functions. What would be the solution?",
+          "url": "https://github.com/idaholab/moose/discussions/19363",
+          "updatedAt": "2022-07-11T17:03:30Z",
+          "publishedAt": "2021-11-11T17:29:00Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "ykvishal"
+                  },
+                  "bodyText": "I think that there are 2 more options MaskedBodyForce and INSADBoussinesqBodyForce. I hope that one of them will work.",
+                  "url": "https://github.com/idaholab/moose/discussions/19363#discussioncomment-1627845",
+                  "updatedAt": "2022-07-11T17:03:24Z",
+                  "publishedAt": "2021-11-11T20:07:05Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aiskhak"
+                          },
+                          "bodyText": "Thank you for the reply. It seems like MaskedBodyForce allows only using material property, but not a variable. INSADBoussinesqBodyForce works only with NS module, while I have different kernels...",
+                          "url": "https://github.com/idaholab/moose/discussions/19363#discussioncomment-1628681",
+                          "updatedAt": "2022-07-11T17:03:24Z",
+                          "publishedAt": "2021-11-12T00:02:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "It's the right lead though.\nDont use a function, use a kernel directly. Functions cant depend on non-linear variables.",
+                          "url": "https://github.com/idaholab/moose/discussions/19363#discussioncomment-1628721",
+                          "updatedAt": "2022-07-11T17:03:24Z",
+                          "publishedAt": "2021-11-12T00:26:54Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aiskhak"
+                          },
+                          "bodyText": "So you are saying to modify a kernel (requires access to sources)?",
+                          "url": "https://github.com/idaholab/moose/discussions/19363#discussioncomment-1628725",
+                          "updatedAt": "2022-07-11T17:03:24Z",
+                          "publishedAt": "2021-11-12T00:28:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "do you not have access to SAM source code?\nI would say add a kernel that does what you want",
+                          "url": "https://github.com/idaholab/moose/discussions/19363#discussioncomment-1628786",
+                          "updatedAt": "2022-07-11T20:38:27Z",
+                          "publishedAt": "2021-11-12T00:55:50Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aiskhak"
+                          },
+                          "bodyText": "yes, I do. Thanks for the advice!",
+                          "url": "https://github.com/idaholab/moose/discussions/19363#discussioncomment-1628816",
+                          "updatedAt": "2022-07-11T20:38:28Z",
+                          "publishedAt": "2021-11-12T01:07:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "travismui"
+                          },
+                          "bodyText": "@aiskhak You can use a CoupledForce kernel to add a scalar factor temperature-dependent body force. Note that Moose syntax will work in line with the SAM syntax, so you can achieve this directly from the input. If you have more complicated requirements, please feel free to contact the SAM developers directly to discuss your needs.",
+                          "url": "https://github.com/idaholab/moose/discussions/19363#discussioncomment-1628924",
+                          "updatedAt": "2022-07-11T20:38:27Z",
+                          "publishedAt": "2021-11-12T01:46:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aiskhak"
+                          },
+                          "bodyText": "Thanks, this is probably what I need.",
+                          "url": "https://github.com/idaholab/moose/discussions/19363#discussioncomment-1628930",
+                          "updatedAt": "2022-07-11T20:38:55Z",
+                          "publishedAt": "2021-11-12T01:49:04Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Phase Field: Solve Did NOT Converge!",
+          "author": {
+            "login": "wowodejiajia"
+          },
+          "bodyText": "Dear MOOSE developers,\nI downloaded the input code from the literature. Run it on my own computer.\n19 Nonlinear |R| = 3.234805e+06\n0 Linear |R| = 3.234805e+06\n1 Linear |R| = 3.234747e+06\n2 Linear |R| = 3.234728e+06\n3 Linear |R| = 3.234719e+06\n4 Linear |R| = 3.234713e+06\n5 Linear |R| = 3.234709e+06\n6 Linear |R| = 3.234707e+06\n7 Linear |R| = 3.234705e+06\n8 Linear |R| = 3.234703e+06\n9 Linear |R| = 3.234702e+06\n10 Linear |R| = 3.234701e+06\n11 Linear |R| = 3.234700e+06\n12 Linear |R| = 3.234699e+06\n13 Linear |R| = 3.234699e+06\n14 Linear |R| = 3.234698e+06\n15 Linear |R| = 3.234698e+06\n16 Linear |R| = 3.234697e+06\n17 Linear |R| = 3.234697e+06\n18 Linear |R| = 3.234696e+06\n19 Linear |R| = 3.234696e+06\n20 Linear |R| = 3.234695e+06\n21 Linear |R| = 3.234694e+06\n22 Linear |R| = 3.234694e+06\n23 Linear |R| = 3.234694e+06\n24 Linear |R| = 3.234693e+06\n25 Linear |R| = 3.234693e+06\n26 Linear |R| = 3.234693e+06\n27 Linear |R| = 3.234693e+06\n28 Linear |R| = 3.234693e+06\n29 Linear |R| = 3.234693e+06\n30 Linear |R| = 3.234796e+06\n31 Linear |R| = 3.234745e+06\n32 Linear |R| = 3.234725e+06\n33 Linear |R| = 3.234717e+06\n34 Linear |R| = 3.234711e+06\n35 Linear |R| = 3.234708e+06\n36 Linear |R| = 3.234705e+06\n37 Linear |R| = 3.234703e+06\n38 Linear |R| = 3.234701e+06\n39 Linear |R| = 3.234700e+06\n40 Linear |R| = 3.234699e+06\n41 Linear |R| = 3.234698e+06\n42 Linear |R| = 3.234697e+06\n43 Linear |R| = 3.234696e+06\n44 Linear |R| = 3.234696e+06\n45 Linear |R| = 3.234696e+06\n46 Linear |R| = 3.234695e+06\n47 Linear |R| = 3.234695e+06\n48 Linear |R| = 3.234695e+06\n49 Linear |R| = 3.234694e+06\n50 Linear |R| = 3.234694e+06\nLinear solve did not converge due to DIVERGED_ITS iterations 50\n20 Nonlinear |R| = 3.234580e+06\nNonlinear solve did not converge due to DIVERGED_MAX_IT iterations 20\nSolve Did NOT Converge!\nFinished Solving                                                                       [179.60 s] [    0 MB]\nAborting as solve did not converge",
+          "url": "https://github.com/idaholab/moose/discussions/19234",
+          "updatedAt": "2022-06-21T22:28:56Z",
+          "publishedAt": "2021-10-28T09:38:25Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "wowodejiajia"
+                  },
+                  "bodyText": "[Mesh]\n  # input file.\n  # Define mesh. 2-D system, simulation size 200*200.\n  type = GeneratedMesh\n  dim = 2\n  nx = 200\n  xmax = 200\n  ny = 200\n  ymax = 200\n[]\n\n[Variables]\n  # variables. w: chemical potential, eta: order parameter, pot: applied overpotential.  \n  [./w]\n  [../]\n  [./eta]\n  [../]\n  [./pot]\n  [../]\n[]\n\n[Functions]\n  # Creating functions for initial conditions.\n  [./ic_func_eta]\n    type = ParsedFunction\n    value = 0.5*(1.0-1.0*tanh((x-20)*2))\n  [../]\n  [./ic_func_c]\n    type = ParsedFunction\n    value = 0\n  [../]\n  [./ic_func_pot]\n    type = ParsedFunction\n    value = -0.225*(1.0-tanh((x-20)*2))\n  [../]\n[]\n\n[ICs]\n  # Initial conditions.\n  [./eta]\n    variable = eta\n    type = FunctionIC\n    function = ic_func_eta\n  [../]\n  [./w]\n    variable = w\n    type = FunctionIC\n    function = ic_func_c\n  [../]\n  [./pot]\n    variable = pot\n    type = FunctionIC\n    function = ic_func_pot\n  [../]\n[]\n\n[BCs]\n  # Boundary conditions.\n  [./bottom_eta]\n    type = NeumannBC\n    variable = 'eta'\n    boundary = 'bottom'\n    value = 0\n  [../]\n  [./top_eta]\n    type = NeumannBC\n    variable = 'eta'\n    boundary = 'top'\n    value = 0\n  [../]\n  [./left_eta]\n    type = DirichletBC\n    variable = 'eta'\n    boundary = 'left'\n    value = 1\n  [../]\n  [./right_eta]\n    type = DirichletBC\n    variable = 'eta'\n    boundary = 'right'\n    value = 0\n  [../]\n  [./bottom_w]\n    type = NeumannBC\n    variable = 'w'\n    boundary = 'bottom'\n    value = 0\n  [../]\n  [./top_w]\n    type = NeumannBC\n    variable = 'w'\n    boundary = 'top'\n    value = 0.0\n  [../]\n  [./left_w]\n    type = NeumannBC\n    variable = 'w'\n    boundary = 'left'\n    value = 0\n  [../]\n  [./right_w]\n    type = DirichletBC\n    variable = 'w'\n    boundary = 'right'\n    value = 0.0\n  [../]\n  [./left_pot]\n    type = DirichletBC\n    variable = 'pot'\n    boundary = 'left'\n    value = -0.45\n  [../]\n  [./right_pot]\n    type = DirichletBC\n    variable = 'pot'\n    boundary = 'right'\n    value = 0\n  [../]\n[]\n\n[Kernels]\n  [./w_dot]\n    # First part of equation 3 in main text . chi*dw/dt\n    type = SusceptibilityTimeDerivative\n    variable = w\n    f_name = chi\n    args = 'w'\n  [../]\n  [./Diffusion1]\n    # Intrinsic diffusion part of equation 3 in main text.\n    type = MatDiffusion\n    variable = w\n    diffusivity = D\n  [../]\n  [./Diffusion2]\n    # Migration.\n    type = Migration\n    variable = w\n    cv = eta\n    Q_name = 0.\n    QM_name = DN\n    cp = pot\n  [../]\n  [./coupled_etadot]\n    # Coupling between w and eta.\n    type = CoupledSusceptibilityTimeDerivative\n    variable = w\n    v = eta\n    f_name = ft\n    args = 'eta'\n  [../]\n  [./Cond]\n    # Conduction, left handside of equation 4 in main text.\n    type = Conduction\n    variable = pot\n    cp = eta\n    cv = w\n    Q_name = Le1\n    QM_name = 0.\n  [../]\n  [./coupled_pos]\n    # Source term for Equation 4 in main text.\n    type = CoupledSusceptibilityTimeDerivative\n    variable = pot\n    v = eta\n    f_name = ft2\n    args = 'eta'\n  [../]\n  [./BV]\n    # Bulter-volmer equation, right hand side of Equation 1 in main text.\n    type = Kinetics\n    variable = eta\n    f_name = G\n    cp = pot\n    cv = eta\n  [../]\n  [./AC_bulk]\n    # Driving force from switching barrier, right hand side of Equation 1 in main text.\n    type = AllenCahn\n    variable = eta\n    f_name = FF\n  [../]\n  [./AC_int]\n    # interfacial energy\n    type = ACInterface\n    variable = eta\n  [../]\n  [./Noiseeta]\n    type = LangevinNoise\n    variable = eta\n    amplitude = 0.04\n  [../]\n  [./e_dot]\n    # deta/dt\n    type = TimeDerivative\n    variable = eta\n  [../]\n[]\n\n[Materials]\n  [./constants]\n    # kappa_op: gradient coefficient;  M0:diffucion coefficient of Li+ in electrolyte\n    #  S1, S2 conductivity of electrode and electrolyte; L: kinetic coefficient; Ls: electrochemical kinetic coefficient; B: Barrier height;\n    #  es, el: difference in the chemical potential of lithium and neutral components on the electrode/electrolyte phase at initial equilibrium state;\n    # us, ul: free energy density of the electrode/electrolyte phases. Defined in Ref. 20 and 26 of the main text; A: prefactor; AA: nF/(R*T);\n    # dv is the ratio of site density for the electrode/electrolyte phases; ft2: normalized used in Equation 4.\n    type = GenericConstantMaterial\n    prop_names  = 'kappa_op  M0     S1    S2     L    Ls       B   es       el    A     ul    us    AA  dv   ft2'\n    prop_values = '0.3   317.9   1000000 1.19   6.25   0.001  2.4  -13.8  2.631   1.0   0.0695 13.8   38.69 5.5 0.0074'\n  [../]\n  [./liquid_GrandPotential]\n    # grand potential of electrolyte phase\n    type = DerivativeParsedMaterial\n    function = 'ul-A*log(1+exp((w-el)/A))'\n    args = 'w'\n    f_name = f1\n    material_property_names = 'A ul el'\n  [../]\n  [./solid_GrandPotential]\n    # grand potential of electrode phase\n    type = DerivativeParsedMaterial\n    function = 'us-A*log(1+exp((w-es)/A))'\n    args = 'w'\n    f_name = f2\n    material_property_names = 'A us es'\n  [../]\n  [./switching_function]\n    #interpolation function h\n    type = SwitchingFunctionMaterial\n    eta ='eta'\n    h_order = HIGH\n  [../]\n  [./barrier_function]\n    # Barrier function g\n    type = BarrierFunctionMaterial\n    eta = eta\n  [../]\n  [./total_GrandPotential]\n    type = DerivativeTwoPhaseMaterial\n    args = 'w'\n    eta = eta\n    fa_name = f1\n    fb_name = f2\n    derivative_order = 2\n    W = 2.4\n  [../]\n  [./coupled_eta_function]\n    # Coupling between eta and w\n    type = DerivativeParsedMaterial\n    function = '-(cs*dv-cl)*dh'  # in this code cs=-cs h=eta dh=1\n    args = ' w eta'\n    f_name = ft\n    material_property_names = 'dh:=D[h,eta] h dv cs:=D[f2,w] cl:=D[f1,w]'\n    derivative_order = 1\n  [../]\n  [./susceptibility]\n    type = DerivativeParsedMaterial\n    function = '-d2F1*(1-h)-d2F2*h*dv'\n    args = 'w'\n    f_name = chi\n    derivative_order = 1\n    material_property_names = 'h dv d2F1:=D[f1,w,w] d2F2:=D[f2,w,w]'\n  [../]\n  [./Mobility_coefficient]\n    # Mobility defined by D*c/(R*T), whereR*T is normalized by the chemical potential\n    # M0*(1-h) is the effective diffusion coefficient; cl*(1-h) is the ion concentration\n    type = DerivativeParsedMaterial\n    function = '-M0*(1-h)*cl*(1-h)'  #c is -c\n    f_name = D\n    args = 'eta w'\n    derivative_order = 1\n    material_property_names = ' M0 cl:=D[f1,w] h'\n  [../]\n  [./Free]\n    # Energy of the barrier\n    type = DerivativeParsedMaterial\n    f_name = FF\n    material_property_names = 'B'\n    args='eta'\n    function = 'B*eta*eta*(1-eta)*(1-eta)'\n    derivative_order = 1\n  [../]\n  [./Migration_coefficient]\n    # Migration coefficient.\n    type = DerivativeParsedMaterial\n    function = '-cl*(1-h)*AA*M0*(1-h)'\n    args = 'eta w'\n    f_name = DN\n    derivative_order = 1\n    material_property_names = 'M0 AA cl:=D[f1,w] h'\n  [../]\n  [./Bultervolmer]\n    type = DerivativeParsedMaterial\n    function = 'Ls*(exp(pot*AA/2.)+14.89*cl*(1-h)*exp(-pot*AA/2.))*dh'\n    args = 'pot eta w'\n    f_name = G\n    derivative_order = 1\n    material_property_names = 'Ls dh:=D[h,eta] h cl:=D[f1,w] AA'\n    outputs = exodus\n  [../]\n  [./concentration]\n    # output the ion concentration\n    type = ParsedMaterial\n    f_name = c\n    args='eta w'\n    material_property_names = 'h dFl:=D[f1,w]'\n    function = '-dFl*(1-h)'\n    outputs = exodus\n  [../]\n  [./Le1]\n    # Effective conductivity\n    type = DerivativeParsedMaterial\n    f_name = Le1\n    args = 'eta'\n    material_property_names = 'S1 S2 h'\n    function = 'S1*h+S2*(1-h)'\n    derivative_order = 1\n  [../]\n[]\n\n[GlobalParams]\n  enable_jit = false           # Disable JIT\n[]\n\n[Preconditioning]\n  [./SMP]\n    type = SMP\n    full = true\n  [../]\n[]\n\n[Executioner]\n  type = Transient\n  scheme = 'bdf2'\n  solve_type = 'PJFNK'\n  l_max_its = 50\n  l_tol = 1e-4\n  nl_max_its = 20\n  nl_rel_tol = 1e-6\n  nl_abs_tol = 1e-6\n  dt = 0.02\n  end_time = 400\n  petsc_options_iname = '-pc_type -ksp_grmres_restart -sub_ksp_type\n                         -sub_pc_type -pc_asm_overlap'\n  petsc_options_value = 'asm      121                  preonly\n                         lu          8'\n[]\n\n[Outputs]\n  exodus = true\n  csv = true\n  execute_on = 'TIMESTEP_END'\n  [./other]        # creates input_other.e output every 30 timestep\n     type = Exodus\n     interval = 30\n  [../]\n[]",
+                  "url": "https://github.com/idaholab/moose/discussions/19234#discussioncomment-1551443",
+                  "updatedAt": "2022-06-21T22:28:58Z",
+                  "publishedAt": "2021-10-28T09:39:52Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "where did you get that model from?\nI d first have a look in the relevant module to try to see if there s an updated syntax for this input",
+                          "url": "https://github.com/idaholab/moose/discussions/19234#discussioncomment-1554379",
+                          "updatedAt": "2022-06-21T22:29:03Z",
+                          "publishedAt": "2021-10-28T17:22:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "wowodejiajia"
+                          },
+                          "bodyText": "The article is here.\nPhase-Field Simulations of Lithium Dendrite Growth with Open-Source Software\nZijian Hong and Venkatasubramanian Viswanathan\nACS Energy Letters 2018 3 (7), 1737-1743\nDOI: 10.1021/acsenergylett.8b01009",
+                          "url": "https://github.com/idaholab/moose/discussions/19234#discussioncomment-1556406",
+                          "updatedAt": "2022-06-21T22:29:04Z",
+                          "publishedAt": "2021-10-29T02:59:06Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "wowodejiajia"
+                  },
+                  "bodyText": "The article is here : https://pubs.acs.org/doi/10.1021/acsenergylett.8b01009",
+                  "url": "https://github.com/idaholab/moose/discussions/19234#discussioncomment-1556408",
+                  "updatedAt": "2022-06-21T22:29:04Z",
+                  "publishedAt": "2021-10-29T02:59:43Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "added the link. 2018 so the syntax could have evolved since then.\nLet s have @laagesen @SudiptaBiswas  or @amjokisaari pitch in since this is phase field",
+                          "url": "https://github.com/idaholab/moose/discussions/19234#discussioncomment-1556655",
+                          "updatedAt": "2022-06-21T22:29:04Z",
+                          "publishedAt": "2021-10-29T04:25:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "wowodejiajia"
+                          },
+                          "bodyText": "Thank you very much.",
+                          "url": "https://github.com/idaholab/moose/discussions/19234#discussioncomment-1557220",
+                          "updatedAt": "2022-06-21T22:29:03Z",
+                          "publishedAt": "2021-10-29T07:16:59Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "wowodejiajia"
+                  },
+                  "bodyText": "I have changed solve_type =Newton  in [Executioner]. And then I got this result.\nThe following total 5 aux variables:\nG\nc\ndG/deta\ndG/dpot\ndG/dw\nare added for automatic output by MaterialOutputAction.\nFinished Setting Up                                                                      [  0.62 s] [  101 MB]\nFramework Information:\nMOOSE Version:           git commit b0f5d8a on 2021-10-25\nLibMesh Version:\nPETSc Version:           3.15.1\nSLEPc Version:           3.15.1\nCurrent Time:            Fri Oct 29 11:06:25 2021\nExecutable Timestamp:    Wed Oct 27 16:50:13 2021\nParallelism:\nNum Processors:          2\nNum Threads:             2\nMesh:\nParallel Type:           replicated\nMesh Dimension:          2\nSpatial Dimension:       2\nNodes:\nTotal:                 40401\nLocal:                 20326\nMin/Max/Avg:           20075/20326/20200\nElems:\nTotal:                 40000\nLocal:                 20000\nMin/Max/Avg:           20000/20000/20000\nNum Subdomains:          1\nNum Partitions:          2\nPartitioner:             metis\nNonlinear System:\nNum DOFs:                121203\nNum Local DOFs:          60978\nVariables:               { \"w\" \"eta\" \"pot\" }\nFinite Element Types:    \"LAGRANGE\"\nApproximation Orders:    \"FIRST\"\nAuxiliary System:\nNum DOFs:                200000\nNum Local DOFs:          100000\nVariables:               { \"G\" \"c\" \"dG/deta\" \"dG/dpot\" \"dG/dw\" }\nFinite Element Types:    \"MONOMIAL\"\nApproximation Orders:    \"CONSTANT\"\nExecution Information:\nExecutioner:             Transient\nTimeStepper:             ConstantDT\nSolver Mode:             NEWTON\nMOOSE Preconditioner:    SMP\n......\nTime Step 10, time = 0.00500004, dt = 2e-14\n0 Nonlinear |R| = 3.032890e+05\n0 Linear |R| = 3.032890e+05\n1 Linear |R| = 6.471922e+00\n......\n10 Linear |R| = 1.716624e-03\n11 Linear |R| = 3.090150e-04\n12 Linear |R| = 1.064597e-04\n20 Nonlinear |R| = 1.630292e+00\nNonlinear solve did not converge due to DIVERGED_MAX_IT iterations 20\nSolve Did NOT Converge!\nFinished Solving                                                                       [ 53.39 s] [    0 MB]\nAborting as solve did not converge\n*** ERROR ***\nThe following error occurred in the object \"TimeStepper\", of type \"ConstantDT\".\nSolve failed and timestep already at or below dtmin, cannot continue!\n*** ERROR ***\nThe following error occurred in the object \"TimeStepper\", of type \"ConstantDT\".\nSolve failed and timestep already at or below dtmin, cannot continue!\napplication called MPI_Abort(MPI_COMM_WORLD, 1) - process 1\napplication called MPI_Abort(MPI_COMM_WORLD, 1) - process 0\nFinished: Exit code: 1\nWhat should I do?",
+                  "url": "https://github.com/idaholab/moose/discussions/19234#discussioncomment-1557212",
+                  "updatedAt": "2022-06-21T22:29:04Z",
+                  "publishedAt": "2021-10-29T07:15:38Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "so the non linear residual went from 3e5 to 1.6 so the good news is that it looks like your simulation is converging. It just needs more iterations.\nSo in the [Executioner] block, please specify:\nnl_max_its = 100\nto let it take more non linear iterations.\nYou can also lower the tolerances if the residual is low enough : nl_abs_tol and nl_rel_tol can be used for that.\nSee the list of those solver parameters under Solver Parameters (at the bottom of the page)\nhttps://mooseframework.inl.gov/source/executioners/Transient.html",
+                          "url": "https://github.com/idaholab/moose/discussions/19234#discussioncomment-1559811",
+                          "updatedAt": "2022-06-21T22:29:03Z",
+                          "publishedAt": "2021-10-29T15:44:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dschwen"
+                          },
+                          "bodyText": "Is your initial condition even close to a solution at time zero? If not then it is not unusual for the first time step to require a lot of iterations to solve.",
+                          "url": "https://github.com/idaholab/moose/discussions/19234#discussioncomment-1560008",
+                          "updatedAt": "2022-06-21T22:29:03Z",
+                          "publishedAt": "2021-10-29T16:19:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "wowodejiajia"
+                          },
+                          "bodyText": "Thank you for your answers. But it doesn't work. I realized it was parallelism that was the problem. Programs can converge without running in parallel. Can you explain why that is?\nLooking forward to answer.",
+                          "url": "https://github.com/idaholab/moose/discussions/19234#discussioncomment-1586148",
+                          "updatedAt": "2022-06-21T22:29:04Z",
+                          "publishedAt": "2021-11-04T03:54:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dschwen"
+                          },
+                          "bodyText": "not every preconditioner works equally well in parallel. you could try a simple LU (which in parallel would use SuperLU automatically)",
+                          "url": "https://github.com/idaholab/moose/discussions/19234#discussioncomment-1586215",
+                          "updatedAt": "2022-06-26T00:40:40Z",
+                          "publishedAt": "2021-11-04T04:31:47Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "wowodejiajia"
+                  },
+                  "bodyText": "All the documents are here.\nConduction-C.txt\nConduction-h.txt\nex01-P.txt\nKinetics-C.txt\nKinetics-h.txt\nMigration-C.txt\nMigration-h.txt",
+                  "url": "https://github.com/idaholab/moose/discussions/19234#discussioncomment-1586164",
+                  "updatedAt": "2022-06-21T22:29:04Z",
+                  "publishedAt": "2021-11-04T04:05:42Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dschwen"
+                          },
+                          "bodyText": "Converges fine for me with -pc_type lu. Step three struggles with a dt of 0.02 but converges after automatically cutting to 0.01. Then it continues to converge fine.",
+                          "url": "https://github.com/idaholab/moose/discussions/19234#discussioncomment-1590774",
+                          "updatedAt": "2022-06-21T22:29:03Z",
+                          "publishedAt": "2021-11-04T19:23:09Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dschwen"
+                          },
+                          "bodyText": "You should probably look into adaptive timestepping as during later times the simulation converges more quickly.\nTime Step 16, time = 0.3, dt = 0.02\n 0 Nonlinear |R| = 3.974561e+01\n      0 Linear |R| = 3.974561e+01\n      1 Linear |R| = 1.439269e+00\n      2 Linear |R| = 3.138209e-01\n      3 Linear |R| = 1.718015e-02\n      4 Linear |R| = 1.651372e-03\n 1 Nonlinear |R| = 2.183084e+01\n      0 Linear |R| = 2.183084e+01\n      1 Linear |R| = 3.271910e-02\n      2 Linear |R| = 1.750573e-03\n 2 Nonlinear |R| = 9.665931e-01\n      0 Linear |R| = 9.665931e-01\n      1 Linear |R| = 2.149134e-03\n      2 Linear |R| = 1.422680e-04\n      3 Linear |R| = 8.701771e-06\n 3 Nonlinear |R| = 3.019655e-03\n      0 Linear |R| = 3.019655e-03\n      1 Linear |R| = 3.152191e-05\n      2 Linear |R| = 8.527107e-07\n      3 Linear |R| = 1.259573e-07\n 4 Nonlinear |R| = 3.128464e-05\n Solve Converged!\n  Finished Solving                                                                       [  8.26 s] [    0 MB]\n\n(that's on 8 cores)",
+                          "url": "https://github.com/idaholab/moose/discussions/19234#discussioncomment-1590781",
+                          "updatedAt": "2022-06-21T22:29:04Z",
+                          "publishedAt": "2021-11-04T19:24:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dschwen"
+                          },
+                          "bodyText": "and\nTime Step 30, time = 0.58, dt = 0.02\n0 Nonlinear |R| = 3.545873e+01\n      0 Linear |R| = 3.545873e+01\n      1 Linear |R| = 8.017880e-01\n      2 Linear |R| = 6.858638e-02\n      3 Linear |R| = 5.232085e-03\n      4 Linear |R| = 4.528376e-04\n 1 Nonlinear |R| = 7.029588e-01\n      0 Linear |R| = 7.029588e-01\n      1 Linear |R| = 4.787240e-03\n      2 Linear |R| = 3.551958e-04\n      3 Linear |R| = 4.642392e-05\n 2 Nonlinear |R| = 1.644062e-03\n      0 Linear |R| = 1.644062e-03\n      1 Linear |R| = 1.856705e-05\n      2 Linear |R| = 2.448408e-06\n      3 Linear |R| = 2.262082e-07\n      4 Linear |R| = 1.217206e-08\n 3 Nonlinear |R| = 1.516930e-05\n Solve Converged!\n  Finished Solving                                                                       [  6.79 s] [    0 MB]",
+                          "url": "https://github.com/idaholab/moose/discussions/19234#discussioncomment-1590791",
+                          "updatedAt": "2022-06-21T22:29:30Z",
+                          "publishedAt": "2021-11-04T19:26:33Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dschwen"
+                          },
+                          "bodyText": "Here bd240d4 is the slightly updated version of your files that I ran to get above mentioned convergence.",
+                          "url": "https://github.com/idaholab/moose/discussions/19234#discussioncomment-1590814",
+                          "updatedAt": "2022-07-06T17:51:45Z",
+                          "publishedAt": "2021-11-04T19:29:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "wowodejiajia"
+                          },
+                          "bodyText": "Thank you very much for your answer. I have one more question.\nYou used eight cores. Which cores are used for MPI and which cores are used for Threads?",
+                          "url": "https://github.com/idaholab/moose/discussions/19234#discussioncomment-1592567",
+                          "updatedAt": "2022-07-06T17:51:45Z",
+                          "publishedAt": "2021-11-05T03:22:28Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dschwen"
+                          },
+                          "bodyText": "By default no threading is used, so I used all cored for MPI ranks.",
+                          "url": "https://github.com/idaholab/moose/discussions/19234#discussioncomment-1609382",
+                          "updatedAt": "2022-07-06T17:51:45Z",
+                          "publishedAt": "2021-11-09T00:48:15Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "wowodejiajia"
+                          },
+                          "bodyText": "Thank you.",
+                          "url": "https://github.com/idaholab/moose/discussions/19234#discussioncomment-1623553",
+                          "updatedAt": "2022-07-06T17:51:44Z",
+                          "publishedAt": "2021-11-11T03:23:12Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "IC setting for a trapezium in the phase field model",
+          "author": {
+            "login": "emmelines"
+          },
+          "bodyText": "Hi,\nI am building up a new simulation.\nI need a trapezium in a box as the initial condition in my model.\nIs there any suggestion to build this? (any recommend build-up IC app?)\nThank you.",
+          "url": "https://github.com/idaholab/moose/discussions/19336",
+          "updatedAt": "2021-12-16T21:46:50Z",
+          "publishedAt": "2021-11-09T18:19:08Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "dschwen"
+                  },
+                  "bodyText": "Check out this answer.",
+                  "url": "https://github.com/idaholab/moose/discussions/19336#discussioncomment-1615639",
+                  "updatedAt": "2021-11-09T22:06:39Z",
+                  "publishedAt": "2021-11-09T22:05:44Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "emmelines"
+                          },
+                          "bodyText": "Hi,\nThank you for your answer. I tried to put it together.\nDo you have any ideas on how should I fix the vtkPNGReader problem shown below:\nReading image(s)...\nERROR: In ../IO/Image/vtkPNGReader.cxx, line 44\nvtkPNGReader (0x7fbd90af37b0): Unable to open file /Users/emmelineshue/projects/moose/modules/phase_field/phase_field/test_003.png\n      ...image read finished\n\nThank you so much.",
+                          "url": "https://github.com/idaholab/moose/discussions/19336#discussioncomment-1622686",
+                          "updatedAt": "2021-11-10T22:22:16Z",
+                          "publishedAt": "2021-11-10T22:22:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "what is this directory?\nphase_field/phase_field/\nI dont have it",
+                          "url": "https://github.com/idaholab/moose/discussions/19336#discussioncomment-1623269",
+                          "updatedAt": "2021-11-11T01:41:13Z",
+                          "publishedAt": "2021-11-11T01:41:13Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Structured vs. unstructured grids",
+          "author": {
+            "login": "aiskhak"
+          },
+          "bodyText": "Hello,\nI am doing simulations using MOOSE-based SAM for 3D coarse-grid thermal-hydraulics and I am facing the following issue.\nThe code works fine with unstructured grids, though, I need to have a structured grid for my framework. As soon as I develop structured grids, the code considerably slows down (figures of grids attached). One of the possible issues is that structured grids inevitably have sharp transitions and I am not sure that MOOSE (FEM) can handle this appropriately. Maybe it is possible to fix this by using different preconditioners and stuff like that?\n[Preconditioning]\n  [./SMP_PJFNK]\n    type = SMP\n    full = true\n    solve_type = 'PJFNK'\n    petsc_options_iname = '-pc_type -ksp_gmres_restart'\n    petsc_options_value = 'lu 100'\n  [../]\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/19346",
+          "updatedAt": "2022-11-28T20:34:21Z",
+          "publishedAt": "2021-11-10T15:20:37Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nWhat does this geometry look like in 3D? Is it square like this still?\nIf so you should really use a quad / hex mesh.\nThis second mesh looks incredibly skewed and with high aspect ratios. I dont think you will get a good answer from MOOSE or SAM there.\nThe cannon fluid flow solver in MOOSE are the finite volume fluid flow capabilities in the Navier Stokes module, and the FE in that module are supported as well. We dont know what was implemented in SAM. We are getting good results with structured & unstructured grids with finite volume.\nA better numerical scheme, including a better preconditioner, would indeed help you get a solution. We are currently implementing segregated solver capabilities for the finite volume solver.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/19346#discussioncomment-1621288",
+                  "updatedAt": "2023-04-27T03:49:09Z",
+                  "publishedAt": "2021-11-10T17:16:52Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aiskhak"
+                          },
+                          "bodyText": "The mesh in 3D attached (the square region with round inlet-outlet tubes):\n\nYes, the unstructured grid looks bad, but it gives much-much better results in terms of convergence.\nSAM has only FEM implementation. Though, I am not sure how would I use the finite volume approach...\nAre there any recommendation of what to try with the FEM?",
+                          "url": "https://github.com/idaholab/moose/discussions/19346#discussioncomment-1621344",
+                          "updatedAt": "2023-04-27T03:49:31Z",
+                          "publishedAt": "2021-11-10T17:28:07Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "NonConstantInjection",
+          "author": {
+            "login": "Josselin-76"
+          },
+          "bodyText": "Dear community,\nThank you for your wonderful work and your constant new features.\nI am modeling a packer system with a non constant pressure injection rate into a fracture Network. To do so I have used different tools that allowed me a variation of the injection rate over times ( FunctionDirichletBC and  PorousFlowSquarePulsePointSource ), nevertheless none of them give me enough accuracy this is why I am using PorousFlowPeacemanBorehole and PorousFlowPolyLineSink.\nI am not able to find how to apply a non constant injection pressure using PorousFlowPeacemanBorehole and PorousFlowPolyLineSink. Can someone enlighten me ?\nJosselin Ouf\nRWTH Aachen, Germany",
+          "url": "https://github.com/idaholab/moose/discussions/19276",
+          "updatedAt": "2023-07-06T14:00:20Z",
+          "publishedAt": "2021-11-02T13:25:58Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "WilkAndy"
+                  },
+                  "bodyText": "Both PorousFlowPolyLineSink and PorousFlowPeacemanBorehole have a multiplying_var input.  This multiplies the fluxes by your defined AuxVariable.  Hopefully this does what you want.  You could make a FunctionAux for the multiplying_var, for instance.",
+                  "url": "https://github.com/idaholab/moose/discussions/19276#discussioncomment-1578656",
+                  "updatedAt": "2023-07-06T14:00:20Z",
+                  "publishedAt": "2021-11-02T20:42:58Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Josselin-76"
+                          },
+                          "bodyText": "Thanks for your answer,\nI have try to make FunctionAux for the multiplying_var in  PorousFlowPeacemanBorehole. However it does not offer a significant control on the injection rate even when I am using a really small value for the pipe length and radius.\nMy goal is to change the injection rate over time, this change is in method 1 perfectly executed by FunctionDirichletBC but the same injection function is partly ignored by the second method  PorousFlowPeacemanBorehole. Indeed in the second method the curve is a Heaviside like function while one may expect variation through time.\nThanks for your help.\nMethod 1\n[pre_inj_method1]\ntype = FunctionDirichletBC\nboundary = 'INJ2'\nvariable = pwater\nfunction = 'if(t<=100,0.25,if(t<=362.2,7.34-0.0054*(t-100),if(t<=671.8,6.3-0.00245*(t-362.2),if(t<=974.8,5.85-0.00102*(t-671.8),if(t<=1265.8,5.67-0.000481*(t-974.8),if(t<=2175.4,5.62+0.000396*(t-1265.8),if(t<=4000,5.98-5.35e-4(t-2175.4),5)))))))'\n[]\nResult\n\nMethod 2\n[injection_packer]\ntype = FunctionAux\nvariable = injection_packer\nfunction = packer\n[../]\n[Functions]\n[packer]\ntype = ParsedFunction\nvalue = 'if(t<=100,0.25,if(t<=362.2,7.34-0.0054*(t-100),if(t<=671.8,6.3-0.00245*(t-362.2),if(t<=974.8,5.85-0.00102*(t-671.8),if(t<=1265.8,5.67-0.000481*(t-974.8),if(t<=2175.4,5.62+0.000396*(t-1265.8),if(t<=4000,5.98-0.000535*(t-2175.4),5)))))))'\n[]\n[]\n[DiracKernels]\n[bh]\n  type = PorousFlowPeacemanBorehole\n variable = pwater\n SumQuantityUO = injected_mass\n  point_file = INJ.bh\n  fluid_phase = 0\n  bottom_p_or_t = 7.3 #MPa\n  unit_weight = '0 0 0' #fluid_density*gravitational_acceleration, Typical value for water\n  function_of = pressure\n  character = -1 # -1 source, 1 a sink\n  use_mobility = true\n  re_constant = 0.1594\nmultiplying_var = injection_packer\n\n[]\nResult",
+                          "url": "https://github.com/idaholab/moose/discussions/19276#discussioncomment-1620803",
+                          "updatedAt": "2023-07-06T14:00:21Z",
+                          "publishedAt": "2021-11-10T15:53:51Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Assigning permeability by block then pass it to the element-based compute permeability object [Materials][PorousFlow]",
+          "author": {
+            "login": "Traiwit"
+          },
+          "bodyText": "Hi guys,\nSo I can assign permeability or any material property base on the elementID #18542\nBut now, some of my projects are given permeability base on the block_ID, I'm wondering if it is possible, if yes, how to assign permeability based on the block_ID then pass it to my own element-based compute permeability object?\nI'm thinking of something as follows\n\nassign perm base on block ID using PorousFlowPermeabilityConst\n\n  [permeability_A]\n    type = PorousFlowPermeabilityConst\n    block = A\n    permeability = '1E-14 0 0   0 1E-14 0   0 0 1E-14'\n  []\n\n  [permeability_B]\n    type = PorousFlowPermeabilityConst\n    block = B\n    permeability = '5E-14 0 0   0 5E-14 0   0 0 5E-14'\n  []\n\n\nstore it to AuxVariable/Auxkernel and keep it constant throughout the simulation (not changing with time)\n\n\nStill not sure how to do this??\nmaybe use PorousFlowPropertyAux then execute_on: initial? or only at t=1?\n\n\nThen pass that AuxVariable to my own element-based compute permeability object\n\nPlease let me know what do you think?\nThank you\nKind regards,\nTraiwit",
+          "url": "https://github.com/idaholab/moose/discussions/19340",
+          "updatedAt": "2022-11-09T16:38:54Z",
+          "publishedAt": "2021-11-09T23:38:03Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\n\n\nThat same object I added can do block_id as well (and node id, and nearest-neighbor)\nIt just needs to be extended to write a tensor??\nWhat you wrote seems to work though.\n\n\nIf it s a material property there's a MaterialPropertyAux to move it to an AuxVariable\nThere are declinations of this for vectors, tensors etc\n\n\nWhy an auxvariable specifically?\nWhat does PorousFlowPermeabilityConst define? a matprop?\n\n\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/19340#discussioncomment-1616080",
+                  "updatedAt": "2022-11-09T16:39:29Z",
+                  "publishedAt": "2021-11-10T00:25:37Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "Hello\n\nThat same object I added can do block_id as well (and node id, and nearest-neighbor)\nIt just needs to be extended to write a tensor??\nWhat you wrote seems to work though.\nIf it s a material property there's a MaterialPropertyAux to move it to an AuxVariable\nThere are declinations of this for vectors, tensors etc\nWhy an auxvariable specifically?\nWhat does PorousFlowPermeabilityConst define? a matprop?\n\nGuillaume\n\nHi @GiudGiud\n1, yes that works fine\n\n\nbut it is defined at different blocks (with different object name [perm_1], [perm_2] ... [perm_n]) now sure how to put them together into 1 AuxVariable/Auxkernel, I found that https://mooseframework.inl.gov/source/auxkernels/PorousFlowPropertyAux.html allows you to do that.\n\n\nPorousFlowPermeabilityConst is a matprop, but yeh if I don't park it somewhere (AuxVariable), it will be overwritten by my own compute perm (let's call it PorousFlowPermeabilityConstCSV for now)",
+                          "url": "https://github.com/idaholab/moose/discussions/19340#discussioncomment-1616094",
+                          "updatedAt": "2022-11-09T16:39:36Z",
+                          "publishedAt": "2021-11-10T00:33:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "you can block restrict things. For example you can define material properties in one block at a time with the same name.\nOr you can use a MaterialAuxKernel to move a material property with a given name to an auxvariable in a single block, and do that N times to get all them in the same auxvariable\nUmm that s annoying. Does the porous flow module not allow you to use different names? Then there s no concern about overwriting",
+                          "url": "https://github.com/idaholab/moose/discussions/19340#discussioncomment-1616158",
+                          "updatedAt": "2022-11-09T16:39:52Z",
+                          "publishedAt": "2021-11-10T00:55:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "Hi @GiudGiud, I almost got what I want to work, I will explain it when it's finished.\nI now have a minor issue now, so PorousFlowPropertyAux doesn't store permeability in a tensor format (or vector format), it only gives me 1 permeability per element.\n  [./permeability_bottom]\n    type = PorousFlowPermeabilityConst\n    block = TETS_BOTTOM_TET4\n    permeability = '2e-9 0 0 0 3e-9 0 0 0 4e-9'\n  [../]\n\n  [./permeability_top]\n    type = PorousFlowPermeabilityConst\n    block = TETS_TOP_TET4\n    permeability = '1e-9 0 0 0 2e-9 0 0 0 3e-9'\n  [../]\n\n  [./permeability_wedge]\n    type = PorousFlowPermeabilityConst\n    block = ALL_WDGS_ELSET_PRISM6\n    permeability = '3e-9 0 0 0 2e-9 0 0 0 3e-9'\n  [../]\n\n[./perm_map]\n variable = 'perm_map'\n type = PorousFlowPropertyAux\n property = permeability\n [../]\n\nis there any other AuxKernel that I should look into? @WilkAndy is our PorousFlow expert, probs know about this?\nThank you!",
+                          "url": "https://github.com/idaholab/moose/discussions/19340#discussioncomment-1616400",
+                          "updatedAt": "2022-11-09T16:39:53Z",
+                          "publishedAt": "2021-11-10T02:18:55Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "cpgr"
+                  },
+                  "bodyText": "I'm not really sure why you need to define a permeability based on block ids and then a different permeability based on element ids?\nThe problem you will have with the PorousFlowPropertyAux AuxKernel is that the AuxVariable has to be a monomial, so a single real value. You would need one for each non-zero component of the permeability tensor (probably three values needed). You can pick out the value using the row and column params (like MaterialRealTensorValueAux).",
+                  "url": "https://github.com/idaholab/moose/discussions/19340#discussioncomment-1617092",
+                  "updatedAt": "2022-11-09T16:40:00Z",
+                  "publishedAt": "2021-11-10T06:04:13Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "I'm not really sure why you need to define a permeability based on block ids and then a different permeability based on element ids?\nThe problem you will have with the PorousFlowPropertyAux AuxKernel is that the AuxVariable has to be a monomial, so a single real value. You would need one for each non-zero component of the permeability tensor (probably three values needed). You can pick out the value using the row and column params (like MaterialRealTensorValueAux).\n\nAh I see, in this case, I should have 6 AuxVariables/AuxKernels then if I want to store all the perm tensors?\na quick note about the element ids, I need that because the perm I will pass into the simulation will be calculated based on local damage, and the damage file which is obtained from Abaqus is element-based.",
+                          "url": "https://github.com/idaholab/moose/discussions/19340#discussioncomment-1617325",
+                          "updatedAt": "2022-11-09T16:40:01Z",
+                          "publishedAt": "2021-11-10T07:08:37Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to initialize a vector of stateful(old) materials?",
+          "author": {
+            "login": "xueyang94"
+          },
+          "bodyText": "Hello,\nI am writing a material class where I want to initialize a vector of stateful materials. What I did is as follows:\n\nIn the validParams list, add params.addRequiredParam<std::vector<MaterialPropertyName>>(\"some_name\", \"a description\");.\nIn the constructor, add _some_old(getMaterialPropertyOld<std::vector<Real>>(\"some_name\")).\nIn the header file, declare const MaterialProperty<std::vector<Real>> & _some_old.\n\nNow in computeQpProperties, I can use _some_old[_qp][i] to directly access the old values without any compiler error. However, I received an error when running the input file: The following error occurred in the object \"MOOSE Problem\", of type \"FEProblem\". One or more Material Properties were not supplied on block 0: some_name, even though I have supplied some_name = 'name1, name2, ...' in the material class block. Could anyone please let me know there this error comes from, and how to fix it? Thanks in advance.",
+          "url": "https://github.com/idaholab/moose/discussions/19209",
+          "updatedAt": "2022-07-06T17:23:25Z",
+          "publishedAt": "2021-10-26T14:21:30Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThe issue is that you adding in the Params a vector of material properties.\nBut in the constructor you are trying to retrieve a material property that is vector-valued.\nBased on your other post, I think you are trying to specify the vector as \"mat1 mat2 ...\". This cant be done. You have to declare a material property of type std::vector first, then fill it in another material with the mat1, mat2 etc values. Then you can use it here.\nAlso, prefer to use RealVectorValue over std::vector < Real > for the data type.",
+                  "url": "https://github.com/idaholab/moose/discussions/19209#discussioncomment-1539588",
+                  "updatedAt": "2022-07-06T17:23:22Z",
+                  "publishedAt": "2021-10-26T15:41:48Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xueyang94"
+                          },
+                          "bodyText": "Thanks for the reply. I actually tried to initialize a vector of old materials the same way as I did in the other post for non-old materials, but the syntax is wrong. For non-old materials, we can do _some_name(getParam<std::vector<MaterialPropertyName>>(\"some_name\")) in the initializer, and also have a _some_prop to fill the values in like you said. However, with old material, I tried _some_old(getMaterialPropertyOld<std::vector<MaterialPropertyName>>(\"some_name\")), but the compiler error is that there is no matching constructor. How should the old material vector syntax be? Appreciate it.",
+                          "url": "https://github.com/idaholab/moose/discussions/19209#discussioncomment-1541651",
+                          "updatedAt": "2022-07-06T17:23:22Z",
+                          "publishedAt": "2021-10-26T22:18:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "The non-old syntax would be:\n_some(getMaterialProperty<std::vector<MaterialPropertyName>>(\"some_name\"))\n_some(getMaterialProperty< std::vector < Real > >(\"some_name\"))\nthis\n_some_name(getParam<std::vector<MaterialPropertyName>>(\"some_name\"))\nis completely different",
+                          "url": "https://github.com/idaholab/moose/discussions/19209#discussioncomment-1541690",
+                          "updatedAt": "2022-07-06T17:23:22Z",
+                          "publishedAt": "2021-10-26T22:31:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xueyang94"
+                          },
+                          "bodyText": "I am using the getParam for non-old material and it works fine. It is the same as I mentioned in my previous post. The getMaterialProperty won't compile. But either way, what would you suggest to use for old material syntax? _some_old(getMaterialPropertyOld<std::vector<MaterialPropertyName>>(\"some_name\")) does not work...",
+                          "url": "https://github.com/idaholab/moose/discussions/19209#discussioncomment-1541844",
+                          "updatedAt": "2022-07-06T17:23:28Z",
+                          "publishedAt": "2021-10-26T23:29:43Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "it works to populate a vector of string. It doesnt get you the material property.\nIf you have a vector material property, this is the syntax\n_some_old(getMaterialPropertyOld<RealVectorValue>(\"some_name\"))\n_some_old(getMaterialPropertyOld< std::vector < Real > >(\"some_name\"))",
+                          "url": "https://github.com/idaholab/moose/discussions/19209#discussioncomment-1541877",
+                          "updatedAt": "2022-08-10T05:56:08Z",
+                          "publishedAt": "2021-10-26T23:39:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dschwen"
+                          },
+                          "bodyText": "RealVectorValue stores 3-vectors. If Xueyang wants to store a vector of 10 or 20 values (which we have plenty of precedent for), then a property of type std::vector<Real> would be appropriate. But there's a lot of confusion in this thread (for example a material property of type std::vector<MaterialPropertyName> ... what?!)",
+                          "url": "https://github.com/idaholab/moose/discussions/19209#discussioncomment-1542215",
+                          "updatedAt": "2022-08-10T05:56:08Z",
+                          "publishedAt": "2021-10-27T01:02:52Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "oh yeah my bad about RealVectorValue and not noticing the syntax had gotten bad since the initial post. The rest is still valid.",
+                          "url": "https://github.com/idaholab/moose/discussions/19209#discussioncomment-1542411",
+                          "updatedAt": "2022-08-10T05:56:09Z",
+                          "publishedAt": "2021-10-27T02:17:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dschwen"
+                          },
+                          "bodyText": "I'm assuming you mean some_name to be a single name of a material property that contains a vector of values (at least thats how you use the parameter. That means it should be\nparams.addRequiredParam<MaterialPropertyName>(\"some_name\", \"a description\");",
+                          "url": "https://github.com/idaholab/moose/discussions/19209#discussioncomment-1546361",
+                          "updatedAt": "2022-08-10T05:56:09Z",
+                          "publishedAt": "2021-10-27T15:26:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xueyang94"
+                          },
+                          "bodyText": "@dschwen Hi Daniel, some_name is a single name of material property that contains a vector of material property names, not real values. To be specific, it stores the vector of phase concentration names in the KKS local solve. The names of the phase concentrations are user-supplied. For example, in the input file material block, we would have ci_names = 'c1, c2, ...'. Of course, c1 and c2 are computed in my material class.\nI have figured out how to declare and initialize ci_names as a non-old vector of ci (I put it in this post), but I am stuck on the old material vector. I want to initialize _ci_old as a vector of old ci in the material source code, but I am not sure how to use the getMaterialPropertyOld in this case.",
+                          "url": "https://github.com/idaholab/moose/discussions/19209#discussioncomment-1547359",
+                          "updatedAt": "2022-08-10T05:56:12Z",
+                          "publishedAt": "2021-10-27T16:59:21Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Has this been solved?\ngetMaterialPropertyOld should be called with the name of the material property. If it s been made a vector then the name of that one.\nIf it's some component like c1, c2 etc then they should be retrieved one by one or made into a vector material property first",
+                          "url": "https://github.com/idaholab/moose/discussions/19209#discussioncomment-1616328",
+                          "updatedAt": "2022-08-10T05:56:36Z",
+                          "publishedAt": "2021-11-10T01:54:00Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Need a reference for existing plasticity codes",
+          "author": {
+            "login": "mahyarmalek"
+          },
+          "bodyText": "Hello Moose developers,\nI'm trying to implement a cam clay model ( a soil plasticity model) within the template of the plasticity codes that already exist in the library. I need to understand how cappeddruckerprager works, and to do so, I need some documentation or references on which this code has been written.\nThank you,\nMahyar",
+          "url": "https://github.com/idaholab/moose/discussions/19185",
+          "updatedAt": "2023-04-06T08:50:50Z",
+          "publishedAt": "2021-10-22T23:45:54Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "There's some documentation here\nhttps://mooseframework.inl.gov/source/materials/CappedDruckerPragerCosseratStressUpdate.html\nbut I had a look at the source code and it s nothing too complicated.",
+                  "url": "https://github.com/idaholab/moose/discussions/19185#discussioncomment-1616313",
+                  "updatedAt": "2023-04-06T08:51:11Z",
+                  "publishedAt": "2021-11-10T01:50:51Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Thermal expansion",
+          "author": {
+            "login": "amosaha"
+          },
+          "bodyText": "hello,\nI want to couple a problem of heat transfer and thermal expansion. My geometric model is a cylinder. I want to fix the two bottom surfaces of the cylinder.Observe the deformation of the middle section. How should I set the BCS? My code is as follows, fix 1 and fix 2 are the bottom surfaces of the cylinder that I expected to be fixed.\ncode.txt",
+          "url": "https://github.com/idaholab/moose/discussions/19314",
+          "updatedAt": "2022-07-28T15:48:37Z",
+          "publishedAt": "2021-11-08T09:34:33Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYou ll find a lot of examples of fixing boundaries in space in the tensor_mechanics module.\nI think you just need to set a dirichlet BC on the relevant displacement variable.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/19314#discussioncomment-1606573",
+                  "updatedAt": "2022-07-28T15:48:36Z",
+                  "publishedAt": "2021-11-08T15:15:17Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "amosaha"
+                          },
+                          "bodyText": "I want to fix two bottom surfaces, but most of the models are two-dimensional problems. Where can I find relevant examples for reference? My program does not converge after running. I think it may be related to BCS.Thanks.",
+                          "url": "https://github.com/idaholab/moose/discussions/19314#discussioncomment-1616208",
+                          "updatedAt": "2022-07-28T15:48:40Z",
+                          "publishedAt": "2021-11-10T01:14:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "it should work the same in 3D. What is the normal for these two surfaces?",
+                          "url": "https://github.com/idaholab/moose/discussions/19314#discussioncomment-1616244",
+                          "updatedAt": "2022-07-28T15:48:39Z",
+                          "publishedAt": "2021-11-10T01:25:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "amosaha"
+                          },
+                          "bodyText": "(0\uff0c0\uff0c1)and(0\uff0c0\uff0c-1). I just limited the z-coordinates of the two faces, and I don't know how to control the entire face.So I didn\u2019t use the normal vector.",
+                          "url": "https://github.com/idaholab/moose/discussions/19314#discussioncomment-1616261",
+                          "updatedAt": "2022-07-28T15:48:39Z",
+                          "publishedAt": "2021-11-10T01:31:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "aren't they in the same plane? You only want to constrain the bottom right?\nregardless a DirichetBC on disp_z should be enough.",
+                          "url": "https://github.com/idaholab/moose/discussions/19314#discussioncomment-1616270",
+                          "updatedAt": "2022-08-30T17:23:23Z",
+                          "publishedAt": "2021-11-10T01:34:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "amosaha"
+                          },
+                          "bodyText": "I want to limit the upper and lower bottom surfaces of the cylinders, but only restricting their z coordinate system is not enough.",
+                          "url": "https://github.com/idaholab/moose/discussions/19314#discussioncomment-1616284",
+                          "updatedAt": "2022-08-30T17:23:23Z",
+                          "publishedAt": "2021-11-10T01:38:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "you want to restrict them in X and Y too?\nThat just means adding DirichletBC on disp_x and disp_y",
+                          "url": "https://github.com/idaholab/moose/discussions/19314#discussioncomment-1616308",
+                          "updatedAt": "2022-08-30T17:23:23Z",
+                          "publishedAt": "2021-11-10T01:48:28Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

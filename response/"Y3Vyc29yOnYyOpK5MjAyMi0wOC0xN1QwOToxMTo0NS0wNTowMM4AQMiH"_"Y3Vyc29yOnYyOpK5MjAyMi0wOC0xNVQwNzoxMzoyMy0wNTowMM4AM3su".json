@@ -1,0 +1,932 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMi0wOC0xNVQwNzoxMzoyMy0wNTowMM4AM3su"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "A question about Heat conduction solve using displaced mesh",
+          "author": {
+            "login": "xuxiaobei1995"
+          },
+          "bodyText": "Hi all,\nI'm confused about an issue on the heat conduction solve using displaced mesh. Take a simple thermo-mechanical coupled case as an example:\n\nIt is an elongated rectangle with a uniform heat source; the geometry and condition is shown in the figure above. For this case, after the elongation, the analytical solution of the left side temperature is 2 (Tleft - Tright  = 0.5 * qv * conduction_length / k = 1). However, the result from MOOSE is 2.346. If I set use_displaced_mesh = true in the heat source kernel, the result is 3, which is still different from the analytical solution. Does any one know how these results are computed? The input file of this case is shown below, which can be run in any application including the heat conduction & tensor mechanics modules.\n\n[GlobalParams]\n  displacements = 'disp_x disp_y'\n[]\n\n[Mesh]\n  type = GeneratedMesh\n  dim = 2\n  nx = 10\n  ny = 10\n  xmin = 0\n  xmax = 1\n  ymin = 0\n  ymax = 1\n[]\n\n[Variables]\n  [temp]\n  []\n[]\n\n[Kernels]\n  [heatconduction]\n    type = HeatConduction\n    variable = temp\n  []\n  [heatsource]\n    type = HeatSource\n    variable = temp\n    value = 1\n    #use_displaced_mesh = true\n  []\n[]\n\n[Modules/TensorMechanics/Master]\n  [./tm]\n    strain = FINITE\n    add_variables = true\n    decomposition_method = EigenSolution\n    use_displaced_mesh = true\n  [../]\n[]\n\n[Materials]\n  [./elasticity_tensor]\n    type = ComputeIsotropicElasticityTensor\n    youngs_modulus = 2.1e5\n    poissons_ratio = 0.3\n  [../]\n  [./stress]\n    type = ComputeFiniteStrainElasticStress\n  [../]\n  [./hc_mat]\n    type = HeatConductionMaterial\n    thermal_conductivity = 1.0\n  []\n[]\n\n[BCs]\n  [./left]\n    type = PresetBC\n    variable = disp_x \n    boundary = left\n    value = 0.0\n  [../]\n  [./bottom]\n    type = PresetBC\n    variable = disp_y \n    boundary = bottom\n    value = 0.0\n  [../]\n  [./right]\n    type = FunctionPresetBC\n    variable = disp_x \n    boundary = right\n    function = '0.02*t'\n  []\n  [./right_temp]\n    type = PresetBC\n    variable = temp\n    boundary = right\n    value = 1.0\n  []\n[]\n\n[Preconditioning]\n  [./SMP]\n    type = SMP\n    full = true\n  [../]\n[]\n\n[Executioner]\n  type = Transient\n  dt = 1\n  end_time = 50\n\n  solve_type = 'PJFNK'\n\n  petsc_options_iname = '-pc_type -sub_pc_type -pc_asm_overlap -ksp_gmres_restart'\n  line_search = none\n  petsc_options_value = 'asm lu 20 101'\n[]\n\n[Outputs]\n  exodus = true\n  csv = true\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/21451",
+          "updatedAt": "2022-08-17T08:59:41Z",
+          "publishedAt": "2022-06-29T08:34:56Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "T,xx + 1 = 0\nT = -0.5x^2 + ax + b\nT(2) = 1, so 2a + b = 3\nT,x(0) = 0, so a = 0, b = 3\nT = -0.5x^2 + 3\nT(0) = 3\n\nCheers",
+                  "url": "https://github.com/idaholab/moose/discussions/21451#discussioncomment-3047437",
+                  "updatedAt": "2022-06-29T10:41:52Z",
+                  "publishedAt": "2022-06-29T10:41:51Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xuxiaobei1995"
+                          },
+                          "bodyText": "Sorry, I just found I made a mistake when solving the analytical solution... T(0) = 3 is the right result. Big thanks to you!",
+                          "url": "https://github.com/idaholab/moose/discussions/21451#discussioncomment-3048120",
+                          "updatedAt": "2022-06-29T12:32:55Z",
+                          "publishedAt": "2022-06-29T12:32:54Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "js-jixu"
+                          },
+                          "bodyText": "I'm also studying thermomechanical coupling now, and I have some questions. Can I connect with you? My email address is on my homepage.",
+                          "url": "https://github.com/idaholab/moose/discussions/21451#discussioncomment-3412965",
+                          "updatedAt": "2022-08-17T08:59:42Z",
+                          "publishedAt": "2022-08-17T08:59:41Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Basic question related to coupling in kernels",
+          "author": {
+            "login": "KhaledNabilSharafeldin"
+          },
+          "bodyText": "Hello,\nI have a very basic question related to  params.addRequiredCoupledVar in kernels.\nI am currently passing more variables than what actually being used by the kernel using this param. I briefly looked into the code for it and it seems like it's accumulating dependency list, so I am imagining that the code would assume that all the variables are dependent on one another,\nSo my question is would this lead to a slow down or higher memory usage for my app? and if yes, is there a way to only read the variable value without coupling it? like passing it as a vector of variable names and use &coupledValue() funciton?\nThanks in advance,\nKhaled",
+          "url": "https://github.com/idaholab/moose/discussions/21796",
+          "updatedAt": "2022-09-02T20:11:17Z",
+          "publishedAt": "2022-08-08T13:55:02Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nIf you dont couple it, then you risk the system not updating the coupled value (re-initializing it on every new quadrature point) when you try to use it. In general, if you need it you should couple it. And if you dont, you dont need to pass it in the arguments in the input file. You can always pass a constant in place of a variable if you dont plan to use that variable.\nThere wont be an increased memory usage.\nThere could be a slow down but it's very unlikely to be significant. As to all matters of performance, first make it work, then profile it if you need more performance. So I would not worry about this at this point.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21796#discussioncomment-3351702",
+                  "updatedAt": "2022-08-08T18:03:07Z",
+                  "publishedAt": "2022-08-08T18:03:06Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "KhaledNabilSharafeldin"
+                          },
+                          "bodyText": "I have done some profiling, but nothing sticks out to me as out of place. Any recommendations would be really valuable. The code is both slow and consuming a lot of memory.\n\nMemory\n\n\n\nCPU",
+                          "url": "https://github.com/idaholab/moose/discussions/21796#discussioncomment-3351820",
+                          "updatedAt": "2022-08-08T18:23:13Z",
+                          "publishedAt": "2022-08-08T18:23:12Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Seems the numerical solve is costing most of the time and the memory\nCould you please paste your executioner block here?",
+                          "url": "https://github.com/idaholab/moose/discussions/21796#discussioncomment-3351931",
+                          "updatedAt": "2022-08-08T18:44:02Z",
+                          "publishedAt": "2022-08-08T18:44:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "KhaledNabilSharafeldin"
+                          },
+                          "bodyText": "Might also want to add that during jacobian calculation in the subapp1, memory usage doubles in size\n\n Mainapp \n[Executioner]\n  type = Transient\n\n  solve_type = 'newton'\n  line_search = none\n     petsc_options = '-ksp_monitor'\n\n\n  petsc_options_iname = '-pc_type'\n  petsc_options_value = 'lu'\n  # petsc_options_iname = '-pc_type -pc_hypre_type  -pc_hypre_boomeramg_strong_threshold  -pc_hypre_boomeramg_agg_nl  -pc_hypre_boomeramg_agg_num_paths -pc_hypre_boomeramg_max_levels  -pc_hypre_boomeramg_coarsen_type  -pc_hypre_boomeramg_interp_type -pc_hypre_boomeramg_P_max -pc_hypre_boomeramg_truncfactor '\n  # petsc_options_value = 'hypre    boomeramg       0.7                                   4                           5                                 25                              HIMS                              ext+i                           2                         0.3                             '\n  # -pc_type hypre -pc_hypre_type boomeramg -pc_hypre_boomeramg_strong_threshold 0.7  -pc_hypre_boomeramg_agg_nl 4 -pc_hypre_boomeramg_agg_num_paths 5 -pc_hypre_boomeramg_max_levels 25 -pc_hypre_boomeramg_coarsen_type HMIS -pc_hypre_boomeramg_interp_type ext+i -pc_hypre_boomeramg_P_max 2 -pc_hypre_boomeramg_truncfactor 0.3\n  l_max_its = 2\n  l_tol = 1e-14\n  nl_max_its = 20\n  nl_rel_tol = 1e-8\n  nl_abs_tol = 1e-5\n\n  start_time = 6500.0\n  # end_time = 1000000.0\n  num_steps = 10\n  [./TimeStepper]\n    type = TransientTransport\n    postprocessor = rss_max\n    cfl = 0.5\n    dt = 1e-6\n    dt_max1 = 100\n    dt_max2 = 100\n    n = 12\n    n_slip = 12\n  [../]  \n[]\n\n\nSubapp1\n[Executioner]\n  type = Transient\n  solve_type = 'linear'                  # PJFNK JFNK NEWTON FD LINEAR\n  l_tol = 1.0e-5                         # Linear Tolerance         : 1.0e-5\n  l_abs_tol = 1.0e-8\n  l_max_its = 500                       # Max Linear Iterations    : 10000\n  # petsc_options_iname = '-pc_type -pc_hypre_type -ksp_gmres_restart -pc_hypre_boomeramg_strong_threshold'\n  # petsc_options_value = 'hypre    boomeramg      31                 0.7'\n   petsc_options_iname = '-pc_type -sub_pc_type -sub_pc_factor_shift_type '\n   petsc_options_value = 'asm      ilu           nonzero                  '\n   \n  # petsc_options_iname = '-pc_type -ksp_gmres_restart -sub_pc_type -sub_pc_factor_shift_type'\n  # petsc_options_value = 'asm      200                ilu           NONZERO' \n  # scheme = explicit-euler\n  # start_time = 55000\n  # dt = 20\n  [./TimeStepper]\n    type = TransientTransport\n    postprocessor = rss_max\n    cfl = 0.45\n    dt = 20\n    dt_max1 = 20\n    dt_max2 = 10\n    n_slip = 12\n    dt_time_change = 360\n  [../] \n  # reset_dt = true\n\n  # num_steps = 1000\n\n  automatic_scaling = true\n  compute_scaling_once = true \n  # end_time = 30\n  # num_steps = 20\n[]\n\n\nSubapp2\n[Executioner]\n  type = Transient\n  #solve_type = 'LINEAR'                  # PJFNK JFNK NEWTON FD LINEAR\n  #l_tol = 1.0e-11                         # Linear Tolerance         : 1.0e-5\n  #l_max_its = 10000                       # Max Linear Iterations    : 10000\n  # petsc_options_iname = '-pc_type   -pc_hypre_type  -pc_hypre_boomeramg_strong_threshold'\n  # petsc_options_value = 'hypre      boomeramg       0.7'\n  # start_time = 55000\n\n  # start_time = 75\n\n  # petsc_options_iname = '-pc_type -sub_pc_type -sub_pc_factor_shift_type '\n  # petsc_options_value = 'asm      ilu           nonzero                  '\n  # automatic_scaling = true\n  # compute_scaling_once = false \n  # num_steps = 1\n  # dt = 0.5\n  # dt_max = 0.1\n  [./TimeIntegrator]\n    # type = ImplicitEuler\n    # type = BDF2\n    #type = CrankNicolson\n    # type = ImplicitMidpoint\n    # type = LStableDirk2\n    # type = LStableDirk3\n    # type = LStableDirk4\n    # type = AStableDirk4\n    #\n    # Explicit methods\n    type = ActuallyExplicitEuler\n    # type = ExplicitEuler\n    #type = ExplicitMidpoint\n    # type = Heun\n    # type = Ralston\n  [../]\n  # [./TimeStepper]\n  #   type = TransientTransport\n  #   postprocessor = rss_maxs\n  #   cfl = 0.45\n  #   dt = 1e-6\n  #   dt_max = 50\n  #   n_slip = 12\n  # [../] \n  # scheme = implicit-euler\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/21796#discussioncomment-3351987",
+                          "updatedAt": "2022-08-08T18:59:26Z",
+                          "publishedAt": "2022-08-08T18:54:48Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Do you get decent performance out of the subapps?\nFor the main app,\n  petsc_options_iname = '-pc_type'\n  petsc_options_value = 'lu'\n\nthis is a direct solve and it's expensive for large systems. This is the Mat_Aij operations in the CPU profiling iirc.\nYou should try a more scalable preconditioner if you want to see large gains in memory and CPU time\nFor a small improvement,\nYou may also try using a different solver package for LU, see if you get better performance. We have found strumpack to outperform the others quite often. Use the -pc_factor_mat_solver_package petsc option (in iname) and strumpack for the value.",
+                          "url": "https://github.com/idaholab/moose/discussions/21796#discussioncomment-3354062",
+                          "updatedAt": "2022-08-09T01:47:53Z",
+                          "publishedAt": "2022-08-09T01:47:52Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "KhaledNabilSharafeldin"
+                          },
+                          "bodyText": "Do you get decent performance out of the subapps?\n\nYes! any suggestions for the more scalable preconditioners?\nand I'll give strumpack a shot and see how that goes.\nThanks again!\nBest,\nKhaled",
+                          "url": "https://github.com/idaholab/moose/discussions/21796#discussioncomment-3354488",
+                          "updatedAt": "2022-08-09T03:33:51Z",
+                          "publishedAt": "2022-08-09T03:33:05Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "have you tried asm with an ilu sub pc?\nwhat about field splits? (there's a bug on schur right now, I m working on fixing it)",
+                          "url": "https://github.com/idaholab/moose/discussions/21796#discussioncomment-3354547",
+                          "updatedAt": "2022-08-09T03:58:45Z",
+                          "publishedAt": "2022-08-09T03:58:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "KhaledNabilSharafeldin"
+                          },
+                          "bodyText": "I think i've tried both asm and ilu, I am currently testing more with them.\nHowever, currently I'm using a custom mesh by generating it in a main file and reading the .e file output. The mesh uses 2 different mesh elements PYR5 and TET. I switched this up to only PYR5 generated by moose and right away I'm getting substantially lower memory usage. I am still testing and finding the PC that works best but the mesh change made it solvable at the moment.\nDo you have any reasoning why would the different meshes would make such a substantial change? mind you, they are approximately the same number of elements.\nThanks again @GiudGiud for recommendations and solutions!\nBest,\nKhaled",
+                          "url": "https://github.com/idaholab/moose/discussions/21796#discussioncomment-3376329",
+                          "updatedAt": "2022-08-11T14:44:50Z",
+                          "publishedAt": "2022-08-11T14:43:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hard to know. Sometimes meshes are more true to the physics (think a hex mesh aligned with a fluid flow for example) and you get better solutions. I dont know about the speed of the solve though!\n@roystgnr might have some insights on this",
+                          "url": "https://github.com/idaholab/moose/discussions/21796#discussioncomment-3376490",
+                          "updatedAt": "2022-08-11T14:54:24Z",
+                          "publishedAt": "2022-08-11T14:54:24Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "roystgnr"
+                          },
+                          "bodyText": "In case others come across this later, let me talk about the more common phenomena first:\nMesh changes to be more true to the physics can greatly speed up a solve on a difficult nonlinear problem by getting you to a solution in fewer quasiNewton steps - e.g. in a compressible flow, a hex mesh that's not aligned well enough with a shock can be slower to solve on or can be impossible to solve on depending on your formulation.\nIf you're not using either an overkill preconditioner like LU or a horribly weak preconditioner like Jacobi, I'm afraid that even seemingly trivial changes to a mesh can lead to unexpected changes in iteration counts and solve speeds.  The most runtime-efficient preconditioners take your mesh partitioning into account, with something like a Schwarz method or Block Jacobi method (for communication between processors) wrapped around a stronger preconditioner within each subpartition's diagonal block of the matrix ... and that means the strength of your preconditioner as a whole strongly depends on your partitioning.  That's a reasonable practical concern to worry about, but unfortunately it combines with a less reasonable practical concern: mesh partitioning is kind of a black art.  ParMETIS (our default for DistributedMesh) can sometimes give weird results, METIS (our default for ReplicatedMesh) can sometimes give even weirder results (despite having easier constraints on the algorithm; I don't understand why myself), and even our simple alternatives like space-filling-curves can give results very dependent on mesh geometry and processor count.  With a worse partitioning (less-\"compact\" partitions with more \"surface\" at the interfaces between them) you get a double-whammy - the reduced compactness makes your sub-preconditioners less effective so you need more iterations, and the increased surface means more communication between blocks so each iteration takes longer to boot.\nBut that all said ...\nyour problem isn't solve speed, it's solve memory, isn't it?  That's much more surprising to me.  There's a minor effect where going from tets to pyramids (on the same number of nodes) increases your sparsity pattern and so increases your memory requirements (both for the matrix itself and for ILU sub-preconditioners), and of course in the other direction a pyramid Mesh itself takes less memory since it's got fewer elements for the same number of nodes.  I'm not sure what else could be important.  I guess if a mesh change takes your preconditioner from \"really good\" to \"mediocre\", that can lead to an increased number of Krylov vectors being saved (by methods like GMRES, the PETSc default, which save them) and that would take more memory, but unless you're manually changing ksp_gmres_restart it'll throw out and reconstruct those vectors after every 30 iterations, so the memory requirements can't get out of control.\nI'd love to see a before-and-after of memory usage graphs; there's got to be some factor I'm missing.",
+                          "url": "https://github.com/idaholab/moose/discussions/21796#discussioncomment-3377789",
+                          "updatedAt": "2022-08-11T17:47:28Z",
+                          "publishedAt": "2022-08-11T17:47:28Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "KhaledNabilSharafeldin"
+                          },
+                          "bodyText": "@roystgnr thank you very much for the elaborate explanation! this kind of extended replies help a lot understanding the different systems better.\nThe issue with my application first and foremost is memory usage, then speed. I am mostly drawing comparisons in memory usage and performance based on a similar code/model that we have written using PETSc in fortran. The ultimate goal is to get the MOOSE application up to speed and functionality of the previous one.\nThe mesh size I am trying to run is about 3.8-4.2 million elements, do you have a rough estimate how much memory would be needed to run a similar mesh? We have 3 multiapps that share the same mesh and about a 100 of Moose's \"nonlinear variables\", which are not necessarily nonlinear or directly coupled. Currently I've tested on a single highmemory cluster node that has 128 cores and 1TB of RAM and it still exceeded that limit.\n\nI think i've tried both asm and ilu, I am currently testing more with them. However, currently I'm using a custom mesh by generating it in a main file and reading the .e file output. The mesh uses 2 different mesh elements PYR5 and TET. I switched this up to only PYR5 generated by moose and right away I'm getting substantially lower memory usage. I am still testing and finding the PC that works best but the mesh change made it solvable at the moment.\nDo you have any reasoning why would the different meshes would make such a substantial change? mind you, they are approximately the same number of elements.\nThanks again @GiudGiud for recommendations and solutions!\nBest, Khaled\n\nalso regarding this, it did indeed reduce memory usage, however the increase was not as drastic as I initially seen since I got confused by DistributedRectilinearMeshGenerator which allows for PYRAMID type elements but instead defaults for HEX elements without any warnings or errors, so I used instead GeneratedMeshGenerator in distributed.\nThanks again @GiudGiud and @roystgnr!\nBest,\nKhaled",
+                          "url": "https://github.com/idaholab/moose/discussions/21796#discussioncomment-3407059",
+                          "updatedAt": "2022-08-16T14:20:45Z",
+                          "publishedAt": "2022-08-16T14:20:45Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "ArrayDiffusion and ArrayDGDiffusion",
+          "author": {
+            "login": "dingqiushi"
+          },
+          "bodyText": "Why is it necessary to distinguish between diagonal and non-diagonal elements when calculating Jacobi matrices in ArrayDiffusion.C, and why is it necessary to use two functions, computeQpJacobian() and computeQpOffDiagJacobian()? Why is there no computeQpOffDiagJacobian()  in ArrayDGDiffusion.C, only computeQpJacobian() ?",
+          "url": "https://github.com/idaholab/moose/discussions/21857",
+          "updatedAt": "2022-08-20T07:34:30Z",
+          "publishedAt": "2022-08-16T13:38:04Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nwhen there is no off-diagonal coefficients, we dont implement this routine. Are we missing a coefficient for that kernel?\nIt s necessary to have the contributions split between diagonal and off-diagonal because for preconditioning we sometimes only use the diagonal of the Jacobian instead of the full Jacobian. Having this separate routine allows us to form this preconditioning.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21857#discussioncomment-3406799",
+                  "updatedAt": "2022-08-16T13:50:59Z",
+                  "publishedAt": "2022-08-16T13:50:59Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Meaning of TaggingInterface",
+          "author": {
+            "login": "matthiasneuner"
+          },
+          "bodyText": "Hi, I would like to understand the purpose and the function of the TaggingInterface.\nWhat is the purpose and the meaning? What is a tag? Why is there a need for a tag? Unfortunately, the doxygen documentation is not very helpful in this regard ..\nAlso, I cannot really understand how it works.\nTo me it seems that _re_blocks and _ke_blocks are populated by kernels, but I cannot see at which stage and by which module those attributes are accessed. That means, I cannot see when and where does attributes are accessed during the final assembly of the equation system.\nWhen should the TaggingInterface be used, and why are some modules (e.g., NodalConstraint) not using it?\nThank you in advance!",
+          "url": "https://github.com/idaholab/moose/discussions/21855",
+          "updatedAt": "2022-09-02T20:11:22Z",
+          "publishedAt": "2022-08-16T03:49:43Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nMy understanding is that it's meant for two things:\n\neasy storage and retrieval of vectors (fields) in the system class. I used vector tags for saving the iterates in PicardSolve and SecantSolve\nrelatedly, a way to store the contribution of a single kernel to a residual to examine it for debugging\n\nSome modules are not using it because they predate the interface most likely, and there was not necessarily funding to take on a refactor.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21855#discussioncomment-3403148",
+                  "updatedAt": "2022-08-22T04:17:59Z",
+                  "publishedAt": "2022-08-16T04:03:23Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Error after updating env: \"missing symbol called\"",
+          "author": {
+            "login": "marinasessim"
+          },
+          "bodyText": "Hello,\nI'm getting an error on an older app after updating the moose environment. I get this error when I run any input file or the tests.\n\"dyld[xxxxx]: missing symbol called\"\nI cleaned up before recompiling by running \"make clobberall\", which was marked as the solution for this error on a similar thread.\nI'm attaching the outputs of what I think is the equivalent of \"ldd executable\" on a mac (otool -L).\nPlease let me know if there is any other information that can help identify the source. The application is a few months old, please let me know if there are deprecated functions/syntax/anything that could be causing this error.\nThanks for your attention!\nmacaw-opt_output.txt",
+          "url": "https://github.com/idaholab/moose/discussions/21703",
+          "updatedAt": "2022-09-02T20:11:33Z",
+          "publishedAt": "2022-07-27T16:09:20Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nmake clobberall is often insufficient\nwe tend to use git clean -xfd these days\nplease make sure to commit ALL your work before running this command.\nWhat is macaw? What does it do?\nWe have a controlled app with the same name, so I'd just like to check\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21703#discussioncomment-3263469",
+                  "updatedAt": "2022-07-27T18:14:59Z",
+                  "publishedAt": "2022-07-27T18:14:58Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "marinasessim"
+                          },
+                          "bodyText": "Hi Guillaume,\nUnfortunately \"git clean -xfd\" did not do the trick either.\nI updated the environment \"conda update --all\" and rebased moose again. It compiles and no test fails. I did notice a warning this time, it shows up at compilation time (same for Macaw):\n(moose) [msessim][~/projects/macaw]> make -j 4\nChecking if conda packages exist...\nChecking if libmesh version is up to date...\n/Users/msessim/projects/moose/framework/moose.mk:34: The moose-libmesh conda package build number does match the current version of MOOSE. Please run \"conda update --all\" in your MOOSE environment.\nChecking if petsc version is up to date...\n/Users/msessim/projects/moose/framework/moose.mk:50: The moose-petsc conda package build number does match the current version of MOOSE. Please run \"conda update --all\" in your MOOSE environment.\n(...)\nI had just performed \"conda update --all\". Is there any other package update that I am missing?\nI still get the \"missing symbol called\" when I run the tests in Macaw, or any input file. Let me know if there is any info that will help here.\nThanks for your interest in Macaw. I created Macaw (https://github.com/marinasessim/macaw) to share some of the work I did in grad school with Dr.Tonks (https://doi.org/10.1016/j.commatsci.2021.111156). We used phase-field to simulate the oxidation of carbon fibers in a material that is used in heat shields of spacecraft. I did not know we had another Macaw application, bummer!\nMarina",
+                          "url": "https://github.com/idaholab/moose/discussions/21703#discussioncomment-3275151",
+                          "updatedAt": "2022-07-28T21:51:30Z",
+                          "publishedAt": "2022-07-28T21:51:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nSo conda update --all can fail to update sometimes. What versions do you have of the packages?\nmoose-libmesh             2022.06.06              build_3    https://conda.software.inl.gov/public\nmoose-mpich               4.0.2                   build_0    https://conda.software.inl.gov/public\nmoose-petsc               3.16.5                  build_6    https://conda.software.inl.gov/public\nmoose-tools               2022.06.16       py39h5a31bc0_0    https://conda.software.inl.gov/public\n\nif you have something older than those, you may be hitting this.\nIn this case, it's easiest to first try mamba update moose-libmesh moose-petsc then if this fails, wipe the conda environment and reinstall them\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/21703#discussioncomment-3281036",
+                          "updatedAt": "2022-07-29T14:13:41Z",
+                          "publishedAt": "2022-07-29T14:13:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "marinasessim"
+                          },
+                          "bodyText": "Hi Guillaume, sorry for the delay. This was the version of the aforementioned packages:\nmoose-libmesh             2022.06.06              build_0    https://conda.software.inl.gov/public\nmoose-libmesh-vtk         9.1.0            py39hc1bf809_7    https://conda.software.inl.gov/public\nmoose-mpich               4.0.1                   build_2    https://conda.software.inl.gov/public\nmoose-petsc               3.16.5                  build_3    https://conda.software.inl.gov/public\nmoose-tools               2022.04.18       py39hf94b855_0    https://conda.software.inl.gov/public\nI'm in the process of updating the moose env now (starting over since neither \"conda update --all\" or the \"mamba update moose-libmesh moose-petsc\" worked). I asked a colleague (@timcalvert) to try it out, he has a fresh environment with the updated packages and the \"missing symbol called\" problem persists. We also tried in our linux cluster in UF and same is true there. Do you have any other suggestions about what could be happening? Let me know if there is anything I can share to help shed some light.\nThanks for your help!\nMarina",
+                          "url": "https://github.com/idaholab/moose/discussions/21703#discussioncomment-3352332",
+                          "updatedAt": "2022-08-08T19:42:03Z",
+                          "publishedAt": "2022-08-08T19:41:05Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "the \"missing symbol called\" error suggests there are old compiled objects in the repository. I would use the git clean -xfd routine in the moose/ folder and try again. Note that you need to have saved / committed all your work before using that.\nThe package versions are slightly outdated. You probably got newer versions when re-creating the environment from scratch?\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/21703#discussioncomment-3354039",
+                          "updatedAt": "2022-08-09T01:41:56Z",
+                          "publishedAt": "2022-08-09T01:41:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "marinasessim"
+                          },
+                          "bodyText": "Hello,\nI removed the old environment and created a new one. MOOSE tests were compiled and ran with no problems. The packages are now updated:\nmoose-libmesh             2022.08.05              build_0    https://conda.software.inl.gov/public\nmoose-libmesh-vtk         9.1.0               h30e85a9_11    https://conda.software.inl.gov/public\nmoose-mpich               4.0.2                   build_1    https://conda.software.inl.gov/public\nmoose-petsc               3.16.6                  build_0    https://conda.software.inl.gov/public\nmoose-tools               2022.07.18      py310hcffbc79_0    https://conda.software.inl.gov/public\n\nI performed both git clean -xfd and make clobberall in the macaw dir. Macaw was recompiled, but the tests still hit the \"missing symbol called\" error. I'm attaching the outputs of ./run_tests. I will try to run it in debugging mode next.\ntests_missing_symbol_out.txt",
+                          "url": "https://github.com/idaholab/moose/discussions/21703#discussioncomment-3400366",
+                          "updatedAt": "2022-08-15T17:43:01Z",
+                          "publishedAt": "2022-08-15T17:43:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Is MOOSE a submodule of macaw in your build?\nif so you may want to use\ngit submodule for each git clean -xfd in the macaw dir as well",
+                          "url": "https://github.com/idaholab/moose/discussions/21703#discussioncomment-3400387",
+                          "updatedAt": "2022-08-15T17:46:59Z",
+                          "publishedAt": "2022-08-15T17:46:59Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "marinasessim"
+                          },
+                          "bodyText": "Hi Guillaume,\nI don't think I have moose as a submodule, there is no /moose in the macaw dir and I set export MOOSE_DIR=\"$HOME/projects/moose\" in the bash_profile.\nI just tried  git submodule foreach git clean -xfd in addition to git clean -xfd and make clobberall in the macaw dir.  Same error while running tests (\"missing symbol called\").",
+                          "url": "https://github.com/idaholab/moose/discussions/21703#discussioncomment-3400640",
+                          "updatedAt": "2022-08-15T18:23:41Z",
+                          "publishedAt": "2022-08-15T18:23:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "if it s not a submodule, can you clean moose with the git clean -xfd command in projects/moose?\nmissing symbol called could also be a missing function definition I think",
+                          "url": "https://github.com/idaholab/moose/discussions/21703#discussioncomment-3400794",
+                          "updatedAt": "2022-08-15T18:49:32Z",
+                          "publishedAt": "2022-08-15T18:49:31Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Paraview: 1st order variable on 2nd order mesh",
+          "author": {
+            "login": "joe61vette"
+          },
+          "bodyText": "Hello:\nTrying to visualize a 1st order variable on a 2nd order mesh (some vars are 2nd order).  I get unphysical values for the 1st order variables at the 2nd order node locations.  For example:\n\nIs there a setting in Paraview to force interpolation of the variables? (I have asked on the Paraview forum but no response yet). Or do I need to create 2nd order auxvars for my 1st order vars?\nThanks,\nJoe Kelly",
+          "url": "https://github.com/idaholab/moose/discussions/21848",
+          "updatedAt": "2022-09-02T19:51:05Z",
+          "publishedAt": "2022-08-15T14:41:59Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hi Joe\nI've never seen that.\n@roystgnr @dschwen have you / do you have a solution?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21848#discussioncomment-3398960",
+                  "updatedAt": "2022-08-15T14:45:35Z",
+                  "publishedAt": "2022-08-15T14:45:23Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "roystgnr"
+                  },
+                  "bodyText": "I've never seen this either.  I can at least say that \"Or do I need to create 2nd order auxvars for my 1st order vars?\" isn't the long-term solution - there has to be some kind of bug here.\nIs there any way you can reduce the problem to an input file we can use to replicate it?",
+                  "url": "https://github.com/idaholab/moose/discussions/21848#discussioncomment-3399141",
+                  "updatedAt": "2022-08-15T15:10:22Z",
+                  "publishedAt": "2022-08-15T15:10:21Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "joe61vette"
+                          },
+                          "bodyText": "Thanks.  I'll do that later today.",
+                          "url": "https://github.com/idaholab/moose/discussions/21848#discussioncomment-3399272",
+                          "updatedAt": "2022-08-15T15:25:30Z",
+                          "publishedAt": "2022-08-15T15:25:29Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Serial calculations can converge, but parallel calculations report errors",
+          "author": {
+            "login": "js-jixu"
+          },
+          "bodyText": "Hi, moose experts.\nI'm working on a simple thermomechanical coupling problem, but I'm having a little problem with parallel computing. When I run the input file with one core, it can successfully converge, the log is as follows:\nTime Step 0, time = 0\n\nPostprocessor Values:\n+----------------+----------------+----------------+----------------+----------------+----------------+----------------+\n| time           | average_T_inner| average_T_outer| max_T_inner    | max_T_outer    | min_T_inner    | min_T_outer    |\n+----------------+----------------+----------------+----------------+----------------+----------------+----------------+\n|   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |\n+----------------+----------------+----------------+----------------+----------------+----------------+----------------+\n\n\nTime Step 1, time = 0.001, dt = 0.001\n\nPerforming automatic scaling calculation\n\n 0 Nonlinear |R| = 2.149842e+02\n      0 Linear |R| = 2.149842e+02\n      1 Linear |R| = 1.695426e-10\n  Linear solve converged due to CONVERGED_RTOL iterations 1\n 1 Nonlinear |R| = 6.485681e+01\n      0 Linear |R| = 6.485681e+01\n      1 Linear |R| = 1.145896e-05\n  Linear solve converged due to CONVERGED_RTOL iterations 1\n 2 Nonlinear |R| = 7.953630e-01\n      0 Linear |R| = 7.953630e-01\n      1 Linear |R| = 1.457034e-07\n  Linear solve converged due to CONVERGED_RTOL iterations 1\n 3 Nonlinear |R| = 6.414909e-04\n      0 Linear |R| = 6.414909e-04\n      1 Linear |R| = 7.058500e-11\n  Linear solve converged due to CONVERGED_RTOL iterations 1\n 4 Nonlinear |R| = 4.907162e-10\nNonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4\n Solve Converged!\n  Finished Solving                                                                       [145.71 s] [   70 MB]\n\nOutlier Variable Residual Norms:\n  T: 4.907162e-10\n\nPostprocessor Values:\n+----------------+----------------+----------------+----------------+----------------+----------------+----------------+\n| time           | average_T_inner| average_T_outer| max_T_inner    | max_T_outer    | min_T_inner    | min_T_outer    |\n+----------------+----------------+----------------+----------------+----------------+----------------+----------------+\n|   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |\n|   1.000000e-03 |   8.038428e+02 |   6.147383e+02 |   1.114503e+03 |   6.566417e+02 |   6.181508e+02 |   5.937955e+02 |\n+----------------+----------------+----------------+----------------+----------------+----------------+----------------+\n\n\nTime Step 2, time = 0.002, dt = 0.001\n 0 Nonlinear |R| = 3.986562e+01\n      0 Linear |R| = 3.986562e+01\n      1 Linear |R| = 7.765476e-06\n  Linear solve converged due to CONVERGED_RTOL iterations 1\n 1 Nonlinear |R| = 2.135545e+00\n      0 Linear |R| = 2.135545e+00\n      1 Linear |R| = 5.446749e-07\n  Linear solve converged due to CONVERGED_RTOL iterations 1\n 2 Nonlinear |R| = 3.281716e-03\n      0 Linear |R| = 3.281716e-03\n      1 Linear |R| = 4.802840e-10\n  Linear solve converged due to CONVERGED_RTOL iterations 1\n 3 Nonlinear |R| = 1.238959e-08\n      0 Linear |R| = 1.238959e-08\n      1 Linear |R| = 1.379934e-15\n  Linear solve converged due to CONVERGED_RTOL iterations 1\n 4 Nonlinear |R| = 3.383537e-12\nNonlinear solve converged due to CONVERGED_FNORM_ABS iterations 4\n Solve Converged!\n  Finished Solving                                                                       [144.69 s] [   10 MB]\n\nOutlier Variable Residual Norms:\n  T: 3.383537e-12\n\nPostprocessor Values:\n+----------------+----------------+----------------+----------------+----------------+----------------+----------------+\n| time           | average_T_inner| average_T_outer| max_T_inner    | max_T_outer    | min_T_inner    | min_T_outer    |\n+----------------+----------------+----------------+----------------+----------------+----------------+----------------+\n|   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |\n|   1.000000e-03 |   8.038428e+02 |   6.147383e+02 |   1.114503e+03 |   6.566417e+02 |   6.181508e+02 |   5.937955e+02 |\n|   2.000000e-03 |   8.510320e+02 |   6.186468e+02 |   1.266513e+03 |   6.675766e+02 |   6.224338e+02 |   5.939423e+02 |\n+----------------+----------------+----------------+----------------+----------------+----------------+----------------+\n\n\nTime Step 3, time = 0.003, dt = 0.001\n 0 Nonlinear |R| = 9.530649e+00\n      0 Linear |R| = 9.530649e+00\n      1 Linear |R| = 1.820140e-06\n  Linear solve converged due to CONVERGED_RTOL iterations 1\n 1 Nonlinear |R| = 1.323311e-01\n      0 Linear |R| = 1.323311e-01\n      1 Linear |R| = 3.304854e-08\n  Linear solve converged due to CONVERGED_RTOL iterations 1\n 2 Nonlinear |R| = 1.554424e-05\n      0 Linear |R| = 1.554424e-05\n      1 Linear |R| = 2.145381e-12\n  Linear solve converged due to CONVERGED_RTOL iterations 1\n 3 Nonlinear |R| = 4.003414e-12\nNonlinear solve converged due to CONVERGED_FNORM_ABS iterations 3\n Solve Converged!\n  Finished Solving                                                                       [109.71 s] [    0 MB]\n\nOutlier Variable Residual Norms:\n  T: 4.003414e-12\n\nPostprocessor Values:\n+----------------+----------------+----------------+----------------+----------------+----------------+----------------+\n| time           | average_T_inner| average_T_outer| max_T_inner    | max_T_outer    | min_T_inner    | min_T_outer    |\n+----------------+----------------+----------------+----------------+----------------+----------------+----------------+\n|   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |\n|   1.000000e-03 |   8.038428e+02 |   6.147383e+02 |   1.114503e+03 |   6.566417e+02 |   6.181508e+02 |   5.937955e+02 |\n|   2.000000e-03 |   8.510320e+02 |   6.186468e+02 |   1.266513e+03 |   6.675766e+02 |   6.224338e+02 |   5.939423e+02 |\n|   3.000000e-03 |   8.624025e+02 |   6.194833e+02 |   1.308571e+03 |   6.700365e+02 |   6.232621e+02 |   5.939705e+02 |\n+----------------+----------------+----------------+----------------+----------------+----------------+----------------+\n\nBut when I use two cores in parallel, the computation does not converge and an error like this is reported:\nTime Step 0, time = 0\n\nPostprocessor Values:\n+----------------+----------------+----------------+----------------+----------------+----------------+----------------+\n| time           | average_T_inner| average_T_outer| max_T_inner    | max_T_outer    | min_T_inner    | min_T_outer    |\n+----------------+----------------+----------------+----------------+----------------+----------------+----------------+\n|   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |\n+----------------+----------------+----------------+----------------+----------------+----------------+----------------+\n\n\nTime Step 1, time = 0.001, dt = 0.001\n\nPerforming automatic scaling calculation\n\n 0 Nonlinear |R| = 2.149842e+02\n      0 Linear |R| = 2.149842e+02\n  Linear solve did not converge due to DIVERGED_PC_FAILED iterations 0\n                 PC failed due to FACTOR_OUTMEMORY\nNonlinear solve did not converge due to DIVERGED_FNORM_NAN iterations 0\n Solve Did NOT Converge!\n  Finished Solving                                                                       [  9.33 s] [  133 MB]\nAborting as solve did not converge\n\nTime Step 1, time = 0.0005, dt = 0.0005\n 0 Nonlinear |R| = 2.149842e+02\n      0 Linear |R| = 2.149842e+02\n  Linear solve did not converge due to DIVERGED_PC_FAILED iterations 0\n                 PC failed due to FACTOR_OUTMEMORY\nNonlinear solve did not converge due to DIVERGED_FNORM_NAN iterations 0\n Solve Did NOT Converge!\n  Finished Solving                                                                       [  7.23 s] [  134 MB]\nAborting as solve did not converge\n\nTime Step 1, time = 0.00025, dt = 0.00025\n 0 Nonlinear |R| = 2.149842e+02\n      0 Linear |R| = 2.149842e+02\n  Linear solve did not converge due to DIVERGED_PC_FAILED iterations 0\n                 PC failed due to FACTOR_OUTMEMORY\nNonlinear solve did not converge due to DIVERGED_FNORM_NAN iterations 0\n Solve Did NOT Converge!\n  Finished Solving                                                                       [  7.15 s] [    7 MB]\nAborting as solve did not converge\n\nTime Step 1, time = 0.000125, dt = 0.000125\n 0 Nonlinear |R| = 2.149842e+02\n      0 Linear |R| = 2.149842e+02\n  Linear solve did not converge due to DIVERGED_PC_FAILED iterations 0\n                 PC failed due to FACTOR_OUTMEMORY\nNonlinear solve did not converge due to DIVERGED_FNORM_NAN iterations 0\n Solve Did NOT Converge!\n  Finished Solving                                                                       [  7.10 s] [    1 MB]\nAborting as solve did not converge\n\nTime Step 1, time = 6.25e-05, dt = 6.25e-05\n 0 Nonlinear |R| = 2.149842e+02\n^C[mpiexec@DESKTOP-9HFBUBM] Sending Ctrl-C to processes as requested\n[mpiexec@DESKTOP-9HFBUBM] Press Ctrl-C again to force abort\n\n===================================================================================\n=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES\n=   PID 10828 RUNNING AT DESKTOP-9HFBUBM\n=   EXIT CODE: 2\n=   CLEANING UP REMAINING PROCESSES\n=   YOU CAN IGNORE THE BELOW CLEANUP MESSAGES\n===================================================================================\nYOUR APPLICATION TERMINATED WITH THE EXIT STRING: Interrupt (signal 2)\nThis typically refers to a problem with your application.\nPlease see the FAQ page for debugging suggestions\n\nI'm using WSL and from what I can see in the task manager, the memory is not running out. I want to know why this pehnomenon happens.\n\nHere is my input file and mesh file:\nini_temp = 593 # K\n\n[GlobalParams]\n  displacements = 'disp_x disp_y disp_z'\n[]\n\n[Mesh]\n  file = '2layers_3d.msh'\n[]\n\n[Problem]\n  type = FEProblem\n[]\n\n[Variables]\n  [./T]\n    initial_condition = ${ini_temp}\n  [../]\n[]\n\n[AuxVariables]\n  [./heat]\n    family = MONOMIAL\n    order = FIRST\n    block = 'inner'\n  [../]\n[]\n\n[Modules]\n  [./TensorMechanics]\n    [./Master]\n      [./inner]\n        strain = SMALL\n        incremental = true\n        add_variables = true\n        eigenstrain_names = eigenstrain\n        generate_output = 'strain_xx strain_yy strain_zz'\n        use_automatic_differentiation = true\n\tblock = 'inner'\n      [../]\n    [../]\n  [../]\n[]\n\n[Kernels]\n  [./outer_inner_temperature_time]\n    type = ADHeatConductionTimeDerivative\n    variable = T\n    block = 'outer inner'\n    density_name = 'rho'\n    specific_heat = 'cp'\n  [../]\n  [./outer_inner_temperature_conduction]\n    type = ADHeatConduction\n    variable = T\n    block = 'outer inner'\n    thermal_conductivity = 'k'\n  [../]\n  [./heat_source]\n    type = ADCoupledForce\n    variable = T\n    block = 'inner'\n    v = heat\n  [../]\n[]\n\n[AuxKernels]\n  [./heat_aux]\n    type = FunctionAux\n    variable = heat\n    function = heat_function\n    block = 'inner'\n  [../]\n[]\n\n[Functions]\n  [./heat_function]\n    type = ParsedFunction\n    value = (200+400*sin((z/0.09)*(pi/2)))*10000\n    block = 'inner'\n  [../]\n[]\n\n[BCs]\n  [./inner_top_no_displacement]\n    type = DirichletBC\n    variable = disp_z\n    value = 0\n    boundary = 'inner_top'\n  [../]\n  [./inner_bottom_no_displacement]\n    type = DirichletBC\n    variable = disp_z\n    value = 0\n    boundary = 'inner_bottom'\n  [../]\n  \n  [./constant_T]\n    type = DirichletBC\n    variable = T\n    value = ${ini_temp}\n    boundary = 'outer_wall'\n  [../]\n[]\n\n[Materials]\n  [./rho_inner]\n    type = ADParsedMaterial\n    f_name = rho\n    function = '0.0110876 * pow(9.9672e-1 + 1.179e-5 * T - 2.429e-9 * pow(T,2) + 1.219e-12 * pow(T,3),-3)'\n    args = 'T'\n    block = 'inner'\n  [../]\n  [./cp_inner]\n    type = ADParsedMaterial\n    f_name = cp\n    function = '0.76 * ((302.27 * pow((548.68/T),2) * exp(548.68 / T)) / pow((exp(548.68 / T) - 1),2) + 2 * 8.463e-3 * T + 8.741e7 * 18531.7 * exp(-18531.7 / T) / pow(T,2)) + 0.24 * ((322.49 * pow((587.41/T),2) * exp(587.41 / T)) / pow((exp(587.41 / T) - 1),2) + 2 * 1.4679e-2 * T)'\n    args = 'T'\n    block = 'inner'\n  [../]\n  [./k_inner]\n    type = ADParsedMaterial\n    f_name = k\n    function = '1.158/(7.5408 + 17.692 * (T / 1000) + 3.6142 * pow((T/1000),2)) + 74.105 * pow((T / 1000),-2.5) * exp(-16.35 / (T / 1000))'\n    args = 'T'\n    block = 'inner'\n  [../]\n  [./rho_outer]\n    type = ADParsedMaterial\n    f_name = rho\n    function = '1e-6 * (7830.853 - 0.212046 * T - 1.011373e-4 * pow(T,2))'\n    args = 'T'\n    block = 'outer'\n  [../]\n  [./cp_outer]\n    type = ADParsedMaterial\n    f_name = cp\n    function = '5863.9 - 32.563 * T + 0.072564 * pow(T,2) - 7.045375e-5 * pow(T,3) + 2.585336e-8 * pow(T,4)'\n    args = 'T'\n    block = 'outer'\n  [../]\n  [./k_outer]\n    type = ADParsedMaterial\n    f_name = k\n    function = '0.3'\n    args = 'T'\n    block = 'outer'\n  [../]\n\n  [./elasticity_tensor]\n    type = ADComputeIsotropicElasticityTensor\n    youngs_modulus = 2e11\n    poissons_ratio = 0.32\n    block = 'inner'\n  [../]\n  [./small_stress]\n    type = ADComputeFiniteStrainElasticStress\n    block = 'inner'\n  [../]\n  [./thermal_expansion_strain]\n    type = ADComputeThermalExpansionEigenstrain\n    stress_free_temperature = 273\n    thermal_expansion_coeff = 1.0358e-5\n    temperature = T\n    eigenstrain_name = eigenstrain\n    block = 'inner'\n  [../]\n[]\n\n[Preconditioning]\n  [./smp]\n    type = SMP\n    full = true\n  [../]\n[]\n\n[Executioner]\n  type = Transient\n  num_steps = 50\n  dt = 0.001\n  #end_time = 100\n\n  nl_rel_tol = 1e-10\n  nl_abs_tol = 1e-10\n\n  solve_type = 'NEWTON'\n  petsc_options = '-snes_converged_reason -ksp_converged_reason -snes_linesearch_monitor'\n  petsc_options_iname = '-pc_type -pc_factor_shift_type'\n  petsc_options_value = 'lu       NONZERO'\n  line_search = 'none'\n   # petsc_options_iname = '-snes_type'\n  # petsc_options_value = 'test'\n\n  nl_max_its = 50\n  l_max_its = 100\n  automatic_scaling = true\n[]\n\n[Postprocessors]\n  [./max_T_inner]\n    type = ElementExtremeValue\n    variable = T\n    value_type = max\n    block = 'inner'\n  [../]\n  [./max_T_outer]\n    type = ElementExtremeValue\n    variable = T\n    value_type = max\n    block = 'outer'\n  [../]\n  [./min_T_inner]\n    type = ElementExtremeValue\n    variable = T\n    value_type = min\n    block = 'inner'\n  [../]\n  [./min_T_outer]\n    type = ElementExtremeValue\n    variable = T\n    value_type = min\n    block = 'outer'\n  [../]\n  [./average_T_inner]\n    type = ElementAverageValue\n    variable = T\n    block = 'inner'\n  [../]\n  [./average_T_outer]\n    type = ElementAverageValue\n    variable = T\n    block = 'outer'\n  [../]\n[]\n\n[Outputs]\n  perf_graph = true\n  print_linear_residuals = true\n  [./exodus]\n    type = Exodus\n    file_base = '2layers'\n    execute_on = 'TIMESTEP_END'\n  [../]\n[]\n\ninput file & mesh file.zip\nBesides, I have another two problems. We know that when thermal-mechanical coupling occurs, objects expand as their temperature increases. Correspondingly, the displacement caused by the expansion also affects the distribution of the temperature field. In this case the mesh is actually changing all the time. So how to incorporate the changing mesh into the simulation in MOOSE? Is there any such example in the MOOSE tutorial?\nI want to set the inner cylinder to expand only in the radial direction, given constraints in the axial direction. So can I set the boundary conditions like this:\n[BCs]\n  [./inner_top_no_displacement]\n    type = DirichletBC\n    variable = disp_z\n    value = 0\n    boundary = 'inner_top'\n  [../]\n  [./inner_bottom_no_displacement]\n    type = DirichletBC\n    variable = disp_z\n    value = 0\n    boundary = 'inner_bottom'\n  [../]\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/21845",
+          "updatedAt": "2022-08-15T14:31:32Z",
+          "publishedAt": "2022-08-14T14:46:00Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nI'm not sure about the out of memory error. You could try another LU solver package, and you could try less expensive preconditioners (asm with a lu subpc for example)\nYou could also try to reduce your memory consumption and see if you can make it work with less elements for example.\nFor your second question, you just need to specify use_displaced_mesh and set the displacements to turn on displacements for most physics. You should not have to do anything more.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21845#discussioncomment-3395544",
+                  "updatedAt": "2022-08-15T04:05:39Z",
+                  "publishedAt": "2022-08-15T04:05:38Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "js-jixu"
+                          },
+                          "bodyText": "Hi, Guillaume, thank you for your reply.\nI used fewer meshes, but moose reported the same error:\nTime Step 0, time = 0\n\nPostprocessor Values:\n+----------------+----------------+----------------+----------------+----------------+----------------+----------------+\n| time           | average_T_inner| average_T_outer| max_T_inner    | max_T_outer    | min_T_inner    | min_T_outer    |\n+----------------+----------------+----------------+----------------+----------------+----------------+----------------+\n|   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |\n+----------------+----------------+----------------+----------------+----------------+----------------+----------------+\n\n\nTime Step 1, time = 0.0001, dt = 0.0001\n\n\nPerforming automatic scaling calculation\n\n\n 0 Nonlinear |R| = 3.105843e+02\n      0 Linear |R| = 3.105843e+02\n  Linear solve did not converge due to DIVERGED_PC_FAILED iterations 0\n                 PC failed due to FACTOR_OUTMEMORY\nNonlinear solve did not converge due to DIVERGED_FNORM_NAN iterations 0\n\n Solve Did NOT Converge!\n\n\nAborting as solve did not converge\n\n\nTime Step 1, time = 5e-05, dt = 5e-05\n 0 Nonlinear |R| = 3.105843e+02\n      0 Linear |R| = 3.105843e+02\n  Linear solve did not converge due to DIVERGED_PC_FAILED iterations 0\n                 PC failed due to FACTOR_OUTMEMORY\nNonlinear solve did not converge due to DIVERGED_FNORM_NAN iterations 0\n\n Solve Did NOT Converge!\n\n\nAborting as solve did not converge\n\n\nTime Step 1, time = 2.5e-05, dt = 2.5e-05\n 0 Nonlinear |R| = 3.105843e+02\n      0 Linear |R| = 3.105843e+02\n  Linear solve did not converge due to DIVERGED_PC_FAILED iterations 0\n                 PC failed due to FACTOR_OUTMEMORY\nNonlinear solve did not converge due to DIVERGED_FNORM_NAN iterations 0\n\n Solve Did NOT Converge!\n\n\nAborting as solve did not converge\n\n\nTime Step 1, time = 1.25e-05, dt = 1.25e-05\n 0 Nonlinear |R| = 3.105843e+02\n      0 Linear |R| = 3.105843e+02\n  Linear solve did not converge due to DIVERGED_PC_FAILED iterations 0\n                 PC failed due to FACTOR_OUTMEMORY\nNonlinear solve did not converge due to DIVERGED_FNORM_NAN iterations 0\n\n Solve Did NOT Converge!\n\n2layers_3d.zip\nSo I don't think it's a hardware problem, that is, it's not that the computer's memory is not enough. Do you think MOOSE will reduce the convergence performance due to parallel computing? For example, when a core is used for serial calculation, convergence can be achieved in one iteration. But when computing with four cores, it takes two iterations to reach convergence?\nThank you for advice of use_displaced_mesh, that helps me a lot.",
+                          "url": "https://github.com/idaholab/moose/discussions/21845#discussioncomment-3395636",
+                          "updatedAt": "2022-08-15T04:41:39Z",
+                          "publishedAt": "2022-08-15T04:41:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "The preconditioning will be different in parallel, so the convergence can be slower. Not with LU iirc though.\nYou should investigate using different solver packages for LU (with -pc_factor_mat_solver_type strumpack for example), and other preconditioners (asm with a nested pc, ilu)\nyou may pass a variety of flags to petsc to gain more info about the numerical solve\nsome of the more commonly used:\n petsc_options = '-ksp_converged_reason -ksp_monitor_true_residual -ksp_monitor_singular_value -snes_converged_reason -snes_linesearch_monitor -snes_view'\n\nI ll refer you to the PETSc documentation for what each of them actually do",
+                          "url": "https://github.com/idaholab/moose/discussions/21845#discussioncomment-3398447",
+                          "updatedAt": "2022-08-15T13:38:07Z",
+                          "publishedAt": "2022-08-15T13:37:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "js-jixu"
+                          },
+                          "bodyText": "Thanks a lot for your kind advice.\nI've found that the default of use_displaced_mesh varies in different kernel. When I want to use displaced mesh, should I set use_displaced_mesh = true in each block and kernel which have use_displaced_mesh parameter, such as ADHeatConductionTimeDerivative, ADHeatConduction, DirichletBC ? It seems that I can't set use_displaced_mesh = true in GlobalParams block.",
+                          "url": "https://github.com/idaholab/moose/discussions/21845#discussioncomment-3398767",
+                          "updatedAt": "2022-08-15T14:23:26Z",
+                          "publishedAt": "2022-08-15T14:20:27Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "why cant you set in GlobalParams?",
+                          "url": "https://github.com/idaholab/moose/discussions/21845#discussioncomment-3398782",
+                          "updatedAt": "2022-08-15T14:22:37Z",
+                          "publishedAt": "2022-08-15T14:22:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "js-jixu"
+                          },
+                          "bodyText": "MOOSE reports that \"The parameter 'GlobalParams/use_displaced_mesh' is a private parameter and should not be used in an input file\" when I set use_displaced_mesh =true in GlobalParams block.",
+                          "url": "https://github.com/idaholab/moose/discussions/21845#discussioncomment-3398808",
+                          "updatedAt": "2022-08-15T14:26:11Z",
+                          "publishedAt": "2022-08-15T14:26:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "ok that must be because there is an object in your input file that does not allow for setting this parameter.\nYou re going to have to set it object by object then",
+                          "url": "https://github.com/idaholab/moose/discussions/21845#discussioncomment-3398834",
+                          "updatedAt": "2022-08-15T14:29:10Z",
+                          "publishedAt": "2022-08-15T14:29:09Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "js-jixu"
+                          },
+                          "bodyText": "Yes, I've found ADComputeFiniteStrainElasticStress doesn't allow me to set this parameter. Thank you, Guillaume.",
+                          "url": "https://github.com/idaholab/moose/discussions/21845#discussioncomment-3398858",
+                          "updatedAt": "2022-08-15T14:31:28Z",
+                          "publishedAt": "2022-08-15T14:31:28Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Coupling Tensor Mechanics with THM Heat Structure",
+          "author": {
+            "login": "jcstonehillAMA"
+          },
+          "bodyText": "Hello friends,\nHopefully this is just a silly mistake by me. I'm trying to use the THM Component \"HeatStructureFromFile3D\" to import an exodus file to create a mesh for use with some other THM components.\nIn addition, I'd like to use the Tensor Mechanics module to calculate some the stress/strain from both thermal expansion and an applied load.\nUnfortunately, I can not get past the first step of simply getting the Tensor Mechanics module to recognize the mesh. My suspicion is that it's looking for a mesh that technically hasn't been created yet since it is generated by the HeatStructureFromFile3D component after this check. But, I'd love to hear if anyone has any feedback.\nCode Snippet:\n[Modules/TensorMechanics/Master]\n\t[all]\n\t\tadd_variables = true\n\t[]\n[]\n\n\n[Components]\n\n\t[blk]\n\t\ttype = HeatStructureFromFile3D\n\t\tfile = 'GenerateFuelElement_in.e'\n\t\tposition = '0 0 0'\n\t\tinitial_T = 372\n\t[]\n[]\n\nEDIT: Forgot to include the error:\n*** ERROR ***\nNo subdomains found",
+          "url": "https://github.com/idaholab/moose/discussions/21724",
+          "updatedAt": "2022-09-29T16:34:26Z",
+          "publishedAt": "2022-07-29T20:55:13Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nI dont think THM meshes from components are currently compatible with other modules. @joshuahansel for confirmation\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21724#discussioncomment-3289155",
+                  "updatedAt": "2022-07-31T04:31:53Z",
+                  "publishedAt": "2022-07-31T04:31:52Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "joshuahansel"
+                          },
+                          "bodyText": "I'm not entirely sure, but I think that this is probably the case. THM was designed to couple with other physics via MultiApps or have the other apps write their own Components. I can at least say that we have no examples of doing what is attempted here.",
+                          "url": "https://github.com/idaholab/moose/discussions/21724#discussioncomment-3296995",
+                          "updatedAt": "2022-08-01T13:07:20Z",
+                          "publishedAt": "2022-08-01T13:07:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "LagrangeW"
+                          },
+                          "bodyText": "Hello, Is there any example inputs on coupling THM using MultiApps? Ask this because THM module seems different with others that no [Variables] or [Kernels] is needed in a THM input.",
+                          "url": "https://github.com/idaholab/moose/discussions/21724#discussioncomment-3362805",
+                          "updatedAt": "2022-08-10T02:47:22Z",
+                          "publishedAt": "2022-08-10T02:47:21Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nThere's this example on the virtual test bed\nhttps://github.com/idaholab/virtual_test_bed/tree/devel/htgr/assembly\nthm.i is the THM input\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/21724#discussioncomment-3363444",
+                          "updatedAt": "2022-08-10T05:48:07Z",
+                          "publishedAt": "2022-08-10T05:48:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "this is the doc page for it\nhttps://mooseframework.inl.gov/virtual_test_bed/htgr/assembly/index.html",
+                          "url": "https://github.com/idaholab/moose/discussions/21724#discussioncomment-3363448",
+                          "updatedAt": "2022-08-10T05:48:33Z",
+                          "publishedAt": "2022-08-10T05:48:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "LagrangeW"
+                          },
+                          "bodyText": "Got it! Thank you Guillaume!",
+                          "url": "https://github.com/idaholab/moose/discussions/21724#discussioncomment-3363586",
+                          "updatedAt": "2022-08-10T06:16:59Z",
+                          "publishedAt": "2022-08-10T06:16:58Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "joshuahansel"
+                  },
+                  "bodyText": "I don't have your input file or stacktrace, but I think the error you're probably hitting is in TensorMechanicsAction. If you want to check the suspicion you have, you can check whether the task THM:build_mesh appears before validate_coordinate_systems when you do Debug/show_actions=true.",
+                  "url": "https://github.com/idaholab/moose/discussions/21724#discussioncomment-3297050",
+                  "updatedAt": "2022-08-01T13:16:14Z",
+                  "publishedAt": "2022-08-01T13:16:12Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jcstonehillAMA"
+                          },
+                          "bodyText": "Excellent! Thanks for the advice. I'll check this out and report back. I'm a fairly novice MOOSE user and didn't know THM was meant to couple through Multiapps. I'll read up more on Multiapps for the future.",
+                          "url": "https://github.com/idaholab/moose/discussions/21724#discussioncomment-3298746",
+                          "updatedAt": "2022-08-01T14:24:27Z",
+                          "publishedAt": "2022-08-01T14:24:26Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "joshuahansel"
+                          },
+                          "bodyText": "What physical problem are you working toward? You're trying to couple tensor mechanics to a THM heat structure. Does that mean you want to couple to thermal hydraulics? And what kind of coupling between physical domains are you trying to achieve?",
+                          "url": "https://github.com/idaholab/moose/discussions/21724#discussioncomment-3299615",
+                          "updatedAt": "2022-08-01T14:59:03Z",
+                          "publishedAt": "2022-08-01T14:59:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jcstonehillAMA"
+                          },
+                          "bodyText": "Joshua, I apologize for the late reply. I've been on leave.\nAs I mentioned, I'm new to MOOSE. The goal was to create a model of a NERVA-derived fuel element. The solid domains would have volumetric heating and heat conduction. This solid domain was setup as a heat structure from an exodus file. Then I used heat transfer components to transfer the heat to multiple FlowChannel1Phase components (one for each of the flow channels in the physical fuel element).\nI was able to accomplish this. The next step was to see if I could use the results to determine stresses/strains from the thermal expansion combined with an applied load, which is when I ran into problems. I've been learning the MOOSE suite by simply examining examples and trying to mimic them to fit my problem. I had not considered the multi-app functionality and I'm curious if that would solve my issues! When I get a chance, I'll give it an attempt.",
+                          "url": "https://github.com/idaholab/moose/discussions/21724#discussioncomment-3398669",
+                          "updatedAt": "2022-08-15T14:09:29Z",
+                          "publishedAt": "2022-08-15T14:09:28Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Confusion around FlowChannel1Phase position argument",
+          "author": {
+            "login": "TheBEllis"
+          },
+          "bodyText": "Hi MOOSE team, I am currently using the thermal hydraulics module for a project, and I am a bit confused about the position argument. In step 5 on the single phase flow example, when a second flow channel is added, its position argument on line 214 for the water flow channel is altered slightly to include the thickness of the wall, compared to the helium flow cahnnel. I have included a little drawing to show my understanding of the setup for this set of flow channels and heat exchanger. I don't understand why the position argument requires us to take into account the thickness of the wall, when it has the same \"origin\" as the rest of the components. My intuition for the geometry may be wrong which would explain why I don't get it, but I was just wondering if there was something else I'm missing. Any help is much appreciated!\nSmall edit, sorry, realised it was just rude to reference lines on one of the example input files and send anyone answering on a hunt for the correct file. I have attached the relevant file, but the parts I am referring to are this line for the helium flow channel\nposition = '1 0 2'\n\nand this line for the water flow channel.\nposition = '${fparse 1 + hx_wall_thickness} 0 2'\n\n\nexample_5.txt\nl",
+          "url": "https://github.com/idaholab/moose/discussions/21835",
+          "updatedAt": "2022-08-15T13:25:46Z",
+          "publishedAt": "2022-08-12T12:36:35Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@joshuahansel is the secondary flow supposed to wrap around the pipe (what it seems looking at A) or be on the other side of the wall (what it seems looking at the position argument) ?\nLink to that tutorial:\nhttps://mooseframework.inl.gov/modules/thermal_hydraulics/tutorials/single_phase_flow/step05.html#step-5-secondary-side",
+                  "url": "https://github.com/idaholab/moose/discussions/21835#discussioncomment-3387490",
+                  "updatedAt": "2022-08-12T21:51:15Z",
+                  "publishedAt": "2022-08-12T21:51:15Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "joshuahansel"
+                  },
+                  "bodyText": "Thanks for bringing to my attention @GiudGiud. @TheBEllis Sorry for the confusion in the example. The example does have an annular secondary side channel, and you're right, the axis line segment is what you're usually specifying with position, orientation, and length, so in reality, you shouldn't offset as in the example. The example offsets the secondary side for visualization purposes only: if you were to open up the output file in Paraview without the offset, the primary and secondary sides would be coincident, so the person who wrote the example put the secondary side flow channel just to the right of that intermediate heat structure so that they can be viewed simultaneously instead of having to toggle the primary and secondary side channels on and off. The important thing to realize for this is that few or no cases, this position doesn't actually matter. The only thing that really matters is that you have the channels aligned with other meshes correctly so that nearest node-type couplings work correctly.",
+                  "url": "https://github.com/idaholab/moose/discussions/21835#discussioncomment-3390829",
+                  "updatedAt": "2022-08-13T20:00:03Z",
+                  "publishedAt": "2022-08-13T20:00:03Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "TheBEllis"
+                          },
+                          "bodyText": "Thank you both very much for getting back to me and offering some clarification it was very very helpful! To rack your brains just a bit more, in both the step of the tutorial that @GiudGiud linked, as well as my own input files, I can't actually open the output files in paraview, as it doesn't like the fact that sidesets and element blocks have the same name? Have either of you had any experience of this?",
+                          "url": "https://github.com/idaholab/moose/discussions/21835#discussioncomment-3397661",
+                          "updatedAt": "2022-08-15T11:50:30Z",
+                          "publishedAt": "2022-08-15T11:50:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "This is an incompatibility with your version of paraview, 5.10.something.\nYou may either downgrade to 5.9.latest or use the legacy exodus reader in your version",
+                          "url": "https://github.com/idaholab/moose/discussions/21835#discussioncomment-3398360",
+                          "updatedAt": "2022-08-15T13:25:47Z",
+                          "publishedAt": "2022-08-15T13:25:46Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Hoek-Brown model and Equivalent plastic strain",
+          "author": {
+            "login": "Traiwit"
+          },
+          "bodyText": "Hi guys,\njust wonder does MOOSE have the Hoek-Brown plastic model, I couldn't find it in the document at all (I only see DP and MC models), maybe it's hidden somewhere?\nDo we have the 'equivalent plastic strain' or the 'Damage' output for the tensor mechanics module? I guess it's this (below), someone please help me to confirm it.\n  [./mc_int_auxk]\n    type = MaterialStdVectorAux\n    index = 0\n    property = plastic_internal_parameter\n    variable = mc_int\n  [../]\n\nThank you guys, I hope you have a good day\nTraiwit",
+          "url": "https://github.com/idaholab/moose/discussions/17892",
+          "updatedAt": "2022-08-15T12:13:23Z",
+          "publishedAt": "2021-05-20T05:47:55Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "WilkAndy"
+                  },
+                  "bodyText": "No Hoek-Brown that i'm aware of.  (I wonder whether a private App has it?)\nYou are right about the MaterialStdVectorAux.  You just have to be careful with the index, because that depends on your plastic model.  If you are unsure, it's easiest to consult the test files that use the same plastic model that you're using, because they almost always have record plastic strain into AuxVars.  If still unsure, just ask.\na",
+                  "url": "https://github.com/idaholab/moose/discussions/17892#discussioncomment-761728",
+                  "updatedAt": "2022-06-19T14:54:05Z",
+                  "publishedAt": "2021-05-20T06:49:32Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "Hi @WilkAndy, my team has implemented Hoek-Brown in Abaqus, not sure how difficult it is to transfer into MOOSE.\nRegarding 'index', I checked several input files, they are all over the place, could you please explain it to me.\nIf it helps, most of my simulations consider Z-axis to be verticle direction. Should the index be '2' OR I am on the wrong track entirely?\nThank you\nTraiwit",
+                          "url": "https://github.com/idaholab/moose/discussions/17892#discussioncomment-766143",
+                          "updatedAt": "2022-06-19T14:54:07Z",
+                          "publishedAt": "2021-05-21T00:58:31Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Any news on this @Traiwit @WilkAndy",
+                          "url": "https://github.com/idaholab/moose/discussions/17892#discussioncomment-977123",
+                          "updatedAt": "2022-06-19T14:54:07Z",
+                          "publishedAt": "2021-07-08T00:43:44Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Thanks for prompting, @GiudGiud .\nThe \"index\" is nothing to do with direction, @Traiwit .   It is dependent on the plastic model.  For instance, some implementations of Mohr-Coulomb will have 6 yield functions, with each of those functions having a plastic strain associated with them.  Therefore, when using this type of MohrCoulomb you'll have to choose index=0 or index=1, ... or index=5.   On the other hand, another implementation of Mohr-Coulomb will have just 1 yield function (perhaps it has smoothed the 6 mentioned above into one overall surface, or perhaps it does some rearrangement of the principal stresses, or something else) and will have just 1 plastic strain.  Therefore, your only choice is index=0.\nSo, in conclusion, you have to know the details of the particular implementation of your particular plastic model in order to know what \"index\" you might be interested in recording.\nI suggest you just ask this Discussion list when you're not sure.   Or you can \"risk it\" and look at test files that use the exact plastic model you're using.",
+                          "url": "https://github.com/idaholab/moose/discussions/17892#discussioncomment-977187",
+                          "updatedAt": "2022-06-19T14:54:14Z",
+                          "publishedAt": "2021-07-08T01:22:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "Thanks @WilkAndy\nNow i'm more confused with the '6' yield functions, can we control it in the input file?\nI think the one I'm using doesn't have the option (TensorMechanicsPlasticMohrCoulombMulti), so index = 0 should be fine\n\nThanks again guys",
+                          "url": "https://github.com/idaholab/moose/discussions/17892#discussioncomment-977202",
+                          "updatedAt": "2022-08-15T08:53:49Z",
+                          "publishedAt": "2021-07-08T01:33:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "You are correct about index=0 @Traiwit .   TensorMechanicsPlasticMohrCoulombMulti does have 6 planar yield functions, so could have 6 plastic internal parameters, but MCMulti actually sums them, so there is only 1.  Hence index=0 is the only valid choice.\n(This is not true for other implementations of Mohr-Coulomb.  For instance CappedMohrCoulombStressUpdate has two internal parameters, index=0 corresponding to shear failure and index=1 corresponding to tensile failure.  BTW, it has 12 yield functions, the first 3 being tensile, the next 3 being compression, the next 6 being Mohr-Coulomb.)\nFor future reference, when you're using the ComputeMultiPlasticityStress with, say\nplastic_models = 'model0 model1 model2'\n\nthen\n\nindex=0 will correspond to the plastic internal parameter of model0\nindex=1 will correspond to the plastic internal parameter of model1\nindex=2 will correspond to the plastic internal parameter of model2",
+                          "url": "https://github.com/idaholab/moose/discussions/17892#discussioncomment-977296",
+                          "updatedAt": "2022-08-15T08:53:49Z",
+                          "publishedAt": "2021-07-08T02:15:08Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xxsszzaa"
+                          },
+                          "bodyText": "Hi @WilkAndy, my team has implemented Hoek-Brown in Abaqus, not sure how difficult it is to transfer into MOOSE.\nRegarding 'index', I checked several input files, they are all over the place, could you please explain it to me.\nIf it helps, most of my simulations consider Z-axis to be verticle direction. Should the index be '2' OR I am on the wrong track entirely?\nThank you Traiwit\n\nHi @Traiwit \uff0cRecently, I want to use the material subroutines of Hoke-Brown and Mogi Coulomb for comparative tests. I wonder if you can send me the source code of your 's UMAT, 850082649@qq.com\nThank you very much\nSandwish",
+                          "url": "https://github.com/idaholab/moose/discussions/17892#discussioncomment-3397846",
+                          "updatedAt": "2022-08-15T12:13:24Z",
+                          "publishedAt": "2022-08-15T12:13:23Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

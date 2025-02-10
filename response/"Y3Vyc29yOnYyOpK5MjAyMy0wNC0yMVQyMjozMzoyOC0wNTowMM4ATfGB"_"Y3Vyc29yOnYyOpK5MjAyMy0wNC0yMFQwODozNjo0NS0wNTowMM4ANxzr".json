@@ -1,0 +1,856 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMy0wNC0yMFQwODozNjo0NS0wNTowMM4ANxzr"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Question about the Custom Closures",
+          "author": {
+            "login": "Ethan-xj"
+          },
+          "bodyText": "@joshuahansel Hey josh, the coupling between heat structure and flow channels is successful.\nI wrote a input file using Closures1PhaseSimple and its calculation is well-off. But when I use the Closures1PhaseNone, ADWallFrictionChurchillMaterial and ADWallHeatTransferCoefficient3EqnDittusBoelterMaterial, the terminal says:\n*** ERROR ***\nThe following error occurred in the object \"THM:problem\", of type \"THMProblem\".\n\nMaterial property 'Hw:1', requested by 'ROD1_FLOWSC1:heat_flux_uo' is not defined on block core_chan1\nMaterial property 'Hw:2', requested by 'ROD7_FLOWSC15:heat_flux_uo' is not defined on block core_chan1\nMaterial property 'Hw:1', requested by 'core_chan1:avg_T_wall_3eqn_mat' is not defined on block core_chan1\nMaterial property 'Hw:2', requested by 'core_chan1:avg_T_wall_3eqn_mat' is not defined on block core_chan1\nMaterial property 'Hw:1', requested by 'core_chan1:avg_T_wall_3eqn_mat_face' is not defined on block core_chan1\nMaterial property 'Hw:2', requested by 'core_chan1:avg_T_wall_3eqn_mat_face' is not defined on block core_chan1\nMaterial property 'Hw:1', requested by 'core_chan1:avg_T_wall_3eqn_mat_neighbor' is not defined on block core_chan1\nMaterial property 'Hw:2', requested by 'core_chan1:avg_T_wall_3eqn_mat_neighbor' is not defined on block core_chan1\nMaterial property 'Hw:1', requested by 'ROD1_FLOWSC2:heat_flux_uo' is not defined on block core_chan2\nMaterial property 'Hw:2', requested by 'ROD2_FLOWSC2:heat_flux_uo' is not defined on block core_chan2\nMaterial property 'Hw:1', requested by 'core_chan2:avg_T_wall_3eqn_mat' is not defined on block core_chan2\nMaterial property 'Hw:2', requested by 'core_chan2:avg_T_wall_3eqn_mat' is not defined on block core_chan2\nMaterial property 'Hw:1', requested by 'core_chan2:avg_T_wall_3eqn_mat_face' is not defined on block core_chan2\nMaterial property 'Hw:2', requested by 'core_chan2:avg_T_wall_3eqn_mat_face' is not defined on block core_chan2\nMaterial property 'Hw:1', requested by 'core_chan2:avg_T_wall_3eqn_mat_neighbor' is not defined on block core_chan2\nMaterial property 'Hw:2', requested by 'core_chan2:avg_T_wall_3eqn_mat_neighbor' is not defined on block core_chan2\nMaterial property 'Hw:1', requested by 'ROD1_FLOWSC4:heat_flux_uo' is not defined on block core_chan4\nMaterial property 'Hw:2', requested by 'ROD3_FLOWSC4:heat_flux_uo' is not defined on block core_chan4\nMaterial property 'Hw:1', requested by 'core_chan4:avg_T_wall_3eqn_mat' is not defined on block core_chan4\nMaterial property 'Hw:2', requested by 'core_chan4:avg_T_wall_3eqn_mat' is not defined on block core_chan4\nMaterial property 'Hw:1', requested by 'core_chan4:avg_T_wall_3eqn_mat_face' is not defined on block core_chan4\nMaterial property 'Hw:2', requested by 'core_chan4:avg_T_wall_3eqn_mat_face' is not defined on block core_chan4\nMaterial property 'Hw:1', requested by 'core_chan4:avg_T_wall_3eqn_mat_neighbor' is not defined on block core_chan4\nMaterial property 'Hw:2', requested by 'core_chan4:avg_T_wall_3eqn_mat_neighbor' is not defined on block core_chan4\nMaterial property 'Hw:1', requested by 'ROD2_FLOWSC5:heat_flux_uo' is not defined on block core_chan5\nMaterial property 'Hw:2', requested by 'ROD5_FLOWSC5:heat_flux_uo' is not defined on block core_chan5\nMaterial property 'Hw:1', requested by 'core_chan5:avg_T_wall_3eqn_mat' is not defined on block core_chan5\nMaterial property 'Hw:2', requested by 'core_chan5:avg_T_wall_3eqn_mat' is not defined on block core_chan5\nMaterial property 'Hw:1', requested by 'core_chan5:avg_T_wall_3eqn_mat_face' is not defined on block core_chan5\nMaterial property 'Hw:2', requested by 'core_chan5:avg_T_wall_3eqn_mat_face' is not defined on block core_chan5\nMaterial property 'Hw:1', requested by 'core_chan5:avg_T_wall_3eqn_mat_neighbor' is not defined on block core_chan5\n\nThere are more error info. I won't show them because they're similar.\nMy input file is:\nT_in = 522.436        # K\n# m_dot_in = 1e-4     # kg/s\npress = 101325        # Pa\n\n[GlobalParams]\n  initial_p = ${press}\n  initial_vel = 0\n  initial_T = ${T_in}\n\n  rdg_slope_reconstruction = full\n  closures = simple_closures\n  fp = Lead\n#  f = 0.033\n#  Hw = 343.173\n[]\n\n[FluidProperties]\n  [./Lead]\n    type = LeadBismuthFluidProperties_zxy\n  [../]\n[]\n\n[Functions]\n  [PowerDistribution]\n    type = ParsedFunction\n    expression = sin(5*pi*z/3)\n  [../]\n[]\n\n[Materials]\n  [f_mat]\n    type = ADWallFrictionChurchillMaterial\n    D_h = D_h\n    f_D = f_D\n    mu = mu\n    rho = rho\n    vel = vel\n  [../]\n  [Hw_mat]\n    type = ADWallHeatTransferCoefficient3EqnDittusBoelterMaterial\n    D_h = D_h\n    rho = rho\n    vel = vel\n    T = T\n    T_wall = T_wall\n    cp = cp\n    mu = mu\n    k = k\n  [../]\n[]\n\n[Closures]\n  [simple_closures]\n#    type = Closures1PhaseSimple\n    type = Closures1PhaseNone\n  []\n[]\n\n[HeatStructureMaterials]\n  [fuel-mat]\n    type = SolidMaterialProperties\n    k = 20\n    cp = 490\n    rho = 8.5e3\n  []\n  [gap-mat]\n    type = SolidMaterialProperties\n    k = 0.027\n    cp = 1007\n    rho = 0.43\n  []\n  [clad-mat]\n    type = SolidMaterialProperties\n    k = 20\n    cp = 450\n    rho = 7.95e3\n  []\n[]\n\n[Components]\n  [total_power]\n    type = TotalPower\n    power = 3335.933\n  [../]\n  [./inlet1]\n    type = InletMassFlowRateTemperature1Phase\n    input = 'core_chan1:in'\n    m_dot = 0.0394\n    T = ${T_in}\n  [../]\n  [core_chan1]\n    type = FlowChannel1Phase\n    position = '-0.015 -0.02598 0'\n    orientation = '0 0 1'\n    length = 0.6\n    n_elems = 60\n    A = 92.598e-6\n    D_h = 16.622e-3\n  [../]\n  [outlet1]\n    type = Outlet1Phase\n    input = 'core_chan1:out'\n    p = ${press}\n  [../]\n  [./inlet2]\n    type = InletMassFlowRateTemperature1Phase\n    input = 'core_chan2:in'\n    m_dot = 0.1124\n    T = ${T_in}\n  [../]\n  [core_chan2]\n    type = FlowChannel1Phase\n    position = '0 -0.02598 0'\n    orientation = '0 0 1'\n    length = 0.6\n    n_elems = 60\n    A = 263.874e-6\n    D_h = 25.221e-3\n  [../]\n  [outlet2]\n    type = Outlet1Phase\n    input = 'core_chan2:out'\n    p = ${press}\n  [../]\n  [./inlet3]\n    type = InletMassFlowRateTemperature1Phase\n    input = 'core_chan3:in'\n    m_dot = 0.0394\n    T = ${T_in}\n  [../]\n  [core_chan3]\n    type = FlowChannel1Phase\n    position = '0.015 -0.02598 0'\n    orientation = '0 0 1'\n    length = 0.6\n    n_elems = 60\n    A = 92.598e-6\n    D_h = 16.622e-3\n  [../]\n  [outlet3]\n    type = Outlet1Phase\n    input = 'core_chan3:out'\n    p = ${press}\n  [../]\n  [./inlet4]\n    type = InletMassFlowRateTemperature1Phase\n    input = 'core_chan4:in'\n    m_dot = 0.1124\n    T = ${T_in}\n  [../]\n  [core_chan4]\n    type = FlowChannel1Phase\n    position = '-0.0225 -0.01299 0'\n    orientation = '0 0 1'\n    length = 0.6\n    n_elems = 60\n    A = 263.874e-6\n    D_h = 25.221e-3\n  [../]\n  [outlet4]\n    type = Outlet1Phase\n    input = 'core_chan4:out'\n    p = ${press}\n  [../]\n  [./inlet5]\n    type = InletMassFlowRateTemperature1Phase\n    input = 'core_chan5:in'\n    m_dot = 0.1124\n    T = ${T_in}\n  [../]\n  [core_chan5]\n    type = FlowChannel1Phase\n    position = '0.0225 -0.01299 0'\n    orientation = '0 0 1'\n    length = 0.6\n    n_elems = 60\n    A = 263.874e-6\n    D_h = 25.221e-3\n  [../]\n  [outlet5]\n    type = Outlet1Phase\n    input = 'core_chan5:out'\n    p = ${press}\n  [../]\n  [./inlet6]\n    type = InletMassFlowRateTemperature1Phase\n    input = 'core_chan6:in'\n    m_dot = 0.0735\n    T = ${T_in}\n  [../]\n  [core_chan6]\n    type = FlowChannel1Phase\n    position = '0 -0.01299 0'\n    orientation = '0 0 1'\n    length = 0.6\n    n_elems = 60\n    A = 172.515e-6\n    D_h = 36.608e-3\n  [../]\n  [outlet6]\n    type = Outlet1Phase\n    input = 'core_chan6:out'\n    p = ${press}\n  [../]\n  [./inlet7]\n    type = InletMassFlowRateTemperature1Phase\n    input = 'core_chan7:in'\n    m_dot = 0.0735\n    T = ${T_in}\n  [../]\n  [core_chan7]\n    type = FlowChannel1Phase\n    position = '-0.01125 -0.006495 0'\n    orientation = '0 0 1'\n    length = 0.6\n    n_elems = 60\n    A = 172.515e-6\n    D_h = 36.608e-3\n  [../]\n  [outlet7]\n    type = Outlet1Phase\n    input = 'core_chan7:out'\n    p = ${press}\n  [../]\n  [./inlet8]\n    type = InletMassFlowRateTemperature1Phase\n    input = 'core_chan8:in'\n    m_dot = 0.0735\n    T = ${T_in}\n  [../]\n  [core_chan8]\n    type = FlowChannel1Phase\n    position = '0.01125 -0.006495 0'\n    orientation = '0 0 1'\n    length = 0.6\n    n_elems = 60\n    A = 172.515e-6\n    D_h = 36.608e-3\n  [../]\n  [outlet8]\n    type = Outlet1Phase\n    input = 'core_chan8:out'\n    p = ${press}\n  [../]\n  [./inlet9]\n    type = InletMassFlowRateTemperature1Phase\n    input = 'core_chan9:in'\n    m_dot = 0.0394\n    T = ${T_in}\n  [../]\n  [core_chan9]\n    type = FlowChannel1Phase\n    position = '-0.03 0 0'\n    orientation = '0 0 1'\n    length = 0.6\n    n_elems = 60\n    A = 92.598e-6\n    D_h = 16.622e-3\n  [../]\n  [outlet9]\n    type = Outlet1Phase\n    input = 'core_chan9:out'\n    p = ${press}\n  [../]\n  [./inlet10]\n    type = InletMassFlowRateTemperature1Phase\n    input = 'core_chan10:in'\n    m_dot = 0.0394\n    T = ${T_in}\n  [../]\n  [core_chan10]\n    type = FlowChannel1Phase\n    position = '0.03 0 0'\n    orientation = '0 0 1'\n    length = 0.6\n    n_elems = 60\n    A = 92.598e-6\n    D_h = 16.622e-3\n  [../]\n  [outlet10]\n    type = Outlet1Phase\n    input = 'core_chan10:out'\n    p = ${press}\n  [../]\n  [./inlet11]\n    type = InletMassFlowRateTemperature1Phase\n    input = 'core_chan11:in'\n    m_dot = 0.0735\n    T = ${T_in}\n  [../]\n  [core_chan11]\n    type = FlowChannel1Phase\n    position = '-0.01125 0.006495 0'\n    orientation = '0 0 1'\n    length = 0.6\n    n_elems = 60\n    A = 172.515e-6\n    D_h = 36.608e-3\n  [../]\n  [outlet11]\n    type = Outlet1Phase\n    input = 'core_chan11:out'\n    p = ${press}\n  [../]\n  [./inlet12]\n    type = InletMassFlowRateTemperature1Phase\n    input = 'core_chan12:in'\n    m_dot = 0.0735\n    T = ${T_in}\n  [../]\n  [core_chan12]\n    type = FlowChannel1Phase\n    position = '0.01125 0.006495 0'\n    orientation = '0 0 1'\n    length = 0.6\n    n_elems = 60\n    A = 172.515e-6\n    D_h = 36.608e-3\n  [../]\n  [outlet12]\n    type = Outlet1Phase\n    input = 'core_chan12:out'\n    p = ${press}\n  [../]\n  [./inlet13]\n    type = InletMassFlowRateTemperature1Phase\n    input = 'core_chan13:in'\n    m_dot = 0.0735\n    T = ${T_in}\n  [../]\n  [core_chan13]\n    type = FlowChannel1Phase\n    position = '0 0.01299 0'\n    orientation = '0 0 1'\n    length = 0.6\n    n_elems = 60\n    A = 172.515e-6\n    D_h = 36.608e-3\n  [../]\n  [outlet13]\n    type = Outlet1Phase\n    input = 'core_chan13:out'\n    p = ${press}\n  [../]\n  [./inlet14]\n    type = InletMassFlowRateTemperature1Phase\n    input = 'core_chan14:in'\n    m_dot = 0.1124\n    T = ${T_in}\n  [../]\n  [core_chan14]\n    type = FlowChannel1Phase\n    position = '-0.0225 0.01299 0'\n    orientation = '0 0 1'\n    length = 0.6\n    n_elems = 60\n    A = 263.874e-6\n    D_h = 25.221e-3\n  [../]\n  [outlet14]\n    type = Outlet1Phase\n    input = 'core_chan14:out'\n    p = ${press}\n  [../]\n  [./inlet15]\n    type = InletMassFlowRateTemperature1Phase\n    input = 'core_chan15:in'\n    m_dot = 0.1124\n    T = ${T_in}\n  [../]\n  [core_chan15]\n    type = FlowChannel1Phase\n    position = '0.0225 0.01299 0'\n    orientation = '0 0 1'\n    length = 0.6\n    n_elems = 60\n    A = 263.874e-6\n    D_h = 25.221e-3\n  [../]\n  [outlet15]\n    type = Outlet1Phase\n    input = 'core_chan15:out'\n    p = ${press}\n  [../]\n  [./inlet16]\n    type = InletMassFlowRateTemperature1Phase\n    input = 'core_chan16:in'\n    m_dot = 0.0394\n    T = ${T_in}\n  [../]\n  [core_chan16]\n    type = FlowChannel1Phase\n    position = '-0.015 0.02598 0'\n    orientation = '0 0 1'\n    length = 0.6\n    n_elems = 60\n    A = 92.598e-6\n    D_h = 16.622e-3\n  [../]\n  [outlet16]\n    type = Outlet1Phase\n    input = 'core_chan16:out'\n    p = ${press}\n  [../]\n  [./inlet17]\n    type = InletMassFlowRateTemperature1Phase\n    input = 'core_chan17:in'\n    m_dot = 0.1124\n    T = ${T_in}\n  [../]\n  [core_chan17]\n    type = FlowChannel1Phase\n    position = '0 0.02598 0'\n    orientation = '0 0 1'\n    length = 0.6\n    n_elems = 60\n    A = 263.874e-6\n    D_h = 25.221e-3\n  [../]\n  [outlet17]\n    type = Outlet1Phase\n    input = 'core_chan17:out'\n    p = ${press}\n  [../]\n  [./inlet18]\n    type = InletMassFlowRateTemperature1Phase\n    input = 'core_chan18:in'\n    m_dot = 0.0394\n    T = ${T_in}\n  [../]\n  [core_chan18]\n    type = FlowChannel1Phase\n    position = '0.015 0.02598 0'\n    orientation = '0 0 1'\n    length = 0.6\n    n_elems = 60\n    A = 92.598e-6\n    D_h = 16.622e-3\n  [../]\n  [outlet18]\n    type = Outlet1Phase\n    input = 'core_chan18:out'\n    p = ${press}\n  [../]\n  [7RODS]\n    type = FLARE_7RODS_TEST\n    flow_channel1 = core_chan1\n    flow_channel2 = core_chan2\n    flow_channel3 = core_chan3\n    flow_channel4 = core_chan4\n    flow_channel5 = core_chan5\n    flow_channel6 = core_chan6\n    flow_channel7 = core_chan7\n    flow_channel8 = core_chan8\n    flow_channel9 = core_chan9\n    flow_channel10 = core_chan10\n    flow_channel11 = core_chan11\n    flow_channel12 = core_chan12\n    flow_channel13 = core_chan13\n    flow_channel14 = core_chan14\n    flow_channel15 = core_chan15\n    flow_channel16 = core_chan16\n    flow_channel17 = core_chan17\n    flow_channel18 = core_chan18\n  [../]\n  [ROD1]\n    type = HeatStructureCylindrical\n    position = '-0.0115 -0.0199 0'\n    orientation = '0 0 1'\n    length = 0.6\n    n_elems = 60\n    initial_T = 522.436\n    names = 'fuel gap clad'\n    widths = '0.00028 0.0052 0.00052'\n    n_part_elems = '5 20 10'\n    materials = 'fuel-mat gap-mat clad-mat'\n  [../]\n  [ROD2]\n    type = HeatStructureCylindrical\n    position = '0.0115 -0.0199 0'\n    orientation = '0 0 1'\n    length = 0.6\n    n_elems = 60\n    initial_T = 522.436\n    names = 'fuel gap clad'\n    widths = '0.00028 0.0052 0.00052'\n    n_part_elems = '5 20 10'\n    materials = 'fuel-mat gap-mat clad-mat'\n  [../]\n  [ROD3]\n    type = HeatStructureCylindrical\n    position = '-0.023 0 0'\n    orientation = '0 0 1'\n    length = 0.6\n    n_elems = 60\n    initial_T = 522.436\n    names = 'fuel gap clad'\n    widths = '0.00028 0.0052 0.00052'\n    n_part_elems = '5 20 10'\n    materials = 'fuel-mat gap-mat clad-mat'\n  [../]\n  [ROD4]\n    type = HeatStructureCylindrical\n    position = '0 0 0'\n    orientation = '0 0 1'\n    length = 0.6\n    n_elems = 60\n    initial_T = 522.436\n    names = 'fuel gap clad'\n    widths = '0.00028 0.0052 0.00052'\n    n_part_elems = '5 20 10'\n    materials = 'fuel-mat gap-mat clad-mat'\n  [../]\n  [ROD5]\n    type = HeatStructureCylindrical\n    position = '0.023 0 0'\n    orientation = '0 0 1'\n    length = 0.6\n    n_elems = 60\n    initial_T = 522.436\n    names = 'fuel gap clad'\n    widths = '0.00028 0.0052 0.00052'\n    n_part_elems = '5 20 10'\n    materials = 'fuel-mat gap-mat clad-mat'\n  [../]\n  [ROD6]\n    type = HeatStructureCylindrical\n    position = '-0.0115 0.0199 0'\n    orientation = '0 0 1'\n    length = 0.6\n    n_elems = 60\n    initial_T = 522.436\n    names = 'fuel gap clad'\n    widths = '0.00028 0.0052 0.00052'\n    n_part_elems = '5 20 10'\n    materials = 'fuel-mat gap-mat clad-mat'\n  [../]\n  [ROD7]\n    type = HeatStructureCylindrical\n    position = '0.0115 0.0199 0'\n    orientation = '0 0 1'\n    length = 0.6\n    n_elems = 60\n    initial_T = 522.436\n    names = 'fuel gap clad'\n    widths = '0.00028 0.0052 0.00052'\n    n_part_elems = '5 20 10'\n    materials = 'fuel-mat gap-mat clad-mat'\n  [../]\n  [HeatSource1]\n    type = HeatSourceFromTotalPower\n    hs = ROD1\n    regions = 'fuel'\n    power = total_power\n    power_shape_function = PowerDistribution\n    power_fraction = 0.142857\n  [../]\n  [HeatSource2]\n    type = HeatSourceFromTotalPower\n    hs = ROD2\n    regions = 'fuel'\n    power = total_power\n    power_shape_function = PowerDistribution\n    power_fraction = 0.142857\n  [../]\n  [HeatSource3]\n    type = HeatSourceFromTotalPower\n    hs = ROD3\n    regions = 'fuel'\n    power = total_power\n    power_shape_function = PowerDistribution\n    power_fraction = 0.142857\n  [../]\n  [HeatSource4]\n    type = HeatSourceFromTotalPower\n    hs = ROD4\n    regions = 'fuel'\n    power = total_power\n    power_shape_function = PowerDistribution\n    power_fraction = 0.142857\n  [../]\n  [HeatSource5]\n    type = HeatSourceFromTotalPower\n    hs = ROD5\n    regions = 'fuel'\n    power = total_power\n    power_shape_function = PowerDistribution\n    power_fraction = 0.142857\n  [../]\n  [HeatSource6]\n    type = HeatSourceFromTotalPower\n    hs = ROD6\n    regions = 'fuel'\n    power = total_power\n    power_shape_function = PowerDistribution\n    power_fraction = 0.142857\n  [../]\n  [HeatSource7]\n    type = HeatSourceFromTotalPower\n    hs = ROD7\n    regions = 'fuel'\n    power = total_power\n    power_shape_function = PowerDistribution\n    power_fraction = 0.142857\n  [../]\n  [ROD1_FLOWSC1]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan1\n    hs = ROD1\n    hs_side = outer\n    P_hf = 0.0377/6\n  [../]\n  [ROD1_FLOWSC2]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan2\n    hs = ROD1\n    hs_side = outer\n    P_hf = 0.0377/4\n  [../]\n  [ROD1_FLOWSC4]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan4\n    hs = ROD1\n    hs_side = outer\n    P_hf = 0.0377/4\n  [../]\n  [ROD1_FLOWSC6]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan6\n    hs = ROD1\n    hs_side = outer\n    P_hf = 0.0377/6\n  [../]\n  [ROD1_FLOWSC7]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan7\n    hs = ROD1\n    hs_side = outer\n    P_hf = 0.0377/6\n  [../]\n  [ROD2_FLOWSC2]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan2\n    hs = ROD2\n    hs_side = outer\n    P_hf = 0.0377/4\n  [../]\n  [ROD2_FLOWSC3]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan3\n    hs = ROD2\n    hs_side = outer\n    P_hf = 0.0377/6\n  [../]\n  [ROD2_FLOWSC5]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan5\n    hs = ROD2\n    hs_side = outer\n    P_hf = 0.0377/4\n  [../]\n  [ROD2_FLOWSC6]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan6\n    hs = ROD2\n    hs_side = outer\n    P_hf = 0.0377/6\n  [../]\n  [ROD2_FLOWSC8]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan8\n    hs = ROD2\n    hs_side = outer\n    P_hf = 0.0377/6\n  [../]\n  [ROD3_FLOWSC4]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan4\n    hs = ROD3\n    hs_side = outer\n    P_hf = 0.0377/4\n  [../]\n  [ROD3_FLOWSC7]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan7\n    hs = ROD3\n    hs_side = outer\n    P_hf = 0.0377/6\n  [../]\n  [ROD3_FLOWSC9]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan9\n    hs = ROD3\n    hs_side = outer\n    P_hf = 0.0377/6\n  [../]\n  [ROD3_FLOWSC11]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan11\n    hs = ROD3\n    hs_side = outer\n    P_hf = 0.0377/6\n  [../]\n  [ROD3_FLOWSC14]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan14\n    hs = ROD3\n    hs_side = outer\n    P_hf = 0.0377/4\n  [../]\n  [ROD4_FLOWSC6]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan6\n    hs = ROD4\n    hs_side = outer\n    P_hf = 0.0377/6\n  [../]\n  [ROD4_FLOWSC7]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan7\n    hs = ROD4\n    hs_side = outer\n    P_hf = 0.0377/6\n  [../]\n  [ROD4_FLOWSC8]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan8\n    hs = ROD4\n    hs_side = outer\n    P_hf = 0.0377/6\n  [../]\n  [ROD4_FLOWSC11]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan11\n    hs = ROD4\n    hs_side = outer\n    P_hf = 0.0377/6\n  [../]\n  [ROD4_FLOWSC12]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan12\n    hs = ROD4\n    hs_side = outer\n    P_hf = 0.0377/6\n  [../]\n  [ROD4_FLOWSC13]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan13\n    hs = ROD4\n    hs_side = outer\n    P_hf = 0.0377/6\n  [../]\n  [ROD5_FLOWSC5]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan5\n    hs = ROD5\n    hs_side = outer\n    P_hf = 0.0377/4\n  [../]\n  [ROD5_FLOWSC8]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan8\n    hs = ROD5\n    hs_side = outer\n    P_hf = 0.0377/6\n  [../]\n  [ROD5_FLOWSC10]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan10\n    hs = ROD5\n    hs_side = outer\n    P_hf = 0.0377/6\n  [../]\n  [ROD5_FLOWSC12]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan12\n    hs = ROD5\n    hs_side = outer\n    P_hf = 0.0377/6\n  [../]\n  [ROD5_FLOWSC15]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan15\n    hs = ROD5\n    hs_side = outer\n    P_hf = 0.0377/4\n  [../]\n  [ROD6_FLOWSC11]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan11\n    hs = ROD6\n    hs_side = outer\n    P_hf = 0.0377/6\n  [../]\n  [ROD6_FLOWSC13]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan13\n    hs = ROD6\n    hs_side = outer\n    P_hf = 0.0377/6\n  [../]\n  [ROD6_FLOWSC14]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan14\n    hs = ROD6\n    hs_side = outer\n    P_hf = 0.0377/4\n  [../]\n  [ROD6_FLOWSC16]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan16\n    hs = ROD6\n    hs_side = outer\n    P_hf = 0.0377/6\n  [../]\n  [ROD6_FLOWSC17]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan17\n    hs = ROD6\n    hs_side = outer\n    P_hf = 0.0377/4\n  [../]\n  [ROD7_FLOWSC12]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan12\n    hs = ROD7\n    hs_side = outer\n    P_hf = 0.0377/6\n  [../]\n  [ROD7_FLOWSC13]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan13\n    hs = ROD7\n    hs_side = outer\n    P_hf = 0.0377/6\n  [../]\n  [ROD7_FLOWSC15]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan1\n    hs = ROD7\n    hs_side = outer\n    P_hf = 0.0377/4\n  [../]\n  [ROD7_FLOWSC17]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan17\n    hs = ROD7\n    hs_side = outer\n    P_hf = 0.0377/4\n  [../]\n  [ROD7_FLOWSC18]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan18\n    hs = ROD7\n    hs_side = outer\n    P_hf = 0.0377/6\n  [../]\n[]\n\n[Preconditioning]\n  [./a]\n    type = SMP\n    full = true\n  [../]\n[]\n\n[VectorPostprocessors]\n  [./T_SC_CORNER1]\n    type = ElementValueSampler\n    variable = T\n    sort_by = z\n    block = 8\n  [../]\n  [./T_SC_CORNER2]\n    type = ElementValueSampler\n    variable = T\n    sort_by = z\n    block = 0\n  [../]\n  [./T_SC_SIDE]\n    type = ElementValueSampler\n    variable = T\n    sort_by = z\n    block = 16\n  [../]\n  [./T_SC_CENTER]\n    type = ElementValueSampler\n    variable = T\n    sort_by = z\n    block = 7\n  [../]\n  [./M_SC_CORNER]\n    type = ElementValueSampler\n    variable = rhouA\n    sort_by = z\n    block = 8\n  [../]\n  [./M_SC_SIDE]\n    type = ElementValueSampler\n    variable = rhouA\n    sort_by = z\n    block = 16\n  [../]\n  [./M_SC_CENTER]\n    type = ElementValueSampler\n    variable = rhouA\n    sort_by = z\n    block = 7\n  [../]\n[]\n\n[Executioner]\n  type = Transient\n  start_time = 0\n  end_time = 50\n  dt = 0.1\n\n# line_search = basic\n  solve_type = 'PJFNK'\n  l_max_its = 100\n\n  nl_rel_tol = 1e-5\n  nl_abs_tol = 1e-5\n  nl_max_its = 100\n\n  automatic_scaling = true\n  off_diagonals_in_auto_scaling = true\n  line_search = 'none'\n\n  petsc_options = '-ksp_type<preonly>'\n  petsc_options_iname = '-pc_type'\n  petsc_options_value = 'lu'\n\n[]\n\n[Outputs]\n  exodus = true\n  [CSV]\n    type = CSV\n    start_time = 49\n    end_time = 50\n  [../]\n[]\n\n\nDid I miss any necessary syntax? Btw, if I want to add my own closures, should I create a new material class like ADWallFrictionChurchillMaterial and ADWallHeatTransferCoefficient3EqnDittusBoelterMaterial?\nEthan",
+          "url": "https://github.com/idaholab/moose/discussions/24151",
+          "updatedAt": "2023-04-22T03:01:20Z",
+          "publishedAt": "2023-04-21T13:14:21Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "licharlot"
+                  },
+                  "bodyText": "Hi Ethan,\nThis is because you have 2 heat transfers attached to your flow channel, so you need to define the heat transfer coefficient material for each heat transfer (Hw:1 and Hw:2).  By default, the name of the material created by ADWallHeatTransferCoefficeint3EqnDittusBoelterMaterial  is Hw. You can change it by adding the parameter Hw to your block and specify Hw:1 or Hw:2, and also adjust the T_wall parameter to T_wall:1 and T_wall:2. Note that you will also need to create the material from the aux variable for these 2 wall temperatures. See below:\n[Hw1_mat]\n   type = ADWallHeatTransferCoefficient3EqnDittusBoelterMaterial\n   D_h = D_h\n   rho = rho\n   vel = vel\n   T = T\n   T_wall = T_wall:1\n   cp = cp\n   mu = mu\n   k = k\n  block = ${list_of_blocks_with_2_HT}\n []\n [Hw2_mat]\n   type = ADWallHeatTransferCoefficient3EqnDittusBoelterMaterial\n   D_h = D_h\n   rho = rho\n   vel = vel\n   T = T\n   T_wall = T_wall:2\n   cp = cp\n   mu = mu\n   k = k\n  block = ${list_of_blocks_with_2_HT}\n []\n\n[T_wall1_mat]\n type = ADCoupledVariableValueMaterial\n prop_name = T_wall:1\n coupled_variable = T_wall:1\n block = ${list_of_blocks_with_2_HT}\n[]\n\n[T_wall2_mat]\n type = ADCoupledVariableValueMaterial\n prop_name = T_wall:2\n coupled_variable = T_wall:2\n block = ${list_of_blocks_with_2_HT}\n[]",
+                  "url": "https://github.com/idaholab/moose/discussions/24151#discussioncomment-5688754",
+                  "updatedAt": "2023-04-21T17:20:19Z",
+                  "publishedAt": "2023-04-21T17:20:19Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Ethan-xj"
+                          },
+                          "bodyText": "Thank you!",
+                          "url": "https://github.com/idaholab/moose/discussions/24151#discussioncomment-5691311",
+                          "updatedAt": "2023-04-22T03:01:21Z",
+                          "publishedAt": "2023-04-22T03:01:20Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "ADGenericFunctorMaterials not recognized by the diffusion kernel",
+          "author": {
+            "login": "Nabiel-Abuyazid"
+          },
+          "bodyText": "I have a diffusivity coefficient (DO18int and DO16int) that depends on the variable itself (O16int and O18int) both spatially and temporally. I have found that the ADGenericFunctorMaterials achieves this but I am unable to get it working. The console outputs the error:\napplication called MPI_Abort(MPI_COMM_WORLD, 1) - process 0\n\n\n*** ERROR ***\nThe following error occurred in the object \"MOOSE Problem\", of type \"FEProblem\".\n\nMaterial property 'DO16int', requested by 'diff_O16int' is not defined on block 0\nMaterial property 'DO18int', requested by 'diff_O18int' is not defined on block 0\n--------------------------------------------------------------------------------------------------------------------------------\n\nHere is what my input file looks like pertaining to the Variables, Materials and Kernels block.\n\n[Variables]\n  [O16int]\n    initial_condition = 0.992\n  []\n  [O18int]\n    initial_condition = 0.002\n  []\n[]\n\n[Materials]\n  [Y16]\n    type = ADParsedMaterial\n    property_name = Y16\n    coupled_variables = 'O16int O18int'\n    expression = 'O16int/(O16int+O18int)'\n  []\n  [Y18]\n    type = ADParsedMaterial\n    property_name = Y18\n    coupled_variables = 'O16int O18int'\n    expression = 'O18int/(O16int+O18int)'\n  []\n  [DO16int]\n    type = ADGenericFunctorMaterial\n    prop_names = 'DO16int'\n    prop_values = 'Y16*5'\n  []\n  [DO18int]\n    type = ADGenericFunctorMaterial\n    prop_names = 'DO18int'\n    prop_values = 'Y18*5'\n  []\n[]\n\n[Kernels]\n  [diff_O16int]\n    type = ADMatDiffusion\n    diffusivity = DO16int\n    variable = O16int\n  []\n  [dO16intdt]\n    type = ADTimeDerivative\n    variable = O16int\n  []\n  [diff_O18int]\n    type = ADMatDiffusion\n    diffusivity = DO18int\n    variable = O18int\n  []\n  [dO18intdt]\n    type = ADTimeDerivative\n    variable = O18int\n  []\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/24155",
+          "updatedAt": "2023-04-29T02:33:28Z",
+          "publishedAt": "2023-04-21T17:11:43Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nfunctor materials are different from regular materials, and are not compatible with ADMatDiffusion\nyou want to use a Parsed Material not a functor material here\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/24155#discussioncomment-5689285",
+                  "updatedAt": "2023-04-21T18:46:29Z",
+                  "publishedAt": "2023-04-21T18:46:29Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Post processing variable values",
+          "author": {
+            "login": "vermaprk"
+          },
+          "bodyText": "Hi\nI am doing phase field modelling with eta (variable) as the order parameter. eta=1 for phase1 and eta = 0 for phase 2 and 0<eta<1 for the diffused interface between the two phases. I want to track the interface at the end of simulation with a condition as:\nFor 0.4<eta<0.6 I want all the x, y coordinates. I have no experience with handling exodus file system. So can I generate this data using the moose postprocessor.\nThe post processed file should look like:\nx     y      eta\nThanks",
+          "url": "https://github.com/idaholab/moose/discussions/24150",
+          "updatedAt": "2023-04-24T10:55:28Z",
+          "publishedAt": "2023-04-21T13:14:05Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nIs this just for output? You can use thresholds in paraview to limit the elements shown to those meeting a certain value.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/24150#discussioncomment-5687155",
+                  "updatedAt": "2023-04-21T14:34:55Z",
+                  "publishedAt": "2023-04-21T14:34:54Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "This object will output all the values in each element.\nhttps://mooseframework.inl.gov/source/vectorpostprocessors/ElementValueSampler.html\nWhat you COULD do to get just eta between two values is use this user object (below) to modify the subdomains\nhttps://mooseframework.inl.gov/source/userobjects/CoupledVarThresholdElementSubdomainModifier.html\nthen use the ElementVlaueSampler on the new subdomain using the block parameter\nBUT I reckon it's easier to just postprocessor the CSV for values of eta you care about",
+                  "url": "https://github.com/idaholab/moose/discussions/24150#discussioncomment-5688138",
+                  "updatedAt": "2023-04-21T16:06:33Z",
+                  "publishedAt": "2023-04-21T16:06:33Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Capillary hysteresis",
+          "author": {
+            "login": "sinaomrani96"
+          },
+          "bodyText": "Hi,\nHope you are doing well.\nI came across some questions, and I appreciate if someone could help me with them. Sorry if they are naive :)\nI wnated to simulate an imbibtion-drainage (wetting-drying) by PorousFlow module. It supports hysteresis but the tests available are only one dimensional. So, I was wondering if this feature is supported in higher dimensions, and will it converge or not. My other question is that in the examples, hysteresis is only used with dirac kernels. Is this the only way to use hysteresis in PorousFlow?\nThanks,\nSina",
+          "url": "https://github.com/idaholab/moose/discussions/23543",
+          "updatedAt": "2023-04-21T14:28:16Z",
+          "publishedAt": "2023-02-27T17:48:01Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@WilkAndy",
+                  "url": "https://github.com/idaholab/moose/discussions/23543#discussioncomment-5126238",
+                  "updatedAt": "2023-02-27T17:50:59Z",
+                  "publishedAt": "2023-02-27T17:50:58Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "WilkAndy"
+                  },
+                  "bodyText": "Yes, hysteresis can be used in models with any dimensionality.   The only reason why the examples are all 1D is because, being part of the PorousFlow test suite, they need to run very quickly.\nRegarding convergence: it's quite likely that hysteresis won't impact convergence much, but whether that's true in your case depends upon your model.\nI suggest that you create your model without hysteresis, get everything running nicely, and then finally include hysteresis, using the procedures described here: https://mooseframework.inl.gov/modules/porous_flow/hysteresis.html\nA",
+                  "url": "https://github.com/idaholab/moose/discussions/23543#discussioncomment-5128284",
+                  "updatedAt": "2023-02-27T21:22:22Z",
+                  "publishedAt": "2023-02-27T21:22:22Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Oh, and DiracKernels are unrelated to hysteresis: the examples you looked at all happen to have DiracKernels, but they do not impact hysteresis.",
+                          "url": "https://github.com/idaholab/moose/discussions/23543#discussioncomment-5128427",
+                          "updatedAt": "2023-02-27T21:24:50Z",
+                          "publishedAt": "2023-02-27T21:24:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sinaomrani96"
+                          },
+                          "bodyText": "Hi,\nHope you are doing well.\nThank you for your answer. I created the model without hysteresis based on a PorousFlow example as you suggested and it works but when I try to use PC with hysteresis I get segmentation fault error. I run the model in debugg mode and I got\n'Assertion `i < _size' failed\nAccess out of bounds in MooseArray (i: 2 size: 2)\nat /home/sinaomrani/projects/moose/framework/build/header_symlinks/MooseArray.h, line 276'\nI do not know why I face this error. Can you please give me your insight? Also here is the input file.\nhttps://github.com/sinaomrani96/PorousFlow-hysteresis/blob/main/test\nThanks\nBest regards,\nSina",
+                          "url": "https://github.com/idaholab/moose/discussions/23543#discussioncomment-5167053",
+                          "updatedAt": "2023-03-01T14:00:56Z",
+                          "publishedAt": "2023-03-01T14:00:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I took a quick look and the interaction between the PorousFlowSink and the PorousFlowHysteresis seems to have issues.\nThe out-of-bounds access happens on the boundary, when computing the material property for the 3rd quadrature point when the container has only been sized for 2. I m not sure why it would not be sized well yet. @WilkAndy what are your thoughts",
+                          "url": "https://github.com/idaholab/moose/discussions/23543#discussioncomment-5169429",
+                          "updatedAt": "2023-03-01T17:41:44Z",
+                          "publishedAt": "2023-03-01T17:41:44Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "I feel this is likely to be a bug!   Apologies, and kind-of-thanks (only kind-of because this means more work for me!).  I'm currently not at work, and won't be there for a few days, so can't fix it right now.  I'm not super sure why the boundary of a 2D mesh would have 3 quadpoints, but maybe something is getting evaluated on the interior element.",
+                          "url": "https://github.com/idaholab/moose/discussions/23543#discussioncomment-5176106",
+                          "updatedAt": "2023-03-02T08:31:54Z",
+                          "publishedAt": "2023-03-02T08:31:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sinaomrani96"
+                          },
+                          "bodyText": "Dear @WilkAndy,\nHope you are doing well.\nI was wondering if you fixed this bug or you have not find the time yet.\nThanks.\nBest regards,\nSina",
+                          "url": "https://github.com/idaholab/moose/discussions/23543#discussioncomment-5292530",
+                          "updatedAt": "2023-03-13T14:45:41Z",
+                          "publishedAt": "2023-03-13T14:45:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Sina, i'm sorry but i haven't fixed it yet.   I've been largely decoupled from MOOSE for the last month, and will not have time to work on it till after Easter.",
+                          "url": "https://github.com/idaholab/moose/discussions/23543#discussioncomment-5447986",
+                          "updatedAt": "2023-03-28T04:12:30Z",
+                          "publishedAt": "2023-03-28T04:12:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "This has been fixed in #24104 , @sinaomrani96 .   Thank you for finding this bug, and I'm sorry it has impacted your work, and that i took so long to fix it.",
+                          "url": "https://github.com/idaholab/moose/discussions/23543#discussioncomment-5682425",
+                          "updatedAt": "2023-04-21T06:47:57Z",
+                          "publishedAt": "2023-04-21T06:47:56Z",
+                          "isAnswer": true
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "sinaomrani96"
+                  },
+                  "bodyText": "Dear @WilkAndy,\nHope you are doing well.\nGreat. I just checked it, and it works fine. I appreciate your time. Thanks.",
+                  "url": "https://github.com/idaholab/moose/discussions/23543#discussioncomment-5687086",
+                  "updatedAt": "2023-04-21T14:28:06Z",
+                  "publishedAt": "2023-04-21T14:28:06Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "ChromiumOxidation and ChromiumThermal is not a registered object",
+          "author": {
+            "login": "haqfariha"
+          },
+          "bodyText": "I am a new user and trying to work with oxidation problem for my project. I am trying built-in test input file of moose but I can not run it because of error messeges pop up - these kernels are not registered. How can I resolve this? The problem I am trying-\nhttps://mooseframework.inl.gov/bison/source/materials/ChromiumOxidation.html#chromiumoxidation\nThanks in advance.",
+          "url": "https://github.com/idaholab/moose/discussions/24149",
+          "updatedAt": "2023-05-31T19:06:39Z",
+          "publishedAt": "2023-04-21T01:42:49Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThis is actually from the BISON website, and these are BISON objects.\nBISON is an export controlled application application, you may request access here:\nhttps://ncrcaims.inl.gov/Identity/Account/Register\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/24149#discussioncomment-5681046",
+                  "updatedAt": "2023-04-21T03:25:29Z",
+                  "publishedAt": "2023-04-21T03:25:29Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to link external libraries to a MOOSE application",
+          "author": {
+            "login": "KamalnathOSU"
+          },
+          "bodyText": "Dear MOOSE team,\nI am developing a MOOSE-based app using heat conduction module and tensor mechanics module. From the app, I can get temperature as a function of time for each element. I have an external C library (*.so files along with some header files *.h) that can calculate some material properties (eg: grain size) as a function of thermal history.\nI want to create  auxiliary variables that store these properties. So, in my auxkernel, I want to call some functions from the external C library and assign the auxiliary variables.\nI want to know where to modify the Makefile in my app to link these external libraries. Can I any one of you help ?\nThank you very much!\nKamal",
+          "url": "https://github.com/idaholab/moose/discussions/24129",
+          "updatedAt": "2023-04-21T20:52:38Z",
+          "publishedAt": "2023-04-19T21:05:16Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nI think your best bet if you have the .C and .h files is to just compile them in MOOSE.\nJust add them in the auxkernel folder or a new folder (in both src and include). If they compile standalone that's great. If not then you'll need to make sure they do\nthen just call this code from a custom auxkernel\nNote: If you want to use AD they should NOT be filling an auxvariable, but a material property instead. And there will be a bit of work to populate the derivatives there\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/24129#discussioncomment-5667402",
+                  "updatedAt": "2023-04-19T23:33:17Z",
+                  "publishedAt": "2023-04-19T23:33:16Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "KamalnathOSU"
+                          },
+                          "bodyText": "@GiudGiud I dont have the *.C file as it is a commercial code. They only provide *.so file that should be dynamically linked to the target executable.\nThank you for tip. I was trying to create auxvariable first. And latter when needed, I would shift to material property.",
+                          "url": "https://github.com/idaholab/moose/discussions/24129#discussioncomment-5667478",
+                          "updatedAt": "2023-04-19T23:49:40Z",
+                          "publishedAt": "2023-04-19T23:49:40Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "beyond my skills then\n@permcody",
+                          "url": "https://github.com/idaholab/moose/discussions/24129#discussioncomment-5667520",
+                          "updatedAt": "2023-04-19T23:57:16Z",
+                          "publishedAt": "2023-04-19T23:57:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "permcody"
+                          },
+                          "bodyText": "If you only need to link these libraries to the final executable you can define the libraries to link in a the variable $ADDITIONAL_DEPEND_LIBS. We do have a few other flags if you need to link them into the libraries themselves. Depending on how you refer to these symbols in the code will depend on where the linkage is required. Let\u2019s start with the above named variable. If that doesn\u2019t work as expected, I\u2019ll point you to some additional variables to try.\nYou can take a peek at framework/app.mk to see the exact link lines for libraries and executables.",
+                          "url": "https://github.com/idaholab/moose/discussions/24129#discussioncomment-5667659",
+                          "updatedAt": "2023-04-20T00:16:48Z",
+                          "publishedAt": "2023-04-20T00:16:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "KamalnathOSU"
+                          },
+                          "bodyText": "@permcody Thank you very much.\nFor example, if I have to two libraries libgrainsize.so libconductivity.so located at \"$HOME/external_code/lib\" that should be linked to the final executable, then can I define\nADDITIONAL_DEPEND_LIBS=-L$(HOME)/external_code/lib -llibgrainsize -llibconductivity\nat the Makefile of my app ?",
+                          "url": "https://github.com/idaholab/moose/discussions/24129#discussioncomment-5667756",
+                          "updatedAt": "2023-04-20T00:38:16Z",
+                          "publishedAt": "2023-04-20T00:38:15Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "permcody"
+                          },
+                          "bodyText": "Precisely!",
+                          "url": "https://github.com/idaholab/moose/discussions/24129#discussioncomment-5667806",
+                          "updatedAt": "2023-04-20T00:47:22Z",
+                          "publishedAt": "2023-04-20T00:47:21Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "KamalnathOSU"
+                          },
+                          "bodyText": "Hi @permcody !\nI read through app.mk file. There were multiples occurrences (3 times) of ADDITIONAL_DEPEND_LIBS. But the variable \"ADDITIONAL_LIBS\" occurred only once, at the creation of executable.\nSo, if I want to link it only with the final executable,  should I be using \"ADDITIONAL_LIBS\" variable ?",
+                          "url": "https://github.com/idaholab/moose/discussions/24129#discussioncomment-5676274",
+                          "updatedAt": "2023-04-20T17:01:35Z",
+                          "publishedAt": "2023-04-20T17:01:34Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "\u276f git grep \"ADDITIONAL_DEP\"\nframework/app.mk:$(app_LIB): $(app_HEADER) $(app_plugin_deps) $(depend_libs) $(app_objects) $(ADDITIONAL_DEPEND_LIBS)\nframework/app.mk:$(app_test_LIB): $(app_HEADER) $(app_plugin_deps) $(depend_libs) $(app_test_objects) $(ADDITIONAL_DEPEND_LIBS)\nframework/app.mk:$(app_EXEC): $(app_LIBS) $(mesh_library) $(main_object) $(app_test_LIB) $(depend_test_libs) $(ADDITIONAL_DEPEND_LIBS)\nIf I am reading the above correctly, you were correct when asking about exporting ADDITIONAL_DEPEND_LIBS.\nedit: you'll want to encapsulate your export however (due to spaces):\nADDITIONAL_DEPEND_LIBS=\"-L$(HOME)/external_code/lib -llibgrainsize -llibconductivity\"",
+                          "url": "https://github.com/idaholab/moose/discussions/24129#discussioncomment-5676655",
+                          "updatedAt": "2023-04-20T17:47:18Z",
+                          "publishedAt": "2023-04-20T17:46:21Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "KamalnathOSU"
+                          },
+                          "bodyText": "Hi Jason ! @milljm\nThanks for the tip on encapsulation. For my case, ADDITIONAL_DEPEND_LIBS didn't work but ADDITIONAL_LIBS does the trick.\nADDITIONAL_LIBS=\"-L$(HOME)/external_code/lib -lgrainsize -lconductivity\"\n\nI modified the Makefile of my app to add the above line (as shown below) and then I could compile my app.\n# dep apps\nAPPLICATION_DIR    := $(CURDIR)\nAPPLICATION_NAME   := panda\nBUILD_EXEC                := yes\nGEN_REVISION           := no\nADDITIONAL_LIBS      :=\"-L$(HOME)/external_code/lib -lgrainsize -lconductivity\"\ninclude            $(FRAMEWORK_DIR)/app.mk",
+                          "url": "https://github.com/idaholab/moose/discussions/24129#discussioncomment-5677025",
+                          "updatedAt": "2023-04-20T18:31:15Z",
+                          "publishedAt": "2023-04-20T18:29:12Z",
+                          "isAnswer": true
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Applying different kernels on different sides of a moving interface",
+          "author": {
+            "login": "WayneX-Wong"
+          },
+          "bodyText": "Hi all,\nI'm trying to simulate kind of phase transition problem where interface moves based on calculated variable value, while governing PDEs of the subdomains on the two sides are different.\nI found XFEM Module quite suitable for this kind of simulation about moving interface, but I wonder whether it support different kernels on different Cut-subdomains. I didn't find any similar tests or examples yet.\nOr is there any alternative methods?\nThank you very much!",
+          "url": "https://github.com/idaholab/moose/discussions/24133",
+          "updatedAt": "2023-04-21T00:48:26Z",
+          "publishedAt": "2023-04-20T04:52:10Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "jiangwen84"
+                  },
+                  "bodyText": "For XFEM, currently we cannot restrict kernels to be calculated only on a specific subdomain.  One possible solution is to let kernels/physics to be solved on the whole domain, and then we just discard/ignore the solution that is relevant to that subdomain. I have not tried this myself yet, and you might encounter some issues.\nAlternatively, we would suggest you consider Phase Field approach for phase transition problem. It can eliminate a lot of troubles associated with moving the interface.",
+                  "url": "https://github.com/idaholab/moose/discussions/24133#discussioncomment-5674760",
+                  "updatedAt": "2023-04-20T14:46:15Z",
+                  "publishedAt": "2023-04-20T14:46:14Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Did we ever merge the XFEM-based subdomain modifier?",
+                          "url": "https://github.com/idaholab/moose/discussions/24133#discussioncomment-5675221",
+                          "updatedAt": "2023-04-20T15:23:11Z",
+                          "publishedAt": "2023-04-20T15:23:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "Did we ever merge the XFEM-based subdomain modifier?\n\nThat is a good point. Maybe Yes. If so, we might be able to do it to some extend. It is not fully tested, and I am afraid there might be many issues here and there.",
+                          "url": "https://github.com/idaholab/moose/discussions/24133#discussioncomment-5675324",
+                          "updatedAt": "2023-04-20T15:31:22Z",
+                          "publishedAt": "2023-04-20T15:31:21Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Why the Simulation.C in ThermalHydraulicModel can be the driver of the simulation?",
+          "author": {
+            "login": "SomnusYu"
+          },
+          "bodyText": "Hi all,\nI'd like to know why the Simulation.C can be the driver of the simulation in THM? How does it work? It really confused me. Could anyone kindly tell me?\nThank you!\nBest regards.",
+          "url": "https://github.com/idaholab/moose/discussions/24120",
+          "updatedAt": "2023-04-20T14:49:15Z",
+          "publishedAt": "2023-04-19T13:20:58Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@joshuahansel any doc page on Simulation?",
+                  "url": "https://github.com/idaholab/moose/discussions/24120#discussioncomment-5661599",
+                  "updatedAt": "2023-04-19T13:55:56Z",
+                  "publishedAt": "2023-04-19T13:55:55Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "joshuahansel"
+                          },
+                          "bodyText": "No there isn't. It wasn't prioritized since it would be more of a developer documentation.",
+                          "url": "https://github.com/idaholab/moose/discussions/24120#discussioncomment-5662025",
+                          "updatedAt": "2023-04-19T14:34:05Z",
+                          "publishedAt": "2023-04-19T14:34:05Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "joshuahansel"
+                  },
+                  "bodyText": "I don't think it's really necessary for your question, but note that THMProblem inherits from FEProblem and Simulation:\nclass THMProblem : public FEProblem, public Simulation\n\nAs far as it being a \"driver\", I'd say just look at the actions/tasks that are executing and let those be your guide. Some of these actions go into the simulation class to do various things. For example, the components are stored in the Simulation class, and there is an action to add a component. I think if we wanted to, if we could put all of Simulation's data in a different place (like putting all of the components into MOOSE's existing warehouse), then we might be able to do away with Simulation and just have the \"action\" code directly in actions.\nLet me know if that answers your question.",
+                  "url": "https://github.com/idaholab/moose/discussions/24120#discussioncomment-5662152",
+                  "updatedAt": "2023-04-19T14:44:29Z",
+                  "publishedAt": "2023-04-19T14:43:49Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "SomnusYu"
+                          },
+                          "bodyText": "Thank you for your reply! So the simulation is just to store data, is that right? I just like to find out how the THM works if we give an input file and run this input file. It should run line by line according to a main function. If the simulation is not the main function, which file is the main function?",
+                          "url": "https://github.com/idaholab/moose/discussions/24120#discussioncomment-5662280",
+                          "updatedAt": "2023-04-19T14:54:16Z",
+                          "publishedAt": "2023-04-19T14:54:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "SomnusYu"
+                          },
+                          "bodyText": "For example, if we use the FlowChannel1Phase component, which function decides on building mesh first or initializing first? It should have an underlying logic.",
+                          "url": "https://github.com/idaholab/moose/discussions/24120#discussioncomment-5662373",
+                          "updatedAt": "2023-04-19T15:00:35Z",
+                          "publishedAt": "2023-04-19T14:59:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "joshuahansel"
+                          },
+                          "bodyText": "The main function is at modules/thermal_hydraulics/src/main.C, but it's a bit difficult to follow it all the way down.\n\nwhich function decides on building mesh first or initializing first?\n\nActions are used to do those two tasks. Task dependencies with each other are registered, and a dependency resolver takes that information and sorts all of the tasks/actions. There is a basic documentation for components: https://mooseframework.inl.gov/syntax/Components/index.html that tells you the order that the various component methods will be executed in, if that's all you're interested in.",
+                          "url": "https://github.com/idaholab/moose/discussions/24120#discussioncomment-5664027",
+                          "updatedAt": "2023-04-19T16:20:13Z",
+                          "publishedAt": "2023-04-19T16:20:12Z",
+                          "isAnswer": true
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "SomnusYu"
+                          },
+                          "bodyText": "OK, thank you very much!",
+                          "url": "https://github.com/idaholab/moose/discussions/24120#discussioncomment-5664960",
+                          "updatedAt": "2023-04-19T17:51:56Z",
+                          "publishedAt": "2023-04-19T17:51:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "SomnusYu"
+                          },
+                          "bodyText": "Hi joshuahansel,\nCould you please tell me what is the difference between these two lines:\nsyntax.registerActionSyntax(\"AddComponentAction\", \"Components/*\", \"THM:add_component\");\nsyntax.registerActionSyntax(\"AddComponentAction\", \"Components/*/*\", \"THM:add_component\");.\nWhat's the meaning of this symbol: /* ?\nI also find some lines without this symbol, and it also doesn't have the task name, just like:\nsyntax.registerActionSyntax(\"THMCreateMeshAction\", \"Components\");\nThank you!",
+                          "url": "https://github.com/idaholab/moose/discussions/24120#discussioncomment-5674132",
+                          "updatedAt": "2023-04-20T13:50:30Z",
+                          "publishedAt": "2023-04-20T13:50:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "This is for Regex. * means anything.\nso Components/* means anything within the components block\nComponents// means anything within any block inside the components block",
+                          "url": "https://github.com/idaholab/moose/discussions/24120#discussioncomment-5674262",
+                          "updatedAt": "2023-04-20T14:01:11Z",
+                          "publishedAt": "2023-04-20T14:01:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "SomnusYu"
+                          },
+                          "bodyText": "I got it, thank you!",
+                          "url": "https://github.com/idaholab/moose/discussions/24120#discussioncomment-5674790",
+                          "updatedAt": "2023-04-20T14:49:15Z",
+                          "publishedAt": "2023-04-20T14:49:15Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Error while updating",
+          "author": {
+            "login": "sinaomrani96"
+          },
+          "bodyText": "Hi everyone.\nI wanted to update my moose repository and I am getting the following errors. I wanted to know if it is a general issue or only happened to me. Thanks.\n/home/sinaomrani/mambaforge3/envs/moose/libmesh/include/timpi/packing.h:279:22: error: 'pack' is not a member of 'libMesh::Parallel::Packing<MeshInfo::SubdomainInfo, void>'\n279 |     Packing::pack(comp, data_out, ctx);\n|     ~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~\n/home/sinaomrani/mambaforge3/envs/moose/libmesh/include/timpi/packing.h:332:31: error: 'unpack' is not a member of 'libMesh::Parallel::Packing<MeshInfo::SubdomainInfo, void>'\n332 |     comp = Packing::unpack(in, ctx);\n|            ~~~~~~~~~~~~~~~~~~~^~~~~~~~~\n/home/sinaomrani/mambaforge3/envs/moose/libmesh/include/timpi/packing.h:234:38: error: 'packable_size' is not a member of 'libMesh::Parallel::Packing<MeshInfo::SidesetInfo, void>'\n234 |     return Packing::packable_size(comp, ctx);\n|            ~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~\nand many more.\nBest regards,\nSina",
+          "url": "https://github.com/idaholab/moose/discussions/24136",
+          "updatedAt": "2023-04-20T13:57:50Z",
+          "publishedAt": "2023-04-20T13:36:23Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYou need to update libmesh at the same time as you update moose\nmamba update --all\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/24136#discussioncomment-5674007",
+                  "updatedAt": "2023-04-20T13:38:53Z",
+                  "publishedAt": "2023-04-20T13:38:52Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "installation problems: wsl + python 3.8 / 3.9",
+          "author": {
+            "login": "cunyizju"
+          },
+          "bodyText": "When I install moose in windows 10 - wsl (python 3.9), the following messages are met:\n\n\n\nconda install moose-tools\n\n\n\nCollecting package metadata (current_repodata.json): done\nSolving environment: failed with initial frozen solve. Retrying with flexible solve.\nSolving environment: failed with repodata from current_repodata.json, will retry with next repodata source.\nCollecting package metadata (repodata.json): done\nSolving environment: failed with initial frozen solve. Retrying with flexible solve.\nSolving environment: \\\nFound conflicts! Looking for incompatible packages.\nThis can take several minutes.  Press CTRL-C to abort.\nfailed\n\nUnsatisfiableError: The following specifications were found to be incompatible with each other:\n\nOutput in format: Requested package -> Available versionsThe following specifications were found to be incompatible with your system:\n\n  - feature:/linux-64::__glibc==2.31=0\n  - feature:|@/linux-64::__glibc==2.31=0\n\nYour installed version is: 2.31\n\nconda install moose-libmesh (py3.9):\nCollecting package metadata (current_repodata.json): done\nSolving environment: failed with initial frozen solve. Retrying with flexible solve.\nSolving environment: failed with repodata from current_repodata.json, will retry with next repodata source.\nCollecting package metadata (repodata.json): done\nSolving environment: failed with initial frozen solve. Retrying with flexible solve.\nSolving environment: |\nFound conflicts! Looking for incompatible packages.\nThis can take several minutes.  Press CTRL-C to abort.\nfailed\n\nUnsatisfiableError: The following specifications were found to be incompatible with each other:\n\nOutput in format: Requested package -> Available versions\n\nPackage libgcc-ng conflicts for:\npython=3.9 -> zlib[version='>=1.2.11,<1.3.0a0'] -> libgcc-ng[version='>=7.2.0']\nmoose-libmesh -> moose-libmesh-vtk==6.3.0=build_7 -> libgcc-ng[version='>=7.2.0|>=9.3.0|>=7.3.0']\npython=3.9 -> libgcc-ng[version='>=7.3.0|>=7.5.0']The following specifications were found to be incompatible with your system:\n\n  - feature:/linux-64::__glibc==2.31=0\n  - feature:|@/linux-64::__glibc==2.31=0\n  - python=3.9 -> libgcc-ng[version='>=7.5.0'] -> __glibc[version='>=2.17']\n\nYour installed version is: 2.31\n\nSimilar problems occur for the python 3.8 environment.\nCould anyone please help me check how to fix the above installation problem?\nBest wishes,\nBruce",
+          "url": "https://github.com/idaholab/moose/discussions/19029",
+          "updatedAt": "2023-04-20T13:36:45Z",
+          "publishedAt": "2021-10-07T01:33:30Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@milljm",
+                  "url": "https://github.com/idaholab/moose/discussions/19029#discussioncomment-1439785",
+                  "updatedAt": "2022-06-15T19:35:36Z",
+                  "publishedAt": "2021-10-07T01:59:59Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cunyizju"
+                          },
+                          "bodyText": "Let me answer this question on my own.\nconda create -n moose -q -y\nconda config --add channels idaholabCopy\nconda config --add channels conda-forge\n\nconda activate moose\nconda install moose-tools\nconda install moose-libmesh\n\nshould work.",
+                          "url": "https://github.com/idaholab/moose/discussions/19029#discussioncomment-1439915",
+                          "updatedAt": "2022-06-15T19:35:42Z",
+                          "publishedAt": "2021-10-07T02:38:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "The idaholab channel is being deprecated... It would seem I forgot to modify our FAQ section reflecting this change. While 'idaholab' still holds the necessary things, it won't forever. Also looks like the 'right-click select all' routine includes 'Copy' by mistake. The proper channel is our new public URL (https://conda.software.inl.gov/public):\nconda config --add channels https://conda.software.inl.gov/public\nconda config --remove channels idaholab # or idaholabCopy in your case\nThese commands are safe to use, as both channels contain identical packages.\nAs for your original error, I suspect a new environment would work (you're heading in the right direction).",
+                          "url": "https://github.com/idaholab/moose/discussions/19029#discussioncomment-1442463",
+                          "updatedAt": "2022-06-15T19:35:44Z",
+                          "publishedAt": "2021-10-07T13:42:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cunyizju"
+                          },
+                          "bodyText": "Thanks, Jason.\nI believe creating a clean environment is critical to avoid conflicts.\nconda create -n moose -q -y",
+                          "url": "https://github.com/idaholab/moose/discussions/19029#discussioncomment-1448922",
+                          "updatedAt": "2022-06-15T19:36:17Z",
+                          "publishedAt": "2021-10-08T15:21:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "Can you post what you did in a new post (not a reply). I'd like to mark it as the answer, especially since you figured it out on your own. It will help others that come across this same error :)\nCheers!",
+                          "url": "https://github.com/idaholab/moose/discussions/19029#discussioncomment-1459358",
+                          "updatedAt": "2022-06-15T19:36:36Z",
+                          "publishedAt": "2021-10-11T14:03:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rlt97"
+                          },
+                          "bodyText": "Hi all,\nThanks for your insight  @milljm and @cunyizju !\nI am currently running into a similar issue regarding the installation of the moose packages\n\nC:\\Users\\lethai>conda activate moose\n\n\n(moose) C:\\Users\\lethai>conda install moose-tools\nCollecting package metadata (current_repodata.json): done\nSolving environment: failed with initial frozen solve. Retrying with flexible solve.\nCollecting package metadata (repodata.json): done\nSolving environment: failed with initial frozen solve. Retrying with flexible solve.\n\n\nPackagesNotFoundError: The following packages are not available from current channels:\n\n\n\nmoose-tools\n\n\n\nCurrent channels:\n\n\n\nhttps://conda.anaconda.org/idaholab/win-64\nhttps://conda.anaconda.org/idaholab/noarch\nhttps://conda.software.inl.gov/public/win-64\nhttps://conda.software.inl.gov/public/noarch\nhttps://conda.anaconda.org/conda-forge/win-64\nhttps://conda.anaconda.org/conda-forge/noarch\nhttps://repo.anaconda.com/pkgs/main/win-64\nhttps://repo.anaconda.com/pkgs/main/noarch\nhttps://repo.anaconda.com/pkgs/r/win-64\nhttps://repo.anaconda.com/pkgs/r/noarch\nhttps://repo.anaconda.com/pkgs/msys2/win-64\nhttps://repo.anaconda.com/pkgs/msys2/noarch\n\n\nIf you have any hints, it will be greatly appreciated.\nThanks in advance,\nRemi",
+                          "url": "https://github.com/idaholab/moose/discussions/19029#discussioncomment-1468143",
+                          "updatedAt": "2022-06-15T19:36:35Z",
+                          "publishedAt": "2021-10-13T03:10:45Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "Unfortunately we do not have a Microsoft Windows channel at this time... You'll have to use Windows Subsystem for Linux (WSL) if you wish to make use of the MOOSE framework. Native Windows support is something we talk about on occasion, so perhaps someday!",
+                          "url": "https://github.com/idaholab/moose/discussions/19029#discussioncomment-1471166",
+                          "updatedAt": "2022-06-15T19:36:43Z",
+                          "publishedAt": "2021-10-13T14:03:05Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rlt97"
+                          },
+                          "bodyText": "Got it - thanks ! @milljm",
+                          "url": "https://github.com/idaholab/moose/discussions/19029#discussioncomment-1471972",
+                          "updatedAt": "2022-06-15T19:36:50Z",
+                          "publishedAt": "2021-10-13T16:10:51Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "LiHao1995"
+                  },
+                  "bodyText": "Hello everyone. When installing metawrap, even though I created the virtual environment metawrap, there were still conflicts.\nAs following:\n(metawrap) [localhost ~]$ conda install -c ursky metawrap-mg\nCollecting package metadata (current_repodata.json): done\nSolving environment: failed with initial frozen solve. Retrying with flexible solve.\nSolving environment: failed with repodata from current_repodata.json, will retry with next repodata source.\nCollecting package metadata (repodata.json): done\nSolving environment: failed with initial frozen solve. Retrying with flexible solve.\nSolving environment: \\\nFound conflicts! Looking for incompatible packages.                                                                                                                                                                                                                                    failed\nUnsatisfiableError: The following specifications were found to be incompatible with each other:\nOutput in format: Requested package -> Available versionsThe following specifications were found to be incompatible with your system:\n\nfeature:/linux-64::__glibc==2.18=0\npython=2.7 -> libgcc-ng[version='>=11.2.0'] -> __glibc[version='>=2.17']\n\nYour installed version is: 2.18\nHowever, I successfully reinstalled glibc 2.18 and upgraded libgcc-ng to the latest version, but the issue is still not resolved. Can anyone provide some better advice? Thank you very much.",
+                  "url": "https://github.com/idaholab/moose/discussions/19029#discussioncomment-5672371",
+                  "updatedAt": "2023-04-20T11:11:07Z",
+                  "publishedAt": "2023-04-20T11:11:06Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "I think your best bet would be to ask the maintainers of Metawrap at the feed stock repo: https://github.com/conda-forge/metawrap-feedstock. However, it doesn't seem to be very active.\nFollowing all the links, I end up at https://github.com/jakirkham/metawrap for its homepage. And it looks like no one is home. I am not sure how much support you are going to find...\nYou may have better luck downloading the source from: https://github.com/jakirkham/metawrap and building it manually. Or attempting to modify the Feedstock recipe to grab the latest version from source and build the package yourself.\nSorry but I don't think we're going to be of much help beyond what I've suggested. Is this in some way related to MOOSE?",
+                          "url": "https://github.com/idaholab/moose/discussions/19029#discussioncomment-5673240",
+                          "updatedAt": "2023-04-20T12:28:06Z",
+                          "publishedAt": "2023-04-20T12:27:10Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "LiHao1995"
+                  },
+                  "bodyText": "Thanks for your valuable advice \uff01 I will try the next step. If it fails again, metarap will have to be replaced with other software, as it is not the only one available. [ 0_.._0 ]\n\n\n\n\n\n\n\n\n\nAt 2023-04-20 20:27:21, \"Jason Miller\" ***@***.***> wrote:\n\nI think your best bet would be to ask the maintainers for Metawrap at the feed stock repo: https://github.com/conda-forge/metawrap-feedstock. However, it doesn't seem to be very active.\n\nFollowing all the links, I end up at https://github.com/jakirkham/metawrap for its homepage. And it looks like no one is home. I am not sure how much support you are going to find...\n\nYou may have better luck downloading the source from: https://github.com/jakirkham/metawrap and building it manually. Or attempting to modify the Feedstock recipe to grab the latest version from source and build the package your self.\n\nSorry but I don't think we're going to be of much help beyond what I've suggested. Is this in some way related to MOOSE?\n\n\u2014\nReply to this email directly, view it on GitHub, or unsubscribe.\nYou are receiving this because you commented.Message ID: ***@***.***>",
+                  "url": "https://github.com/idaholab/moose/discussions/19029#discussioncomment-5673984",
+                  "updatedAt": "2023-04-20T13:36:45Z",
+                  "publishedAt": "2023-04-20T13:36:45Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

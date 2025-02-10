@@ -1,0 +1,868 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMi0wOS0yMFQwNjozOTozMi0wNTowMM4AQkkG"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Compiling questions about using fluid properties module",
+          "author": {
+            "login": "Raven-pro"
+          },
+          "bodyText": "Hello, everyone.\nI am trying to use MOOSE to simulate two-phase flow based on the basic homogeneous equations, and in the process, I need to calculate void fraction, densities and the saturate temperature and stuffs like that.\nThen I thinke it's a good choice to develop a outside module to calculate the properties, like, creating a C++ file with functions, and  transfer the input variables in then get parameters I want.\nAnd then I decide to look into the FLUID PROPERTIES module (Water97FluidProperties, to be specific), to import the desired properties parameters into the Material Object, identicial to the process presented in the page below.\nhttps://mooseframework.inl.gov/modules/fluid_properties/index.html\nThen I turn the module selection (FP only) in the Makefile to \"yes\". But it says that the Material file I want to use is not registered and the process goes wrong.\nThen I turn all the modules on in the Makefile, and everything goes well.\nSo, does that mean the FP modules can only be used with some other modules imported or something? If I just want to use it as a calculation module, is there anything more I should take care?\nCould you help me with this problem, thanks a lot.",
+          "url": "https://github.com/idaholab/moose/discussions/22007",
+          "updatedAt": "2022-09-22T13:00:05Z",
+          "publishedAt": "2022-09-03T15:42:47Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nyou should be able to import just the fluid properties module. Maybe something isn\u2019t set up quite right.\nCould you please try building your application with the Navier Stokes module? That should include the fluid properties module\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22007#discussioncomment-3544392",
+                  "updatedAt": "2022-09-03T20:31:24Z",
+                  "publishedAt": "2022-09-03T20:31:23Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Raven-pro"
+                          },
+                          "bodyText": "Thank you! Sorry for not being able to reply in time.\nI have revised my setting and found what is wrong(mistyping of my code mostly), after the debugging the code could run successfully.\nBut I ran into another problem, the parameters supposed to be calculated in the Material module cannot transfer to the kernels(I tried to use std::cout << to see if  I get parameters wrong, and they were wrong indeed.), causing the disconvergence of the simulation.\nBelow is my input file. Could you help me find out what's wrong? Thanks a lot!\n[Mesh]\n    type = GeneratedMesh\n    dim = 1\n    nx = 10\n    xmax = 1.0\n    xmin = 0\n[]\n\n[Modules]\n    [FluidProperties]\n        [iapws]\n            type = Water97FluidProperties\n        []\n    []\n[]\n\n[Variables]\n    [P]\n        order = FIRST\n        family = LAGRANGE\n        initial_condition = 15500000.0\n    []\n    [W]\n        order = FIRST\n        family = LAGRANGE\n        initial_condition = 0.3911\n    []\n    [H]\n        order = FIRST\n        family = LAGRANGE\n        initial_condition = 1133820.0\n    []\n[]\n\n[Materials]\n    [fp_mat]\n        type = IAPWS97Material\n        pm = P\n        hm = H\n        fp = iapws\n    []\n[]\n\n[Kernels]\n    [ContinumPressureTime]\n        type = ContinumPressureTime\n        variable = P\n        hm = H\n    []\n    [ContinumMassGrad]\n        type = ContinumMassGrad\n        variable = P\n        grad_w = W\n        velocity = \"1.0 1.0 1.0\"\n    []\n    [MomentumMassTime]\n        type = MomentumMassTime\n        variable = W\n    []\n    [MomentumMassGrad]\n        type = MomentumMassGradCoupled\n        variable = W\n        p = P\n        hm = H\n        velocity = \"1.0 1.0 1.0\"\n    []\n    [MomentumPressureGrad]\n        type = MomentumPressureGradCoupled\n        variable = W\n        p = P\n        hm = H\n        grad_p = P\n        velocity = \"1.0 1.0 1.0\"\n    []\n    [MomentumMassSource]\n        type = MomentumMassSource\n        variable = W\n        p = P\n        hm = H\n    []\n    [MomentumFrictionSource]\n        type = MomentumFrictionSource\n        variable = W\n        p = P\n        hm = H\n    []\n    [EnergyEnthalpyTime]\n        type = EnergyEnthalpyTime\n        variable = H\n        p = P\n    []\n    [EnergyEnthalpyGrad]\n        type = EnergyEnthalpyGrad\n        variable = H\n        w = W\n        velocity = \"1.0 1.0 1.0\"\n    []\n    [EnergyHeatSource]\n        type = EnergyHeatSource\n        variable = H\n    []\n    [EnergyPressureTime]\n        type = EnergyPressureTime\n        variable = H\n        v = P\n    []\n    [EnergyFrictionSource]\n        type = EnergyFrictionSource\n        variable = H\n        w = W\n        p = P\n    []\n[]\n\n[BCs]\n    [bc1]\n        type = DirichletBC\n        variable = H\n        value = 1133820.0\n        boundary = \"left\"\n    []\n    [bc2]\n        type = DirichletBC\n        variable = P\n        value = 15500000.0\n        boundary = \"right\"\n    []\n    [bc3]\n        type = DirichletBC\n        variable = W\n        value = 0.3911\n        boundary = \"left\"\n    []\n[]\n\n#[VectorPostprocessors]\n  #[H]\n    #type = NodalValueSampler\n    #variable = H\n    #boundary = 'bottom'\n    #block = 0\n    #execute_on = 'initial timestep_end' \n    #use_displaced_mesh = true\n    #sort_by = x\n  #[]\n  #[P]\n    #type = NodalValueSampler\n    #variable = P\n    #boundary = 'bottom'\n    #block = 0\n    #execute_on = 'initial timestep_end' \n    #use_displaced_mesh = true\n    #sort_by = x\n  #[]\n#[]\n\n[Problem]\n    type = FEProblem\n    coord_type = XYZ\n[]\n\n[Preconditioning]\n  [./SMP]\n    type = SMP\n    full = true\n  [../]\n[]\n\n[Executioner]\n    type = Transient\n    solve_type =  PJFNK\n    automatic_scaling = false\n    scheme = bdf2\n    petsc_options_iname = '-pc_type -pc_hypre_type'\n    petsc_options_value = 'hypre boomeramg'\n    num_steps = 10000\n    #start_time = 0.0\n    dt = 0.00001\n    #end_time = 1.0\n    steady_state_tolerance = 0.1\n    steady_state_detection = true\n[]\n\n[Outputs]\n    exodus = true\n    csv = true\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/22007#discussioncomment-3682703",
+                          "updatedAt": "2022-09-19T16:05:12Z",
+                          "publishedAt": "2022-09-19T16:05:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Raven-pro"
+                          },
+                          "bodyText": "Another thing I want to ask about is, I noticed that all the userobjects files of the module FLUID PROPERTIES are registered to FluidPropertiesApp.\nDoes that mean, when I am compiling, there will be built both my application and the properties application, and I can use the parameters calculated in the FluidPropertiesApp to perform the simulation in my app, some kind of coupling?",
+                          "url": "https://github.com/idaholab/moose/discussions/22007#discussioncomment-3682749",
+                          "updatedAt": "2022-09-19T16:09:54Z",
+                          "publishedAt": "2022-09-19T16:09:53Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nObjects registered to the fluid properties app will be available in any app that includes the FLUID_PROPERTIES module. You can look at the Makefile to see which modules are included.\nWhat is this IAPWS97 material? It's not part of MOOSE.\nWhy are you not using the materials in MOOSE (such as FluidPropertiesMaterialPT, or GeneralFluidProps) to compute the fluid properties from the iapws object?\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/22007#discussioncomment-3683544",
+                          "updatedAt": "2022-09-19T18:02:47Z",
+                          "publishedAt": "2022-09-19T18:02:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Raven-pro"
+                          },
+                          "bodyText": "Yes, IAPWS97Material is the file I created myself, and I have also added some functions in the Water97FluidProperties file. The material file is in moose/modules/fluid_properties/src/materials/.\nThe codes are as follows.\n#include \"IAPWS97Material.h\"\n#include \"Water97FluidProperties.h\"\n\nregisterMooseObject(\"FluidPropertiesApp\", IAPWS97Material);\n\nInputParameters\nIAPWS97Material::validParams()\n{\n    InputParameters params = Material::validParams();\n    params.addRequiredCoupledVar(\"pm\", \"Pressure mixture\");\n    params.addRequiredCoupledVar(\"hm\", \"Enthalpy mixture\");\n    params.addRequiredParam<UserObjectName>(\"fp\", \"The name of the user object for fluid properties\");\n    params.addClassDescription(\"Compute fluid properties using formulations\");\n    return params;\n}\n\nIAPWS97Material::IAPWS97Material(const InputParameters & parameters): \nMaterial(parameters),\n_Enth(coupledValue(\"hm\")),\n_Pressure(coupledValue(\"pm\")),\n/// Properties to be calculated\n_hg(declareProperty<Real>(\"hg\")),\n_hl(declareProperty<Real>(\"hl\")),\n_vg(declareProperty<Real>(\"vg\")),\n_vl(declareProperty<Real>(\"vl\")),\n_T(declareProperty<Real>(\"temperature\")),\n_alpha(declareProperty<Real>(\"alpha\")),\n_kg(declareProperty<Real>(\"kg\")),\n_kl(declareProperty<Real>(\"kl\")),\n_rhog(declareProperty<Real>(\"rhog\")),\n_rhol(declareProperty<Real>(\"rhol\")),\n_rhom(declareProperty<Real>(\"rhom\")),\n\n_fp(getUserObject<Water97FluidProperties>(\"fp\"))\n{}\n\nIAPWS97Material::~IAPWS97Material(){}\n\nvoid\nIAPWS97Material::computeQpProperties()\n{\n    _T[_qp] = _fp._Tsat_P(_Pressure[_qp]);\n    _hg[_qp] = _fp._hg_sat_P(_Pressure[_qp]);\n    _hl[_qp] = _fp._hl_sat_P(_Pressure[_qp]);\n    _vg[_qp] = _fp._vg_sat_P(_Pressure[_qp]);\n    _vl[_qp] = _fp._vl_sat_P(_Pressure[_qp]);\n    _rhog[_qp] = 1/_vg[_qp];\n    _rhol[_qp] = 1/_vl[_qp];\n    _alpha[_qp] = _fp._hmm_alpha(_Pressure[_qp], _hg[_qp], _hl[_qp], _rhog[_qp], _rhol[_qp]);\n    _rhom[_qp] = _alpha[_qp] * _rhog[_qp] + (1 - _alpha[_qp]) * _rhol[_qp];\n    Real epsilon = 100;\n    _kg[_qp] = ((1/_fp._vg_sa(t_P(_Pressure[_qp] + epsilon)) - (1/_fp._vg_sat_P(_Pressure[_qp])))/epsilon;\n    _kl[_qp] = ((1/_fp._vl_sat_P(_Pressure[_qp] + epsilon)) - (1/_fp._vl_sat_P(_Pressure[_qp])))/epsilon;\n}",
+                          "url": "https://github.com/idaholab/moose/discussions/22007#discussioncomment-3685977",
+                          "updatedAt": "2022-09-20T02:12:29Z",
+                          "publishedAt": "2022-09-20T02:12:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Raven-pro"
+                          },
+                          "bodyText": "But the parameters supposed to be transfered to the main App are wrong and constant(like _T[_qp], is always value 25.491, and _kg[_qp] is always 1.15236e-241). I tried changing the expression of the parameters(like setting value _T[_qp] = 1) and it doesn't work.",
+                          "url": "https://github.com/idaholab/moose/discussions/22007#discussioncomment-3685994",
+                          "updatedAt": "2022-09-20T02:16:08Z",
+                          "publishedAt": "2022-09-20T02:15:51Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "are you storing the material properties as references?\nif not you are making local copies, which is why it doesnt work",
+                          "url": "https://github.com/idaholab/moose/discussions/22007#discussioncomment-3686082",
+                          "updatedAt": "2022-09-20T02:32:35Z",
+                          "publishedAt": "2022-09-20T02:32:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Raven-pro"
+                          },
+                          "bodyText": "I recompiled the App and then it worked. Maybe I should use make clean each time I compile the App.\nThanks a lot for your patient replies!",
+                          "url": "https://github.com/idaholab/moose/discussions/22007#discussioncomment-3709238",
+                          "updatedAt": "2022-09-22T13:00:07Z",
+                          "publishedAt": "2022-09-22T13:00:05Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Transfer two local variables of MasterApp to one global variable of SubApp",
+          "author": {
+            "login": "js-jixu"
+          },
+          "bodyText": "Hi, MOOSE developers.\nI want to couple two input files by MultiApps & Transfers system. In MasterApp, there are two blocks, the temperature of the fluid block is Tf, and the temperature of the solid block is Ts. In the SubApp, the temperature variable for both the fluid and solid regions is defined as T. MasterApp and SubApp share one mesh file.\nI calculated Tf and Ts in MasterApp, and now I want to transfer them to T of the corresponding block. What I mean is to transfer Ts to T of solid block, and transfer Tf to T of fluid block.\nThis is my ideal situation and results:\n\nWhen I use the following syntax, the value of Ts in the fluid block (actually 0, because Ts is not defined in the fluid block in MasterApp) will overwrite the T of fluid block in SubApp passed by Tf.\n[Transfers]\n  [./to_sub_Tf]\n    type = MultiAppProjectionTransfer\n    direction = to_multiapp\n    multi_app = SubApp\n    source_variable = Tf\n    variable = T\n  [../]\n  [./to_sub_Ts]\n    type = MultiAppProjectionTransfer\n    direction = to_multiapp\n    multi_app = SubApp\n    source_variable = Ts\n    variable = T\n  [../]\n[]\n\nThis is the actual situation and results:\n\n\nHow can I make T get the Ts and Tf of the corresponding block?",
+          "url": "https://github.com/idaholab/moose/discussions/22155",
+          "updatedAt": "2022-09-22T06:54:51Z",
+          "publishedAt": "2022-09-21T15:28:00Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nBasically you need to block-restrict your transfers. The last transfer is overwriting the previous value of T here.\nA few options:\n\nuse a different transfer that supports block restriction\nimplement block restriction (not hard) in your transfer\nuse the transfers in this PR, which have block restriction #17417\nmerge Ts and Tf in T_merged before transfering. You can use the SelfAux to do that or the ParsedAux\n\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22155#discussioncomment-3703188",
+                  "updatedAt": "2022-09-21T18:40:41Z",
+                  "publishedAt": "2022-09-21T18:40:40Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "js-jixu"
+                          },
+                          "bodyText": "Thanks for your useful suggestions. I solved this problem based on your fourth suggestion. I defined an auxvariable named T_merged, then used SelfAux to merge Ts and Tf in T_merged. In Transfers I use T_merged to transfer data to T directly. In order to provide a reference for those who encounter similar problems later, I show the input sentence below:\n[AuxVariables]\n  [./T_merged]\n    family = LAGRANGE\n    order = FIRST\n    block = 'cool clad fuel'\n  [../]\n[]\n\n[AuxKernels]\n  [./Ts_to_T_merged]\n    type = SelfAux\n    variable = T_merged\n    block = 'fuel clad'\n    v = Ts\n  [../]\n  [./Tf_to_T_merged]\n    type = SelfAux\n    variable = T_merged\n    block = 'cool'\n    v = Tf\n  [../]\n[]\n\nBy the way, will you add MultiAppGeneralFieldTransfer to MOOSE's Transfers system in the future? I prefer to use this object after updating MOOSE, rather than using T_merged.",
+                          "url": "https://github.com/idaholab/moose/discussions/22155#discussioncomment-3706300",
+                          "updatedAt": "2022-09-22T06:55:55Z",
+                          "publishedAt": "2022-09-22T06:18:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I ll work on it in the coming month",
+                          "url": "https://github.com/idaholab/moose/discussions/22155#discussioncomment-3706511",
+                          "updatedAt": "2022-09-22T06:54:02Z",
+                          "publishedAt": "2022-09-22T06:54:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "js-jixu"
+                          },
+                          "bodyText": "Looking forward to it!",
+                          "url": "https://github.com/idaholab/moose/discussions/22155#discussioncomment-3706524",
+                          "updatedAt": "2022-09-22T06:54:49Z",
+                          "publishedAt": "2022-09-22T06:54:48Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How can I get the current element's ID in Kernel?",
+          "author": {
+            "login": "Ethan-xj"
+          },
+          "bodyText": "I found the method getElementIDIndex in ElementIDInterface. But how to use it?",
+          "url": "https://github.com/idaholab/moose/discussions/22154",
+          "updatedAt": "2022-09-22T06:37:24Z",
+          "publishedAt": "2022-09-21T14:54:26Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "The doxygen documents are very useful tools to help you figure out this sort of question.\n\nFor almost everything related to element, you should consult the libmesh doxygen here: https://mooseframework.inl.gov/docs/doxygen/libmesh/classlibMesh_1_1Elem.html. The method you need is probably Elem::id(). There are other IDs of course.\nFor kernel objects, you should consult the MOOSE doxygen here e.g. https://mooseframework.inl.gov/docs/doxygen/moose/classKernel.html where you can find a member called _current_elem of type const Elem *const &.\n\nCombining 1 and 2, you can use _current_elem->id() in any object that derives from Kernel to obtain the ID of the current element.",
+                  "url": "https://github.com/idaholab/moose/discussions/22154#discussioncomment-3701489",
+                  "updatedAt": "2022-09-21T15:11:09Z",
+                  "publishedAt": "2022-09-21T15:11:09Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Ethan-xj"
+                          },
+                          "bodyText": "Thank you :D",
+                          "url": "https://github.com/idaholab/moose/discussions/22154#discussioncomment-3706409",
+                          "updatedAt": "2022-09-22T06:37:25Z",
+                          "publishedAt": "2022-09-22T06:37:24Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Best way to couple several apps",
+          "author": {
+            "login": "aarograh"
+          },
+          "bodyText": "I'm working on coupling several apps together.  Up to this point We've only been coupling 2 apps, so the approach we took was to have one app's class inherit from the other to have full access to everything in both apps.  However, when adding a third app, this introduces a diamond inheritance that cannot be overcome (without modifying the parent apps, which isn't an option).  I'm aware people have compiled several apps together, so I'm sure the approach I've taken so far must not be the recommended approach.  Could someone point me toward something that would give an example of how I should actually do this?",
+          "url": "https://github.com/idaholab/moose/discussions/21980",
+          "updatedAt": "2022-09-21T18:12:49Z",
+          "publishedAt": "2022-08-31T18:26:49Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nCould you please ask access to BlueCrab on the INL NCRC?\nThat will be a good example of how to combine applications.\nWhile the inner apps are restricted, BC is actually EAR-99 so we should be able to get you to see it very quickly.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21980#discussioncomment-3521448",
+                  "updatedAt": "2022-08-31T20:35:58Z",
+                  "publishedAt": "2022-08-31T20:35:57Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "please let us know when you have made the request",
+                          "url": "https://github.com/idaholab/moose/discussions/21980#discussioncomment-3521449",
+                          "updatedAt": "2022-08-31T20:36:09Z",
+                          "publishedAt": "2022-08-31T20:36:09Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aarograh"
+                          },
+                          "bodyText": "Ok, I'll do that.  Thanks.",
+                          "url": "https://github.com/idaholab/moose/discussions/21980#discussioncomment-3522103",
+                          "updatedAt": "2022-08-31T22:30:46Z",
+                          "publishedAt": "2022-08-31T22:30:45Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Cardinal is an open source example of this otherwise\nhttps://github.com/neams-th-coe/cardinal/blob/devel/src/base/CardinalApp.C\nyou can see every app in there, with all the registering",
+                  "url": "https://github.com/idaholab/moose/discussions/21980#discussioncomment-3521619",
+                  "updatedAt": "2022-08-31T21:05:24Z",
+                  "publishedAt": "2022-08-31T21:05:20Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "the Makefile also has the necessary mods, but it s more complicated because OpenMC and Nek arent moose apps",
+                          "url": "https://github.com/idaholab/moose/discussions/21980#discussioncomment-3521624",
+                          "updatedAt": "2022-08-31T21:05:49Z",
+                          "publishedAt": "2022-08-31T21:05:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aarograh"
+                          },
+                          "bodyText": "Thanks for the info. I'll check that out.  I'll be working with a non-MOOSE app shortly too, so this might be a really helpful example",
+                          "url": "https://github.com/idaholab/moose/discussions/21980#discussioncomment-3522101",
+                          "updatedAt": "2022-08-31T22:30:36Z",
+                          "publishedAt": "2022-08-31T22:30:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aarograh"
+                          },
+                          "bodyText": "@GiudGiud thanks again for this suggestion.  This has helped with sorting out some issues.  I do have a follow-up question.  I wanted to enable coupling between the 2 apps using both MultiApps and \"full coupling\".  Previously we accomplished \"full coupling\" by having moleApp inherit from SamApp.  I'm trying to move away from this approach since I\"m guessing there's a better way of accomplishing that.\nMy current issue is that the \"full coupling\" inputs fail when trying to read the portions of the input related to SAM syntax.  However, if I try calling SAM's SAM::associateSyntaxInner() from moleApp::setupOptions() (SAM calls it from SamApp::setupOptions(), so I'm just mimicking SAM on this one) I just get a segfault.  Here's the backtrace on the segfault.  Any suggestions on the \"proper\" way to accomplish full coupling?  I tried looking around the MOOSE documentation but haven't found the answer yet.\nProgram received signal SIGSEGV, Segmentation fault.\n0x00007ffff786795e in SamApp::setSimulation (this=0x0, sim=0x555555d8a8d0) at /home/ag6/zoo/mole_sam/contrib/SAM/src/base/SamApp.C:47\n47        _sim = sim;\n(gdb) bt\n#0  0x00007ffff786795e in SamApp::setSimulation (this=0x0, sim=0x555555d8a8d0) at /home/ag6/zoo/mole_sam/contrib/SAM/src/base/SamApp.C:47\n#1  0x00007ffff7231d7f in SAMCreateMeshAction::act (this=0x555555b48760) at /home/ag6/zoo/mole_sam/contrib/SAM/src/actions/SAMCreateMeshAction.C:62\n#2  0x00007ffff2e09a8b in Action::timedAct (this=0x555555b48760) at /home/ag6/zoo/mole_sam/moose/framework/src/actions/Action.C:92\n#3  0x00007ffff2e0e402 in ActionWarehouse::executeActionsWithAction (this=0x55555582de20, task=...) at /home/ag6/zoo/mole_sam/moose/framework/src/actions/ActionWarehouse.C:384\n#4  0x00007ffff2e0df2c in ActionWarehouse::executeAllActions (this=0x55555582de20) at /home/ag6/zoo/mole_sam/moose/framework/src/actions/ActionWarehouse.C:344\n#5  0x00007ffff4310546 in MooseApp::runInputFile (this=0x55555582d840) at /home/ag6/zoo/mole_sam/moose/framework/src/base/MooseApp.C:1044\n#6  0x00007ffff4313d4c in MooseApp::run (this=0x55555582d840) at /home/ag6/zoo/mole_sam/moose/framework/src/base/MooseApp.C:1403\n#7  0x00005555555577c7 in main (argc=3, argv=0x7fffffffc2c8) at /home/ag6/zoo/mole_sam/src/main.C:33",
+                          "url": "https://github.com/idaholab/moose/discussions/21980#discussioncomment-3693303",
+                          "updatedAt": "2022-09-20T18:25:33Z",
+                          "publishedAt": "2022-09-20T18:25:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Full coupling with SAM is more complicated because SAM replaces some of the moose syntax, notably postprocessors syntax.\nThe SAMApp is null? (this = 0x0) A missing createApp call is likely. I think that's usually done in main.C. What kind of app do you create there?",
+                          "url": "https://github.com/idaholab/moose/discussions/21980#discussioncomment-3694534",
+                          "updatedAt": "2022-09-20T21:19:51Z",
+                          "publishedAt": "2022-09-20T21:19:51Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aarograh"
+                          },
+                          "bodyText": "Yeah, as I was leaving for the day I noticed that in main.C and wondered if that might be part of the issues.  Here is what was in main.C already:\n  std::shared_ptr<MooseApp> app = AppFactory::createAppShared(\"moleTestApp\", argc, argv);\n  app->run();\n\nI add this line between the two above just on a whim:\n  std::shared_ptr<MooseApp> sam_app = AppFactory::createAppShared(\"SamApp\", argc, argv);)\n\nHowever, that did not work.  I'm assuming the issue is that the setSimulation method on SamApp takes a SAMSimulation * but is being given an FEProblem * or something like that because SamApp is not driving the solve.\nI'm open to ideas you may have to resolve this, but at this point I may just switch these tests to be MultiApps tests instead, and not bother supporting the full coupling.  However, if you have any quick ideas, please let me know and I'll try them out.",
+                          "url": "https://github.com/idaholab/moose/discussions/21980#discussioncomment-3695599",
+                          "updatedAt": "2022-09-21T01:46:59Z",
+                          "publishedAt": "2022-09-21T01:46:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "You would not create two apps, you would replace what you have with \"moleTestApp\" to \"SamApp\"\nIf there is indeed a cast from MooseApp to SamApp in SAMSimulation that could be the problem. I ll try to get my hands on SAM again and double check.\nAre the simulation domains overlapping between SAM and Mole? Or are they coupled at boundary conditions?",
+                          "url": "https://github.com/idaholab/moose/discussions/21980#discussioncomment-3696132",
+                          "updatedAt": "2022-09-21T03:49:47Z",
+                          "publishedAt": "2022-09-21T03:49:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aarograh"
+                          },
+                          "bodyText": "Using SamApp instead of moleTestApp won't work because then I don't have access to all the mole components I need.\nThe simulation domains are expected to be overlapping for now, yes.  However, I can foresee cases where that may not be the case (either they would be coupled at boundary conditions, or perhaps part of the domain would overlap but each code would have additional domain that the other does not need to model).",
+                          "url": "https://github.com/idaholab/moose/discussions/21980#discussioncomment-3699425",
+                          "updatedAt": "2022-09-21T12:02:27Z",
+                          "publishedAt": "2022-09-21T12:02:26Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "ok then you need an app that sits on top of both.\nOr if you have this liberty (eg you dont have to keep SAM and mole unmodified), you can register all the objects from the other app to one of the two apps.\nIf they are overlapping there's a stronger case for full coupling for now",
+                          "url": "https://github.com/idaholab/moose/discussions/21980#discussioncomment-3702006",
+                          "updatedAt": "2022-09-21T16:07:39Z",
+                          "publishedAt": "2022-09-21T16:07:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aarograh"
+                          },
+                          "bodyText": "If Mole is the \"top\" app, is it possible to register all of SAM's objects to Mole without modifying SAM?  In either case, where would I make the change?  To be honest, I thought that was already happening since I'm calling SamApp::registerApps() and SamApp::registerAll(f, af, s) from moleApp::registerAll().",
+                          "url": "https://github.com/idaholab/moose/discussions/21980#discussioncomment-3702319",
+                          "updatedAt": "2022-09-21T16:42:00Z",
+                          "publishedAt": "2022-09-21T16:41:59Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "yeah so I dont know if you can share this routine, maybe you can email it to me on my INL email\nbut basically it should be like (minus any mistake I made):\nvoid\nmoleApp::registerAll(Factory & f, ActionFactory & af, Syntax & s)\n{\n  Registry::registerObjectsTo(f, {\"moleApp\"});\n  Registry::registerActionsTo(af, {\"moleApp\"});\n\n  ModulesApp::registerAll(f, af, s);\n\n#ifdef SAM_ENABLED\n  SamApp::registerAll(f, af, s);\n  \n  // SamApp::associateSyntax(s, af);\n  // if you do that, you can run Sam input files directly, but might mess up regular input files\n  // if you dont, you have to pass --app SamApp on the command line\n#endif\n}",
+                          "url": "https://github.com/idaholab/moose/discussions/21980#discussioncomment-3702444",
+                          "updatedAt": "2022-09-21T17:00:12Z",
+                          "publishedAt": "2022-09-21T16:57:17Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Moose environment update",
+          "author": {
+            "login": "joe61vette"
+          },
+          "bodyText": "Hello:\nI have tried both \"conda update --all\" and \"mamba update --all\" but don't get the latest version.  When I use \"mamba list\", it shows:\nmoose-libmesh             2022.06.06              build_0    https://conda.software.inl.gov/public\nmoose-libmesh-vtk         9.1.0            py39hc1bf809_7    https://conda.software.inl.gov/public\nmoose-mpich               4.0.1                   build_2    https://conda.software.inl.gov/public\nmoose-petsc               3.16.5                  build_3    https://conda.software.inl.gov/public\nmoose-tools               2022.07.18       py39h5a31bc0_0    https://conda.software.inl.gov/public\n\nInterestingly, when I issue the update command, a question mark appears in the folder icon at the top of the terminal window.  I have the following at the bottom of my .zshrc file:\n# >>> conda initialize >>>\n# !! Contents within this block are managed by 'conda init' !!\n__conda_setup=\"$('/Users/joe/mambaforge3/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)\"\nif [ $? -eq 0 ]; then\n    eval \"$__conda_setup\"\nelse\n    if [ -f \"/Users/joe/mambaforge3/etc/profile.d/conda.sh\" ]; then\n        . \"/Users/joe/mambaforge3/etc/profile.d/conda.sh\"\n    else\n        export PATH=\"/Users/joe/mambaforge3/bin:$PATH\"\n    fi\nfi\nunset __conda_setup\n# <<< conda initialize <<<\n\nmamba activate moose\n\nexport HOST=$(hostname)\n\nBefore issuing the update command, the folder icon path shows as: \"JMKs MBP/Macintosh HD/Users/joe\".  But after issuing either the conda or mamba update command, it changes to: \"x86_64-apple-darwin13.4.0//Users/joe\".\nThanks for the help,\nJoe Kelly",
+          "url": "https://github.com/idaholab/moose/discussions/22158",
+          "updatedAt": "2022-09-21T18:07:58Z",
+          "publishedAt": "2022-09-21T16:36:02Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hi Joe\nNever seen the issue with the folder icon.\nWhen conda/mamba fails to update (mamba is a little better at the dependency resolution), it's worth deleting the environment and re-cloning it. If you still get the same packages that are lagging behind, the next culprit is usually the python version in the environment\nPlease let us know how it goes,\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22158#discussioncomment-3702594",
+                  "updatedAt": "2022-09-21T17:14:07Z",
+                  "publishedAt": "2022-09-21T17:14:06Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "joe61vette"
+                          },
+                          "bodyText": "Thanks Guillaume.  Deleting the environment and reloading it did the trick.  I now have:\nmoose-libmesh             2022.09.09              build_0    https://conda.software.inl.gov/public\nmoose-libmesh-vtk         9.1.0               he71d177_12    https://conda.software.inl.gov/public\nmoose-mpich               4.0.2                   build_2    https://conda.software.inl.gov/public\nmoose-petsc               3.16.6                  build_1    https://conda.software.inl.gov/public\nmoose-tools               2022.07.18      py310hcffbc79_0    https://conda.software.inl.gov/public\nThat I believe are the most recent.\nThanks again,\nJoe",
+                          "url": "https://github.com/idaholab/moose/discussions/22158#discussioncomment-3702777",
+                          "updatedAt": "2022-09-21T17:38:47Z",
+                          "publishedAt": "2022-09-21T17:38:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "same as me\nmoose-libmesh             2022.09.09              build_0    https://conda.software.inl.gov/public\nmoose-libmesh-vtk         9.1.0               h3f5ae15_12    https://conda.software.inl.gov/public\nmoose-mpich               4.0.2                   build_2    https://conda.software.inl.gov/public\nmoose-petsc               3.16.6                  build_1    https://conda.software.inl.gov/public\nmoose-tools               2022.07.18      py310ha2ead4d_0    https://conda.software.inl.gov/public",
+                          "url": "https://github.com/idaholab/moose/discussions/22158#discussioncomment-3703005",
+                          "updatedAt": "2022-09-21T18:07:59Z",
+                          "publishedAt": "2022-09-21T18:07:58Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Symmetry Axis in Axisymmetric Simulation",
+          "author": {
+            "login": "Flolaffel"
+          },
+          "bodyText": "Hello,\nI'm doing an axisymmatric simulation of a ring and want to define the y-axis as the symmetry axis. What I did in former simulations was just using a DirichletBC to stop displacements in x-direction on the left boundary. But now that I have a ring whose left boundary doesn't align with the symmetry axis I can't do that. Is there a way to tell MOOSE that my symmetry axis is 5 mm to the left of my left boundary?",
+          "url": "https://github.com/idaholab/moose/discussions/22152",
+          "updatedAt": "2022-09-21T15:02:02Z",
+          "publishedAt": "2022-09-21T10:25:39Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "I am a little bit confused, because it sounds like you want to utilize the axisymmetry and model a 3D cylinder in 2D, but you are still working with cartesian coordinates, e.g. x, y. Can I assume that you really meant to say the r-displacement instead of the x-displacement?\nIf so, then the solution will be very simple: you don't prescribe the left boundary in the r-direction.\n\nIs there a way to tell MOOSE that my symmetry axis is 5 mm to the left of my left boundary?\n\nThe best way to achieve that is to have your symmetry axis go through the origin (0, 0). For example, let the bottom left corner of the mesh have an x-coordinate of 5 mm.",
+                  "url": "https://github.com/idaholab/moose/discussions/22152#discussioncomment-3699888",
+                  "updatedAt": "2022-09-21T12:59:15Z",
+                  "publishedAt": "2022-09-21T12:59:14Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Flolaffel"
+                          },
+                          "bodyText": "Yes, you are right. The correct way would be to use r and z. But when using the TensorMechanicsMasterAction the Syntax for the variables stays as x and y AFAIK.\nOk so if I understand you correctly MOOSE automatically assumes that there is a symmetry axis through (0,0)? So if I model the geometry as it is pictured above with the bottom left corner as (0,0), I'd fix the r-displacement on the left side of the stemp and the z-displacement on the bottom of the square and that would be it? No assigning a general symmetry axis in z-direction so the program knows the square is supposed to be a ring?",
+                          "url": "https://github.com/idaholab/moose/discussions/22152#discussioncomment-3700483",
+                          "updatedAt": "2022-09-21T13:54:34Z",
+                          "publishedAt": "2022-09-21T13:54:33Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Yes, you are right. The correct way would be to use r and z. But when using the TensorMechanicsMasterAction the Syntax for the variables stays as x and y AFAIK.\n\nHmm that's interesting. You can see for example modules/tensor_mechanics/test/tests/2D_geometries/2D-RZ_test.i which uses disp_r, disp_z, stress_zz etc. The input file you were looking at probably is probably out-of-date, which we should fix...\n\nOk so if I understand you correctly MOOSE automatically assumes that there is a symmetry axis through (0,0)? So if I model the geometry as it is pictured above with the bottom left corner as (0,0), I'd fix the r-displacement on the left side of the stemp and the z-displacement on the bottom of the square and that would be it? No assigning a general symmetry axis in z-direction so the program knows the square is supposed to be a ring?\n\nIf the left boundary coincides with the symmetry axis, you may or may not fix the r-displacement there -- the solution will be identical.\nIf the left boundary does not coincide with the symmetry axis, you should not fix the r-displacement there.",
+                          "url": "https://github.com/idaholab/moose/discussions/22152#discussioncomment-3700632",
+                          "updatedAt": "2022-09-21T14:02:27Z",
+                          "publishedAt": "2022-09-21T14:02:27Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Flolaffel"
+                          },
+                          "bodyText": "Hmm that's interesting. You can see for example modules/tensor_mechanics/test/tests/2D_geometries/2D-RZ_test.i which uses disp_r, disp_z, stress_zz etc. The input file you were looking at probably is probably out-of-date, which we should fix...\n\nAh well, good to know.\n\nIf the left boundary coincides with the symmetry axis, you may or may not fix the r-displacement there -- the solution will be identical.\nIf the left boundary does not coincide with the symmetry axis, you should not fix the r-displacement there.\n\nOk yeah and the symmetry axis is automatically located on the z-axis?",
+                          "url": "https://github.com/idaholab/moose/discussions/22152#discussioncomment-3700888",
+                          "updatedAt": "2022-09-21T14:18:59Z",
+                          "publishedAt": "2022-09-21T14:18:59Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Yes, I believe that is a fundamental assumption we make: In tensor_mechanics, the symmetry axis for an axisymmetric cylindrical coordinate system always goes through point (0, 0) and has direction (0, 1), speaking Cartesian.",
+                          "url": "https://github.com/idaholab/moose/discussions/22152#discussioncomment-3701392",
+                          "updatedAt": "2022-09-21T15:01:22Z",
+                          "publishedAt": "2022-09-21T15:01:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Flolaffel"
+                          },
+                          "bodyText": "Alright, thank you.",
+                          "url": "https://github.com/idaholab/moose/discussions/22152#discussioncomment-3701398",
+                          "updatedAt": "2022-09-21T15:01:59Z",
+                          "publishedAt": "2022-09-21T15:01:58Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "PorousFlow: Fault mechanics",
+          "author": {
+            "login": "wangshengwa"
+          },
+          "bodyText": "Hi experts,\nI am simulating a fault in a rock aquifer with PorousFlow (by the way, thanks for the five start code). The geometry is complex and hydro-mechanical coupled.\nI am first trying to reach mechanical equilibrium in steady state. But the geometry is complex, looks like the strains and displacements are big and therefore the different layers loose contact. See attached. Is there any way to \"glue\" the different layers? Or perhaps the finite strain approach is not correct?\n\nCheers!\nWang",
+          "url": "https://github.com/idaholab/moose/discussions/22147",
+          "updatedAt": "2022-09-21T08:41:35Z",
+          "publishedAt": "2022-09-20T12:21:28Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "WilkAndy"
+                  },
+                  "bodyText": "If i understand your model correctly, this is a mesh problem, not a problem with your model.\nYour deformed model exhibits two \"fractures\" (the grey lines in the above figure) that should not be there.  Those grey lines will not allow fluid to flow across them, nor will they transmit any mechanical force.  This is because they are actually empty space (there are no thin finite elements that sit inside those \"fractures\").\nIf the previous paragraph is correct, then your mesh is at fault.  You have created a mesh that contains a \"left block\" a \"fault block\" and a \"right block\" (shown in the above figure).  However, these blocks do not share any nodes except for at the very top of the picture (and probably the bottom too).  They must share nodes, and then your model will not generate those grey fractures.  You'll have to go back to your meshing software and ensure the blocks share nodes.\na",
+                  "url": "https://github.com/idaholab/moose/discussions/22147#discussioncomment-3694328",
+                  "updatedAt": "2022-09-20T20:39:55Z",
+                  "publishedAt": "2022-09-20T20:39:54Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "wangshengwa"
+                          },
+                          "bodyText": "Thanks!! This fixed the problem!!",
+                          "url": "https://github.com/idaholab/moose/discussions/22147#discussioncomment-3697931",
+                          "updatedAt": "2022-09-21T08:41:35Z",
+                          "publishedAt": "2022-09-21T08:41:35Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "The mesh generating for cohesive zone model (CZM)",
+          "author": {
+            "login": "RECHOA"
+          },
+          "bodyText": "Hi all,\nI am new  to CZM and when i study the example case in MOOSE :(moose/modules/tensor_mechanics/test/tests/cohesive_zone_model/stretch_rotate_large_deformation.i),\nI noticed that the mesh and the  interface (boundary = 'interface') was generated by using BreakMeshByBlockGenerator.\n\nNow i want to generate the mesh in that case by using software Cubit. Whether just the boundary = 'interface' in inputfile need change to boundary = 'surface1 surface2' ,\nor maybe i should merge  surface1  and  surface2 in Cubit and then set the surface as interface ?",
+          "url": "https://github.com/idaholab/moose/discussions/22149",
+          "updatedAt": "2022-09-29T17:14:43Z",
+          "publishedAt": "2022-09-20T16:05:05Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "An interface includes two opposite sides, e.g. a primary side and a secondary side. But the CZM implementation in tensor_mechanics operates on only one side of the interface. That was a design choice.\nSo in your case you should either provide boundary = 'surface1', or boundary = 'surface2', but not both. Also note that the mesh you supplied into MOOSE should be fully connected, i.e. the interface between surface1/surface2 is not disjoint. The splitting has to be handled by BreakMeshByBlockGenerator.",
+                  "url": "https://github.com/idaholab/moose/discussions/22149#discussioncomment-3692535",
+                  "updatedAt": "2022-09-20T17:02:03Z",
+                  "publishedAt": "2022-09-20T17:02:02Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "RECHOA"
+                          },
+                          "bodyText": "Also note that the mesh you supplied into MOOSE should be fully connected, i.e. the interface between surface1/surface2 is not disjoint. The splitting has to be handled by BreakMeshByBlockGenerator.\n\nSo i should merge  surface1 and surface2 to make volume1 and volume2 fully connected by using Cubit, and name them block1/block2, then use BreakMeshByBlockGenerator to split them?",
+                          "url": "https://github.com/idaholab/moose/discussions/22149#discussioncomment-3692972",
+                          "updatedAt": "2022-09-20T17:46:14Z",
+                          "publishedAt": "2022-09-20T17:46:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Yes. The mesh generator has many options. I believe you can tune it to meet your needs. If not let me know.",
+                          "url": "https://github.com/idaholab/moose/discussions/22149#discussioncomment-3693041",
+                          "updatedAt": "2022-09-20T17:54:27Z",
+                          "publishedAt": "2022-09-20T17:54:27Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "RECHOA"
+                          },
+                          "bodyText": "If the mesh file created by Cubit has 3 merged blocks:\n\nthe cohesive zone model (CZM) is applied in volume1 and volume2, i.e. the BreakMeshByBlockGenerator only apply in block1 and block2, not block3. How could this be realized?",
+                          "url": "https://github.com/idaholab/moose/discussions/22149#discussioncomment-3693195",
+                          "updatedAt": "2022-09-20T18:10:41Z",
+                          "publishedAt": "2022-09-20T18:10:40Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "Use the 'block_pair' option. See https://mooseframework.inl.gov/source/meshgenerators/BreakMeshByBlockGenerator.html",
+                          "url": "https://github.com/idaholab/moose/discussions/22149#discussioncomment-3693768",
+                          "updatedAt": "2022-09-20T19:14:29Z",
+                          "publishedAt": "2022-09-20T19:14:28Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Where can I find more info about the geometric search system?",
+          "author": {
+            "login": "Ethan-xj"
+          },
+          "bodyText": "When I read the introduction about the NearestNodeValueAux, it says\"The NearestNodeValueAux uses the geometric search system to find the shortest distance from a node where the AuxVariable......\".\nI want to know more information about the geometric search system. And if possible, can anybody tell me how can I use this system?\nEthan",
+          "url": "https://github.com/idaholab/moose/discussions/21622",
+          "updatedAt": "2022-09-20T13:25:05Z",
+          "publishedAt": "2022-07-19T01:48:21Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nWe have this documentation online\nhttps://mooseframework.inl.gov/moose/source/geomsearch/GeometricSearchData.html\nHope it helps\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21622#discussioncomment-3176310",
+                  "updatedAt": "2022-07-19T02:16:56Z",
+                  "publishedAt": "2022-07-19T02:16:55Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Ethan-xj"
+                          },
+                          "bodyText": "@GiudGiud Hello! It's an old disscusion :\uff09\nI want to know where I can find the info about the getQuadraturePenetrationLocator in GeometricSearchData. I want to express the coordinate of the quadrature points in Kernel.",
+                          "url": "https://github.com/idaholab/moose/discussions/21622#discussioncomment-3690119",
+                          "updatedAt": "2022-09-20T12:50:12Z",
+                          "publishedAt": "2022-09-20T12:50:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Ethan-xj"
+                          },
+                          "bodyText": "Oh I find the GeometricSearchData.h and GeometricSearchData.C.",
+                          "url": "https://github.com/idaholab/moose/discussions/21622#discussioncomment-3690487",
+                          "updatedAt": "2022-09-20T13:25:06Z",
+                          "publishedAt": "2022-09-20T13:25:05Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Auxiliary variables",
+          "author": {
+            "login": "Oops-Qiao"
+          },
+          "bodyText": "Hello buddy,\nI have a questions regarding the auxiliary variables.\nI see the following words from the workshop \"Auxiliary variables come in two flavors: Nodal and Elemental\" and at the same time in the auxiliary kernel we wrote velocity expression in this way \"-(_permeability[_qp] / _viscosity[_qp]) * _pressure_gradient[_qp]\" where qp is the quadrature point.\nIt is difficult for me to link this quadrature point with Nodal and Elemental here. Could you please give an example that can intuitively illustrate the odal varaible and elemental variable?\nThank you in advance.\nKind regards,\nQiao",
+          "url": "https://github.com/idaholab/moose/discussions/21955",
+          "updatedAt": "2022-09-20T11:39:32Z",
+          "publishedAt": "2022-08-29T13:36:48Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nElemental variables may have multiple quadrature points (CONSTANT MONOMIAL or cell-centered finite volume only have one). _qp indexing reaches the value computed for the relevant quadrature point. Auxkernels for elemental variables loop over elements, then have an inner loop on quadrature points.\nNodal variables use the nodes as quadrature points. So _qp is just 0\nRe-using the same syntax for both allows us to write a single auxkernel definition that is valid for both nodal and elemental variables.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21955#discussioncomment-3502852",
+                  "updatedAt": "2022-08-29T18:28:03Z",
+                  "publishedAt": "2022-08-29T18:28:02Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Oops-Qiao"
+                          },
+                          "bodyText": "ok, one more question here, if we have a variable: \"velocity\", this velocity can be set as either elemental variable or nodal variable, right? or maybe it can only be nodal variable?\nAnother thing is for the _qp in the elemental variable case, it is numbered for each element for example, _qp =1,2,3. or _qp is numbered globally for all the elements?  Thank you again.",
+                          "url": "https://github.com/idaholab/moose/discussions/21955#discussioncomment-3504035",
+                          "updatedAt": "2022-08-29T22:05:19Z",
+                          "publishedAt": "2022-08-29T22:05:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "it could be either. In FE we use nodal variables for velocity, in FV we use an elemental one. The type of variable may influence what discretization you use of the equations (CG, DG etc)\nit s numbered locally",
+                          "url": "https://github.com/idaholab/moose/discussions/21955#discussioncomment-3505591",
+                          "updatedAt": "2022-08-30T04:51:48Z",
+                          "publishedAt": "2022-08-30T04:51:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Oops-Qiao"
+                          },
+                          "bodyText": "it could be either. In FE we use nodal variables for velocity, in FV we use an elemental one. The type of variable may influence what discretization you use of the equations (CG, DG etc)\nit s numbered locally\n\nHi Guillaume,\nHere you mentioned that velocity is nodal variable in FE. Do you mean we compute velocity in the auxkernel at nodes? What if now I directly compute velocity (one of unknowns) from solving the model equations implicitly and simultaneously? Is it still nodal variable? then how does moose implement the quadrature integration? Thank you, I just recall some stuff in my mind.\nBest regards,\nQiao",
+                          "url": "https://github.com/idaholab/moose/discussions/21955#discussioncomment-3688166",
+                          "updatedAt": "2022-09-20T08:40:17Z",
+                          "publishedAt": "2022-09-20T08:40:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "The quadrature points for nodal variables are the nodes.\nNodal variables may be auxiliary or nonlinear.\nQuadrature points are actually not at nodes, but some loops in MOOSE over quadrature points can be re-used for nodal values, by just pretending the node is the only Qp",
+                          "url": "https://github.com/idaholab/moose/discussions/21955#discussioncomment-3689533",
+                          "updatedAt": "2022-09-20T21:09:39Z",
+                          "publishedAt": "2022-09-20T11:39:32Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,1029 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMS0xMS0wN1QyMzo0OToxOC0wNjowMM4AN_6r"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "How to keep the Indicators and Markers when restoring solutions",
+          "author": {
+            "login": "xiekai-mc"
+          },
+          "bodyText": "Hello\nIn the file Transient.C, line 409-415, when solve is not converged:\n  else\n  {\n    _problem.restoreMultiApps(EXEC_TIMESTEP_BEGIN, true);\n    _problem.restoreMultiApps(EXEC_TIMESTEP_END, true);\n    _time_stepper->rejectStep();\n    _time = _time_old;\n  }\nI add  _problem.computeIndicators(), _problem.computeMarkers() and _problem.adaptMesh() here, like this:\n else\n  {\n    if (mesh_error())\n    {\n      _problem.computeIndicators();\n      _problem.computeMarkers();\n    }\n\n    _problem.restoreMultiApps(EXEC_TIMESTEP_BEGIN, true);\n    _problem.restoreMultiApps(EXEC_TIMESTEP_END, true);\n    _time_stepper->rejectStep();\n    _time = _time_old;\n\n    if (mesh_error())\n      _problem.adaptMesh();\n  }\nWhat I want to do is:\n\nCompute the indicators and markers of the unconverged step.\nThen restore everything except Indicators and markers.\nRefine the mesh according to the indicators and markers above.\n\nBut indicators and markers seem to be restored as well.\nIs there any way to keep them\uff1f",
+          "url": "https://github.com/idaholab/moose/discussions/18962",
+          "updatedAt": "2022-07-24T13:26:01Z",
+          "publishedAt": "2021-09-29T11:00:20Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "I don't think there is an option to restore only part of the system.\nYou could save a copy of that part of solution vector then set it again.\n    // Save variable previous values\n    NumericVector<Number> old = _nl.getVector(tag_id   OR   variable name);\n\nAre you trying to refine the multiapp or the main app btw",
+                  "url": "https://github.com/idaholab/moose/discussions/18962#discussioncomment-1403393",
+                  "updatedAt": "2022-07-24T13:26:04Z",
+                  "publishedAt": "2021-09-29T14:56:34Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xiekai-mc"
+                          },
+                          "bodyText": "I am trying to refine the multiapp and by level_set",
+                          "url": "https://github.com/idaholab/moose/discussions/18962#discussioncomment-1403760",
+                          "updatedAt": "2022-07-24T13:26:04Z",
+                          "publishedAt": "2021-09-29T15:45:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I dont understand what you mean by and by level_set.\nAh saving the marker and indicator from the multiapp here may be tough. You'd need to transfer them or something. Even then i dont know that it happens in the right order.",
+                          "url": "https://github.com/idaholab/moose/discussions/18962#discussioncomment-1403771",
+                          "updatedAt": "2022-07-24T13:26:04Z",
+                          "publishedAt": "2021-09-29T15:47:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xiekai-mc"
+                          },
+                          "bodyText": "I use the level_set module. It seems to be able to transfer the markers.\n[Transfers]\n  [to_markers]\n    type = LevelSetMeshRefinementTransfer\n    multi_app = fracture\n    variable = marker\n    source_variable = marker\n    check_multiapp_execute_on = false\n  []\n.....\n[Problem]\n  type = LevelSetProblem\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/18962#discussioncomment-1403835",
+                          "updatedAt": "2022-07-24T13:26:04Z",
+                          "publishedAt": "2021-09-29T15:57:28Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Ok but the markers need to be transferred before the restore, after a fail, if we are going to save the variable there.",
+                          "url": "https://github.com/idaholab/moose/discussions/18962#discussioncomment-1403985",
+                          "updatedAt": "2022-07-24T13:30:07Z",
+                          "publishedAt": "2021-09-29T16:27:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xiekai-mc"
+                          },
+                          "bodyText": "After saving the old solution vector , how to set the new one ?",
+                          "url": "https://github.com/idaholab/moose/discussions/18962#discussioncomment-1404124",
+                          "updatedAt": "2022-07-24T13:30:07Z",
+                          "publishedAt": "2021-09-29T16:52:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "NumericVector<Number> & new = _nl.getVector(tag_id   OR   variable name);\nnew = old;",
+                          "url": "https://github.com/idaholab/moose/discussions/18962#discussioncomment-1404136",
+                          "updatedAt": "2022-07-24T13:30:07Z",
+                          "publishedAt": "2021-09-29T16:54:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xiekai-mc"
+                          },
+                          "bodyText": "There is an error\n/home/user01/projects/moose/framework/src/executioners/Transient.C:471:54: error: cannot allocate an object of abstract type 'libMesh::NumericVector<double>'\n  471 |       NumericVector<Number> old_d = _nl.getVector(\"d\");",
+                          "url": "https://github.com/idaholab/moose/discussions/18962#discussioncomment-1409146",
+                          "updatedAt": "2022-07-24T13:30:07Z",
+                          "publishedAt": "2021-09-30T13:43:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Ah that's annoying. I think you'll need to use one of the constructors for one of the derived classes\nSee the documentation for that type, see if you can find something that works\nhttps://libmesh.github.io/doxygen/classlibMesh_1_1NumericVector.html",
+                          "url": "https://github.com/idaholab/moose/discussions/18962#discussioncomment-1410178",
+                          "updatedAt": "2022-07-24T13:30:07Z",
+                          "publishedAt": "2021-09-30T16:39:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xiekai-mc"
+                          },
+                          "bodyText": "If I refine the mesh before restoring solutions , it is no need to save solution vectors:\nelse\n  {\n    if (mesh_error())\n    {\n      _problem.computeIndicators();\n      _problem.computeMarkers();\n      _problem.adaptMesh();\n    }\n\n    _problem.restoreMultiApps(EXEC_TIMESTEP_BEGIN, true);\n    _problem.restoreMultiApps(EXEC_TIMESTEP_END, true);\n    _time_stepper->rejectStep();\n    _time = _time_old;     \n  }\nBut the number of the elements is changed after _problem.adaptMesh(). Is there any way to restore the solutions to the new mesh.",
+                          "url": "https://github.com/idaholab/moose/discussions/18962#discussioncomment-1423478",
+                          "updatedAt": "2022-07-24T13:30:07Z",
+                          "publishedAt": "2021-10-04T08:16:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xiekai-mc"
+                          },
+                          "bodyText": "This seems to work:\n  else\n  {\n    if (mesh_error())\n    {\n      _problem.computeIndicators();\n      _problem.computeMarkers();\n\n      _problem.adaptMesh();\n\n      // _problem.restoreMultiApps(EXEC_TIMESTEP_BEGIN, true);\n      // _problem.restoreMultiApps(EXEC_TIMESTEP_END, true);\n      _time_stepper->rejectStep();\n      _time = _time_old;\n    }\n    else\n    {\n      _problem.restoreMultiApps(EXEC_TIMESTEP_BEGIN, true);\n      _problem.restoreMultiApps(EXEC_TIMESTEP_END, true);\n      _time_stepper->rejectStep();\n      _time = _time_old;\n    }\n  }\nI remove the _problem.restoreMultiApps(EXEC_TIMESTEP_BEGIN, true); and   _problem.restoreMultiApps(EXEC_TIMESTEP_END, true);. What's the use of these two lines \uff1f Is that safe to do this ?",
+                          "url": "https://github.com/idaholab/moose/discussions/18962#discussioncomment-1427711",
+                          "updatedAt": "2022-07-24T13:30:08Z",
+                          "publishedAt": "2021-10-05T02:39:44Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Question about Hill Plasticity Stress Update",
+          "author": {
+            "login": "tsda706"
+          },
+          "bodyText": "Hi, I am a student working on a project about anisotropic material. I am very new to plasticity and MOOSE, and I need help to better understand the \"Hill Plasticity Stress Update\".\nIn the given example\n(modules/tensor_mechanics/test/tests/ad_anisotropic_plasticity/ad_aniso_plasticity_x.i)\nthe given yield stress is 0.001, while in the given result\n(modules/tensor_mechanics/test/tests/ad_anisotropic_plasticity/gold/ad_aniso_plasticity_x_out.csv)\nthe initial yield stress is 0.001417, (about sqrt(2) times of the given yield stress).\nI did not make any revision of the input file, and was expecting the initial yield stress the same as 0.001. I am wondering, do I have any misunderstanding of what the input file is doing here, or is there any rotation which could scale the result by sqrt(2) while I did not notice?\nAny suggestion or comment would be appreciated! Many thanks!",
+          "url": "https://github.com/idaholab/moose/discussions/19318",
+          "updatedAt": "2023-03-31T06:35:46Z",
+          "publishedAt": "2021-11-08T16:55:57Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "recuero"
+                  },
+                  "bodyText": "When you have anisotropic plasticity, the stress components contribute to the yield criterion through some sort of anisotropic coefficients. In this case, you have the Hill's coefficients (F, G, H, L, M, N) modifying the current stress state at the material point to quantify its contribution to the total stress. So, even though you may select 0.001 as the yield stress, that doesn't really mean your uniaxial stress will reach that value at the beginning of plastic yield. However, it must be on the order of magnitude, since the anisotropy coefficients usually don't go beyond a factor of 2 or 3.\nFrom https://mooseframework.inl.gov/source/materials/ADHillPlasticityStressUpdate.html, if you develop that equation and substitute the coefficients (F, G, H, L, M, N)  in the Hill's tensor (\"A\" on that doc page), you can arrive at an equation that will give you a number for sigma_x in that test that you point to. Hopefully, that number is in agreement with the gold file.",
+                  "url": "https://github.com/idaholab/moose/discussions/19318#discussioncomment-1615912",
+                  "updatedAt": "2023-03-31T06:36:08Z",
+                  "publishedAt": "2021-11-09T23:23:11Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "tsda706"
+                          },
+                          "bodyText": "Thank you for answering my question. Sorry that I previously did not explain things clearly. I agree that the value of Hill's coefficients would influence the stress components, and according to the definition of Hill's coefficient  (I hope that you do not mind me using Abaqus' explanation), I know that\nF = (sigma_0)^2/2 * (1/(sigma_2)^2 + 1/(sigma_3)^2 - 1/(sigma_1)^2)\nG = (sigma_0)^2/2 * (1/(sigma_3)^2 + 1/(sigma_1)^2 - 1/(sigma_2)^2)\nand\nH = (sigma_0)^2/2 * (1/(sigma_1)^2 + 1/(sigma_2)^2 - 1/(sigma_3)^2).\nwhere sigma_0 is the initial stress, sigma_1, sigma_2 and sigma_3 are the normal yield stresses.\nThen the relation between the yield stress in x direction would be\nG + H = (sigma_0)^2/2 * (2/(sigma_1)^2)=(sigma_0/sigma_1)^2\nor sigma_1 = sigma_0 * sqrt(1/(G+H)).\nI think this derivation also matches what is given in MOOSE's definition of Hill's tensor, as A(1,1)=G+H.\nIn the given example (modules/tensor_mechanics/test/tests/ad_anisotropic_plasticity/ad_aniso_plasticity_x.i)\nF = 0.5829856, G = 0.364424, H = 0.6342174, and sigma_0 ( yield stress) = 0.001\nThen G+H=0.9986414, sigma_1 = sigma_0 * sqrt(1/(G+H))=0.001 * sqrt(1/0.9986414) which approximate to 0.001. That is why I expected the initial yield stress would be 0.001 instead of 0.0014 (the result from the given gold file)\nSo I was thinking, did I make any mistake on the above derivation or did I miss any important component for the calculation?\nThank you again for answering my question!",
+                          "url": "https://github.com/idaholab/moose/discussions/19318#discussioncomment-1615978",
+                          "updatedAt": "2023-03-31T06:36:08Z",
+                          "publishedAt": "2021-11-09T23:45:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "recuero"
+                          },
+                          "bodyText": "No, you didn't miss anything. There is a factor of 2 (actually a divide-by-2) that we are applying to the current stress contribution (see our doc page), so the definition is slightly different from the page you just pointed to (this explains the math). I think I remember seeing this type of discrepancies out in the literature. Hopefully, it's not too big of a hassle.",
+                          "url": "https://github.com/idaholab/moose/discussions/19318#discussioncomment-1615997",
+                          "updatedAt": "2023-03-31T06:36:08Z",
+                          "publishedAt": "2021-11-09T23:56:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "tsda706"
+                          },
+                          "bodyText": "I see what you mean now. This makes a lot of sense. Thank you for the help!",
+                          "url": "https://github.com/idaholab/moose/discussions/19318#discussioncomment-1616060",
+                          "updatedAt": "2023-03-31T06:36:19Z",
+                          "publishedAt": "2021-11-10T00:15:38Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Incompatible PRs",
+          "author": {
+            "login": "ykvishal"
+          },
+          "bodyText": "Hi\nI want to use centriod option of FeatureVolumeVectorPostprocessor ( #18672) and KDTree for PolycrystalVoronoi (#17733). However, they are not compatible with each other. I get following errors after adding #17733\n\nElem::centroid() has been deprecated. Replace with either Elem::vertex_average() to maintain existing behavior, or the more expensive Elem::true_centroid() in cases where the true 'geometric' centroid is required.\n\n\n*** ERROR ***\nThe following error occurred in the object \"grain_volumes\", of type \"FeatureVolumeVectorPostprocessor\".\n\n\nWhile declaring a VectorPostprocessor value with the name \"centroid_x\",\n\n\na Reporter with the same name has already been declared.\n\n\nVectorPostprocessor \"grain_volumes/centroid_x\":\n\n\nType:\nstd::vector\nProducer:\nFeatureVolumeVectorPostprocessor \"grain_volumes\"\nContext type:\nReporterGeneralContext<std::vector >\nConsumer(s):\nNone\n\nIs it possible to use these 2 PRs simultaneously ?\nThank you.\nVishal",
+          "url": "https://github.com/idaholab/moose/discussions/19337",
+          "updatedAt": "2022-07-05T19:00:15Z",
+          "publishedAt": "2021-11-09T18:38:37Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "dschwen"
+                  },
+                  "bodyText": "Yes it is, but you need to replace calls to centroid() with calls to vertex_average() :-)",
+                  "url": "https://github.com/idaholab/moose/discussions/19337#discussioncomment-1615580",
+                  "updatedAt": "2022-07-05T19:00:14Z",
+                  "publishedAt": "2021-11-09T21:54:51Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dschwen"
+                          },
+                          "bodyText": "To clarify, this was a recent libmesh deprecation. If I remember correctly, centroid never calculated the precise centroid of an element anyways, it has always been a vertex average. To avoid further confusion after adding a correct centroid computation method the old method was deprecated and kept under a different name (vertex_average), and a new true_centroid method was added.",
+                          "url": "https://github.com/idaholab/moose/discussions/19337#discussioncomment-1615587",
+                          "updatedAt": "2023-02-17T09:30:55Z",
+                          "publishedAt": "2021-11-09T21:56:46Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "PorousFlow: P&T outside range-non linear solver does not converge",
+          "author": {
+            "login": "rksin8"
+          },
+          "bodyText": "Hi,\nI am working on CO2 injection in a brine saturated reservoir problem. The model runs for a few time steps after that it message pressure & temperature outside the tabulated range and it does not converge.\n\nI tried with different capillary and relative permeability relation, mesh refinement, different tabulated range, injection rate as given (nonlinear_convergence_problems) here but still no improvement.  I used the same parameters in Dumux and it works fine.\n\nMy input file: https://github.com/rksin8/co2-bine/blob/main/co2_brine_theis.i\nCould anyone please let me know what causes this error and how to fix it?\nThanks in advance!",
+          "url": "https://github.com/idaholab/moose/discussions/19312",
+          "updatedAt": "2022-07-10T18:37:06Z",
+          "publishedAt": "2021-11-08T03:19:34Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "cpgr"
+                  },
+                  "bodyText": "I have to head out for a bit now, but will take a look tonight.",
+                  "url": "https://github.com/idaholab/moose/discussions/19312#discussioncomment-1603777",
+                  "updatedAt": "2022-07-10T18:39:24Z",
+                  "publishedAt": "2021-11-08T05:48:44Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cpgr"
+                          },
+                          "bodyText": "In my experience, these issues are mainly caused by something happening at the boundaries. I had a look, and the salt profile at the rightmost boundary was doing something funny. I changed that BC to a simple DirichletBC\n  [right_xnacl]\n    type = DirichletBC\n    variable = xnacl\n    boundary = 'right'\n    value = 0.1\n  []\n\n(and deleted the gravity =  param in each kernel block, which weren't all the same! - the gravity value in the global params block is then used consistently), and the problem ran as expected (note: I did coarsen the mesh to make it a bit faster).\n\nI think the injection rate might not be the same as the Dumux model, though, as this profile is after only ~15 days, so you might want to double check that.",
+                          "url": "https://github.com/idaholab/moose/discussions/19312#discussioncomment-1608487",
+                          "updatedAt": "2022-07-10T18:39:26Z",
+                          "publishedAt": "2021-11-08T20:33:50Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rksin8"
+                          },
+                          "bodyText": "Hi Chris,\nThank you for your help. Now I am getting results very close to the dumux one.",
+                          "url": "https://github.com/idaholab/moose/discussions/19312#discussioncomment-1611224",
+                          "updatedAt": "2022-07-10T18:40:41Z",
+                          "publishedAt": "2021-11-09T09:26:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cpgr"
+                          },
+                          "bodyText": "Great! It looks like you might need to change the BC for the total mass fraction z at the RHS to get a better match.",
+                          "url": "https://github.com/idaholab/moose/discussions/19312#discussioncomment-1611411",
+                          "updatedAt": "2022-07-10T18:40:55Z",
+                          "publishedAt": "2021-11-09T09:50:59Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Deleted Question",
+          "author": {
+            "login": "tsda706"
+          },
+          "bodyText": "",
+          "url": "https://github.com/idaholab/moose/discussions/19151",
+          "updatedAt": "2022-11-03T03:00:19Z",
+          "publishedAt": "2021-10-19T15:57:04Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "recuero"
+                  },
+                  "bodyText": "Use of ADHillElastoPlasticityStressUpdate is experimental and this object is not fully optimized, so it could be slow.  If the material yields isotropically, then the best choice would probably be to use something like IsotropicPlasticityStressUpdate with the proper elasticity tensor. Some code changes may be required though.",
+                  "url": "https://github.com/idaholab/moose/discussions/19151#discussioncomment-1503937",
+                  "updatedAt": "2022-11-03T03:00:19Z",
+                  "publishedAt": "2021-10-19T17:33:44Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "For a) , changing a source file from using a constant to using a function is pretty easy. So if you go that route you will have no problem doing that.",
+                          "url": "https://github.com/idaholab/moose/discussions/19151#discussioncomment-1504436",
+                          "updatedAt": "2022-11-03T03:00:25Z",
+                          "publishedAt": "2021-10-19T19:42:34Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I m suggesting you modify the source (code) file, not just the input file.",
+                          "url": "https://github.com/idaholab/moose/discussions/19151#discussioncomment-1504592",
+                          "updatedAt": "2022-11-03T03:00:25Z",
+                          "publishedAt": "2021-10-19T20:27:27Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "recuero"
+                          },
+                          "bodyText": "Using a hardening function for ADHillElastoPlasticityStressUpdate is not currently supported. It'd require a small code change. Manipulating the input file isn't enough.",
+                          "url": "https://github.com/idaholab/moose/discussions/19151#discussioncomment-1504829",
+                          "updatedAt": "2022-11-03T03:00:25Z",
+                          "publishedAt": "2021-10-19T21:21:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "also what is it a function of?\nUnless it is ONLY space and time, you want to be making this coefficient a material property, not a Function object",
+                          "url": "https://github.com/idaholab/moose/discussions/19151#discussioncomment-1505017",
+                          "updatedAt": "2022-11-03T03:00:36Z",
+                          "publishedAt": "2021-10-19T22:10:59Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "oh so no temperature dependence or any local variable, just plastic strain?\nSee the documentation for Function https://mooseframework.inl.gov/syntax/Functions/index.html\nMaterial properties & materials https://mooseframework.inl.gov/syntax/Materials/index.html",
+                          "url": "https://github.com/idaholab/moose/discussions/19151#discussioncomment-1505103",
+                          "updatedAt": "2022-11-03T03:00:36Z",
+                          "publishedAt": "2021-10-19T22:36:23Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to take necking into uniaxial tension simulation",
+          "author": {
+            "login": "xchengood"
+          },
+          "bodyText": "Dear Moose experts or users,\nCould anyone share any ideas or thoughts about how to take the necking mechanism/phenomenon into the power-law model for uniaxial tension simulation ( https://mooseframework.inl.gov/source/materials/crystal_plasticity/CrystalPlasticityKalidindiUpdate.html) with me? So that I can observe when the fracture will happen on the stress-strain curve. Thank you for your help.",
+          "url": "https://github.com/idaholab/moose/discussions/19325",
+          "updatedAt": "2022-11-14T10:54:00Z",
+          "publishedAt": "2021-11-08T22:01:16Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "Necking is typically due to inelastic mechanisms. Plasticity is one of the mechanisms that will lead to necking. It is not specific to any hardening law. It depends on the geometry and material properties.\nFracture is a different phenomenon that isn't necessarily related to necking. A ductile specimen may fail before or after necking is observed.",
+                  "url": "https://github.com/idaholab/moose/discussions/19325#discussioncomment-1609743",
+                  "updatedAt": "2022-11-14T10:54:00Z",
+                  "publishedAt": "2021-11-09T03:01:20Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Summation of Element",
+          "author": {
+            "login": "hokonkim"
+          },
+          "bodyText": "Hello, I have a question about built-in Kernel or Postprocessor in MOOSE.\nI want to sum values stored (assigned) in all Elements.\nIs there any proper Kernel or Postprocessor (or AuxKernel? ) for this?\nI tried to find an appropriate one through Syntax, however I didn't know which one is right for me.\nThanks!\nSincerely,\nHokon Kim",
+          "url": "https://github.com/idaholab/moose/discussions/19274",
+          "updatedAt": "2022-06-14T06:58:51Z",
+          "publishedAt": "2021-11-02T11:47:47Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nSo you want a sum with no quadrature? Like not an integration? I m afraid we don't have that already in the framework.\nA sum would be a single value, so it would be a postprocessor.\nIf all your elements are the same shape you can use an ElementIntegralVariablePostprocessor since the integral and the sum are the same\nhttps://mooseframework.inl.gov/source/postprocessors/ElementIntegralVariablePostprocessor.html\nIf all your elements have the same number of nodes, you can use a NodalSum, as this does not do an integration, just sums the values on each node, which for the right type of variable will just be equal to the element value. Then you can divide the result by the number of nodes per element.\nWe would absolutely support it if you wanted to add an ElementSum post processor to the framework.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/19274#discussioncomment-1576815",
+                  "updatedAt": "2022-06-14T06:59:00Z",
+                  "publishedAt": "2021-11-02T15:19:32Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hokonkim"
+                          },
+                          "bodyText": "For example, above image is the 3D microstructure that had Elements(colored as Black points).\n(I do not know how many elements or nodes exists, how could I know this?)\nI just want to sum values(colored as red) on black points at each (time) step.\n-> I didn't give all numbers on black points, but values are assigned on all Elements\nIs it possible to compute this summation?",
+                          "url": "https://github.com/idaholab/moose/discussions/19274#discussioncomment-1576983",
+                          "updatedAt": "2022-06-14T06:59:01Z",
+                          "publishedAt": "2021-11-02T15:37:45Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "number of elements and nodes is output at code startup / you can know it from the mesh using a viewer\nno not as a summation unless you are in one of the special cases I mentioned.\nYou d need to write a new post processor if not",
+                          "url": "https://github.com/idaholab/moose/discussions/19274#discussioncomment-1577184",
+                          "updatedAt": "2022-06-14T06:59:26Z",
+                          "publishedAt": "2021-11-02T16:09:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hokonkim"
+                          },
+                          "bodyText": "Here is the mesh information that I used recently.\nMesh: \n  Parallel Type:           replicated\n  Mesh Dimension:          3\n  Spatial Dimension:       3\n  Nodes:                   \n    Total:                 1021076\n    Local:                 9296\n  Elems:                   \n    Total:                 5708148\n    Local:                 47605\n  Num Subdomains:          4\n  Num Partitions:          120\n  Partitioner:             metis\n\nI think I need to write a new post-processor for what I want.\nWhat am I supposed to do?\nThanks for your help.",
+                          "url": "https://github.com/idaholab/moose/discussions/19274#discussioncomment-1577627",
+                          "updatedAt": "2022-06-14T06:59:25Z",
+                          "publishedAt": "2021-11-02T17:23:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I would start from ElementIntegralVariablePP (so copy it to ElementSum, then modify it)\nand instead of summing on the quadrature with weights, I would only sum if qp = 0 with a weight of 1",
+                          "url": "https://github.com/idaholab/moose/discussions/19274#discussioncomment-1577687",
+                          "updatedAt": "2022-07-05T06:11:22Z",
+                          "publishedAt": "2021-11-02T17:34:24Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hokonkim"
+                          },
+                          "bodyText": "So, you mean I need to write a new Post-Processor like I made Custom kernels or interfacekernels for my application.\nAlso, it would be good to start from copying ElementsIntegralVariablePP as ElementSum(Custom Post processor for my application).\nAm I right on track?",
+                          "url": "https://github.com/idaholab/moose/discussions/19274#discussioncomment-1577752",
+                          "updatedAt": "2022-07-05T06:11:22Z",
+                          "publishedAt": "2021-11-02T17:47:51Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "yes on both counts",
+                          "url": "https://github.com/idaholab/moose/discussions/19274#discussioncomment-1577760",
+                          "updatedAt": "2022-07-05T06:11:22Z",
+                          "publishedAt": "2021-11-02T17:49:05Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "once you've created it I d be down to have it in the framework, not just in your app though",
+                          "url": "https://github.com/idaholab/moose/discussions/19274#discussioncomment-1577768",
+                          "updatedAt": "2022-07-05T06:12:42Z",
+                          "publishedAt": "2021-11-02T17:49:43Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hokonkim"
+                          },
+                          "bodyText": "I copied and pasted the ElementIntegralVariablePP.C and ElementIntegralVariablePP.h from MOOSE framework PP folder.\nand replace ElementIntegralVariablePP with ElementSumPP.\nBut, still I have no idea about implementing this part \"instead of summing on the quadrature with weights, I would only sum if qp = 0 with a weight of 1\" below.\nReal\nElementSumPostprocessor::computeQpIntegral()\n{\n  return _u[_qp];\n}\n\nElementSumPostprocessor.zip",
+                          "url": "https://github.com/idaholab/moose/discussions/19274#discussioncomment-1577935",
+                          "updatedAt": "2022-07-05T06:12:42Z",
+                          "publishedAt": "2021-11-02T18:15:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "the weight isn't in computeQpIntegral it s in computeIntegral I think\nIn computeQpIntegral, for selecting a Qp, you can just have:\nif _qp == 0\nreturn _u[_qp];\nelse\nreturn 0\nNote that I am assuming that the variable is constant over ELEMENTS and that you want one value per element.\nFrom your drawing it looks like you want a NodalSum ??",
+                          "url": "https://github.com/idaholab/moose/discussions/19274#discussioncomment-1577950",
+                          "updatedAt": "2022-07-05T06:12:43Z",
+                          "publishedAt": "2021-11-02T18:19:31Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hokonkim"
+                          },
+                          "bodyText": "Okay, I think I need to give you more detail.\nwhat I want is to sum values in Elements (specifically, \"Auxiliary variable\", not \"Variable\").\nDepending on summation, I would control the \"Material property\" gradually.\nFor NodalSum that you commented previously, my mesh does not have equal numbers for Node and Element.\n(If all your elements have the same number of nodes, you can use a NodalSum)\nSo, I considered writing the new PP like you said to me.\nReal\nElementSumPostprocessor::computeQpIntegral()\n{\n  if _qp == 0{\n    return _u[_qp];\n  }\n  else{\n    return 0;\n  }\n}",
+                          "url": "https://github.com/idaholab/moose/discussions/19274#discussioncomment-1578025",
+                          "updatedAt": "2022-07-05T06:12:45Z",
+                          "publishedAt": "2021-11-02T18:32:34Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to split a input.i file into seperate parts for better mangement?",
+          "author": {
+            "login": "ZhigangPu"
+          },
+          "bodyText": "Dear,\nAs my project grows larger, my input file has hundreds of lines.  It becomes more and more complicated to manage.\nI wonder is there any way to split a input file into some smaller input file containing different parts? Then we can \"include\" different parts into a \"main\" input file to assemble them together. I think that is a good way to manage larger projects.\nThanks\nzhigang",
+          "url": "https://github.com/idaholab/moose/discussions/19306",
+          "updatedAt": "2024-06-01T22:22:56Z",
+          "publishedAt": "2021-11-06T07:23:40Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "loganharbour"
+                  },
+                  "bodyText": "This is currently a work in progress. See #9755 for more information.\nYou can also use the Action System (see https://mooseframework.inl.gov/source/actions/Action.html; sorry the documentation isn't very useful at the moment) to systematically build objects from more simplified input.",
+                  "url": "https://github.com/idaholab/moose/discussions/19306#discussioncomment-1599553",
+                  "updatedAt": "2024-06-01T22:22:56Z",
+                  "publishedAt": "2021-11-06T15:37:10Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "includes are still a WIP.\nActions are a great idea for your application, to simplify the syntax for users.\nAnother option is to split the input file into multiple files and provide them on the command line like this:\n./my-app-opt -i file1.i file2.i ...\nthe files are then merged together",
+                          "url": "https://github.com/idaholab/moose/discussions/19306#discussioncomment-1599682",
+                          "updatedAt": "2024-06-01T22:23:16Z",
+                          "publishedAt": "2021-11-06T16:29:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ZhigangPu"
+                          },
+                          "bodyText": "thanks very much! I'll try that!",
+                          "url": "https://github.com/idaholab/moose/discussions/19306#discussioncomment-1601992",
+                          "updatedAt": "2024-06-01T22:22:56Z",
+                          "publishedAt": "2021-11-07T15:01:15Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "./my-app-opt -i file1.i file2.i ...\nthe files are then merged together\n\nHi @GiudGiud, so we can have a separated object for each file and run them together in a single line? for example ./my-app-opt -i mesh.i controls.i constraints.i ??\na quick note: @loganharbour @GiudGiud This 'include' would be very helpful for our workflow too, as each of our full-scale simulation objects (BCs, Materials, Controls) has more than 2000 lines, not to mention 100000+ lines from nodal constraints.\nCannot wait to see it :)\nThanks guys!\nKind regards,\nTraiwit",
+                          "url": "https://github.com/idaholab/moose/discussions/19306#discussioncomment-1603045",
+                          "updatedAt": "2024-06-01T22:22:56Z",
+                          "publishedAt": "2021-11-07T23:15:57Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@Traiwit as was discussed on the other post, 100k lines input is problematic. Please make sure to use an action or a different kind of constraint if you don't want to spend dozens of hours just parsing the input file at startup.\nI actually have not tried more than two input files merged. I ll try tomorrow.",
+                          "url": "https://github.com/idaholab/moose/discussions/19306#discussioncomment-1603769",
+                          "updatedAt": "2024-06-01T22:23:01Z",
+                          "publishedAt": "2021-11-08T05:46:59Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Yeah so it works to merge more than 2 inputs. Not sure why I couldnt remember that yesterday.",
+                          "url": "https://github.com/idaholab/moose/discussions/19306#discussioncomment-1606591",
+                          "updatedAt": "2024-06-01T22:23:06Z",
+                          "publishedAt": "2021-11-08T15:18:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "@GiudGiud Awesome! I tried that on my simulation and it works fine too, thanks!",
+                          "url": "https://github.com/idaholab/moose/discussions/19306#discussioncomment-1609547",
+                          "updatedAt": "2024-06-01T22:23:07Z",
+                          "publishedAt": "2021-11-09T01:48:24Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Error for output_centroids",
+          "author": {
+            "login": "KaijieNing"
+          },
+          "bodyText": "Hi,  everyone,\nI am trying to get the centroids of the grains by FeatureVolumeVectorPostprocessor. I followed the MOOSE instruction and added execute_on = 'timestep_begin' & output_centroids = true. But it did not work and showed the error as below.  How to solve it?\n[./grain_volumes]\ntype = FeatureVolumeVectorPostprocessor\nflood_counter = grain_center\nexecute_on = 'timestep_begin'\noutput_centroids = true\n[../]",
+          "url": "https://github.com/idaholab/moose/discussions/17965",
+          "updatedAt": "2023-02-17T11:37:08Z",
+          "publishedAt": "2021-05-30T04:13:30Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "aeslaughter"
+                  },
+                  "bodyText": "This could be a bug. The error indicates that the output you desire already exists. What input block is your snippet in: [Postprocessors] or [UsersObjects]?",
+                  "url": "https://github.com/idaholab/moose/discussions/17965#discussioncomment-811387",
+                  "updatedAt": "2023-02-17T11:37:11Z",
+                  "publishedAt": "2021-06-01T14:44:02Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "KaijieNing"
+                          },
+                          "bodyText": "The input file that I modified was from (modules/phase_field/test/tests/rigidbodymotion/grain_motion.i).\nI tried either [Postprocessors] or [UsersObjects] but neither worked.\nWhat could be possible to get the output for Centroids? Thanks very much.\n[Postprocessors] #or [UserObjects]\n[./grain_center]\ntype = GrainTracker\nvariable = eta\noutputs = none\ncompute_var_to_feature_map = true\nexecute_on = 'timestep_begin'\n[../]\n[]\n[VectorPostprocessors]\n[./grain_volumes]\ntype = FeatureVolumeVectorPostprocessor\nflood_counter = grain_center\nexecute_on = 'timestep_begin'\noutput_centroids = true\n[../]\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/17965#discussioncomment-811518",
+                          "updatedAt": "2023-12-19T17:47:38Z",
+                          "publishedAt": "2021-06-01T15:08:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aeslaughter"
+                          },
+                          "bodyText": "Can you provide a minimum input file that show the error?",
+                          "url": "https://github.com/idaholab/moose/discussions/17965#discussioncomment-816134",
+                          "updatedAt": "2023-12-19T17:47:40Z",
+                          "publishedAt": "2021-06-02T14:17:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "KaijieNing"
+                          },
+                          "bodyText": "To keep it short, here is the input file for test purposes. You will need to enable PhaseField Module to run it.\nMany thanks.\n[Mesh]\n  type = GeneratedMesh\n  dim = 2\n  nx = 25\n  ny = 15\n  nz = 0\n  xmax = 50\n  ymax = 25\n  zmax = 0\n  elem_type = QUAD4\n[]\n\n[Variables]\n  [./c]\n    order = FIRST\n    family = LAGRANGE\n  [../]\n  [./w]\n    order = FIRST\n    family = LAGRANGE\n  [../]\n  [./eta]\n    order = FIRST\n    family = LAGRANGE\n  [../]\n[]\n\n[Kernels]\n  [./c_res]\n    type = SplitCHParsed\n    variable = c\n    f_name = F\n    kappa_name = kappa_c\n    w = w\n    args = eta\n  [../]\n  [./w_res]\n    type = SplitCHWRes\n    variable = w\n    mob_name = M\n  [../]\n  [./time]\n    type = CoupledTimeDerivative\n    variable = w\n    v = c\n  [../]\n\n  [./eta_dot]\n    type = TimeDerivative\n    variable = eta\n  [../]\n  [./acint_eta]\n    type = ACInterface\n    variable = eta\n    mob_name = M\n    args = c\n    kappa_name = kappa_eta\n  [../]\n  [./acbulk_eta]\n    type = AllenCahn\n    variable = eta\n    mob_name = M\n    f_name = F\n    args = c\n  [../]\n[]\n\n[Materials]\n  [./pfmobility]\n    type = GenericConstantMaterial\n    prop_names = 'M    kappa_c  kappa_eta'\n    prop_values = '5.0  2.0      0.1'\n  [../]\n  [./free_energy]\n    type = DerivativeParsedMaterial\n    args = 'c eta'\n    constant_names = 'barr_height  cv_eq'\n    constant_expressions = '0.1          1.0e-2'\n    function = 16*barr_height*(c-cv_eq)^2*(1-cv_eq-c)^2+(c-eta)^2\n    derivative_order = 2\n  [../]\n[]\n\n[Postprocessors]\n  [./grain_center]\n    type = GrainTracker\n    variable = eta\n    outputs = none\n    compute_var_to_feature_map = true\n    execute_on = 'timestep_begin'\n  [../]\n\n[]\n\n[VectorPostprocessors]\n  [./grain_volumes]\n    type = FeatureVolumeVectorPostprocessor\n    flood_counter = grain_center\n    execute_on = 'timestep_begin'\n    output_centroids = true\n  [../]\n[]\n\n[Preconditioning]\n  [./SMP]\n    type = SMP\n    full = true\n  [../]\n[]\n\n[Executioner]\n  type = Transient\n  solve_type = NEWTON\n  dt = 0.2\n  num_steps = 4\n[]\n\n[Outputs]\n  exodus = true\n[]\n\n[ICs]\n  [./rect_c]\n    y2 = 20.0\n    y1 = 5.0\n    inside = 1.0\n    x2 = 30.0\n    variable = c\n    x1 = 10.0\n    type = BoundingBoxIC\n  [../]\n  [./rect_eta]\n    y2 = 20.0\n    y1 = 5.0\n    inside = 1.0\n    x2 = 30.0\n    variable = eta\n    x1 = 10.0\n    type = BoundingBoxIC\n  [../]\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/17965#discussioncomment-817356",
+                          "updatedAt": "2023-02-17T11:37:16Z",
+                          "publishedAt": "2021-06-02T18:20:56Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Any news on this @aeslaughter @KaijieNing ?",
+                          "url": "https://github.com/idaholab/moose/discussions/17965#discussioncomment-977122",
+                          "updatedAt": "2023-05-14T21:22:42Z",
+                          "publishedAt": "2021-07-08T00:43:26Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aeslaughter"
+                          },
+                          "bodyText": "No. I need to try this out. I wonder if @permcody or @dschwen has an insight, since this if from the grain tracking system?",
+                          "url": "https://github.com/idaholab/moose/discussions/17965#discussioncomment-985690",
+                          "updatedAt": "2023-05-14T21:22:42Z",
+                          "publishedAt": "2021-07-09T14:57:40Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "tonkmr"
+                          },
+                          "bodyText": "I am getting the same error and I have several projects that need to use this capability. Has anyone looked into it yet @aeslaughter @permcody @dschwen ?",
+                          "url": "https://github.com/idaholab/moose/discussions/17965#discussioncomment-1217019",
+                          "updatedAt": "2023-05-14T21:22:42Z",
+                          "publishedAt": "2021-08-21T18:10:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dschwen"
+                          },
+                          "bodyText": "Yeah, clearly a bug. The declareVector(\"centroid_x\"); call is in FeatureVolumeVectorPostprocessor::execute() instead of in the constructor. That causes it to be redeclared over and over.",
+                          "url": "https://github.com/idaholab/moose/discussions/17965#discussioncomment-1217032",
+                          "updatedAt": "2023-05-14T21:22:42Z",
+                          "publishedAt": "2021-08-21T18:17:34Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "dschwen"
+                  },
+                  "bodyText": "Fix is up at #18672",
+                  "url": "https://github.com/idaholab/moose/discussions/17965#discussioncomment-1217098",
+                  "updatedAt": "2023-05-14T21:22:42Z",
+                  "publishedAt": "2021-08-21T18:55:01Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ykvishal"
+                          },
+                          "bodyText": "Is this working for anyone? I am getting following error:\n\n*** ERROR ***\nThe following error occurred in the object \"grain_volumes\", of type \"FeatureVolumeVectorPostprocessor\".\n\n\nWhile declaring a VectorPostprocessor value with the name \"centroid_x\",\na Reporter with the same name has already been declared.\n\n\nVectorPostprocessor \"grain_volumes/centroid_x\":\nType:\nstd::vector\nProducer:\nFeatureVolumeVectorPostprocessor \"grain_volumes\"\nContext type:\nReporterGeneralContext<std::vector >\nConsumer(s):\nNone\n\nI installed MOOSE last week and my input file is\ngrain_growth_2D_graintrackerwithCentroid.i.txt\nThank you.\nVishal",
+                          "url": "https://github.com/idaholab/moose/discussions/17965#discussioncomment-1607120",
+                          "updatedAt": "2023-05-14T21:22:42Z",
+                          "publishedAt": "2021-11-08T16:28:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "KaijieNing"
+                          },
+                          "bodyText": "Your input file was good. I was able to run it and had all the outputs. Best.",
+                          "url": "https://github.com/idaholab/moose/discussions/17965#discussioncomment-1607311",
+                          "updatedAt": "2023-05-14T21:22:52Z",
+                          "publishedAt": "2021-11-08T16:59:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ykvishal"
+                          },
+                          "bodyText": "Thanks for the confirmation! Then something strange is happening my moose installation.",
+                          "url": "https://github.com/idaholab/moose/discussions/17965#discussioncomment-1607379",
+                          "updatedAt": "2023-05-14T21:22:52Z",
+                          "publishedAt": "2021-11-08T17:10:28Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "KaijieNing"
+                          },
+                          "bodyText": "You can update your MOOSE and try it again.",
+                          "url": "https://github.com/idaholab/moose/discussions/17965#discussioncomment-1607551",
+                          "updatedAt": "2023-05-14T21:22:52Z",
+                          "publishedAt": "2021-11-08T17:39:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ykvishal"
+                          },
+                          "bodyText": "Yes, I installed MOOSE last week. However, I also added one old PR (related to grain growth initial condition) prior to make command, and it may have caused some problem. I will try again without this PR and see what happens. Thanks for the suggestion.",
+                          "url": "https://github.com/idaholab/moose/discussions/17965#discussioncomment-1607617",
+                          "updatedAt": "2023-05-14T21:22:53Z",
+                          "publishedAt": "2021-11-08T17:47:29Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Can MOOSE compute local volume of Element?",
+          "author": {
+            "login": "hokonkim"
+          },
+          "bodyText": "Hello, I have a question about computing local volume of Element in MOOSE.\nIf possible, I'd like to compute local volume of Element and store the value.\nAre there proper ways to do this or any tips?\nI appreciate your help.\nSincerely,\nHokon Kim",
+          "url": "https://github.com/idaholab/moose/discussions/19305",
+          "updatedAt": "2022-11-07T05:23:39Z",
+          "publishedAt": "2021-11-05T20:19:16Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "loganharbour"
+                  },
+                  "bodyText": "There's a few ways to do this - but funny enough, I have a need for this capability at the very moment. I'll put up a PR shortly with the object.",
+                  "url": "https://github.com/idaholab/moose/discussions/19305#discussioncomment-1599589",
+                  "updatedAt": "2022-11-07T05:23:40Z",
+                  "publishedAt": "2021-11-06T15:52:57Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "dschwen"
+                  },
+                  "bodyText": "It is provided as _current_elem_volume",
+                  "url": "https://github.com/idaholab/moose/discussions/19305#discussioncomment-1599608",
+                  "updatedAt": "2022-11-07T05:23:40Z",
+                  "publishedAt": "2021-11-06T15:58:57Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "loganharbour"
+                  },
+                  "bodyText": "See #19308 for the new object.",
+                  "url": "https://github.com/idaholab/moose/discussions/19305#discussioncomment-1599663",
+                  "updatedAt": "2022-11-07T05:23:47Z",
+                  "publishedAt": "2021-11-06T16:18:47Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hokonkim"
+                          },
+                          "bodyText": "As far as I understand, \"VolumeAux\" is added (available) in the latest MOOSE framework.\nTo use this latest object, I need to update the MOOSE, right?\n(I'm using MOOSE on HPC, so I need a help from technical support team for update)",
+                          "url": "https://github.com/idaholab/moose/discussions/19305#discussioncomment-1603006",
+                          "updatedAt": "2022-11-07T05:23:49Z",
+                          "publishedAt": "2021-11-07T22:52:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Yes you need to update MOOSE to have access to it. It's in since Saturday on the master branch",
+                          "url": "https://github.com/idaholab/moose/discussions/19305#discussioncomment-1603783",
+                          "updatedAt": "2022-11-07T05:23:51Z",
+                          "publishedAt": "2021-11-08T05:49:18Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

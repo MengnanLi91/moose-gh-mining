@@ -1,0 +1,989 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMS0xMS0xN1QxOTozOToxOC0wNjowMM4AOEA9"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "How to set the hardening factor as a function of variables in J2 plasticity model",
+          "author": {
+            "login": "PengWei97"
+          },
+          "bodyText": "Dear MOOSE experts,\nI tried to replace the linear elastic mechanics in bicrysta.i with J2 plastic mechanics, but I encountered a very big bottleneck, that is, I don\u2019t know how to set the HardFactor in userobjects to the phase field variable gr0 gr1 stand up. And try to set HardFactor to MaterialProperty<Real>, but the compilation error (the transmitted data type is inconsistent with the output data type), the error is displayed as follows,\n\nAnd the following is the linear hardening model that I customized from TensorMechanicsHardeningPowerRule.C,\n\\\\\\ TensorMechanicsHardeningLinear.h\npublic:\n  static InputParameters validParams();\n\n  TensorMechanicsHardeningLinear(const InputParameters & parameters);\n\n  virtual Real value(Real intnl) const override;\n\n  virtual Real derivative(Real intnl) const override;\n\nprivate:\n  /// The value = value_0 + _h_factor*p\n  const Real _value_0;\n\n  /// The value = value_0 + _h_factor*p\n  const Real _hard_factor;\n\n\\\\\\ TensorMechanicsHardeningLinear.C\nReal\nTensorMechanicsHardeningLinear::value(Real intnl) const\n{\n  return _value_0 + _hard_factor * intnl;\n  // return _value_0 * std::pow(intnl / _epsilon0 + 1, _exponent);\n}\n\nReal\nTensorMechanicsHardeningLinear::derivative(Real intnl) const  // d*/d_intnl\n{\n  return _hard_factor;\n}\nIn general, my purpose is to set HardFactor to a function of gr0 gr1, just like ElasticityTensor, so what I want to do now is to set HardFactor to MaterialProperty<Real>\nAny suggestions or recommendations to fix the problem would be greatly appreciated.\nThank you\nWei",
+          "url": "https://github.com/idaholab/moose/discussions/19454",
+          "updatedAt": "2022-06-11T21:55:01Z",
+          "publishedAt": "2021-11-23T00:57:14Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "_qp is defined for regular materials using the computeQpProperties routine. This is being executed every time we enter a new element and need the material properties for a kernel.\nhere this  TensorMechanicsHardeningPowerRule is a user object, and more precisely it derives from a GeneralUO. GeneralUO isnt meant to be executed everywhere on the mesh, or at quadrature points (_qp) but only once for the entire domain.\nIf you go in framework/include/postprocessors and enter grep -r GeneralPostprocessor (which derives from GeneralUO) you can see the general style of a GeneralUO derived class.\nSo my suggestion would be to look again at what you want value to return. Is it a single value for all the mesh or is it a field? If the latter you need to change the inheritances.",
+                  "url": "https://github.com/idaholab/moose/discussions/19454#discussioncomment-1685550",
+                  "updatedAt": "2022-06-11T21:55:39Z",
+                  "publishedAt": "2021-11-23T06:00:27Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "PengWei97"
+                          },
+                          "bodyText": "So my suggestion would be to look again at what you want value to return. Is it a single value for all the mesh or is it a field? If the latter you need to change the inheritances.\n\nYes, I hope the returned value is a field, specifically for different gr0 gr1, HardFactor has different values. HardFactor is a MaterialProperty<Real> data, so I need to change my inheritance from GeneralUserObject to Material, right?",
+                          "url": "https://github.com/idaholab/moose/discussions/19454#discussioncomment-1685714",
+                          "updatedAt": "2022-06-11T21:55:43Z",
+                          "publishedAt": "2021-11-23T06:59:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "if you want to declare a material property for _hard_factor yes, that's what I would do.",
+                          "url": "https://github.com/idaholab/moose/discussions/19454#discussioncomment-1685724",
+                          "updatedAt": "2022-06-11T21:56:25Z",
+                          "publishedAt": "2021-11-23T07:03:12Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "PengWei97"
+                          },
+                          "bodyText": "But there is a big problem here. If I put TensorMechanicsHardeningLinear in the materials module of input, there is a big problem you will encounter, that is, TensorMechanicsPlasticJ2 is in UserObjects, and the part of ComputeMultiPlasticityStress  in materials  about calling the yield function needs to be modified. I think this is a very big change. I am not sure if such a big change must be made to migrate the the J2 plastic model from UserObjects to materials block.\nThe following is the relevant code involved in the input file,\n[Materials]\n  [./mc]\n    type = ComputeMultiPlasticityStress\n    block = 0\n    ep_plastic_tolerance = 1E-9\n    plastic_models = j2\n    debug_fspb = crash\n  [../]\n[./]\n\n[UserObjects]\n  [./str]\n    type = TensorMechanicsHardeningLinear\n    value_0 = 2000 # MPa\n    HardFactor = ${my_HardFactor}  # MPa\n  [../]\n  [./j2]\n    type = TensorMechanicsPlasticJ2\n    yield_strength = str\n    yield_function_tolerance = 1E-5\n    internal_constraint_tolerance = 1E-9\n    max_iterations = 10\n  [../]",
+                          "url": "https://github.com/idaholab/moose/discussions/19454#discussioncomment-1685764",
+                          "updatedAt": "2022-06-11T21:57:11Z",
+                          "publishedAt": "2021-11-23T07:16:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "ok someone more familiar with this system will have to pitch in then",
+                          "url": "https://github.com/idaholab/moose/discussions/19454#discussioncomment-1685853",
+                          "updatedAt": "2022-06-11T22:01:15Z",
+                          "publishedAt": "2021-11-23T07:41:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "PengWei97"
+                          },
+                          "bodyText": "Yes, because of the modification of TensorMechanicsHardeningLinear, the related code of TensorMechanicsPlasticJ2andComputeMultiPlasticityStress` had to be modified afterwards. This is a relatively large project.\nSpecifically, I am not very clear how to modify the following code to call MaterialProperty, if it is in the materials block I could do.\n\\\\\\TensorMechanicsPlasticJ2.C\n_strength(getUserObject<TensorMechanicsHardeningModel>(\"yield_strength\")),\nAnd, I think the biggest challenge is in ComputeMultiPlasticityStress, because it involves three levels of inheritance to see the call of the plastic model (as shown in the figure below), and how to replace this plastic_models with MaterialProperty data.\n\nOf course, this is just my understanding to the best of my knowledge. I would be very grateful if relevant experts can give me guidance in this regard.",
+                          "url": "https://github.com/idaholab/moose/discussions/19454#discussioncomment-1685925",
+                          "updatedAt": "2022-06-11T22:01:15Z",
+                          "publishedAt": "2021-11-23T08:01:04Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Using a PP value from previous timestep",
+          "author": {
+            "login": "hokonkim"
+          },
+          "bodyText": "Hello, I am looking for a way to use a PP value from previous timestep.\nV_Cr_last is a zero at first, and it should be replaced by computed value.\nBased on previous posts, I tried several ways..but, I still cannot find an appropriate way to do this.\n\n[Materials]\n  [./CrDepoActivity]\n    type  = ParsedMaterial\n    block = 'PT_TPB_TET4'\n    f_name = 'CrDepoActivity_SD'\n    constant_names        = 'R          T        z     F          x_CrO2OH2   x_H2O  V_molar_Cr2O3'\n                        # (J/K/mol),  (K), (# of e-), (C/mol),    (non),      (non), (cm^3)\n    constant_expressions  = '8.3144598  1073.0   4   96485.3329   1e-8        0.01   29.12'\n    function = '(SD_init * x_CrO2OH2^(0.5) * x_H2O^(0.5) * 2 * sinh(F * 2 / R / T * aux_eta_tpb)) *\n                 V_molar_Cr2O3 / z / F'\n    args = 'SD_init aux_eta_tpb'\n    # postprocessor_names = ''\n    # Make values see at output(*.e) file\n    # outputs = exodus\n  [../]\n[]\n\n[AuxVariables]\n  [./aux_eta_tpb]\n    block = 'PT_TPB_TET4'\n  [../]\n\n  [./SD_init]\n    block = 'PT_TPB_TET4'\n    initial_condition = 1\n  [../]\n[]\n\n[Postprocessors]\n  [./volume_TPB]\n    type = VolumePostprocessor\n    block = 'PT_TPB_TET4'\n    outputs = 'console csv'\n  [../]\n\n  [./avg_SD_Cr2O3]\n    type = ElementAverageMaterialProperty\n    mat_prop = CrDepoActivity_SD\n    block = 'PT_TPB_TET4'\n    outputs = 'console csv'\n  [../]\n\n  [./V_Cr_last]\n    type = ParsedPostprocessor\n    function = 'avg_SD_Cr2O3 * (volume_TPB - 0) * Timestep_now'\n    pp_names = 'avg_SD_Cr2O3 volume_TPB Timestep_now'\n    outputs = 'console csv'\n    # execute_on = 'initial timestep_end' # Need this line, because Postprocessor is not being executed at the 0th timestep.\n  [../]\n\n  [./dV_Cr_dt]\n    type = ParsedPostprocessor\n    function = 'avg_SD_Cr2O3 * (volume_TPB - V_Cr_last)'\n    pp_names = 'avg_SD_Cr2O3 volume_TPB V_Cr_last'\n    outputs = 'console csv'\n  [../]\n\n  [./V_Cr_new]\n    type = ParsedPostprocessor\n    function = 'V_Cr_last + (dV_Cr_dt * Timestep_now)'\n    pp_names = 'V_Cr_last dV_Cr_dt Timestep_now'\n    outputs = 'console csv'\n    execute_on = 'initial timestep_end' # Need this line, because Postprocessor is not being executed at the 0th timestep.\n  [../]\n\n  [./Time_now]\n    type = TimePostprocessor\n    outputs = 'console csv'\n  [../]\n\n  [./Timestep_now]\n    # delta time\n    type = TimestepSize\n    outputs = 'console csv'\n  [../]\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/19449",
+          "updatedAt": "2022-07-19T18:58:48Z",
+          "publishedAt": "2021-11-22T09:04:32Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "ParsedMaterial wont let you do that directly.\nYou can either :\n\ncode your own material and use getPostprocessorValueOld()\nhack something with changeOverTimePostprocessor (old = new - change)\nadd an OldPostprocessor to the framework that uses getPostprocessorValueOld()",
+                  "url": "https://github.com/idaholab/moose/discussions/19449#discussioncomment-1683046",
+                  "updatedAt": "2022-07-19T18:58:52Z",
+                  "publishedAt": "2021-11-22T17:36:56Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hokonkim"
+                          },
+                          "bodyText": "It looks like I need to make a custom postprocessor.\nBased on changeOverTimePostprocessor and EmptyPostprocessor,\nI made (custom) OldPostprocessor.c and .h files like below\nThis is the header file (OldPostprocessor.h).\n    #pragma once\n\n    #include \"GeneralPostprocessor.h\"\n\n    // Forward Declarations\n    class OldPostprocessor;\n\n    template <>\n    InputParameters validParams<OldPostprocessor>();\n\n    class OldPostprocessor : public GeneralPostprocessor\n    {\n    public:\n      static InputParameters validParams();\n\n      OldPostprocessor(const InputParameters & parameters);\n\n      virtual void initialize() override;\n      virtual void execute() override;\n      virtual Real getValue() override;\n\n    protected:\n      /// current post-processor value\n      const PostprocessorValue & _pps_value;\n\n      /// old post-processor value\n      const PostprocessorValue & _pps_value_old;\n    };\n\n\nThis is the source code (OldPostprocessor.C).\n\n\n    #include \"OldPostprocessor.h\"\n\n    #include \"libmesh/parallel.h\"\n\n    registerMooseObject(\"ermineApp\", OldPostprocessor);\n\n    defineLegacyParams(OldPostprocessor);\n\n    InputParameters\n    OldPostprocessor::validParams()\n    {\n      InputParameters params = GeneralPostprocessor::validParams();\n      params.addClassDescription(\"A postprocessor object that returns a value of zero.\");\n      params.addRequiredParam<PostprocessorName>(\"postprocessor\", \"The name of the postprocessor\");\n      return params;\n    }\n\n    OldPostprocessor::OldPostprocessor(const InputParameters & parameters)\n      : GeneralPostprocessor(parameters),\n      _pps_value(getPostprocessorValue(\"postprocessor\")),\n      _pps_value_old(getPostprocessorValueOld(\"postprocessor\"))\n    {\n    }\n\n    Real\n    OldPostprocessor::getValue()\n    {\n      if(_t_step == 0)\n      {\n        return 0;\n      }\n      else\n      {\n        return _pps_value_old;\n      }\n    }\n\nDid I do write a correct OldPostprocessor to get a previous time-step value of a Postprocessor?",
+                          "url": "https://github.com/idaholab/moose/discussions/19449#discussioncomment-1683651",
+                          "updatedAt": "2023-05-22T15:24:29Z",
+                          "publishedAt": "2021-11-22T19:47:14Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "yes\nIf you add a boolean to switch between new, old and older I think we would welcome the contribution the framework",
+                          "url": "https://github.com/idaholab/moose/discussions/19449#discussioncomment-1684019",
+                          "updatedAt": "2023-05-22T15:24:35Z",
+                          "publishedAt": "2021-11-22T21:03:52Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hokonkim"
+                          },
+                          "bodyText": "At a first step(initial value), V_Cr,prev should be put as a zero into d_Cr/dt and V_Cr,new.\nBut, in present input file and OldPostprocessor, I cannot do that.\nShould I modify the initialize section in the source code?\n#include \"OldPostprocessor.h\"\n\nregisterMooseObject(\"ermineApp\", OldPostprocessor);\n\ndefineLegacyParams(OldPostprocessor);\n\nInputParameters\nOldPostprocessor::validParams()\n{\n  InputParameters params = GeneralPostprocessor::validParams();\n\n  params.addRequiredParam<PostprocessorName>(\"postprocessor\", \"The name of the postprocessor\");\n  params.addClassDescription(\"A postprocessor that gets a postprocessor value from a previous time step\");\n  return params;\n}\n\nOldPostprocessor::OldPostprocessor(const InputParameters & parameters)\n  : GeneralPostprocessor(parameters),\n    _pps_value(getPostprocessorValue(\"postprocessor\")),\n    _pps_value_old(getPostprocessorValueOld(\"postprocessor\"))\n{\n}\n\nvoid\nOldPostprocessor::initialize()\n{\n    Real zeroVal = 0;   ??????????????????????\n}\n\nvoid\nOldPostprocessor::execute()\n{\n}\n\nReal\nOldPostprocessor::getValue()\n{\n  if(_t_step == 0)\n  {\n    return zeroVal;\n  }\n  else\n  {\n    return _pps_value_old;\n  }\n}\n\nBy the way, how can I do \"add a boolean to switch between new, old and older\"???\nI have no idea about this..",
+                          "url": "https://github.com/idaholab/moose/discussions/19449#discussioncomment-1684468",
+                          "updatedAt": "2023-05-22T15:24:35Z",
+                          "publishedAt": "2021-11-22T22:40:24Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "VCr_prev is not 0?\nthe boolean I mentioned would be an additional parameter. Could be a boolean or could be an enum. If you dont see what i m talking about just make it work for your case",
+                          "url": "https://github.com/idaholab/moose/discussions/19449#discussioncomment-1684644",
+                          "updatedAt": "2023-05-22T15:24:38Z",
+                          "publishedAt": "2021-11-22T23:36:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hokonkim"
+                          },
+                          "bodyText": "So far, this codes didn't work for me...\nIf I include V_Cr_prev into dV_Cr_dt or V_Cr_new, then it didn't work.\nI think referring values from itself is problem?\n  [./dV_Cr_dt]\n    type = ParsedPostprocessor\n    function = 'if(Time_now = 0, avg_SD_Cr2O3 * (volume_TPB - 0), avg_SD_Cr2O3 * (volume_TPB - V_Cr_prev))'\n    pp_names = 'Time_now avg_SD_Cr2O3 volume_TPB V_Cr_prev'\n    outputs = 'console csv'\n    # execute_on = 'initial timestep_end' # Need this line, because Postprocessor is not being executed at the 0th timestep.\n  [../]\n\n  [./V_Cr_new]\n    type = ParsedPostprocessor\n    function = 'if(Time_now = 0, 0, V_Cr_prev + (dV_Cr_dt * Timestep_now))'\n    pp_names = 'Time_now V_Cr_prev dV_Cr_dt Timestep_now'\n    outputs = 'console csv'\n    execute_on = 'initial timestep_end' # Need this line, because Postprocessor is not being executed at the 0th timestep.\n  [../]\n\n  [./V_Cr_prev]\n    type = OldPostprocessor\n    postprocessor = V_Cr_new\n    outputs = 'console csv'\n    # execute_on = 'initial timestep_end' # Need this line, because Postprocessor is not being executed at the 0th timestep.\n  [../]\n\n  [./Time_now]\n    type = TimePostprocessor\n    outputs = 'console csv'\n  [../]\n\n  [./Timestep_now]\n    # delta time\n    type = TimestepSize\n    outputs = 'console csv'\n  [../]",
+                          "url": "https://github.com/idaholab/moose/discussions/19449#discussioncomment-1684841",
+                          "updatedAt": "2023-05-22T15:24:39Z",
+                          "publishedAt": "2021-11-23T00:59:56Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "why does it not work for you?",
+                          "url": "https://github.com/idaholab/moose/discussions/19449#discussioncomment-1684869",
+                          "updatedAt": "2023-05-22T15:24:42Z",
+                          "publishedAt": "2021-11-23T01:12:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "your getValue returns a 0 at time step 0, so VCr_prev should be 0 then.\nSame for VCr_new, it returns 0 at time 0.\nWhich postprocessor is not equal to what you want?",
+                          "url": "https://github.com/idaholab/moose/discussions/19449#discussioncomment-1684874",
+                          "updatedAt": "2023-05-22T15:24:42Z",
+                          "publishedAt": "2021-11-23T01:14:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hokonkim"
+                          },
+                          "bodyText": "I cannot run a simulation like above. It just terminated automatically.\nSo, I cannot check the values from each postprocessor after I modified the input file like previous reply.",
+                          "url": "https://github.com/idaholab/moose/discussions/19449#discussioncomment-1684885",
+                          "updatedAt": "2023-05-22T15:24:42Z",
+                          "publishedAt": "2021-11-23T01:20:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Ah that s different. Something is wrong in your postprocessor and it is crashing.\nYou can try to compile in debug mode and find the problem.\nI had a second look at your code.\nWhat is zeroVal ? Is it defined in your header? What do you need that? It s just 0, you can just have return 0; in getValue for t=0\nif it s a class attribute, then doing Real zeroVal = 0 in initalize will not write to it. Declaring the type like this means it ll create a new one (which will be released as soon as the initialize is done)",
+                          "url": "https://github.com/idaholab/moose/discussions/19449#discussioncomment-1684906",
+                          "updatedAt": "2023-05-22T15:24:45Z",
+                          "publishedAt": "2021-11-23T01:27:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "also no more screenshots lol\nplease paste in quotes",
+                          "url": "https://github.com/idaholab/moose/discussions/19449#discussioncomment-1684912",
+                          "updatedAt": "2023-05-22T15:24:47Z",
+                          "publishedAt": "2021-11-23T01:28:54Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Any interest in coupling phase-field and electrochemistry?",
+          "author": {
+            "login": "ZhigangPu"
+          },
+          "bodyText": "Dear,\nPhase-field method are growing popular in studying the interface between electrode and electrolyte in batteries, e.g. Lithium metal batteries. It's vital to develop new batteries to solve energy issues or other systems containing electrochemistry interface for practical applications.\nHere are some milestone papers trying to apply phase-field methods into electrochemistry:\n\nJ.E. Guyer, W.J. Boettinger, J.A. Warren, G.B. McFadden, Phys. Rev. E 69 (2004) 021603.\nJ.E. Guyer, W.J. Boettinger, J.A. Warren, G.B. McFadden, Phys. Rev. E 69 (2004) 021604.\nY. Shibuta, Y. Okajima, T. Suzuki, Sci. Technol. Adv. Mater. 8 (2007) 511e518. [25] L. Liang, Y. Qi, F. Xue, S. Bhattacharya, S.J. Harris, L.-Q. Chen, Phys. Rev. E 86 (2012) 051609.\nD.R. Ely, A. Jana, R.E. Garc\u00eda, J. Power Sources 272 (2014) 581e594. [27] M.Z. Bazant, Acc. Chem. Res. 46 (2013) 1144e1160. [28]\nChen, L., Zhang, H. W., Liang, L. Y., Liu, Z., Qi, Y., Lu, P., Chen, J., & Chen, L. Q. (2015). Modulation of dendritic patterns during electrodeposition: A nonlinear phase-field model. Journal of Power Sources, 300, 376\u2013385.\nCogswell, D. A. (2015). Quantitative phase-field modeling of dendritic electrodeposition. Physical Review E - Statistical, Nonlinear, and Soft Matter Physics, 92(1), 1\u20135. https://doi.org/10.1103/PhysRevE.92.011301\n\nI wonder is there someone interested in writing such a module in MOOSE. If so, I guess we can cooperate to write such module.",
+          "url": "https://github.com/idaholab/moose/discussions/19344",
+          "updatedAt": "2023-02-13T12:51:19Z",
+          "publishedAt": "2021-11-10T09:27:52Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "laagesen"
+                  },
+                  "bodyText": "There has been some electrochemical phase-field models implemented in MOOSE in the past, but there is no specific application for them. However you might be able to find kernels already written for the model you are interested in in the phase-field repository.\nhttps://journals.aps.org/pre/abstract/10.1103/PhysRevE.101.022802",
+                  "url": "https://github.com/idaholab/moose/discussions/19344#discussioncomment-1661728",
+                  "updatedAt": "2023-02-13T12:51:27Z",
+                  "publishedAt": "2021-11-18T01:18:41Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ZhigangPu"
+                          },
+                          "bodyText": "Sorry for late reply, many thanks for the guidance and paper!\nzhigang",
+                          "url": "https://github.com/idaholab/moose/discussions/19344#discussioncomment-1685227",
+                          "updatedAt": "2023-02-13T12:51:29Z",
+                          "publishedAt": "2021-11-23T03:26:06Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Memory requirement issues for grain growth simulations",
+          "author": {
+            "login": "sahu07"
+          },
+          "bodyText": "Dear MOOSE team,\nI am trying to resolve an out-of-memory problem in my simulations. For which I would like to know the purpose of \"split grains\" and its impact on memory requirement. Can you please talk about the memory requirement for \"split grains\"? Do more split grains require more memory?\nI did two groups of grain growth simulations, namely \"grainsize25\" and \"grainsize35\". Both the groups of simulations have identical input scripts except for the Dream3D input microstructure (INL file). \"grainsize25\" means grain size is 25 grids and \"grainsize35\" means grain size is 35. All other input parameters are the same ( 128X128x64 mesh; num_steps=1; 30 order parameters; 10 MPI processors with 4 threads each; No mesh adaptivity; )\nBut the memory utilized were drastically different: ( 5 trials each)\ngrainsize25: (57.78 GB; 57.72 GB; 57.74 GB; 57.74 GB; 57.74 GB)\ngrainsize35: (150.97 GB; 106.49 GB; 110.60 GB; 147.49 GB; 75.41 GB)\nWhy \"grainsize35\" simulations have higher memory? I thought it is due to \"split grains\" but I don't know the internal workings of split grain. How to reduce the memory requirement for \"grainsize35\"? Similar problem occurs in \"grainsize50\" and \"grainsize60\", where the memory requirement exceeds 1 TB. Could you help me to resolve this issue?\nThank you!\nRegards,\nSarita",
+          "url": "https://github.com/idaholab/moose/discussions/19437",
+          "updatedAt": "2022-07-05T08:33:45Z",
+          "publishedAt": "2021-11-19T18:23:31Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "ykvishal"
+                  },
+                  "bodyText": "I don't know the reason for  \"split grains\" issue, but I want to confirm one thing.  Are you using EBSDReader? My colleague and I found that EBSDReader takes a lot of memory per core. Can you provide your input files (.i and .txt)? I can quickly check your memory usage with MemoryUsage and VectorMemoryUsage.",
+                  "url": "https://github.com/idaholab/moose/discussions/19437#discussioncomment-1672949",
+                  "updatedAt": "2022-07-05T08:33:46Z",
+                  "publishedAt": "2021-11-19T21:48:53Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sahu07"
+                          },
+                          "bodyText": "Hi Vishal,\nYes, I am using EBSDReader.\nHere are the input and output files.\ngrainsize25_a.i.txt\ngrainsize25_a.out.txt\ngrainsize35_a.i.txt\ngrainsize35_a.out.txt\nThanks,\nSarita",
+                          "url": "https://github.com/idaholab/moose/discussions/19437#discussioncomment-1673027",
+                          "updatedAt": "2022-07-05T08:33:46Z",
+                          "publishedAt": "2021-11-19T22:22:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ykvishal"
+                          },
+                          "bodyText": "For grainsize25 case, the number of grains is 149 at t=0 and t=1. For grainsize35 case, the number of grains at  t=0 and  t=1 are 47 and 115 , respectively. ie the number of grains are increasing!!!!! Without looking at image, I can only guess that you have a large number of tiny regions (ie approximately equal to one mesh element), and it may be the reason for increasing number of grains ( and for the split grain warning).\nAlso, do you need 30 order parameters? If you can reduce it (apply trial and error approach) then your memory requirement will also decrease. There is another issue (other than huge memory requirement) with EBSDReader - the GrainTracker algorithm does not work efficiently at t=0 time-step. My colleague and I  are going to post these issues (huge memory requirement and problem with GrainTracker at time-step=0) related to EBSDReader here.",
+                          "url": "https://github.com/idaholab/moose/discussions/19437#discussioncomment-1673178",
+                          "updatedAt": "2022-07-05T08:33:47Z",
+                          "publishedAt": "2021-11-19T23:13:30Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "True stress/true strain or engineering stress/engineering strain",
+          "author": {
+            "login": "xchengood"
+          },
+          "bodyText": "Dear Moose experts or users,\n\nDoes the following inputting syntax output true stress/true strain or engineering stress/engineering strain?\n\nOne example is here (https://github.com/idaholab/moose/blob/next/modules/tensor_mechanics/test/tests/crystal_plasticity/stress_update_material_based/update_method_test.i).\n\nI found the demonstration for the 'strain = FINITE' and 'add_variables = true' (https://mooseframework.inl.gov/modules/tensor_mechanics/Strains.html). But I don't figure out what is exact for the 'generate_output = stress_zz'. Will it output true stress?\n\nI suppose this example (https://mooseframework.inl.gov/source/materials/crystal_plasticity/CrystalPlasticityHCPDislocationSlipBeyerleinUpdate.html) just be implemented on a single element. How can I run it for the polycrystal?\n\nThank you.",
+          "url": "https://github.com/idaholab/moose/discussions/19434",
+          "updatedAt": "2022-07-26T06:00:07Z",
+          "publishedAt": "2021-11-19T17:34:43Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "jiangwen84"
+                  },
+                  "bodyText": "In general, MOOSE uses true strain and true stress (Cauchy stress). The generate_output=stress_zz will output cauchy stress in the zz direction ((2,2) component in the 3x3 stress tensor)\nFor CP, you can assign different Euler angles to different blocks/elements for polycrystalline modeling.",
+                  "url": "https://github.com/idaholab/moose/discussions/19434#discussioncomment-1672006",
+                  "updatedAt": "2022-07-26T06:00:07Z",
+                  "publishedAt": "2021-11-19T17:50:00Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Heterogenous nucleation",
+          "author": {
+            "login": "vermaprk"
+          },
+          "bodyText": "I have system of metal electrolyte interface with metal phase growing (electrodeposition). I want add nucleation using phase field module at the solid liquid interface only (heterogenous nucleation). Can i use discrete nucleation map at only the interface region. If yes how can i specify the region with conditional operators.",
+          "url": "https://github.com/idaholab/moose/discussions/19410",
+          "updatedAt": "2022-09-01T10:12:58Z",
+          "publishedAt": "2021-11-16T10:34:25Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "laagesen"
+                  },
+                  "bodyText": "You will want to make the nucleation probability a function of position through the DiscreteNucleationInserter rather than DiscreteNucleationMap. You can create a material property and supply the name of the material property to the probability parameter of the DiscreteNucleationInserter. You can make the material property using a DerivativeParsedMaterial and make it a function that is non-zero only in the interface. For example, if the order parameter is phi and ranges from 0 to 1 in the interface, you could make a function phi^2 * (1-phi)^2 times some constant to control the rate.",
+                  "url": "https://github.com/idaholab/moose/discussions/19410#discussioncomment-1661713",
+                  "updatedAt": "2022-09-01T10:13:03Z",
+                  "publishedAt": "2021-11-18T01:09:33Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "laagesen"
+                          },
+                          "bodyText": "You could also use a conditional as you asked by using an if statement in the DerivativeParsedMaterial, so that the nucleation probability is non-zero only if 0.25 < phi < 0.75 or some other values of your choosing. You will probably need to play with the values you choose a bit to decide exactly where to set them. There should be some examples of using if statements in the DerivativeParsedMaterial functions but feel free to reach out again if you don't find anything.",
+                          "url": "https://github.com/idaholab/moose/discussions/19410#discussioncomment-1661718",
+                          "updatedAt": "2022-09-01T10:13:03Z",
+                          "publishedAt": "2021-11-18T01:14:45Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "vermaprk"
+                          },
+                          "bodyText": "It worked Thanks for the help",
+                          "url": "https://github.com/idaholab/moose/discussions/19410#discussioncomment-1671140",
+                          "updatedAt": "2022-09-01T10:13:19Z",
+                          "publishedAt": "2021-11-19T15:18:53Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Apply the constitutive model considering the effect of grain size, dislocation interaction, second phase particles and temperature to polycrystal and solve it with VPSC in Moose",
+          "author": {
+            "login": "xchengood"
+          },
+          "bodyText": "Hi Moose experts or users,\nA constitutive model taking the effect of grain size, dislocation interaction (thermal glide and climb mechanism), second phase strengthening, and temperature is good to study materials' mechanical properties and creep behaviours at different temperatures. There are many such models considering one or more factors proposed. For example, a constitutive model for only the glide and evolution of forest dislocations within a Hexagonal Close-Packed (HCP) crystal lattice (https://mooseframework.inl.gov/source/materials/crystal_plasticity/CrystalPlasticityHCPDislocationSlipBeyerleinUpdate.html). And Moose team already built this class well.\nThe old discussion post is made here (#19199). Based on that, I have the following two questions.\n\n\nAs mentioned, 'the VPSC is a kind of solver and a constitutive model', is there a VPSC solver in Moose? If so, how to use it and are there any examples for reference? If not, How can I apply the HCP model to polycrystal, not only for a single crystal?\n\n\nI also want to study how the stress-strain curve change with temperature. I add the the following block to the [AuxKernels]\n[temperature]\ntype = FunctionAux\nvariable = temperature\nfunction = '300+400*t' # temperature increases at a constant rate\nexecute_on = timestep_begin\n[]\nIs my method correct? Basically, I got the stress-strain curve at 300K and 1600K. The yield strength shows a significant decrease, but Young's modulus does not show any change. Two curves have the same slope as shown below. This does not make sense. If my method is not correct, could you share any ideas with me? Basically, Young's modulus should decrease with the increase of temperature.\n\n\n\nThank you. @sapitts @ngrilli",
+          "url": "https://github.com/idaholab/moose/discussions/19418",
+          "updatedAt": "2022-06-06T12:15:54Z",
+          "publishedAt": "2021-11-16T22:10:32Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "ngrilli"
+                  },
+                  "bodyText": "Dear @xchengood,\nI don't think there is a VPSC solver, just use the crystal plasticity formulation in MOOSE.\nYou can find an example polycrystal simulation and instruction about how to create a polycrystal using Neper here:\nhttps://github.com/ngrilli/c_pfor_am/tree/main/test/tests/neper\nThe plasticity material model will not change the elastic modulus with temperature.\nThe elastic modulus is defined in the material object ComputeElasticityTensorConstantRotationCP\nwhich is not temperature dependent.\nI have made a new material class that you can use for the temperature dependence of the elastic modulus:\nhttps://github.com/ngrilli/c_pfor_am/blob/main/src/materials/ComputeElasticityTensorCPGrain.C\nThere is a test case here:\nhttps://github.com/ngrilli/c_pfor_am/blob/main/test/tests/TempDepElasticConstants/TempDepElasticConst.i\nThe class should be compatible with the existing CP models in MOOSE\nbut you need to check for that.\nBest Regards,\nNicol\u00f2",
+                  "url": "https://github.com/idaholab/moose/discussions/19418#discussioncomment-1667833",
+                  "updatedAt": "2022-06-06T12:16:08Z",
+                  "publishedAt": "2021-11-19T00:39:27Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "FSI model setup with inlet pressure",
+          "author": {
+            "login": "lemevel"
+          },
+          "bodyText": "Hi all,\nI am trying to setup a FSI problem modeling the flow of viscous fluid through a conduit to a fluid-filled cavity and the deformation of the surrounding rocks. This model is described in this paper: https://agupubs.onlinelibrary.wiley.com/doi/full/10.1002/2016JB013066\n(see sketch of Figure 1b)\nTo start with I am trying to benchmark the case of a constant pressure applied at the base of the conduit. Following this constant inlet pressure I expect the pressure in the chamber to increase until it reaches the inlet pressure (with rates exponentially decreasing - see analytical solution and figures attached). The uplift at the surface should also follow this temporal evolution.\nFor the MOOSE input file I followed the FSI example called: fsi_flat_channel.i\nIn the MOOSE results, after the application of the pressure at the inlet, it does not seem to propagate in the conduit and raise the pressure in the chamber. As a consequence there is almost no deformation modeled at the surface. I have an analytical solution that I am comparing the numerical solution with for maximum uplift at the surface and pressure evolution at the exit of the conduit/entrance of the chamber. Both the magnitude and temporal evolution seem off by several orders of magnitude.\nI have attached a picture of my mesh, the expected pressure and displacement evolution (analytical) and screenshots of modeled fluid pressure and displacement in MOOSE. My input file is copied below.\nDo you have any suggestion for solving this problem?\nThank you,\nH\u00e9l\u00e8ne\n\n\n\n\n\n[GlobalParams]\n  gravity = '0 0 0'\n  integrate_p_by_parts = true\n  laplace = true\n  convective_term = true\n  transient_term = true\n  pspg = true\n  displacements = 'disp_x disp_y'\n[]\n\n[Problem]\n  coord_type = RZ\n[]\n\n[Mesh]\n  file = mogi_conduit_ns_HLM.msh # sphere/conduit\n[]\n\n[Variables]\n  [./vel_x]\n    block = 'domain_liquid'\n  [../]\n  [./vel_y]\n    block = 'domain_liquid'\n  [../]\n  [./p]\n    block = 'domain_liquid'\n  [../]\n  [./disp_x]\n  [../]\n  [./disp_y]\n  [../]\n  [./vel_x_solid]\n    block = 'domain_solid'\n  [../]\n  [./vel_y_solid]\n    block = 'domain_solid'\n  [../]\n[]\n\n[Kernels]\n  [./vel_x_time]\n    type = INSMomentumTimeDerivative\n    variable = vel_x\n    block = 'domain_liquid'\n    use_displaced_mesh = true\n  [../]\n  [./vel_y_time]\n    type = INSMomentumTimeDerivative\n    variable = vel_y\n    block = 'domain_liquid'\n    use_displaced_mesh = true\n  [../]\n  [./mass]\n    type = INSMass\n    variable = p\n    u = vel_x\n    v = vel_y\n    p = p\n    block = 'domain_liquid'\n    use_displaced_mesh = true\n  [../]\n  [./x_momentum_space]\n    type = INSMomentumLaplaceForm\n    variable = vel_x\n    u = vel_x\n    v = vel_y\n    p = p\n    component = 0\n    block = 'domain_liquid'\n    use_displaced_mesh = true\n  [../]\n  [./y_momentum_space]\n    type = INSMomentumLaplaceForm\n    variable = vel_y\n    u = vel_x\n    v = vel_y\n    p = p\n    component = 1\n    block = 'domain_liquid'\n    use_displaced_mesh = true\n  [../]\n  [./vel_x_mesh]\n    type = ConvectedMesh\n    disp_x = disp_x\n    disp_y = disp_y\n    variable = vel_x\n    block = 'domain_liquid'\n    use_displaced_mesh = true\n  [../]\n  [./vel_y_mesh]\n    type = ConvectedMesh\n    disp_x = disp_x\n    disp_y = disp_y\n    variable = vel_y\n    block = 'domain_liquid'\n    use_displaced_mesh = true\n  [../]\n  [./disp_x_fluid]\n    type = Diffusion\n    variable = disp_x\n    block = 'domain_liquid'\n  [../]\n  [./disp_y_fluid]\n    type = Diffusion\n    variable = disp_y\n    block = 'domain_liquid'\n  [../]\n  [./accel_tensor_x]\n    type = CoupledTimeDerivative\n    variable = disp_x\n    v = vel_x_solid\n    block = 'domain_solid'\n  [../]\n  [./accel_tensor_y]\n    type = CoupledTimeDerivative\n    variable = disp_y\n    v = vel_y_solid\n    block = 'domain_solid'\n  [../]\n  [./vxs_time_derivative_term]\n    type = CoupledTimeDerivative\n    variable = vel_x_solid\n    v = disp_x\n    block = 'domain_solid'\n  [../]\n  [./vys_time_derivative_term]\n    type = CoupledTimeDerivative\n    variable = vel_y_solid\n    v = disp_y\n    block = 'domain_solid'\n  [../]\n  [./source_vxs]\n    type = MatReaction\n    variable = vel_x_solid\n    block = 'domain_solid'\n    mob_name = 1\n  [../]\n  [./source_vys]\n    type = MatReaction\n    variable = vel_y_solid\n    block = 'domain_solid'\n    mob_name = 1\n  [../]\n[]\n\n[InterfaceKernels]\n  [./penalty_interface_x]\n    type = CoupledPenaltyInterfaceDiffusion\n    variable = vel_x\n    neighbor_var = disp_x\n    secondary_coupled_var = vel_x_solid\n    boundary = 'sl_interface'\n    penalty = 1e6\n  [../]\n  [./penalty_interface_y]\n    type = CoupledPenaltyInterfaceDiffusion\n    variable = vel_y\n    neighbor_var = disp_y\n    secondary_coupled_var = vel_y_solid\n    boundary = 'sl_interface'\n    penalty = 1e6\n  [../]\n[]\n\n[Modules/TensorMechanics/Master]\n  [./solid_domain]\n    strain = SMALL\n    incremental = false\n    generate_output = 'strain_xx strain_yy strain_zz' ## Not at all necessary, but nice\n    block = 'domain_solid'\n  [../]\n[]\n\n[Materials]\n  [./elasticity_tensor]\n    type = ComputeIsotropicElasticityTensor\n    youngs_modulus = 2.5e9\n    poissons_ratio = 0.25\n    block = 'domain_solid'\n  [../]\n  [./small_stress]\n    type = ComputeLinearElasticStress\n    block = 'domain_solid'\n  [../]\n  [./const]\n    type = GenericConstantMaterial\n    block = 'domain_liquid'\n    prop_names = 'rho mu'\n    prop_values = '2700  1e5'\n  [../]\n[]\n\n[BCs]\n  [./inlet_p]\n    type = DirichletBC\n    variable = p\n    boundary = 'liquid_inlet'\n    value = 1e6\n  [../]\n  [./no_disp_x]\n    type = DirichletBC\n    variable = disp_x\n    boundary = 'solid_right solid_bottom liquid_inlet'\n    value = 0\n  [../]\n  [./no_disp_y]\n    type = DirichletBC\n    variable = disp_y\n    boundary = 'solid_bottom liquid_inlet solid_right'\n    value = 0\n  [../]\n  [./solid_x_no_slip]\n    type = DirichletBC\n    variable = vel_x_solid\n    boundary = 'solid_right solid_bottom'\n    value = 0.0\n  [../]\n  [./solid_y_no_slip]\n    type = DirichletBC\n    variable = vel_y_solid\n    boundary = 'solid_bottom solid_right'\n    value = 0.0\n  [../]\n  [./fluid_x_no_slip]\n    type = DirichletBC\n    variable = vel_x\n    boundary = 'liquid_inlet liquid_left'\n    value = 0.0\n  [../]\n[]\n\n[Preconditioning]\n  [./SMP]\n    type = SMP\n    full = true\n  [../]\n[]\n \n[Executioner]\n type = Transient\n solve_type = 'PJFNK'\n  num_steps = 20\n  dt = 5\n  dtmin = 1\n  \n  petsc_options_iname = '-pc_type'\n  petsc_options_value = 'lu'\n  line_search = none\n[]\n\n[Outputs]\n  [./out]\n    type = Exodus\n  [../]\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/19011",
+          "updatedAt": "2022-09-21T12:43:38Z",
+          "publishedAt": "2021-10-05T21:52:43Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nSo the idea is that the increased pressure will move the solid boundaries until equilibrium? Do you get a linearly varying pressure profile from just the gravity term currently?\nAnother difference I see with the example is that the example's domains are more constraints. The no slip / no displacement BCs seem to be completely wrapping around the two phases, except for the fluid inlet.\n@somu15 any ideas?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/19011#discussioncomment-1450382",
+                  "updatedAt": "2022-09-21T12:43:54Z",
+                  "publishedAt": "2021-10-08T20:33:15Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lemevel"
+                          },
+                          "bodyText": "Hi,\nThanks for your answer. Yes the applied pressure at the inlet should generate incompressible viscous flow in the conduit, which will increase the pressure in the \"chamber\" and the above solid (rocks) will deform leading to displacement of the free surface. I have attached a sketch of the problem to help visualizing.\nI am unsure I understand the test you suggested with the gravity term. When I disable the inlet pressure and enable gravity this way in the input file:\n[GlobalParams]\ngravity = '0 9.8 0'\nthe resulting pressure distribution in the chamber does not make sense (positive in the top half and negative in lower half). I can only get this problem to converge for few very small steps (0.1s).\nI agree that the channel example is relatively different since they do not have a free surface and there is an outlet for the fluid.\nI suspect there is something wrong in the way I setup the boundary conditions and/or the kernels for this problem but cannot pinpoint which one.\nHelene",
+                          "url": "https://github.com/idaholab/moose/discussions/19011#discussioncomment-1473629",
+                          "updatedAt": "2022-11-11T04:40:10Z",
+                          "publishedAt": "2021-10-13T22:12:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "somu15"
+                          },
+                          "bodyText": "Thanks @GiudGiud. @lemevel I will have to take a look at this more closely. But do you want to model the fluid as an acoustic medium? See this: https://mooseframework.inl.gov/modules/fsi/fsi_acoustics.html\nWhen you use an acoustic fluid, you may use the free surface BC to simulate gravity effects. See this: https://mooseframework.inl.gov/source/bcs/FluidFreeSurfaceBC.html",
+                          "url": "https://github.com/idaholab/moose/discussions/19011#discussioncomment-1473691",
+                          "updatedAt": "2022-11-11T04:40:16Z",
+                          "publishedAt": "2021-10-13T22:37:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "geoyanzhan3"
+                          },
+                          "bodyText": "Thanks @somu15! The free surface is for solid, not liquid. So I don't think it is an acoustic fluid.",
+                          "url": "https://github.com/idaholab/moose/discussions/19011#discussioncomment-1476790",
+                          "updatedAt": "2022-11-11T04:40:16Z",
+                          "publishedAt": "2021-10-14T12:27:14Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lemevel"
+                          },
+                          "bodyText": "Yes, we are not modeling an acoustic fluid. The purpose of the applied pressure is to simulate a mass injection to the system.",
+                          "url": "https://github.com/idaholab/moose/discussions/19011#discussioncomment-1477298",
+                          "updatedAt": "2022-11-11T04:40:28Z",
+                          "publishedAt": "2021-10-14T13:58:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "somu15"
+                          },
+                          "bodyText": "Thanks @geoyanzhan3 @lemevel . As I understand, you are applying a transient pressure BC on the fluid at the bottom in the red shaded zone. What is your BC on the left part of the fluid (i.e., red shaded zone)?",
+                          "url": "https://github.com/idaholab/moose/discussions/19011#discussioncomment-1478174",
+                          "updatedAt": "2022-11-11T04:40:28Z",
+                          "publishedAt": "2021-10-14T16:27:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "geoyanzhan3"
+                          },
+                          "bodyText": "@somu15 The left is an axisymmetric boundary.",
+                          "url": "https://github.com/idaholab/moose/discussions/19011#discussioncomment-1478553",
+                          "updatedAt": "2022-11-11T04:40:28Z",
+                          "publishedAt": "2021-10-14T17:45:26Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "somu15"
+                          },
+                          "bodyText": "@geoyanzhan3 @lemevel I thought about this a little bit. Although it seems like you can use an acoustic fluid (which is like a linearized Navier-Stokes with only pressure as the primary variable), the acoustic formulation in MOOSE does not consider fluid viscosity. I don't know what the effect of ignoring viscosity for your problem would be. But I can say that solving the acoustic problem is simpler.\nIf you want to use INS kernels, @fdkong  and @lindsayad might have some thoughts on this.\nThank you.",
+                          "url": "https://github.com/idaholab/moose/discussions/19011#discussioncomment-1478663",
+                          "updatedAt": "2022-11-11T04:40:54Z",
+                          "publishedAt": "2021-10-14T18:11:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lemevel"
+                          },
+                          "bodyText": "Thanks for these thoughts. However we can not ignore viscosity as this is one of the governing parameter for the viscous flow (similar to Poiseuille flow) and impact the temporal evolution of the flow and thus the temporal evolution of the solid deformation and surface displacement.",
+                          "url": "https://github.com/idaholab/moose/discussions/19011#discussioncomment-1478681",
+                          "updatedAt": "2022-11-11T04:41:11Z",
+                          "publishedAt": "2021-10-14T18:15:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "geoyanzhan3"
+                          },
+                          "bodyText": "@somu15 Thank you very much! I think viscosity is important in our model.",
+                          "url": "https://github.com/idaholab/moose/discussions/19011#discussioncomment-1478683",
+                          "updatedAt": "2022-11-11T04:41:11Z",
+                          "publishedAt": "2021-10-14T18:15:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lynnmunday"
+                          },
+                          "bodyText": "I'm not at all familiar with this module so this is just a guess.  I think the penalty on CoupledPenaltyInterfaceDiffusion should probably be larger for your case.  The original input file used used penalty = 1e6 with a youngs_modulus = 1e2.   Your youngs_modulus=2.5e9 so I think your penalty should be ~1e9 or as large as you can make it and still get the system to converge.",
+                          "url": "https://github.com/idaholab/moose/discussions/19011#discussioncomment-1478695",
+                          "updatedAt": "2022-11-11T04:41:55Z",
+                          "publishedAt": "2021-10-14T18:17:43Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "fdkong"
+                  },
+                  "bodyText": "@lemevel\nYou might use regular coordinates to make things simple as the first step (also for debugging). We can switch to RZ once the regular coordinates work.  So far, there is at least one thing you might need to improve to make your application work.\n  [./inlet_p]\n    type = DirichletBC\n    variable = p\n    boundary = 'liquid_inlet'\n    value = 1e6\n  [../]\n\nThe pressure inlet might be implemented weakly, and pressure DirichletBC might introduce instabilities. You could integrate by part and then replace \"p\" with the inlet pressure. We do not have this kind of BC yet, but it is easy to implement if you would like to do so.",
+                  "url": "https://github.com/idaholab/moose/discussions/19011#discussioncomment-1498104",
+                  "updatedAt": "2022-09-21T12:43:59Z",
+                  "publishedAt": "2021-10-18T18:56:03Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "fdkong"
+                          },
+                          "bodyText": "Alternatively, you could take a look into modules/navier_stokes/test/tests/ins/pressure_channel/open_bc_pressure_BC.i\nWhen applying pressure  DirichletBC, we do not integrate by part.\n@lindsayad knows more on this",
+                          "url": "https://github.com/idaholab/moose/discussions/19011#discussioncomment-1498601",
+                          "updatedAt": "2022-09-21T12:44:01Z",
+                          "publishedAt": "2021-10-18T20:53:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lemevel"
+                          },
+                          "bodyText": "@fdkong  Thanks for your answers. We are still stuck with this problem. If I turn off \"integrate by parts\" and still use the DirichletBC the problem does not converge.\nSorry I am unsure what you suggest here: \"You could integrate by part and then replace \"p\" with the inlet pressure. We do not have this kind of BC yet, but it is easy to implement if you would like to do so.\"\nWould you have an example input file that shows how to implement it?\nThank you.",
+                          "url": "https://github.com/idaholab/moose/discussions/19011#discussioncomment-1607209",
+                          "updatedAt": "2022-09-21T12:44:01Z",
+                          "publishedAt": "2021-11-08T16:42:43Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "So if you take the test that @fdkong referenced and you turn off the outlet pressure boundary condition, shrink the problem, and then run with -pc_type svd -pc_svd_monitor, then you'll see that the problem is actually singular. I wouldn't be surprised if you have the same issue here. Can you shrink your problem (to less than 1000 dofs roughly), and then run with -pc_type svd -pc_svd_monitor to check whether your problem is singular?",
+                          "url": "https://github.com/idaholab/moose/discussions/19011#discussioncomment-1607346",
+                          "updatedAt": "2022-09-21T12:44:01Z",
+                          "publishedAt": "2021-11-08T17:05:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "geoyanzhan3"
+                          },
+                          "bodyText": "Thank you @lindsayad @fdkong! We have tested a shrunk problem with ~600 DOF. The message shows \"0 of 595 singular values are (nearly) zero\". I don't know if that is what you expected. I have attached the shrunk mesh file, moose input file, and the error message for your convenience.\nshrink_singular_test.zip",
+                          "url": "https://github.com/idaholab/moose/discussions/19011#discussioncomment-1608684",
+                          "updatedAt": "2022-09-21T12:44:01Z",
+                          "publishedAt": "2021-11-08T21:15:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "fdkong"
+                          },
+                          "bodyText": "I think a little bit more about this. We enforce the interface conditions that already take \"integrate by parts.\" And then we can not turn off  \"integrate by parts.\"\nThe solution here is to implement a weak pressure inlet.\n\nWould you have an example input file that shows how to implement it?\n\nYou might need to write a C++ code to implement an integrated BC on this.",
+                          "url": "https://github.com/idaholab/moose/discussions/19011#discussioncomment-1629081",
+                          "updatedAt": "2022-09-21T12:44:06Z",
+                          "publishedAt": "2021-11-12T02:44:21Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "geoyanzhan3"
+                          },
+                          "bodyText": "After taking a close look at our failed solution, we found the inlet velocity is negative. It means there is backflow in the inlet. We wonder if the Dirichlet pressure BC is not sufficient to define this problem. As the velocity field may not be numerically unique to fulfill the boundary condition.\nWe further take a look at the successful solution by COMSOL Multiphysics. In COMSOL, there is an option called \"suppress backflow\" in the definition of inlet BC. I'm attaching the equations as well.\nDo you think if the backflow matters? @fdkong @lindsayad Thank you very much!\n-Yan and @lemevel\nVertical component of fluid velocity (left bottom corner is the inlet) (failed solution )\n\nProblem description",
+                          "url": "https://github.com/idaholab/moose/discussions/19011#discussioncomment-1652910",
+                          "updatedAt": "2022-09-21T12:44:07Z",
+                          "publishedAt": "2021-11-16T17:02:53Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "We wonder if the Dirichlet pressure BC is not sufficient to define this problem.\n\nThis was my concern as well. As I noted earlier if I make no specification of velocity at inlet or outlet and I only specify pressure at either the inlet or outlet of a channel flow test we have, then we have a singular system. But in #19011 (reply in thread) you all mentioned that your system is not singular with the current setup. But then @fdkong weighed in and said that the interface kernel assumes that we have integrated the pressure by parts (which is not typically what we would do when we have to specify Dirichlet BCs for pressure).\nMy most fundamental concern, probably based on my limited understanding of the current problem, is: you have an inlet; do you have an outlet? If not, where does the new mass go?",
+                          "url": "https://github.com/idaholab/moose/discussions/19011#discussioncomment-1653088",
+                          "updatedAt": "2022-09-21T12:43:59Z",
+                          "publishedAt": "2021-11-16T17:34:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "@geoyanzhan3  Do you know how the suppress backflow is implemented in COMSOL? A quick check will be to disable the suppress backflow in COMSOL, and then compare the results with MOOSE.",
+                          "url": "https://github.com/idaholab/moose/discussions/19011#discussioncomment-1661428",
+                          "updatedAt": "2022-09-21T12:43:59Z",
+                          "publishedAt": "2021-11-17T23:21:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "fdkong"
+                          },
+                          "bodyText": "is: you have an inlet; do you have an outlet? If not, where does the new mass go?\n\nI think it is very similar to how we blow a balloon. And there is no outlet. More mass makes the balloon larger.\n@geoyanzhan3 If the BC equation (inlet pressure) in the picture is what you want, you might not use Dirichlet BC because it does not seem like a Dirichlet BC. It is a kind of NeumannBC. You could do something like this (need to turn on integrate by part).\n  [./vec_y_bc]\n    type = NeumannBC\n    variable = vel_y\n    boundary = 'whatever'\n    value = whatever_p # might need a negative sign to get the direction right. (from outside to inside)\n  [../]\n\nYou have \"u_{fluid} \\dot t\". What is \"t\"? is it a tangental vector?",
+                          "url": "https://github.com/idaholab/moose/discussions/19011#discussioncomment-1661565",
+                          "updatedAt": "2022-09-21T12:43:59Z",
+                          "publishedAt": "2021-11-18T00:06:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "geoyanzhan3"
+                          },
+                          "bodyText": "Thank you @fdkong ! I think you are right: 't' is a tangential vector.\nAlso, I think besides the NeumannBC, we at least need one Dirichlet BC right? Is $u_{fluid} \\dot t = 0$ sufficient to define the question?\nThank you @jiangwen84 ! The equations for suppressing backflow is p^_0 >p_0 as shown in the problem description figure.",
+                          "url": "https://github.com/idaholab/moose/discussions/19011#discussioncomment-1665401",
+                          "updatedAt": "2022-09-21T12:45:23Z",
+                          "publishedAt": "2021-11-18T15:30:33Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Outputs",
+          "author": {
+            "login": "jinca"
+          },
+          "bodyText": "Hello,\nHope everyone is doing well.\nI am launching jobs in batch, so I am only directing the outputs to a file .out.\nMay I ask you how I can see the other output files?\nI am talking about the files .e, and the file that shows the final calculations. (e.g. Temperature gotten on each element of the mesh).\nThanks in advance!\nJulita",
+          "url": "https://github.com/idaholab/moose/discussions/19303",
+          "updatedAt": "2022-07-18T19:15:11Z",
+          "publishedAt": "2021-11-05T13:13:35Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nWhat exactly is the concern?\nThe outputs are generated in the folder of the input file.\nIf you are worried about them overwriting each other, you can pass a different file name using the file_base parameter in the Outputs block.\nSo from the command line you can pass Outputs/file_base=fileXXX (no space) to each run numbered XXX so that the results don't overwrite each other.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/19303#discussioncomment-1595970",
+                  "updatedAt": "2022-07-18T19:15:10Z",
+                  "publishedAt": "2021-11-05T15:43:00Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "jinca"
+                  },
+                  "bodyText": "Hi Guillaume, thanks for replying.\nI know that the outputs are .out and they are placed in the same folder of the input file\nI want to know where is the .e file to see the image of the simulation\nAnother question is where is the final result on each point of the mesh. I use log_view but only shows convergence message and thee number of iterations are different for each run. I put the same conditions and every time I run it, the iteration number changes. It is not reproducible. Thanks.",
+                  "url": "https://github.com/idaholab/moose/discussions/19303#discussioncomment-1596817",
+                  "updatedAt": "2022-07-18T19:15:09Z",
+                  "publishedAt": "2021-11-05T18:27:10Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "The .e files (exodus) are also generated in that folder. If they are not for you, you can add exodus=true to the Outputs block",
+                          "url": "https://github.com/idaholab/moose/discussions/19303#discussioncomment-1596840",
+                          "updatedAt": "2022-07-18T19:15:09Z",
+                          "publishedAt": "2021-11-05T18:32:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jinca"
+                          },
+                          "bodyText": "Hi Giudguid, that sounds a great advice, I will try it tomorrow and let you know to close this :) In case you can tell me if there is an option to see the final result of the simulation in a 'log file', it would be great. For example, if I am resizing the mesh, I want to see if the results are the same to be compared and confirm accuracy. Thanks again!",
+                          "url": "https://github.com/idaholab/moose/discussions/19303#discussioncomment-1597858",
+                          "updatedAt": "2022-07-18T19:15:12Z",
+                          "publishedAt": "2021-11-06T00:14:33Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "oh you want to compare between mesh refinement?\nIf you can boil it down to a few numbers, then use Postprocessors and compare them at different levels of refinement.\nIf you cannot and need to be comparing fields of values, then the solution is to load the two solutions in MOOSE or paraview, from two different exodus files, and compare them there. MOOSE has a bunch of projection options to compare the fine & coarse solutions or the fine OR the coarse mesh",
+                          "url": "https://github.com/idaholab/moose/discussions/19303#discussioncomment-1616360",
+                          "updatedAt": "2022-07-18T19:15:12Z",
+                          "publishedAt": "2021-11-10T02:04:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jinca"
+                          },
+                          "bodyText": "Hello,\nI got this output:\n*** Warning ***\n/~/input.i:144: unused parameter 'Outputs/pgraph/exodus'\nThis is my block in my input file:\n[Outputs]\n[pgraph]\ntype = PerfGraphOutput\nexodus=true\nexecute_on = 'initial final'\nlevel = 1\n[]\n[]\nThanks in advance again!",
+                          "url": "https://github.com/idaholab/moose/discussions/19303#discussioncomment-1648087",
+                          "updatedAt": "2022-09-12T09:22:57Z",
+                          "publishedAt": "2021-11-16T00:20:15Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "[Outputs]\n  exodus=true\n  [pgraph]\n  type = PerfGraphOutput\n  execute_on = 'initial final'\n  level = 1\n  []\n[]\n\nis more correct\nthe perfgraph wont help you do comparisons. I think wrt comparisons, my previous answer should help",
+                          "url": "https://github.com/idaholab/moose/discussions/19303#discussioncomment-1648123",
+                          "updatedAt": "2022-09-12T09:22:58Z",
+                          "publishedAt": "2021-11-16T00:31:48Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jinca"
+                          },
+                          "bodyText": "Hello dear Giud, what do you mean by wrt?",
+                          "url": "https://github.com/idaholab/moose/discussions/19303#discussioncomment-1663296",
+                          "updatedAt": "2022-09-12T09:22:59Z",
+                          "publishedAt": "2021-11-18T09:31:40Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "with regards to",
+                          "url": "https://github.com/idaholab/moose/discussions/19303#discussioncomment-1665244",
+                          "updatedAt": "2022-09-12T09:22:59Z",
+                          "publishedAt": "2021-11-18T15:09:35Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Uniaxial stretching simulation with coarse mesh or fine mesh based on J2 plasticity",
+          "author": {
+            "login": "PengWei97"
+          },
+          "bodyText": "Dear MOOSE experts,\nRecently, I conducted two uniaxial stretching simulations based on J2 plasticity. The first one (test1) has a relatively coarse mesh. Both the stretching curve and the calculation running time are very nice, as shown in Fig.1. However, the second one (test2) has a finer grid , and the calculated curve is correct, but dt gets smaller and smaller after 10s as the simulation progresses, until it reaches the set dtmin = 2e-6 , the final solution failed, as shown in Figure 2.  My input file is j2plastic_1.i\n\n\nSo, my question is what is the root cause of this bug? And I want to emphasize that the two tests are only different in the number of grids. Finally, what aspects should be taken to solve this problem?\nAny suggestions or recommendations to fix the problem would be greatly appreciated.\nThank you\nWei",
+          "url": "https://github.com/idaholab/moose/discussions/19390",
+          "updatedAt": "2022-11-19T02:48:21Z",
+          "publishedAt": "2021-11-15T14:44:18Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "jiangwen84"
+                  },
+                  "bodyText": "Can you try a different solver?\n  petsc_options_iname = '-pc_type'\n  petsc_options_value = 'lu'",
+                  "url": "https://github.com/idaholab/moose/discussions/19390#discussioncomment-1645336",
+                  "updatedAt": "2022-11-19T02:48:23Z",
+                  "publishedAt": "2021-11-15T15:18:30Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "PengWei97"
+                          },
+                          "bodyText": "This problem seems to be resolved, and the result is shown in Figure 3.\n\nAlthough I don't know the difference between lu and hypre. Regarding mechanical problems, whether it is J2 or crystal plasticity, do you have any good suggestions and experience to share with regard to the choice of solver?",
+                          "url": "https://github.com/idaholab/moose/discussions/19390#discussioncomment-1648566",
+                          "updatedAt": "2022-11-19T02:48:26Z",
+                          "publishedAt": "2021-11-16T02:57:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "They are different linear solvers. LU is a direct solver. The direct solvers are generally more robust than iterative solver, but will use more memory. If your problem size is not very large, LU is recommended for plasticity problems.",
+                          "url": "https://github.com/idaholab/moose/discussions/19390#discussioncomment-1661216",
+                          "updatedAt": "2022-11-19T02:48:29Z",
+                          "publishedAt": "2021-11-17T22:18:33Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "PengWei97"
+                          },
+                          "bodyText": "Ok, I got it. Thank again for your advice.",
+                          "url": "https://github.com/idaholab/moose/discussions/19390#discussioncomment-1661785",
+                          "updatedAt": "2022-11-19T02:48:29Z",
+                          "publishedAt": "2021-11-18T01:39:18Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

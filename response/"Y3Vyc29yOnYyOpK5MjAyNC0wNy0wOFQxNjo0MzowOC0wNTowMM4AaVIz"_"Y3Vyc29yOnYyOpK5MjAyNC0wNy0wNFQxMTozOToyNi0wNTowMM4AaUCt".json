@@ -1,0 +1,757 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyNC0wNy0wNFQxMTozOToyNi0wNTowMM4AaUCt"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Restricting volumetric kernel to elements on boundary",
+          "author": {
+            "login": "NateAM"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nI am trying to simulate the change in volume due to the deposition or removal of mass on the surface of a deforming mesh. In my formulation it is easier for me to describe the change in volume due to a volumetric mass source term i.e.\n$\\frac{\\partial \\rho}{\\partial t} + \\left(\\rho v_i\\right)_{,i} = c$\nwhere $c$ is the volumetric mass source term. Because for my problem the mass change through the boundary is defined on the surface as an IntegratedBC and I don't have any way to make this conversion directly, I would like to introduce a variable that represents a volumetric mass change for the elements on the boundary that results in the same mass change as the surface integral i.e.\n$\\int_{\\mathcal{B}} c dv = \\int_{\\partial \\mathcal{B}} c^s da $\nwhere $c^s$ is the mass flow into the body across the surface. I think the answer I would expect would be for the $c$ term to be zero at all of the nodes except for on the surface that is seeing mass deposition or removal.\nIs what I want to do sensible or is there a better approach? Is there a way to restrict a volumetric kernel to only contribute to the residuals on the surface of the body?",
+          "url": "https://github.com/idaholab/moose/discussions/28051",
+          "updatedAt": "2024-07-08T21:36:03Z",
+          "publishedAt": "2024-07-02T21:18:11Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "grmnptr"
+                  },
+                  "bodyText": "A naive approach could be to create a subdomain for the layer at the boundary and restrict your custom kernel to those elements.\nA kernel in MOOSE is a block-restrictible object so you will always be able to restrict its action to a given subdomain. Usually it goes like this:\n[Kernels]\n  [mykernel]\n    type = MyCustomKernel\n    ... other parameters ...\n    block = 'sudomainname-or-number'\n  []\n[]",
+                  "url": "https://github.com/idaholab/moose/discussions/28051#discussioncomment-9950250",
+                  "updatedAt": "2024-07-03T16:05:03Z",
+                  "publishedAt": "2024-07-03T16:05:03Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "NateAM"
+                          },
+                          "bodyText": "@grmnptr thank you for the suggestion! I would prefer not having to define new blocks if I can avoid it unless there are ways to automatically move elements from one block to another based on sideset updates. I was thinking I could try and define a monomial variable that would only be non-zero on the surface so I'll try that today and see if I can't make something work.",
+                          "url": "https://github.com/idaholab/moose/discussions/28051#discussioncomment-9987819",
+                          "updatedAt": "2024-07-08T13:46:49Z",
+                          "publishedAt": "2024-07-08T13:46:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "sideset updates\n\nbefore the simulation or during the simulation?",
+                          "url": "https://github.com/idaholab/moose/discussions/28051#discussioncomment-9988551",
+                          "updatedAt": "2024-07-08T14:53:00Z",
+                          "publishedAt": "2024-07-08T14:52:59Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "NateAM"
+                          },
+                          "bodyText": "before the simulation or during the simulation?\n\nIdeally during the simulation. There will be elements that could be deactivating when there is enough mass loss so my plan is to use the CoupledVarThresholdElementSubdomainModifier userobject (link to documentation)",
+                          "url": "https://github.com/idaholab/moose/discussions/28051#discussioncomment-9988611",
+                          "updatedAt": "2024-07-08T14:57:00Z",
+                          "publishedAt": "2024-07-08T14:56:59Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "ok the CoupledVarThresholdElementSubdomainModifier is able to track the movement of the sideset as elements are added or removed.\nI think you should try to:\n\nhave a variable tracking the mass everywhere\nin the volume it solves d rho/dt + rho v = 0\non the sideset there is a boundary condition that adds or removes mass, like an Integrated Neumann BC\nthe magnitude of that flux is set proportional to the element_volume / side_area. This will mimick a volumetric term",
+                          "url": "https://github.com/idaholab/moose/discussions/28051#discussioncomment-9988732",
+                          "updatedAt": "2024-07-08T15:09:19Z",
+                          "publishedAt": "2024-07-08T15:09:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "NateAM"
+                          },
+                          "bodyText": "@GiudGiud okay, I think that is similar to what I have implemented though I was applying the mass change through an integrated bc on the balance of mass. If I'm missing your point please let me know!\nThe issue I'm running into is that I get nonphysical oscillations in the density field. To try and show things visually, in 1D where the integration points are the xs and the element nodes are the |s and I've applied a mass flux (mass per unit area) out of the body to the right hand side (->).\ne1         e2         e3\n|--x--x--|--x--x--|--x--x--|->\nThe oscillation directions are +, -, +, - under the nodes going from left to right.\nThe oscillations arise because for a 1D balance of mass, this has a tri-diagonal Jacobian\nBecause the surface is eroding I want to make sure that the volume-change is localized in the element nearest to the mass flux (e3 in the example). The mass of the nodes associated with e3 will be decreasing, but if the volume change is consistent with the change in mass then the density will remain constant. To do this, I need to know what the mass change rates are at the integration points of e3 which feed into the volume change kernels (balance of linear momentum stress divergence with a stress-free deformation associated with mass change).\nDoes that make sense?\nFor the mass variable how were you thinking this would be defined?\nThank you for your help!\nEDIT: Formatting",
+                          "url": "https://github.com/idaholab/moose/discussions/28051#discussioncomment-9990865",
+                          "updatedAt": "2024-07-08T19:08:39Z",
+                          "publishedAt": "2024-07-08T19:07:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I think finding a solution in 1D is a good idea.\n\nFor the mass variable how were you thinking this would be defined?\n\nYou can try an elemental (constant monomial with DG or finite volume for example) or a nodal variable (default lagrange, CG). I dont know which one will be easiest I have never done this before\n\nThe mass of the nodes associated with e3 will be decreasing, but if the volume change is consistent with the change in mass then the density will remain constant.\n\nthis is also a good test case. Show that you can vary the size of the element (using an imposed disp_x) and still have stability of the density / mass",
+                          "url": "https://github.com/idaholab/moose/discussions/28051#discussioncomment-9991918",
+                          "updatedAt": "2024-07-08T21:36:04Z",
+                          "publishedAt": "2024-07-08T21:36:02Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Error for  Porous Flow Tutorial Page 01. A single fluid",
+          "author": {
+            "login": "caoductoan379"
+          },
+          "bodyText": "Hi All.\nI am starting to learn an example of Porous Flow Tutorial Page 01. A single fluid. I am using an HPC cluster. Unfortunately, i got an error as an attachment.\nCould you please let me know what is wrong with this problem? Thank you very much for this help.\nPlease see my input file and the error from the screenshot.\nFluid1.txt",
+          "url": "https://github.com/idaholab/moose/discussions/28082",
+          "updatedAt": "2024-07-08T19:18:33Z",
+          "publishedAt": "2024-07-08T15:40:10Z",
+          "category": {
+            "name": "Q&A Modules: Porous Flow"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYou are using an object which is not registered to this application. Which executable are you using?\nThis screenshot is nearly unreadable in dark mode. Please copy paste screen text in triple quotes next time.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/28082#discussioncomment-9989253",
+                  "updatedAt": "2024-07-08T15:56:10Z",
+                  "publishedAt": "2024-07-08T15:56:09Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "caoductoan379"
+                          },
+                          "bodyText": "Thanks for the quick response. I am using an execution as:\n/modules/solid_mechanics/solid_mechanics-opt \u2013i  input file.\nThanks a lot for this help",
+                          "url": "https://github.com/idaholab/moose/discussions/28082#discussioncomment-9990718",
+                          "updatedAt": "2024-07-08T18:50:42Z",
+                          "publishedAt": "2024-07-08T18:50:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "But this is the porous flow tutorial. So you need to use the porous flow executable, in modules/porous_flow.\nYou can build it the same way you built the solid mechanics executable",
+                          "url": "https://github.com/idaholab/moose/discussions/28082#discussioncomment-9990851",
+                          "updatedAt": "2024-07-08T19:06:14Z",
+                          "publishedAt": "2024-07-08T19:06:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "caoductoan379"
+                          },
+                          "bodyText": "Thanks a lot. It is working.",
+                          "url": "https://github.com/idaholab/moose/discussions/28082#discussioncomment-9990967",
+                          "updatedAt": "2024-07-08T19:18:34Z",
+                          "publishedAt": "2024-07-08T19:18:33Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Visualizing Named Sets in Paraview",
+          "author": {
+            "login": "vikramroybarc"
+          },
+          "bodyText": "Hi,\nI recently started learning moose. I have some doubts regarding visualizng named sets of mesh in PARAVIEW.\nIn this example (https://github.com/idaholab/moose/blob/next/modules/solid_mechanics/examples/bridge/bridge.i) different boundaries are named top, bottom1, ... based on boundary_id variable.\nSimilarly in the piston example (https://github.com/idaholab/moose/blob/next/modules/solid_mechanics/examples/piston/piston_params.i) load is applied on the load_surf boundary\nI understand that these boundary related info (boundary_id in bridge example and named_set-> load_surf in piston example) variable is written in exodus mesh file. How do I visualize these named sets in paraview.\nAnybody having idea regarding this kindly help.\nThankyou",
+          "url": "https://github.com/idaholab/moose/discussions/28079",
+          "updatedAt": "2024-07-08T18:24:49Z",
+          "publishedAt": "2024-07-08T07:51:53Z",
+          "category": {
+            "name": "Q&A Tools"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nOn the info tab on the left of the screen in Paraview. Sidesets and nodesets will appear there with their names\n\nyou may have to click the cog icon to turn on advanced mode.",
+                  "url": "https://github.com/idaholab/moose/discussions/28079#discussioncomment-9987832",
+                  "updatedAt": "2024-07-08T13:48:43Z",
+                  "publishedAt": "2024-07-08T13:48:42Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "vikramroybarc"
+                  },
+                  "bodyText": "Hi Giud,\nThanks for your reply.\nI am using Paraview 5.9.0. In this version of paraview, I can see some sidesets are defined in the info tab as seen in this image.\n\nBut How can I visualize which region of mesh each of these sideset corresponds to.\nKindly help if you have an idea regarding this",
+                  "url": "https://github.com/idaholab/moose/discussions/28079#discussioncomment-9990356",
+                  "updatedAt": "2024-07-08T17:58:27Z",
+                  "publishedAt": "2024-07-08T17:58:26Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Instead of the info tab, use the properties tab (all the way to the left-center of your screenshot)\nthen select the sidesets in the menu similar to my screenshot",
+                          "url": "https://github.com/idaholab/moose/discussions/28079#discussioncomment-9990519",
+                          "updatedAt": "2024-07-08T18:19:06Z",
+                          "publishedAt": "2024-07-08T18:19:05Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "vikramroybarc"
+                  },
+                  "bodyText": "Thankyou very Guid for the help. I am finally able to do this.",
+                  "url": "https://github.com/idaholab/moose/discussions/28079#discussioncomment-9990553",
+                  "updatedAt": "2024-07-08T18:24:47Z",
+                  "publishedAt": "2024-07-08T18:24:46Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Error in thermal contact based mortar",
+          "author": {
+            "login": "jin0123456"
+          },
+          "bodyText": "Hello,\nI met the error in mortar thermal contact,\nThe requested mortar interface AutomaticMortarGeneration object does not yet exist!\nAnd i find it in MortarData.C line 123 and 145,\nhttps://github.com/idaholab/moose/blob/61714043f0e9dcbf822da0b852b47ef2c6a08ae2/framework/src/constraints/MortarData.C\nconst AutomaticMortarGeneration &\nMortarData::getMortarInterface(const std::pair<BoundaryID, BoundaryID> & boundary_key,\n                               const std::pair<SubdomainID, SubdomainID> & /*subdomain_key*/,\n                               bool on_displaced) const\n{\n  if (on_displaced)\n  {\n    if (_displaced_mortar_interfaces.find(boundary_key) == _displaced_mortar_interfaces.end())\n      mooseError(\n          \"The requested mortar interface AutomaticMortarGeneration object does not yet exist!\");\n\n    return _displaced_mortar_interfaces.at(boundary_key);\n  }\n  else\n  {\n    if (_mortar_interfaces.find(boundary_key) == _mortar_interfaces.end())\n      mooseError(\n          \"The requested mortar interface AutomaticMortarGeneration object does not yet exist!\");\n\n    return _mortar_interfaces.at(boundary_key);\n  }\n}\n\nI want to know about _displaced_mortar_interfaces.find(boundary_key) == _displaced_mortar_interfaces.end(),\nwhat's this about? Where is my problem and how can i fix it?",
+          "url": "https://github.com/idaholab/moose/discussions/28038",
+          "updatedAt": "2024-07-08T06:17:02Z",
+          "publishedAt": "2024-07-02T04:20:39Z",
+          "category": {
+            "name": "Q&A Modules: Thermal Hydraulics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nWhat's missing is that createMortarInterface has not been called beforehand on that interface (two boundaries)\nAre you developing or this is straight from a moose input with regular objects?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/28038#discussioncomment-9937558",
+                  "updatedAt": "2024-07-02T14:19:51Z",
+                  "publishedAt": "2024-07-02T14:19:50Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jin0123456"
+                          },
+                          "bodyText": "I found out the reason. If I set use_displaced_mesh = true in ModularGapConductanceConstraint object I will get the error or I will not.\nSo I want to know why would this happen? What is this setting about?\nIn my case, the deformation of the mesh is relatively large and the distance between two boundaries will decrease during simulation.\nHow should I use use_displaced_mesh? Should I set true or false?",
+                          "url": "https://github.com/idaholab/moose/discussions/28038#discussioncomment-9942741",
+                          "updatedAt": "2024-07-03T02:06:31Z",
+                          "publishedAt": "2024-07-03T02:06:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@recuero",
+                          "url": "https://github.com/idaholab/moose/discussions/28038#discussioncomment-9954831",
+                          "updatedAt": "2024-07-04T05:39:06Z",
+                          "publishedAt": "2024-07-04T05:39:05Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "recuero"
+                          },
+                          "bodyText": "It may be the the user is just missing the creation of the lower dimensional domains? Almost positive MOOSE have examples of these heat transfer mortar  constraints with displaced meshes, maybe through actions.",
+                          "url": "https://github.com/idaholab/moose/discussions/28038#discussioncomment-9959919",
+                          "updatedAt": "2024-07-04T14:42:18Z",
+                          "publishedAt": "2024-07-04T14:42:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jin0123456"
+                          },
+                          "bodyText": "I know what i should do now. Much appreciated!",
+                          "url": "https://github.com/idaholab/moose/discussions/28038#discussioncomment-9983632",
+                          "updatedAt": "2024-07-08T06:17:03Z",
+                          "publishedAt": "2024-07-08T06:17:01Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Using the fluidproperties module to calculate fluid flow results appears abnormal",
+          "author": {
+            "login": "shin-chan-cpu"
+          },
+          "bodyText": "In the moose version released in April, the CO2FluidProperties class added e_from_p_T and cp_from_p_T two functions so that my input card can start to perform steady-state two-dimensional tube heating flow calculations, but my output temperature and pressure have not changed. In my separate tests, the output results of these two functions are basically consistent with the reference data given in the official website tutorial, but the results I get have not changed. I replaced it with Water97FluidProperties for calculation. The calculation results look normal. I hope to know how to optimize it next",
+          "url": "https://github.com/idaholab/moose/discussions/27459",
+          "updatedAt": "2024-07-08T05:23:33Z",
+          "publishedAt": "2024-04-24T11:47:09Z",
+          "category": {
+            "name": "Q&A Modules: Navier-Stokes"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nIt would be good to isolate the problem.\nCan you use simple a MaterialRealAux auxkernel and this material\nhttps://mooseframework.inl.gov/source/materials/FluidPropertiesMaterialPT.html\nto output these properties and make sure they are correct.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/27459#discussioncomment-9215128",
+                  "updatedAt": "2024-04-24T15:25:57Z",
+                  "publishedAt": "2024-04-24T15:25:56Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "shin-chan-cpu"
+                          },
+                          "bodyText": "After I changed the material part, I output those physical properties with auxkernal. I do know that my physical properties are correct, but my output does not have a normal temperature and pressure distribution, resulting in the same pressure and temperature throughout the calculation. This may be a problem with my input card or something. If I only change the physical properties to the physical properties of water under other conditions, the temperature and pressure distribution in this calculation will become normal.",
+                          "url": "https://github.com/idaholab/moose/discussions/27459#discussioncomment-9219717",
+                          "updatedAt": "2024-04-25T02:02:52Z",
+                          "publishedAt": "2024-04-25T02:02:52Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "shin-chan-cpu"
+                          },
+                          "bodyText": "This is a screenshot of some physical properties I extracted. Although the value is correct, you can see that the speed behind it has not even changed. I want to know what to modify next.",
+                          "url": "https://github.com/idaholab/moose/discussions/27459#discussioncomment-9219949",
+                          "updatedAt": "2024-04-25T02:38:28Z",
+                          "publishedAt": "2024-04-25T02:38:28Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "which time step are you outputting with paraview?\ndid you rescale the data when loading the new results? (looking at the CSV, there's nothing to rescale_\nThe results in this CSV do look constant everywhere, not just the property but T, p, u, v\nI dont think it even solved? Can you attach the simulation log?",
+                          "url": "https://github.com/idaholab/moose/discussions/27459#discussioncomment-9240023",
+                          "updatedAt": "2024-04-26T17:33:51Z",
+                          "publishedAt": "2024-04-26T17:28:48Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "shin-chan-cpu"
+                          },
+                          "bodyText": "Sorry, it seems to be a problem with my boundary conditions. At present, the two-dimensional pipeline flow can be calculated, but I would also like to take the liberty to ask, I am currently calculating the three-dimensional flow around, if I enable the variable property, there will be problems that cannot be converged, and the nan value appears in the iterative process. Is there any specific solution to this?",
+                          "url": "https://github.com/idaholab/moose/discussions/27459#discussioncomment-9348091",
+                          "updatedAt": "2024-05-07T23:59:54Z",
+                          "publishedAt": "2024-05-07T23:59:53Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "This seems like an 'out-of-bounds' problem.\nYou can try the NaN interface parameters if the fluid properties you are using has them.\nYou can work on better initialization / try a viscosity rampdown to make the problem easier to solve",
+                          "url": "https://github.com/idaholab/moose/discussions/27459#discussioncomment-9348169",
+                          "updatedAt": "2024-05-08T00:09:48Z",
+                          "publishedAt": "2024-05-08T00:09:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "shin-chan-cpu"
+                          },
+                          "bodyText": "I tried to adjust to the SIMPLE algorithm and add initial conditions, but he would get the following error during the solution\nLinear solve did not converge due to IVERGED_PC_FAILED iterations 0\n               PC failed due to FACTOR_NUMERIC_ZEROPIVOT\n\nI've looked into some problems that previously required the petsc_options_iname option to configure the solver, but this option is not available in the SIMPLE algorithm",
+                          "url": "https://github.com/idaholab/moose/discussions/27459#discussioncomment-9350722",
+                          "updatedAt": "2024-05-08T07:04:37Z",
+                          "publishedAt": "2024-05-08T07:04:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "hello\nfor SIMPLE the petsc_options are specified on a per-system basis. See the parameters here:\nhttps://mooseframework.inl.gov/source/executioners/SIMPLE.html",
+                          "url": "https://github.com/idaholab/moose/discussions/27459#discussioncomment-9353719",
+                          "updatedAt": "2024-05-08T11:50:31Z",
+                          "publishedAt": "2024-05-08T11:50:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "shin-chan-cpu"
+                          },
+                          "bodyText": "Hello, I have tried the two methods you mentioned before, but their convergence is still poor. Is it because my geometry is too complicated?",
+                          "url": "https://github.com/idaholab/moose/discussions/27459#discussioncomment-9364905",
+                          "updatedAt": "2024-05-09T07:33:12Z",
+                          "publishedAt": "2024-05-09T07:33:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Does it converge on a simple mesh?",
+                          "url": "https://github.com/idaholab/moose/discussions/27459#discussioncomment-9368020",
+                          "updatedAt": "2024-05-09T11:59:59Z",
+                          "publishedAt": "2024-05-09T11:59:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "shin-chan-cpu"
+                          },
+                          "bodyText": "In the case given by Moose, the energy equation can be converged, and the grid in the case is a square flow channel, but when I cut out a round rod in the square flow channel as the fluid domain, the energy equation becomes very unstable, and the residual is getting larger and larger.",
+                          "url": "https://github.com/idaholab/moose/discussions/27459#discussioncomment-9377536",
+                          "updatedAt": "2024-05-10T03:35:47Z",
+                          "publishedAt": "2024-05-10T03:35:47Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Initialisation using VTK format files",
+          "author": {
+            "login": "zengyuxin0807"
+          },
+          "bodyText": "Dear Moose Experts,\nI have a VTK storage file with information on stresses, strains, etc. that I want to use as an initial condition input. I see in the moose instructions that many kinds of files can be read through the mesh board, but I didn't find an example of a relevant reading of a VTK.\nHow do I read my vtk into moose as an initialisation condition, and if I can read the vtk what does it look like in terms of parameter naming and data storage format. If I can't read the vtk, what format do I need to convert it to and how do I do it?\nI would greatly appreciate any insights or suggestions from the community to help resolve this issue.\nThank you very much for your time and consideration.",
+          "url": "https://github.com/idaholab/moose/discussions/28054",
+          "updatedAt": "2024-07-11T07:33:55Z",
+          "publishedAt": "2024-07-03T07:31:01Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "milljm"
+                  },
+                  "bodyText": "We have a VTK file writer/reader object available. I am not very sure how to interface with it. You might be able to figure it out on your own if you look at the following test spec files which make use of the library:\nmoose/test/tests/functions/image_function/test\nAnd then the input files associated with those tests.\nI believe @lindsayad can describe this in greater detail.",
+                  "url": "https://github.com/idaholab/moose/discussions/28054#discussioncomment-9949542",
+                  "updatedAt": "2024-07-03T15:03:58Z",
+                  "publishedAt": "2024-07-03T15:03:57Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nI dont think the VTK file can be used for anything outside of the mesh in MOOSE. you cannot initialize fields from it\nHowever, using meshio, a Python library, you can convert your VTK file to Exodus, and if this works well, then you can use Exodus restart (one of the two ways, explained here https://mooseframework.inl.gov/application_usage/restart_recover.html)",
+                          "url": "https://github.com/idaholab/moose/discussions/28054#discussioncomment-9954803",
+                          "updatedAt": "2024-07-04T05:33:56Z",
+                          "publishedAt": "2024-07-04T05:33:55Z",
+                          "isAnswer": true
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "zengyuxin0807"
+                          },
+                          "bodyText": "Thank you very much for the solution ideas, this has helped me a lot, I will try them out!",
+                          "url": "https://github.com/idaholab/moose/discussions/28054#discussioncomment-9963354",
+                          "updatedAt": "2024-07-05T01:30:38Z",
+                          "publishedAt": "2024-07-05T01:30:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "@GiudGiud is correct that we don't support reading solution information from VTK. Probably not useful to you, but we do support writing solution information to VTK",
+                          "url": "https://github.com/idaholab/moose/discussions/28054#discussioncomment-9972160",
+                          "updatedAt": "2024-07-05T23:43:36Z",
+                          "publishedAt": "2024-07-05T23:42:55Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Implementation of RankFourTensor member function \"contractionIj\"",
+          "author": {
+            "login": "bbist196"
+          },
+          "bodyText": "Hello Everyone,\nI am trying to get the strain energy density by using elastic tensor (not using stress and strain) with the following equation\n_strain_energy_density = (\u00bd) * ((_mechanical_strain) : (_elasticity_tensor) : (_mechanica_strain))\ni.e.\n\nFor this, first of all,  I made the double contraction using member function \"contractionIj\" of RankFourTensor _elasticity_tensor with the RankTwoTensor _mechanical_strain to get _stresss as follows\n\nAnd then I computed the _strain_energy_density using double contraction using member function \"doubleContraction\" of _stresss and _mechanical_strain following the equation given below\n\nFor this, my source code snippet is as follows:\n\nWith this snippet in the the src code the app compiled well. But on running simulation, produce the RankTwoTensor of _stresss with all element zero as printed below\n\nHowever, the printed non zero _elasticity_tensor (isotropic linear elastic tensor) and _mechanical_strain are as follows:\n\n\nHere, no input parameters (_elasticity_tensor and _mechanical_strain)  are zero producing zero _stresss.\nSo, It is suspected to have error in the use \"contractionIj\" member function in the following src code snippet\n\nCould anyone please help me out whether this is the correct way of using \"contractionIj\" member function??\nNote: You can find the reference for the \"contractionIj\" member function defined for RankFourTensor here [https://mooseframework.inl.gov/docs/doxygen/moose/classRankFourTensorTempl.html#a2b47567b94f148cc5b30bbb3739e80f1]\nFurther, files needed to check the module are available here:\n[https://github.com/bbist196/bright_star]\nYour help will be greatly appreciated.\nThank you.\nThankyou",
+          "url": "https://github.com/idaholab/moose/discussions/28052",
+          "updatedAt": "2024-07-05T22:43:13Z",
+          "publishedAt": "2024-07-02T22:13:34Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": []
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Cannot find -llustreapi(Lustre API) when updating libmesh during hpc install",
+          "author": {
+            "login": "chongxiyuan"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n I have consulted the Posting Guidelines.\n I have searched the Discussions Forum and MOOSE Framework Troubleshooting and have not found what I was looking for\n Q&A Getting Started is the most appropriate category for my question (trouble installing, beginner user, ...)\n\nIssue or question about MOOSE\nHi everyone,\nI am trying to update moose on hpc after an update on the cluster that stopped previous apps to work. The petsc went through, but I am getting /bin/ld: cannot find -llustreapi when doing the update libmesh step. I consulted the hpc administrators and they said Lustre API is installed at some location on the cluster.\n$ locate lustreapi\n/usr/lib64/liblustreapi.so.1\n/usr/lib64/liblustreapi.so.1.0.0\n/usr/share/man/man7/lustreapi.7.gz\n\nHow can I help the script to locate this library?\nThank you\n(Optional) code in question / simulation log / errors\nmake[4]: Leaving directory `/home/yuan310/projects/moose/libmesh/build/contrib/netcdf/v4/libhdf5'\nMaking all in liblib\nmake[4]: Entering directory `/home/yuan310/projects/moose/libmesh/build/contrib/netcdf/v4/liblib'\n  CC       libnetcdf_la-nc_initialize.lo\n  CCLD     libnetcdf.la\n/bin/ld: cannot find -llustreapi\n/usr/bin/sha1sum: .libs/libnetcdf.so.13.1.1: No such file or directory\ncollect2: error: ld returned 1 exit status\nmake[4]: *** [libnetcdf.la] Error 1\nmake[4]: Leaving directory `/home/yuan310/projects/moose/libmesh/build/contrib/netcdf/v4/liblib'\nmake[3]: *** [all-recursive] Error 1\nmake[3]: Leaving directory `/home/yuan310/projects/moose/libmesh/build/contrib/netcdf/v4'\nmake[2]: *** [all] Error 2\nmake[2]: Leaving directory `/home/yuan310/projects/moose/libmesh/build/contrib/netcdf/v4'\nmake[1]: *** [all-recursive] Error 1\nmake[1]: Leaving directory `/home/yuan310/projects/moose/libmesh/build/contrib'\nmake: *** [all-recursive] Error 1\nEncountering Errors? Please include diagnostic output\nFri Jul  5 10:21:35 EDT 2024\n\nSystem Arch: LSB Version: :core-4.1-amd64:core-4.1-noarch:cxx-4.1-amd64:cxx-4.1-noarch:desktop-4.1-amd64:desktop-4.1-noarch:languages-4.1-amd64:languages-4.1-noarch:printing-4.1-amd64:printing-4.1-noarch Distributor ID: CentOS Description: CentOS Linux release 7.9.2009 (Core) Release: 7.9.2009 Codename: Core\n\nMOOSE Package Version: Custom Build\n\nCPU Count: 32\n\nMemory Free: 351500.016 MB\n\nVariable `which $CC` check:\n/apps/spack/bell/apps/openmpi/3.1.6-gcc-9.3.0-3xlew3m/bin/mpicc\n\n$CC --version:\ngcc (Spack GCC) 9.3.0\nCopyright (C) 2019 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\nMPICC:\nwhich mpicc:\n\t/apps/spack/bell/apps/openmpi/3.1.6-gcc-9.3.0-3xlew3m/bin/mpicc\nmpicc -show:\n\t/apps/spack/bell/apps/gcc/9.3.0-gcc-4.8.5-z2ug7z7/bin/gcc -I/apps/spack/bell/apps/openmpi/3.1.6-gcc-9.3.0-3xlew3m/include -fexceptions -pthread -L/apps/spack/bell/apps/hwloc/1.11.11-gcc-9.3.0-ubnsyw3/lib -L/apps/spack/bell/apps/zlib/1.2.11-gcc-9.3.0-7x3gabj/lib -L/usr/lib64 -Wl,-rpath,/apps/spack/bell/apps/gcc/9.3.0-gcc-4.8.5-z2ug7z7/lib/gcc/x86_64-pc-linux-gnu/9.3.0 -Wl,-rpath,/apps/spack/bell/apps/gcc/9.3.0-gcc-4.8.5-z2ug7z7/lib64 -Wl,-rpath -Wl,/apps/spack/bell/apps/hwloc/1.11.11-gcc-9.3.0-ubnsyw3/lib -Wl,-rpath -Wl,/apps/spack/bell/apps/zlib/1.2.11-gcc-9.3.0-7x3gabj/lib -Wl,-rpath -Wl,/usr/lib64 -Wl,-rpath -Wl,/apps/spack/bell/apps/openmpi/3.1.6-gcc-9.3.0-3xlew3m/lib -L/apps/spack/bell/apps/openmpi/3.1.6-gcc-9.3.0-3xlew3m/lib -lmpi\n\nCOMPILER /apps/spack/bell/apps/gcc/9.3.0-gcc-4.8.5-z2ug7z7/bin/gcc:\ngcc (Spack GCC) 9.3.0\nCopyright (C) 2019 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\nPython:\n\t/bin/python\n\tPython 2.7.5\n\nMODULES:\n\nCurrently Loaded Modules:\n  1) gmp/6.2.1    3) mpc/1.1.0     5) gcc/9.3.0       7) xalt/1.1.2 (S)\n  2) mpfr/3.1.6   4) zlib/1.2.11   6) openmpi/3.1.6   8) rcac\n\n  Where:\n   S:  Module is Sticky, requires --force to unload or purge\n\n \n\nPETSC_DIR not set\n\nENVIRONMENT:\n}\n}\nAPPTAINER_UNSHARE_IPC=1\nBASH_FUNC_ml()=() {  eval $($LMOD_DIR/ml_cmd \"$@\")\nBASH_FUNC_module()=() {  eval $($LMOD_CMD bash \"$@\") && eval $(${LMOD_SETTARG_CMD:-:} -s sh)\n_=/bin/env\nCC=mpicc\nCLUSTER_SCRATCH=/scratch/bell/yuan310\nCMAKE_PREFIX_PATH=/apps/spack/bell/apps/openmpi/3.1.6-gcc-9.3.0-3xlew3m:/apps/spack/bell/apps/gcc/9.3.0-gcc-4.8.5-z2ug7z7:/apps/spack/bell/apps/zlib/1.2.11-gcc-9.3.0-7x3gabj:/apps/spack/bell-20231031/apps/mpc/1.1.0-gcc-4.8.5-falbgx3:/apps/spack/bell-20231031/apps/mpfr/3.1.6-gcc-4.8.5-cslxql4:/apps/spack/bell-20231031/apps/gmp/6.2.1-gcc-4.8.5-dse55eg\nCOLORTERM=truecolor\nCPATH=/apps/spack/bell/apps/openmpi/3.1.6-gcc-9.3.0-3xlew3m/include:/apps/spack/bell/apps/gcc/9.3.0-gcc-4.8.5-z2ug7z7/include:/apps/spack/bell/apps/zlib/1.2.11-gcc-9.3.0-7x3gabj/include:/apps/spack/bell-20231031/apps/mpc/1.1.0-gcc-4.8.5-falbgx3/include:/apps/spack/bell-20231031/apps/mpfr/3.1.6-gcc-4.8.5-cslxql4/include:/apps/spack/bell-20231031/apps/gmp/6.2.1-gcc-4.8.5-dse55eg/include\nCVS_RSH=ssh\nCXX=mpiCC\nDBUS_SESSION_BUS_ADDRESS=unix:abstract=/tmp/dbus-maMbqUya21,guid=b80bb007ddbd62968db55daf668319ca\nDESKTOP_SESSION=xfce\nDISPLAY=:18.0\nF77=mpif77\nF90=mpif90\nF95=/apps/spack/bell/apps/gcc/9.3.0-gcc-4.8.5-z2ug7z7/bin/gfortran\nFCA_MGR_HOME=/opt/mellanox/fca\nFC=mpif90\nGCC_HOME=/apps/spack/bell/apps/gcc/9.3.0-gcc-4.8.5-z2ug7z7\nGLADE_CATALOG_PATH=:\nGLADE_MODULE_PATH=:\nGLADE_PIXMAP_PATH=:\nGMP_HOME=/apps/spack/bell-20231031/apps/gmp/6.2.1-gcc-4.8.5-dse55eg\nGPG_AGENT_INFO=/home/yuan310/.gnupg/S.gpg-agent:17252:1\nHISTCONTROL=ignoredups\nHISTSIZE=1000\nHOME=/home/yuan310\nHOSTNAME=bell-fe06.rcac.purdue.edu\n__Init_Default_Modules=1\nLANG=en_US.UTF-8\nLD_LIBRARY_PATH=/apps/spack/bell/apps/openmpi/3.1.6-gcc-9.3.0-3xlew3m/lib:/apps/spack/bell/apps/gcc/9.3.0-gcc-4.8.5-z2ug7z7/lib64:/apps/spack/bell/apps/gcc/9.3.0-gcc-4.8.5-z2ug7z7/lib:/apps/spack/bell/apps/zlib/1.2.11-gcc-9.3.0-7x3gabj/lib:/apps/spack/bell-20231031/apps/mpc/1.1.0-gcc-4.8.5-falbgx3/lib:/apps/spack/bell-20231031/apps/mpfr/3.1.6-gcc-4.8.5-cslxql4/lib:/apps/spack/bell-20231031/apps/gmp/6.2.1-gcc-4.8.5-dse55eg/lib:/opt/thinlinc/lib64:/opt/thinlinc/lib\nLESSOPEN=||/usr/bin/lesspipe.sh %s\nLIBRARY_PATH=/apps/spack/bell/apps/openmpi/3.1.6-gcc-9.3.0-3xlew3m/lib:/apps/spack/bell/apps/gcc/9.3.0-gcc-4.8.5-z2ug7z7/lib64:/apps/spack/bell/apps/gcc/9.3.0-gcc-4.8.5-z2ug7z7/lib:/apps/spack/bell/apps/zlib/1.2.11-gcc-9.3.0-7x3gabj/lib:/apps/spack/bell-20231031/apps/mpc/1.1.0-gcc-4.8.5-falbgx3/lib:/apps/spack/bell-20231031/apps/mpfr/3.1.6-gcc-4.8.5-cslxql4/lib:/apps/spack/bell-20231031/apps/gmp/6.2.1-gcc-4.8.5-dse55eg/lib\n_LMFILES_=/opt/spack/modulefiles/Core/gmp/6.2.1.lua:/opt/spack/modulefiles/Core/mpfr/3.1.6.lua:/opt/spack/modulefiles/Core/mpc/1.1.0.lua:/opt/spack/modulefiles/gcc/9.3.0/zlib/1.2.11.lua:/opt/spack/modulefiles/Core/gcc/9.3.0.lua:/opt/spack/modulefiles/gcc/9.3.0/openmpi/3.1.6.lua:/opt/spack/modulefiles/Core/xalt/1.1.2.lua:/opt/spack/modulefiles/Core/rcac.lua\nLMOD_ADMIN_FILE=/opt/lmod/lmod/admin.list\nLMOD_AVAIL_STYLE=grouped:system\nLMOD_CMD=/opt/lmod/lmod/libexec/lmod\nLMOD_DIR=/opt/lmod/lmod/libexec\nLMOD_FAMILY_COMPILER=gcc\nLMOD_FAMILY_COMPILER_VERSION=9.3.0\nLMOD_FAMILY_MPI=openmpi\nLMOD_FAMILY_MPI_VERSION=3.1.6\nLMOD_FULL_SETTARG_SUPPORT=no\nLMOD_MPI_NAME=openmpi\nLMOD_MPI_VERSION=3.1.6-3xlew3m\nLMOD_PKG=/opt/lmod/lmod\n__LMOD_Priority_PATH=/apps/cent7/xalt/bin:-100\n__LMOD_REF_COUNT_CMAKE_PREFIX_PATH=/apps/spack/bell/apps/openmpi/3.1.6-gcc-9.3.0-3xlew3m:1;/apps/spack/bell/apps/gcc/9.3.0-gcc-4.8.5-z2ug7z7:1;/apps/spack/bell/apps/zlib/1.2.11-gcc-9.3.0-7x3gabj:1;/apps/spack/bell-20231031/apps/mpc/1.1.0-gcc-4.8.5-falbgx3:2;/apps/spack/bell-20231031/apps/mpfr/3.1.6-gcc-4.8.5-cslxql4:2;/apps/spack/bell-20231031/apps/gmp/6.2.1-gcc-4.8.5-dse55eg:2\n__LMOD_REF_COUNT_CPATH=/apps/spack/bell/apps/openmpi/3.1.6-gcc-9.3.0-3xlew3m/include:1;/apps/spack/bell/apps/gcc/9.3.0-gcc-4.8.5-z2ug7z7/include:1;/apps/spack/bell/apps/zlib/1.2.11-gcc-9.3.0-7x3gabj/include:1;/apps/spack/bell-20231031/apps/mpc/1.1.0-gcc-4.8.5-falbgx3/include:1;/apps/spack/bell-20231031/apps/mpfr/3.1.6-gcc-4.8.5-cslxql4/include:1;/apps/spack/bell-20231031/apps/gmp/6.2.1-gcc-4.8.5-dse55eg/include:1\n__LMOD_REF_COUNT_LD_LIBRARY_PATH=/apps/spack/bell/apps/openmpi/3.1.6-gcc-9.3.0-3xlew3m/lib:1;/apps/spack/bell/apps/gcc/9.3.0-gcc-4.8.5-z2ug7z7/lib64:1;/apps/spack/bell/apps/gcc/9.3.0-gcc-4.8.5-z2ug7z7/lib:1;/apps/spack/bell/apps/zlib/1.2.11-gcc-9.3.0-7x3gabj/lib:1;/apps/spack/bell-20231031/apps/mpc/1.1.0-gcc-4.8.5-falbgx3/lib:1;/apps/spack/bell-20231031/apps/mpfr/3.1.6-gcc-4.8.5-cslxql4/lib:1;/apps/spack/bell-20231031/apps/gmp/6.2.1-gcc-4.8.5-dse55eg/lib:1;/opt/thinlinc/lib64:1;/opt/thinlinc/lib:1\n__LMOD_REF_COUNT_LIBRARY_PATH=/apps/spack/bell/apps/openmpi/3.1.6-gcc-9.3.0-3xlew3m/lib:1;/apps/spack/bell/apps/gcc/9.3.0-gcc-4.8.5-z2ug7z7/lib64:1;/apps/spack/bell/apps/gcc/9.3.0-gcc-4.8.5-z2ug7z7/lib:1;/apps/spack/bell/apps/zlib/1.2.11-gcc-9.3.0-7x3gabj/lib:1;/apps/spack/bell-20231031/apps/mpc/1.1.0-gcc-4.8.5-falbgx3/lib:1;/apps/spack/bell-20231031/apps/mpfr/3.1.6-gcc-4.8.5-cslxql4/lib:1;/apps/spack/bell-20231031/apps/gmp/6.2.1-gcc-4.8.5-dse55eg/lib:1\n__LMOD_REF_COUNT__LMFILES_=/opt/spack/modulefiles/Core/gmp/6.2.1.lua:1;/opt/spack/modulefiles/Core/mpfr/3.1.6.lua:1;/opt/spack/modulefiles/Core/mpc/1.1.0.lua:1;/opt/spack/modulefiles/gcc/9.3.0/zlib/1.2.11.lua:1;/opt/spack/modulefiles/Core/gcc/9.3.0.lua:1;/opt/spack/modulefiles/gcc/9.3.0/openmpi/3.1.6.lua:1;/opt/spack/modulefiles/Core/xalt/1.1.2.lua:1;/opt/spack/modulefiles/Core/rcac.lua:1\n__LMOD_REF_COUNT_LOADEDMODULES=gmp/6.2.1:1;mpfr/3.1.6:1;mpc/1.1.0:1;zlib/1.2.11:1;gcc/9.3.0:1;openmpi/3.1.6:1;xalt/1.1.2:1;rcac:1\n__LMOD_REF_COUNT_MANPATH=/apps/spack/bell/apps/openmpi/3.1.6-gcc-9.3.0-3xlew3m/share/man:1;/apps/spack/bell/apps/gcc/9.3.0-gcc-4.8.5-z2ug7z7/share/man:1;/apps/spack/bell/apps/zlib/1.2.11-gcc-9.3.0-7x3gabj/share/man:1;/opt/hpss/man:1\n__LMOD_REF_COUNT_MODULEPATH=/opt/spack/modulefiles/openmpi/3.1.6-3xlew3m/gcc/9.3.0:1;/opt/spack/modulefiles/gcc/9.3.0:1;/opt/spack/modulefiles/Core:1\n__LMOD_REF_COUNT_PATH=/apps/cent7/xalt/bin:1;/apps/spack/bell/apps/openmpi/3.1.6-gcc-9.3.0-3xlew3m/bin:1;/apps/spack/bell/apps/gcc/9.3.0-gcc-4.8.5-z2ug7z7/bin:1;/bin:1;/usr/bin:1;/opt/thinlinc/bin:1;/usr/local/bin:1;/usr/bin/X11:1;/sbin:1;/usr/sbin:1;/usr/local/sbin:1;/opt/hpss/bin:1;/opt/hsi/bin:1\n__LMOD_REF_COUNT_PKG_CONFIG_PATH=/apps/spack/bell/apps/openmpi/3.1.6-gcc-9.3.0-3xlew3m/lib/pkgconfig:1;/apps/spack/bell/apps/zlib/1.2.11-gcc-9.3.0-7x3gabj/lib/pkgconfig:1;/apps/spack/bell-20231031/apps/gmp/6.2.1-gcc-4.8.5-dse55eg/lib/pkgconfig:2\n__LMOD_REF_COUNT_PYTHONPATH=/apps/cent7/xalt/site:1;/apps/cent7/xalt/libexec:1\nLMOD_ROOT=/opt/lmod\nLMOD_SETTARG_CMD=:\nLMOD_SETTARG_FULL_SUPPORT=no\nLMOD_SYSTEM_DEFAULT_MODULES=rcac\nLMOD_VERSION=8.4.4\nLOADEDMODULES=gmp/6.2.1:mpfr/3.1.6:mpc/1.1.0:zlib/1.2.11:gcc/9.3.0:openmpi/3.1.6:xalt/1.1.2:rcac\nLOGNAME=yuan310\nLS_COLORS=rs=0:di=38;5;27:ln=38;5;51:mh=44;38;5;15:pi=40;38;5;11:so=38;5;13:do=38;5;5:bd=48;5;232;38;5;11:cd=48;5;232;38;5;3:or=48;5;232;38;5;9:mi=05;48;5;232;38;5;15:su=48;5;196;38;5;15:sg=48;5;11;38;5;16:ca=48;5;196;38;5;226:tw=48;5;10;38;5;16:ow=48;5;10;38;5;21:st=48;5;21;38;5;15:ex=38;5;34:*.tar=38;5;9:*.tgz=38;5;9:*.arc=38;5;9:*.arj=38;5;9:*.taz=38;5;9:*.lha=38;5;9:*.lz4=38;5;9:*.lzh=38;5;9:*.lzma=38;5;9:*.tlz=38;5;9:*.txz=38;5;9:*.tzo=38;5;9:*.t7z=38;5;9:*.zip=38;5;9:*.z=38;5;9:*.Z=38;5;9:*.dz=38;5;9:*.gz=38;5;9:*.lrz=38;5;9:*.lz=38;5;9:*.lzo=38;5;9:*.xz=38;5;9:*.bz2=38;5;9:*.bz=38;5;9:*.tbz=38;5;9:*.tbz2=38;5;9:*.tz=38;5;9:*.deb=38;5;9:*.rpm=38;5;9:*.jar=38;5;9:*.war=38;5;9:*.ear=38;5;9:*.sar=38;5;9:*.rar=38;5;9:*.alz=38;5;9:*.ace=38;5;9:*.zoo=38;5;9:*.cpio=38;5;9:*.7z=38;5;9:*.rz=38;5;9:*.cab=38;5;9:*.jpg=38;5;13:*.jpeg=38;5;13:*.gif=38;5;13:*.bmp=38;5;13:*.pbm=38;5;13:*.pgm=38;5;13:*.ppm=38;5;13:*.tga=38;5;13:*.xbm=38;5;13:*.xpm=38;5;13:*.tif=38;5;13:*.tiff=38;5;13:*.png=38;5;13:*.svg=38;5;13:*.svgz=38;5;13:*.mng=38;5;13:*.pcx=38;5;13:*.mov=38;5;13:*.mpg=38;5;13:*.mpeg=38;5;13:*.m2v=38;5;13:*.mkv=38;5;13:*.webm=38;5;13:*.ogm=38;5;13:*.mp4=38;5;13:*.m4v=38;5;13:*.mp4v=38;5;13:*.vob=38;5;13:*.qt=38;5;13:*.nuv=38;5;13:*.wmv=38;5;13:*.asf=38;5;13:*.rm=38;5;13:*.rmvb=38;5;13:*.flc=38;5;13:*.avi=38;5;13:*.fli=38;5;13:*.flv=38;5;13:*.gl=38;5;13:*.dl=38;5;13:*.xcf=38;5;13:*.xwd=38;5;13:*.yuv=38;5;13:*.cgm=38;5;13:*.emf=38;5;13:*.axv=38;5;13:*.anx=38;5;13:*.ogv=38;5;13:*.ogx=38;5;13:*.aac=38;5;45:*.au=38;5;45:*.flac=38;5;45:*.mid=38;5;45:*.midi=38;5;45:*.mka=38;5;45:*.mp3=38;5;45:*.mpc=38;5;45:*.ogg=38;5;45:*.ra=38;5;45:*.wav=38;5;45:*.axa=38;5;45:*.oga=38;5;45:*.spx=38;5;45:*.xspf=38;5;45:\nLUA_CPATH=/usr/lib64/lua/5.1/?.so;;\nLUA_PATH=/usr/share/lua/5.1/?.lua;/usr/share/lua/5.1/?/init.lua;;\nMAIL=/var/spool/mail/yuan310\nMANPATH=:/apps/spack/bell/apps/openmpi/3.1.6-gcc-9.3.0-3xlew3m/share/man:/apps/spack/bell/apps/gcc/9.3.0-gcc-4.8.5-z2ug7z7/share/man:/apps/spack/bell/apps/zlib/1.2.11-gcc-9.3.0-7x3gabj/share/man::/opt/hpss/man:/opt/thinlinc/share/man:/opt/hpss/man\nMODULEPATH=/opt/spack/modulefiles/openmpi/3.1.6-3xlew3m/gcc/9.3.0:/opt/spack/modulefiles/gcc/9.3.0:/opt/spack/modulefiles/Core\nMODULESHOME=/opt/lmod/lmod\n_ModuleTable001_=X01vZHVsZVRhYmxlXz17WyJNVHZlcnNpb24iXT0zLFsiY19yZWJ1aWxkVGltZSJdPWZhbHNlLFsiY19zaG9ydFRpbWUiXT1mYWxzZSxkZXB0aFQ9e30sZmFtaWx5PXtbImNvbXBpbGVyIl09ImdjYyIsWyJtcGkiXT0ib3Blbm1waSIsfSxtVD17Z2NjPXtbImZuIl09Ii9vcHQvc3BhY2svbW9kdWxlZmlsZXMvQ29yZS9nY2MvOS4zLjAubHVhIixbImZ1bGxOYW1lIl09ImdjYy85LjMuMCIsWyJsb2FkT3JkZXIiXT01LHByb3BUPXt9LFsic3RhY2tEZXB0aCJdPTEsWyJzdGF0dXMiXT0iYWN0aXZlIixbInVzZXJOYW1lIl09ImdjYy85LjMuMCIsfSxnbXA9e1siZm4iXT0iL29wdC9zcGFjay9tb2R1bGVmaWxlcy9Db3JlL2dtcC82LjIuMS5sdWEiLFsiZnVsbE5hbWUiXT0iZ21wLzYu\n_ModuleTable002_=Mi4xIixbImxvYWRPcmRlciJdPTEscHJvcFQ9e30sWyJyZWZfY291bnQiXT0yLFsic3RhY2tEZXB0aCJdPTMsWyJzdGF0dXMiXT0iYWN0aXZlIixbInVzZXJOYW1lIl09ImdtcC82LjIuMSIsfSxtcGM9e1siZm4iXT0iL29wdC9zcGFjay9tb2R1bGVmaWxlcy9Db3JlL21wYy8xLjEuMC5sdWEiLFsiZnVsbE5hbWUiXT0ibXBjLzEuMS4wIixbImxvYWRPcmRlciJdPTMscHJvcFQ9e30sWyJyZWZfY291bnQiXT0xLFsic3RhY2tEZXB0aCJdPTIsWyJzdGF0dXMiXT0iYWN0aXZlIixbInVzZXJOYW1lIl09Im1wYy8xLjEuMCIsfSxtcGZyPXtbImZuIl09Ii9vcHQvc3BhY2svbW9kdWxlZmlsZXMvQ29yZS9tcGZyLzMuMS42Lmx1YSIsWyJmdWxsTmFtZSJdPSJtcGZyLzMuMS42IixbImxv\n_ModuleTable003_=YWRPcmRlciJdPTIscHJvcFQ9e30sWyJyZWZfY291bnQiXT0yLFsic3RhY2tEZXB0aCJdPTMsWyJzdGF0dXMiXT0iYWN0aXZlIixbInVzZXJOYW1lIl09Im1wZnIvMy4xLjYiLH0sb3Blbm1waT17WyJmbiJdPSIvb3B0L3NwYWNrL21vZHVsZWZpbGVzL2djYy85LjMuMC9vcGVubXBpLzMuMS42Lmx1YSIsWyJmdWxsTmFtZSJdPSJvcGVubXBpLzMuMS42IixbImxvYWRPcmRlciJdPTYscHJvcFQ9e30sWyJzdGFja0RlcHRoIl09MSxbInN0YXR1cyJdPSJhY3RpdmUiLFsidXNlck5hbWUiXT0ib3Blbm1waS8zLjEuNiIsfSxyY2FjPXtbImZuIl09Ii9vcHQvc3BhY2svbW9kdWxlZmlsZXMvQ29yZS9yY2FjLmx1YSIsWyJmdWxsTmFtZSJdPSJyY2FjIixbImxvYWRPcmRlciJdPTgscHJv\n_ModuleTable004_=cFQ9e30sWyJzdGFja0RlcHRoIl09MCxbInN0YXR1cyJdPSJhY3RpdmUiLFsidXNlck5hbWUiXT0icmNhYyIsfSx4YWx0PXtbImZuIl09Ii9vcHQvc3BhY2svbW9kdWxlZmlsZXMvQ29yZS94YWx0LzEuMS4yLmx1YSIsWyJmdWxsTmFtZSJdPSJ4YWx0LzEuMS4yIixbImxvYWRPcmRlciJdPTcscHJvcFQ9e2xtb2Q9e1sic3RpY2t5Il09MSx9LH0sWyJzdGFja0RlcHRoIl09MSxbInN0YXR1cyJdPSJhY3RpdmUiLFsidXNlck5hbWUiXT0ieGFsdCIsfSx6bGliPXtbImZuIl09Ii9vcHQvc3BhY2svbW9kdWxlZmlsZXMvZ2NjLzkuMy4wL3psaWIvMS4yLjExLmx1YSIsWyJmdWxsTmFtZSJdPSJ6bGliLzEuMi4xMSIsWyJsb2FkT3JkZXIiXT00LHByb3BUPXt9LFsicmVmX2NvdW50Il09\n_ModuleTable005_=MixbInN0YWNrRGVwdGgiXT0yLFsic3RhdHVzIl09ImFjdGl2ZSIsWyJ1c2VyTmFtZSJdPSJ6bGliLzEuMi4xMSIsfSx9LG1wYXRoQT17Ii9vcHQvc3BhY2svbW9kdWxlZmlsZXMvb3Blbm1waS8zLjEuNi0zeGxldzNtL2djYy85LjMuMCIsIi9vcHQvc3BhY2svbW9kdWxlZmlsZXMvZ2NjLzkuMy4wIiwiL29wdC9zcGFjay9tb2R1bGVmaWxlcy9Db3JlIix9LFsic3lzdGVtQmFzZU1QQVRIIl09Ii9vcHQvc3BhY2svbW9kdWxlZmlsZXMvQ29yZSIsfQ==\n_ModuleTable_Sz_=5\nMPC_HOME=/apps/spack/bell-20231031/apps/mpc/1.1.0-gcc-4.8.5-falbgx3\nMPFR_HOME=/apps/spack/bell-20231031/apps/mpfr/3.1.6-gcc-4.8.5-cslxql4\nMPICC=/apps/spack/bell/apps/openmpi/3.1.6-gcc-9.3.0-3xlew3m/bin/mpicc\nMPICXX=/apps/spack/bell/apps/openmpi/3.1.6-gcc-9.3.0-3xlew3m/bin/mpic++\nMPIF77=/apps/spack/bell/apps/openmpi/3.1.6-gcc-9.3.0-3xlew3m/bin/mpif77\nMPIF90=/apps/spack/bell/apps/openmpi/3.1.6-gcc-9.3.0-3xlew3m/bin/mpif90\nMPI_HOME=/apps/spack/bell/apps/openmpi/3.1.6-gcc-9.3.0-3xlew3m\nOMPI_MCA_btl_openib_warn_default_gid_prefix=0\nOMPI_MCA_btl_openib_warn_no_device_params_found=0\nOMPI_MCA_btl_openib_warn_nonexistent_if=0\nOMPI_MCA_btl=^vader,tcp,openib,uct\nOMPI_MCA_coll_hcoll_enable=0\nOMPI_MCA_hwloc_base_binding_policy=core\nOMPI_MCA_osc=ucx\nOMPI_MCA_pml=ucx\nOMPI_MCA_rmaps_base_mapping_policy=core\nOMPI_MCA_spml=ucx\nOPENMPI_HOME=/apps/spack/bell/apps/openmpi/3.1.6-gcc-9.3.0-3xlew3m\nPATH=/usr/lib64/qt-3.3/bin:/apps/cent7/xalt/bin:/apps/spack/bell/apps/openmpi/3.1.6-gcc-9.3.0-3xlew3m/bin:/apps/spack/bell/apps/gcc/9.3.0-gcc-4.8.5-z2ug7z7/bin:/bin:/usr/bin:/opt/thinlinc/bin:/usr/local/bin:/usr/bin/X11:/sbin:/usr/sbin:/usr/local/sbin:/opt/hpss/bin:/opt/hsi/bin:/opt/thinlinc/sbin:/opt/hpss/bin:/opt/hsi/bin\nPCSCTUN_COOKIE=/var/opt/thinlinc/sessions/yuan310/18/pcsctun-cookie\nPCSCTUN_SERVER=127.0.0.1:5086\nPKG_CONFIG_PATH=/apps/spack/bell/apps/openmpi/3.1.6-gcc-9.3.0-3xlew3m/lib/pkgconfig:/apps/spack/bell/apps/zlib/1.2.11-gcc-9.3.0-7x3gabj/lib/pkgconfig:/apps/spack/bell-20231031/apps/gmp/6.2.1-gcc-4.8.5-dse55eg/lib/pkgconfig\nPULSE_COOKIE=/var/opt/thinlinc/sessions/yuan310/18/pulse-cookie\nPULSE_RUNTIME_PATH=/var/opt/thinlinc/sessions/yuan310/18/pulse\nPULSE_SERVER=/var/opt/thinlinc/sessions/yuan310/18/pulse/native 127.0.0.1:5085\nPWD=/home/yuan310/projects/moose/scripts\nPYTHONPATH=/apps/cent7/xalt/site:/apps/cent7/xalt/libexec\nQTDIR=/usr/lib64/qt-3.3\nQT_GRAPHICSSYSTEM_CHECKED=1\nQTINC=/usr/lib64/qt-3.3/include\nQTLIB=/usr/lib64/qt-3.3/lib\nRCAC_CLUSTER=bell\nRCAC_CLUSTER_DOMAIN=rcac.purdue.edu\nRCAC_GCC_ROOT=/apps/spack/bell/apps/gcc/9.3.0-gcc-4.8.5-z2ug7z7\nRCAC_GCC_VERSION=9.3.0\nRCAC_GMP_ROOT=/apps/spack/bell-20231031/apps/gmp/6.2.1-gcc-4.8.5-dse55eg\nRCAC_GMP_VERSION=6.2.1\nRCAC_MPC_ROOT=/apps/spack/bell-20231031/apps/mpc/1.1.0-gcc-4.8.5-falbgx3\nRCAC_MPC_VERSION=1.1.0\nRCAC_MPFR_ROOT=/apps/spack/bell-20231031/apps/mpfr/3.1.6-gcc-4.8.5-cslxql4\nRCAC_MPFR_VERSION=3.1.6\nRCAC_OPENMPI_ROOT=/apps/spack/bell/apps/openmpi/3.1.6-gcc-9.3.0-3xlew3m\nRCAC_OPENMPI_VERSION=3.1.6\nRCAC_RETIRED_MODROOT=/opt/modulefiles\nRCAC_SCRATCH=/scratch/bell/yuan310\nRCAC_SPACK_MODROOT=/opt/spack/modulefiles\nRCAC_ZLIB_ROOT=/apps/spack/bell/apps/zlib/1.2.11-gcc-9.3.0-7x3gabj\nRCAC_ZLIB_VERSION=1.2.11\nSBATCH_IGNORE_PBS=yes\nSESSION_MANAGER=local/unix:@/tmp/.ICE-unix/17243,unix/unix:/tmp/.ICE-unix/17243\nSHELL=/bin/bash\nSHLVL=6\nSQUEUE_FORMAT=%12i %9u %12a %16j %.5D %.6C %.11l %.2t %M\nSSH_AGENT_PID=17250\nSSH_ASKPASS=/usr/libexec/openssh/gnome-ssh-askpass\nSSH_AUTH_SOCK=/tmp/ssh-Yto7kZKGiz7M/agent.17249\nTERM=xterm-256color\nTLPREFIX=/opt/thinlinc\nTLPROFILE=xfce\nTLSESSIONDATA=/var/opt/thinlinc/sessions/yuan310/18\nTOWN=Springfield\nUCX_NET_DEVICES=mlx5_0:1\nUSERNAME=yuan310\nUSER=yuan310\nVTE_VERSION=5204\nWINDOWID=41951120\nXALT_ACTIVE=1\nXALT_ETC_DIR=/apps/cent7/xalt/etc\nXALT_TRANSMISSION_STYLE=file\nXAUTHORITY=/var/opt/thinlinc/sessions/yuan310/18/Xauthority\nXDG_CONFIG_DIRS=/etc/xdg\nXDG_CURRENT_DESKTOP=XFCE\nXDG_DATA_DIRS=/home/yuan310/.local/share/flatpak/exports/share:/var/lib/flatpak/exports/share:/usr/local/share:/usr/share:/usr/share\nXDG_MENU_PREFIX=xfce-\nXDG_RUNTIME_DIR=/run/user/797509\nXDG_SESSION_CLASS=user\nXDG_SESSION_DESKTOP=xfce\nXDG_SESSION_ID=19546\nXDG_SESSION_TYPE=x11\nZLIB_HOME=/apps/spack/bell/apps/zlib/1.2.11-gcc-9.3.0-7x3gabj",
+          "url": "https://github.com/idaholab/moose/discussions/28069",
+          "updatedAt": "2024-07-05T19:47:54Z",
+          "publishedAt": "2024-07-05T14:33:44Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "milljm"
+                  },
+                  "bodyText": "I don't think MOOSE updated correctly. That is an old formatted diagnostic output (months ago).\nAre you instead trying to rebuild the same older MOOSE on a system that was recently updated? Honestly your best bet is to bring this up with your cluster admins. The system update may have left a few necessities behind. It routinely happens on our clusters as well.",
+                  "url": "https://github.com/idaholab/moose/discussions/28069#discussioncomment-9969511",
+                  "updatedAt": "2024-07-05T15:06:07Z",
+                  "publishedAt": "2024-07-05T15:06:06Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "chongxiyuan"
+                          },
+                          "bodyText": "Thanks for replying. Yes I am talking to cluster admins as well, we are trying to find out why. The version I am installing is 2023-11-08 because the newest cmake I have on the cluster is 3.20.6 and doesn't meet 3.21.0 requirements with the latest version.",
+                          "url": "https://github.com/idaholab/moose/discussions/28069#discussioncomment-9971298",
+                          "updatedAt": "2024-07-05T19:47:54Z",
+                          "publishedAt": "2024-07-05T19:47:50Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Problem with phase change and heat propagation in multiphase simulation using a heat source in porous medium.",
+          "author": {
+            "login": "claramariaK"
+          },
+          "bodyText": "Hello everyone,\nI am trying to simulate a heat source with a temperature of about 600\u00b0C in sandstone. I want to simulate the heat propagation and the phase change from water to vapor. As a starting point I used the files natural_convection.i and water_vapor_phasechange.i. I read the issue #27159 but could not derive a solution for my case.\nAs of now, the heat from the heat source \"heater\" does not propagate and the phase change does not work properly. See the figure attached (screenshot from the postprocessor output).\n\nI have tried tweaking various parameters including the initial conditions, time steps and mesh sizes (layers) as well as the preconditioning, but it never seems to work (no heat propagation and no correct phase change).\nI would appreciate any help on this topic as I am relatively new to MOOSE and have been trying to solve this problem for a month now.\nHere is the most recent version of my file:\n# The goal of the project is to simulate a heat source with a temperature of ~600\u00b0C\n# in porous medium (sandstone). The heat propogation  and the phase change from water to vapor \n# should be simulated. As a starting point, the natural_convection.i and water_vapor_phasechange.i \n# files were used. \n# As of now the heat from the heat souce \"heater\" does not propagate and the phase change does not work properly.\n\n\ndbg_actions = true\ndbg_residual_norms = true\n\n[Mesh]\n  [gen]\n    type = GeneratedMeshGenerator\n    dim = 2\n    nx = 30\n    ny = 20\n    xmin = 0\n    xmax = 300\n    ymin = -1000\n    ymax = -800\n  []\n  [heater]\n    type = ParsedGenerateSideset\n    input = gen\n    combinatorial_geometry = 'x > 150 & x < 160 & y = -900'\n    new_sideset_name = heater\n  []\n  uniform_refine = 1\n[]\n\n[GlobalParams]\n  PorousFlowDictator = dictator\n  gravity = '0 -9.81 0'\n[]\n\n[Variables]\n  [pliq]\n    scaling = 1e-7\n  []\n  [h]\n    scaling = 1e-6\n  []\n[]\n\n[ICs]\n  [hic]\n    type = PorousFlowFluidPropertyIC\n    variable = h\n    porepressure = pliq\n    property = enthalpy\n    temperature = 303.15\n    fp = water\n  []\n  [hydrostatic]\n    type = FunctionIC\n    variable = pliq\n    function = '101325 + (9.81 * 1000 * (-y))'\n  []\n[]\n\n[BCs]\n  [h_bot]\n    type = DirichletBC\n    variable = h\n    value = 2.8e6 \n    boundary = heater\n  []\n  # [h_top]\n  #   type = DirichletBC\n  #   variable = h\n  #   value = 1.2e5 \n  #   boundary = top\n  # []\n  [p_top]\n    type = DirichletBC\n    variable = pliq\n    value = 7.95e06\n    boundary = top\n  []\n[]\n\n[AuxVariables]\n  [temperature]\n    order = CONSTANT\n    family = MONOMIAL\n  []\n  [density]\n    family = MONOMIAL\n    order = CONSTANT\n  []\n[]\n\n[AuxKernels]\n  [temperature]\n    type = PorousFlowPropertyAux\n    variable = temperature\n    property = temperature\n    execute_on = TIMESTEP_END\n  []\n  [density]\n    type = PorousFlowPropertyAux\n    variable = density\n    property = density\n    execute_on = TIMESTEP_END\n  []\n[]\n\n[Kernels]\n  [mass]\n    type = PorousFlowMassTimeDerivative\n    variable = pliq\n  []\n  [massflux]\n    type = PorousFlowAdvectiveFlux\n    variable = pliq\n  []\n  [energy]\n    type = PorousFlowEnergyTimeDerivative\n    variable = h\n  []\n  [heat_conduction]\n    type = PorousFlowHeatConduction\n    variable = h\n  []\n  [heat_advection]\n    type = PorousFlowHeatAdvection\n    variable = h\n  []\n[]\n\n[UserObjects]\n  [dictator]\n    type = PorousFlowDictator\n    porous_flow_vars = 'pliq h'\n    number_fluid_phases = 2\n    number_fluid_components = 1\n  []\n  [pc]\n    type = PorousFlowCapillaryPressureBC\n    pe = 1e5\n    lambda = 2\n    pc_max = 1e6\n  []\n  [fs]\n    type = PorousFlowWaterVapor\n    water_fp = water\n    capillary_pressure = pc\n  []\n[]\n\n[Materials]\n  [watervapor]\n    type = PorousFlowFluidStateSingleComponent\n    porepressure = pliq\n    enthalpy = h\n    capillary_pressure = pc\n    fluid_state = fs\n  []\n  [thermal_conductivity]\n    type = PorousFlowThermalConductivityIdeal\n    dry_thermal_conductivity = '1 0 0  0 1 0  0 0 1'\n    wet_thermal_conductivity = '3 0 0  0 3 0  0 0 3'\n  []\n  [internal_energy]\n    type = PorousFlowMatrixInternalEnergy\n    density = 2650\n    specific_heat_capacity = 1000\n  []\n  [permeability]\n    type = PorousFlowPermeabilityConst\n    permeability = '1e-14 0 0 0 1e-14 0 0 0 1e-14'\n  []\n  [relperm0]\n    type = PorousFlowRelativePermeabilityCorey\n    n = 2\n    phase = 0\n  []\n  [relperm1]\n    type = PorousFlowRelativePermeabilityCorey\n    n = 2\n    phase = 1\n  []\n  [porosity]\n    type = PorousFlowPorosityConst\n    porosity = 0.2\n  []\n[]\n\n[FluidProperties]\n  [water]\n    type = Water97FluidProperties\n  []\n[]\n\n[Preconditioning]\n  active = 'mumps'\n  [smp]\n    type = SMP\n    full = true\n    petsc_options_iname = '-ksp_type -pc_type -sub_pc_type -sub_pc_factor_shift_type -pc_asm_overlap'\n    petsc_options_value = 'gmres      lu      asm           NONZERO                   2'\n  []\n  [mumps]\n    type = SMP\n    full = true\n    # Following has been added to solve: Linear solve did not converge due to DIVERGED_PC_FAILED iterations 0 PC failed due to SUBPC_ERROR\n    petsc_options = '-snes_converged_reason -ksp_diagonal_scale -ksp_diagonal_scale_fix -ksp_gmres_modifiedgramschmidt -snes_linesearch_monitor'\n    petsc_options_iname = '-ksp_type -pc_type -pc_factor_mat_solver_package -pc_factor_shift_type -snes_rtol -snes_atol -snes_max_it'\n    petsc_options_value = 'gmres      lu       mumps                         NONZERO               1E-3       1E1       500'\n  []\n[]\n\n[Executioner]\n  type = Transient\n  solve_type = NEWTON\n  end_time = 63072000\n  #dtmax = 1e4\n  dtmin = 1e-8\n  [TimeStepper]\n    type = IterationAdaptiveDT\n    dt = 5000\n  []\n[]\n\n[Postprocessors]\n  [enthalpy]\n    type = ElementAverageValue\n    variable = h\n    execute_on = 'initial timestep_end'\n  []\n  [pliq]\n    type = ElementAverageValue\n    variable = pliq\n    execute_on = 'initial timestep_end'\n  []\n  [liquid_mass]\n    type = PorousFlowFluidMass\n    phase = 0\n    execute_on = 'initial timestep_end'\n  []\n  [vapor_mass]\n    type = PorousFlowFluidMass\n    phase = 1\n    execute_on = 'initial timestep_end'\n  []\n  [liquid_heat]\n    type = PorousFlowHeatEnergy\n    phase = 0\n    execute_on = 'initial timestep_end'\n  []\n  [vapor_heat]\n    type = PorousFlowHeatEnergy\n    phase = 1\n    execute_on = 'initial timestep_end'\n  []\n[]\n\n[Debug]\n  show_var_residual_norms = ${dbg_residual_norms}\n  show_actions=${dbg_actions}\n[]\n\n[Outputs]\n  exodus = true\n[] \n\nThanks in advance for any tips or solutions.\nBest regards,\nClara",
+          "url": "https://github.com/idaholab/moose/discussions/28066",
+          "updatedAt": "2024-07-04T23:59:47Z",
+          "publishedAt": "2024-07-04T11:39:05Z",
+          "category": {
+            "name": "Q&A Modules: Porous Flow"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "cpgr"
+                  },
+                  "bodyText": "I can see from the snippet you posted that there was no solve - the initial residual was below the tolerance so nothing happens. What happens if you tighten the tolerance?",
+                  "url": "https://github.com/idaholab/moose/discussions/28066#discussioncomment-9958629",
+                  "updatedAt": "2024-07-04T12:25:56Z",
+                  "publishedAt": "2024-07-04T12:25:55Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "claramariaK"
+                          },
+                          "bodyText": "Hi @cpgr,\nthank you for your quick response. I tried to tighten the tolerance by adding the following to the Executioner block:\nnl_rel_tol = 1e-3\n\nI have tried a multitude of tolerances (ranging from 1e-2 down to 1e-16, if this is even possible), but the result/output is still the same.\nDo you think that the issue could have something to do with the setup of the simulation? As I am very new to programming in general, I do not know for sure if I even did the setup 100% correctly.",
+                          "url": "https://github.com/idaholab/moose/discussions/28066#discussioncomment-9958780",
+                          "updatedAt": "2024-07-04T12:40:59Z",
+                          "publishedAt": "2024-07-04T12:40:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cpgr"
+                          },
+                          "bodyText": "If you look at the preconditioning line, you have -snes-atol = 1e1 which is the absolute tolerance. Any residual less than this means it's converged. I think this is the problem - make it smaller and the problem should at least try and converge (of course, something else might go wrong)",
+                          "url": "https://github.com/idaholab/moose/discussions/28066#discussioncomment-9962966",
+                          "updatedAt": "2024-07-04T23:59:47Z",
+                          "publishedAt": "2024-07-04T23:59:47Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Modelling 1D 2 Phase flow",
+          "author": {
+            "login": "Jake-HW-Miles"
+          },
+          "bodyText": "Hi there,\nIn my pursuit of modelling power conversion systems in MOOSE, I am curious to know if any of the 2 phase modelling features from RELAP made it into MOOSE?\nFor reference, I am aiming for something similar to the attached image:\n\nThanks! :)",
+          "url": "https://github.com/idaholab/moose/discussions/28067",
+          "updatedAt": "2024-07-04T16:39:26Z",
+          "publishedAt": "2024-07-04T14:49:37Z",
+          "category": {
+            "name": "Q&A Modules: Thermal Hydraulics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nnone of the two phase discretization did make it into the thermal hyrdraulics module\nThe two phase fluid properties are in the fluid properties module and the submodules we are adding\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/28067#discussioncomment-9960572",
+                  "updatedAt": "2024-07-04T16:02:54Z",
+                  "publishedAt": "2024-07-04T16:02:53Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Jake-HW-Miles"
+                          },
+                          "bodyText": "Great, thank you! I think TwoPhaseFluidPropertiesIndependent will do at this stage!",
+                          "url": "https://github.com/idaholab/moose/discussions/28067#discussioncomment-9960633",
+                          "updatedAt": "2024-07-04T16:08:40Z",
+                          "publishedAt": "2024-07-04T16:08:40Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "You can apply for a relap7 license at the INL NCRC website",
+                          "url": "https://github.com/idaholab/moose/discussions/28067#discussioncomment-9960904",
+                          "updatedAt": "2024-07-04T16:39:27Z",
+                          "publishedAt": "2024-07-04T16:39:26Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

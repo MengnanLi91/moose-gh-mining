@@ -1,0 +1,721 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMi0wNy0wNFQyMTowOTowNC0wNTowMM4AP-7H"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "GrainTracker issue",
+          "author": {
+            "login": "ykvishal"
+          },
+          "bodyText": "I am performing large 2D (2400X2400 mesh and 20K grains) and 3D (192X192X192, 10K grains) simulations. I am using  GrainTracker block from grain_growth_2D_graintracker.i\n\n[./grain_tracker]\ntype = GrainTracker\nthreshold = 0.2\nconnecting_threshold = 0.08\ncompute_halo_maps = true # Only necessary for displaying HALOS\n[../]\n\nWhen I was analyzing microstructure evolution, I noticed that two grains represented by  a same OP are merging (Grain coalescence) into one. A typical example is here:\n\nThis is happening for many grains.\nEarlier I had similar issue and I observed this issue even for small system size and small number of grains (600 grains). One animation is shown here:\nhttps://user-images.githubusercontent.com/31565781/114320915-95391a80-9b18-11eb-90ab-4cfc3e363778.mp4\nAt that time, I tried few options like 1) Increase mesh size; 2) Play with  threshold  and connecting_threshold  parameters; 3) increase OPs. But these steps were not helpful. When I used a)  coloring_algorithm = bt and int_width=8 in the PolycrystalVoronoi block then it helped a lot.  Unfortunately, for large scale simulations, these two parameters have other effects like a) increase memory requirement and b) the 'projecting initial condition' step during initialization takes several hours (with 560 cores). It becomes worse for 60K grains in 2D and 20K grains in 3D. So I changed back these parameters (coloring_algorithm = jp and int_width=0 - it resulted in 7.5 times improvement in speed for projecting initial condition). Later, I tried to use Adaptivity  option but that was not useful in this case. Also adaptivity option takes several hours (with 560 cores) for large number of grains.\nIf you have some suggestions or tips then please let me know.\nThank you.",
+          "url": "https://github.com/idaholab/moose/discussions/17572",
+          "updatedAt": "2022-07-06T15:57:20Z",
+          "publishedAt": "2021-04-11T21:15:55Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "SudiptaBiswas"
+                  },
+                  "bodyText": "Sorry, what is the issue here? Why shouldn't the grains coalesce? Do you have remapping set to true? What does the halos map look like? Maybe create a small problem to reproduce/explain the issue.",
+                  "url": "https://github.com/idaholab/moose/discussions/17572#discussioncomment-606279",
+                  "updatedAt": "2022-07-05T08:36:05Z",
+                  "publishedAt": "2021-04-13T18:42:10Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ykvishal"
+                          },
+                          "bodyText": "Thank you for your feedback. My response is as follows:\nSorry, what is the issue here? Why shouldn't the grains coalesce?\nIn my research, I am only considering curvature driven grain growth. In ideal grain growth, boundary migration occurs only due to curvature of the boundary. Growth of grains by  grains coalesce step is unphysical in an ideal grain growth.\nDo you have remapping set to true?\nYes. Default option is true. I did not touch the original GrainTracker block given above.\nWhat does the halos map look like? \nHere is the halos map\n\nMaybe create a small problem to reproduce/explain the issue.\nMy research involves large number of grains (>100K). I started with small system size and I managed to avoid grain coalescence for smaller cases. However, for large simulations, the parameter selected by me (as explained above) takes longer time to reach to t=0 step. So, I went back to default options to save time. I am not sure if solution for small size will work for large system.",
+                          "url": "https://github.com/idaholab/moose/discussions/17572#discussioncomment-606517",
+                          "updatedAt": "2022-07-05T08:36:06Z",
+                          "publishedAt": "2021-04-13T19:50:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "SudiptaBiswas"
+                          },
+                          "bodyText": "It looks to me that the two grains are coalescing because of the shrinkage of the smaller grains that were previously present between these two grains. This often happens in polycrystals. However, if this is only happening because the two grains are represented by the same order parameters, then it could be a numerical issue. Probably, the remapping is not working properly. You might consider changing the threshold values or using a different seed for the initial condition.",
+                          "url": "https://github.com/idaholab/moose/discussions/17572#discussioncomment-607202",
+                          "updatedAt": "2022-07-05T08:37:08Z",
+                          "publishedAt": "2021-04-13T23:40:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ykvishal"
+                          },
+                          "bodyText": "However, if this is only happening because the two grains are represented by the same order parameters, then it could be a numerical issue. \nYes. That is the case. I should have mentioned that grains represented by same OP are coalescing very often.\nYou might consider changing the threshold values or using a different seed for the initial condition.\nI will try these suggestions. It seems that the parameters related to GrainTraker block are very sensitive to initial number of grains.",
+                          "url": "https://github.com/idaholab/moose/discussions/17572#discussioncomment-607225",
+                          "updatedAt": "2022-07-05T08:37:15Z",
+                          "publishedAt": "2021-04-13T23:50:40Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ykvishal"
+                          },
+                          "bodyText": "After some trials , now it is looking better.\n\nIt seems that current default settings may work with small number of grains only.\nThank you for the discussion @SudiptaBiswas !!",
+                          "url": "https://github.com/idaholab/moose/discussions/17572#discussioncomment-607797",
+                          "updatedAt": "2022-07-05T08:38:09Z",
+                          "publishedAt": "2021-04-14T04:35:57Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "PengWei97"
+                  },
+                  "bodyText": "Hi @ykvishal, I also encountered the problem of grain merging, and the effect is as follows,\n\nHowever, I didn't see the solution in your discussion, so could you tell me how to solve this problem?\nwei",
+                  "url": "https://github.com/idaholab/moose/discussions/17572#discussioncomment-3084263",
+                  "updatedAt": "2022-07-05T11:32:02Z",
+                  "publishedAt": "2022-07-05T11:32:01Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ykvishal"
+                          },
+                          "bodyText": "In my case, I varied halo level and checked this problem. However, the GrainTracker parameters are dependent on various factors and my solution may or may not work for you. You will have to spend a lot of time to optimize GrainTracker parameters.  All the best.",
+                          "url": "https://github.com/idaholab/moose/discussions/17572#discussioncomment-3085340",
+                          "updatedAt": "2022-07-05T13:59:37Z",
+                          "publishedAt": "2022-07-05T13:59:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "PengWei97"
+                          },
+                          "bodyText": "Thanks for your reply, I will try some of the settings mentioned in your discussion.",
+                          "url": "https://github.com/idaholab/moose/discussions/17572#discussioncomment-3093597",
+                          "updatedAt": "2022-07-06T15:57:24Z",
+                          "publishedAt": "2022-07-06T15:57:20Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Error Compiling and Testing MOOSE",
+          "author": {
+            "login": "ibuhari86"
+          },
+          "bodyText": "Hello Everyone,\nI am new to the group and to MOOSE. I tried to follow the instructions on the website to install MOOSE for the first time, however, I run into this problem (attached). Any suggestions on how to resolve this issue? Thank you.\nRegards,\nBI\n\n.",
+          "url": "https://github.com/idaholab/moose/discussions/21479",
+          "updatedAt": "2022-07-21T23:49:51Z",
+          "publishedAt": "2022-07-01T13:36:23Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nIt looks like it's not finding libmesh. Did you mamba install moose-libmesh ?\nWere you following these instructions?\nhttps://mooseframework.inl.gov/getting_started/installation/conda.html\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21479#discussioncomment-3064331",
+                  "updatedAt": "2022-07-01T13:39:56Z",
+                  "publishedAt": "2022-07-01T13:39:54Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ibuhari86"
+                          },
+                          "bodyText": "Hi Guillaume, thanks for your response. Yes, those are the instructions I followed and everything seemed to be going alright up until when I wanted to compile and test. I actually just redid it to make sure I did not miss any step, and it still gave me the same error message. Thank you\n\n.",
+                          "url": "https://github.com/idaholab/moose/discussions/21479#discussioncomment-3064694",
+                          "updatedAt": "2022-07-01T14:25:32Z",
+                          "publishedAt": "2022-07-01T14:25:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "this time you forgot to activate the moose environment. You re still in (base)",
+                          "url": "https://github.com/idaholab/moose/discussions/21479#discussioncomment-3064856",
+                          "updatedAt": "2022-07-01T14:50:40Z",
+                          "publishedAt": "2022-07-01T14:50:40Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ibuhari86"
+                          },
+                          "bodyText": "I did that, same issue. Not really sure what is going on.",
+                          "url": "https://github.com/idaholab/moose/discussions/21479#discussioncomment-3065517",
+                          "updatedAt": "2022-07-01T16:20:48Z",
+                          "publishedAt": "2022-07-01T16:20:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "what is the output of mamba list ?",
+                          "url": "https://github.com/idaholab/moose/discussions/21479#discussioncomment-3065724",
+                          "updatedAt": "2022-07-01T16:49:42Z",
+                          "publishedAt": "2022-07-01T16:49:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ibuhari86"
+                          },
+                          "bodyText": "This is what I get with that command.",
+                          "url": "https://github.com/idaholab/moose/discussions/21479#discussioncomment-3066541",
+                          "updatedAt": "2022-07-01T19:44:43Z",
+                          "publishedAt": "2022-07-01T19:44:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "either your mamba is broken and you need to re-instsall it or you did not install the moose dependencies like in the instructions.\nDid you run mamba install moose-libmesh ?",
+                          "url": "https://github.com/idaholab/moose/discussions/21479#discussioncomment-3067864",
+                          "updatedAt": "2022-07-02T05:54:57Z",
+                          "publishedAt": "2022-07-02T05:54:56Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ibuhari86"
+                          },
+                          "bodyText": "Hello Guillaume,\nThank you for your patience. I just don't know what it is, but I removed everything and reinstalled it again but still run into the same errors. And yes, I did mamba install moose-libmesh. Please see attached images. Thank you.",
+                          "url": "https://github.com/idaholab/moose/discussions/21479#discussioncomment-3070480",
+                          "updatedAt": "2022-07-02T18:36:28Z",
+                          "publishedAt": "2022-07-02T18:36:27Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Can you show us the output of cat ~/.condarc\nVery likely there is a deprecated channel.",
+                          "url": "https://github.com/idaholab/moose/discussions/21479#discussioncomment-3070524",
+                          "updatedAt": "2022-07-02T18:47:06Z",
+                          "publishedAt": "2022-07-02T18:47:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "good call. I see idaholab in the list of channels it's pulling from.\nOnce you have pasted the content of that file, please delete that file then try again. You will need to run:\nconda config --add channels https://conda.software.inl.gov/public",
+                          "url": "https://github.com/idaholab/moose/discussions/21479#discussioncomment-3070662",
+                          "updatedAt": "2022-07-02T19:38:19Z",
+                          "publishedAt": "2022-07-02T19:38:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ibuhari86"
+                          },
+                          "bodyText": "This is it.",
+                          "url": "https://github.com/idaholab/moose/discussions/21479#discussioncomment-3070789",
+                          "updatedAt": "2022-07-02T20:29:57Z",
+                          "publishedAt": "2022-07-02T20:29:57Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Identification of complex models\uff1athe following blocks (ids) do not exist on the mesh",
+          "author": {
+            "login": "Krystalfang"
+          },
+          "bodyText": "My model is more complicated than cylinders, etc. Models can only be imported while being processed. I completed the pre-processing in Trelis, defined blocks, sidesets, and divided grids, but during the execution of moose, the same error the following blocks ( ids) do not exist on the mesh: pla (65535).\n\nBut I do have  defined block: pla\n\nMy input file should be runnable because I strip out the complex parts of the model and it works.\nIt is very strange that I sometimes re-process the pre-processing, and it is possible to perform iterative calculations on moose, but after changing the mesh or other operations on this basis, similar problems will occur.\nWhat I want to ask is whether this problem is caused by the loss of mesh file information caused by complex models, and where should I start to solve this problem.",
+          "url": "https://github.com/idaholab/moose/discussions/21492",
+          "updatedAt": "2022-07-06T03:18:22Z",
+          "publishedAt": "2022-07-04T12:45:23Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nWhich object is returning this error?\nHow many blocks do you have in the mesh exactly?\nCan you share your mesh file? Might be easier to look at it directly.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21492#discussioncomment-3081263",
+                  "updatedAt": "2022-07-05T02:20:31Z",
+                  "publishedAt": "2022-07-05T02:20:31Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Solved off-forum (by email).\npla block did not exist after Trelis output the exodus as it was replaced by pla_TETRA and pla_PYRAMID in the exodus file because it contained mixed element",
+                          "url": "https://github.com/idaholab/moose/discussions/21492#discussioncomment-3089106",
+                          "updatedAt": "2022-07-06T03:18:21Z",
+                          "publishedAt": "2022-07-06T03:18:20Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Debugging Moose in parallel on Mac in VSCode",
+          "author": {
+            "login": "RocksSavage"
+          },
+          "bodyText": "It would be extraordinarily convenient if there was a way to debug moose on multiple cores, within VScode (on macOS).\nIf anyone has done this, I would appreicate it if you could share what worked for you (your launch.json, other configuration files, etc)",
+          "url": "https://github.com/idaholab/moose/discussions/21512",
+          "updatedAt": "2022-07-05T23:03:43Z",
+          "publishedAt": "2022-07-05T23:03:42Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": []
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Thermal Hydraulics Module Exodus File Error",
+          "author": {
+            "login": "BenjaminWillisINL"
+          },
+          "bodyText": "Hello, I have been trying to access my exodus file output from my most recent input file utilizing the thermal hydraulics module in MOOSE. I have not been able to access the exodus file in either Paraview or Peacock. Every time I go to open the file Paraview or Peacock both crash and I am hit with the error message \"paraview quit unexpectedly.\" I am also getting this error when I try to run the thermal hydraulics module example files. My input file is set up correctly as the I am getting a \"solve converged\" message in my terminal. Is there any solution where I am able to view my exodus files from the thermal hydraulics module without Paraview crashing on me? Thank you.",
+          "url": "https://github.com/idaholab/moose/discussions/21473",
+          "updatedAt": "2022-07-21T23:48:27Z",
+          "publishedAt": "2022-06-30T19:52:32Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nWhat version of paraview is this?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21473#discussioncomment-3059408",
+                  "updatedAt": "2022-06-30T20:46:10Z",
+                  "publishedAt": "2022-06-30T20:46:09Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "BenjaminWillisINL"
+                          },
+                          "bodyText": "I am using Paraview 5.10.1",
+                          "url": "https://github.com/idaholab/moose/discussions/21473#discussioncomment-3085563",
+                          "updatedAt": "2022-07-05T14:25:02Z",
+                          "publishedAt": "2022-07-05T14:24:56Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "BenjaminWillisINL"
+                          },
+                          "bodyText": "More specifically, the version of paraview I downloaded was:\nParaView-5.10.1-MPI-OSX10.13-Python3.9-x86_64.dmg\nI am also using a MacBook Pro. Thanks!",
+                          "url": "https://github.com/idaholab/moose/discussions/21473#discussioncomment-3085600",
+                          "updatedAt": "2022-07-05T14:28:58Z",
+                          "publishedAt": "2022-07-05T14:28:57Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "We are currently having issues with this version.\nPlease install 5.9 or use the legacy exodus reader in 5.10.1",
+                          "url": "https://github.com/idaholab/moose/discussions/21473#discussioncomment-3086285",
+                          "updatedAt": "2022-07-05T15:59:47Z",
+                          "publishedAt": "2022-07-05T15:59:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "BenjaminWillisINL"
+                          },
+                          "bodyText": "That worked. Thank you for your help!",
+                          "url": "https://github.com/idaholab/moose/discussions/21473#discussioncomment-3087051",
+                          "updatedAt": "2022-07-05T18:13:13Z",
+                          "publishedAt": "2022-07-05T18:13:12Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Value of field variables along a selected path",
+          "author": {
+            "login": "abarun22"
+          },
+          "bodyText": "Dear all,\nI am interested in knowing the value of a field variable (possibly for the nodes or discrete points) along a path i selected in the model. I eventually want to plot the response of this variable along this path. Any suggestions here will be appreciated.\nKind regards,\nArun",
+          "url": "https://github.com/idaholab/moose/discussions/21494",
+          "updatedAt": "2022-07-21T23:48:20Z",
+          "publishedAt": "2022-07-04T14:11:13Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nHow is this path? Is it a straight line?\nIf so you may use this vectorpostprocessor:\nhttps://mooseframework.inl.gov/source/vectorpostprocessors/LineValueSampler.html\nIf not straight, you will want to create a new one with your custom path off of the LineValueSampler\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21494#discussioncomment-3081280",
+                  "updatedAt": "2022-07-05T02:25:14Z",
+                  "publishedAt": "2022-07-05T02:25:14Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "abarun22"
+                  },
+                  "bodyText": "Hi Guillaume,\nThanks for the reference. It will be a straight path for sure.\nThis should definitely work.\nKind regards,\nArun\n\u2026\nOn Tue, Jul 5, 2022 at 3:25 AM Guillaume Giudicelli < ***@***.***> wrote:\n Hello\n\n How is this path? Is it a straight line?\n If so you may use this vectorpostprocessor:\n\n https://mooseframework.inl.gov/source/vectorpostprocessors/LineValueSampler.html\n If not straight, you will want to create a new one with your custom path\n off of the LineValueSampler\n\n Guillaume\n\n \u2014\n Reply to this email directly, view it on GitHub\n <#21494 (comment)>,\n or unsubscribe\n <https://github.com/notifications/unsubscribe-auth/AJSA257VDPAQTYZQRWAHNZ3VSOMJLANCNFSM52TKWI6Q>\n .\n You are receiving this because you authored the thread.Message ID:\n ***@***.***>",
+                  "url": "https://github.com/idaholab/moose/discussions/21494#discussioncomment-3085193",
+                  "updatedAt": "2022-07-05T13:39:22Z",
+                  "publishedAt": "2022-07-05T13:39:21Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "About block in moose",
+          "author": {
+            "login": "Gallasd"
+          },
+          "bodyText": "I study radiative heat transfer and want to use rays to calculate viewfactors.\nBecause the current moose does not support meshless yet, I need to create a fluid domain to assist in the  viewfactors calculation.However, the fluid domain is a vacuum, and there is no convection and heat conduction of the fluid.\nI checked several examples that come with moose, for example,'moose\\modules\\heat_conduction\\test\\tests\\radiation_transfer_action\\radiative_transfer_action_external_boundary_ray_tracing.i'\n[Variables]\n[temperature]\nblock = 0\n[]\n[]\n[Kernels]\n[heat_conduction]\ntype = HeatConduction\nvariable = temperature\nblock = 0\ndiffusion_coefficient = 5\n[]\n[]\nHere I think it is only heat conduction at block_0, but I found that there is temperature in block_1 in paraview,as shown in the figure\n\nSo I want to confirm with you, whether heat conduction is performed in block_1, and whether the temperature of the elements on both sides of block_1 is the reason for interpolation",
+          "url": "https://github.com/idaholab/moose/discussions/21498",
+          "updatedAt": "2022-07-05T13:35:53Z",
+          "publishedAt": "2022-07-05T08:55:52Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nHeat conduction is not performed in block 1, as you block-restricted it to 0\nThe only thing you are seeing seems to be the nodal values of temperatures on the boundary between block 0 and block 1.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21498#discussioncomment-3085149",
+                  "updatedAt": "2022-07-05T13:34:08Z",
+                  "publishedAt": "2022-07-05T13:34:07Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Gallasd"
+                          },
+                          "bodyText": "ok i see what you mean thanks a lot",
+                          "url": "https://github.com/idaholab/moose/discussions/21498#discussioncomment-3085155",
+                          "updatedAt": "2022-07-05T13:35:50Z",
+                          "publishedAt": "2022-07-05T13:35:50Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Unsuccessful convergence of the phase field coupled with the elastic energy",
+          "author": {
+            "login": "biaogxb"
+          },
+          "bodyText": "",
+          "url": "https://github.com/idaholab/moose/discussions/21356",
+          "updatedAt": "2022-07-21T23:47:45Z",
+          "publishedAt": "2022-06-20T08:55:44Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "Only if you show us your input file, then someone might help you with it :)",
+                  "url": "https://github.com/idaholab/moose/discussions/21356#discussioncomment-3003346",
+                  "updatedAt": "2022-06-22T15:27:00Z",
+                  "publishedAt": "2022-06-22T15:26:59Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "biaogxb"
+                          },
+                          "bodyText": "I have revised my questions. I would appreciate it if you could give me some suggestions\uff01\uff1a\uff09",
+                          "url": "https://github.com/idaholab/moose/discussions/21356#discussioncomment-3006573",
+                          "updatedAt": "2022-06-23T02:17:51Z",
+                          "publishedAt": "2022-06-23T02:17:50Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "About inp mesh import problem",
+          "author": {
+            "login": "Gallasd"
+          },
+          "bodyText": "Hello,\nI don't know if I haven't understood how to import meshes in inp format into moose.\nInitially I was only working on one geometry model and moose didn't recognize the node set I defined.By consulting other people's examples, I found that I can add this code to identify node sets\n' construct_side_list_from_node_list=true'\nIn the follow-up, I need to consider multiple models, and moose reports an error, saying that importing multiple parts is not yet supported.I tried to define the element set, but my element set is not recognized in the block.\nI don't know how to make moose recognize my block, can you help me, thank you very much!\nThe reason why I consider defining the unit set to represent the block is because when I build a single model study, the elemtent set is defined, and the block can be seen in the paraview.\n\n\nBut it is not recognized in moose",
+          "url": "https://github.com/idaholab/moose/discussions/21493",
+          "updatedAt": "2022-07-21T23:47:37Z",
+          "publishedAt": "2022-07-04T13:24:06Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThe Abaqus file mesh reader is actually inherited from libmesh.\nYou may look at the code there to see what it does\nhttps://libmesh.github.io/doxygen/classlibMesh_1_1AbaqusIO.html#a4935543726ef7a56278f486d2904f423\notherwise you may want to ask in the libmesh discussions\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21493#discussioncomment-3081275",
+                  "updatedAt": "2022-07-05T02:24:00Z",
+                  "publishedAt": "2022-07-05T02:24:00Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Gallasd"
+                          },
+                          "bodyText": "I want to ask you, does the block in moose correspond to the unit set in abaqus? If this is uncertain, I can't find the direction I should go to solve",
+                          "url": "https://github.com/idaholab/moose/discussions/21493#discussioncomment-3081375",
+                          "updatedAt": "2022-07-05T02:45:50Z",
+                          "publishedAt": "2022-07-05T02:45:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "looking at the code it seems to correspond to \"elset\"\nI dont see any reference to unit sets there",
+                          "url": "https://github.com/idaholab/moose/discussions/21493#discussioncomment-3081807",
+                          "updatedAt": "2022-07-05T04:46:32Z",
+                          "publishedAt": "2022-07-05T04:46:32Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Steady state converges but transient does not in CFD",
+          "author": {
+            "login": "sychang2021"
+          },
+          "bodyText": "Hi, moose experts.\nUsually transient algorithms are more stable than steady ones in CFD, but I have encountered a problem that the steady state can converge but the transient cannot converge.\nThis is a 2D problem. There is a solid rectangular inner heat source with two rectangular channels on both sides through which liquid flows to conduct heat. The boundary conditions are inlet temperature, inlet velocity and outlet pressure, as well as the presence or absence of slip boundary conditions at the solid-liquid interface(the velocity is 0 at the boundaries of the flow channels).\n\nI ran a steady state simulation first, and the simulation was converging.\n\nBut when I added a time term to each of the three equations, the simulation didn't converge. The time step of the transient simulation is 1e-6s.\n\nTo describe the problem more clearly, I put the steady-state and transient input files here. The only difference between steady state and transient is the addition of a time term to the transient Kernels block.\nSTEADY\n[Mesh]\n  file = '2layers_2d.msh'\n[]\n\n[Variables]\n  [./T]\n    initial_condition = 300\n  [../]\n  [./velocity]\n    family = LAGRANGE_VEC\n    block = 'outer'\n  [../]\n  [./p]\n    order = FIRST\n    family = LAGRANGE\n    block = 'outer'\n  [../]\n[]\n\n[ICs]\n  [./initial_velocity]\n    type = VectorConstantIC\n    x_value = 0\n    y_value = 1.5\n    z_value = 0\n    variable = velocity\n  [../]\n  [./initial_p]\n    type = FunctionIC\n    variable = p\n    function = ini_p\n  [../]\n[]\n\n[Kernels]\n  [./mass]\n    type = INSADMass\n    variable = p\n  [../]\n  [./mass_pspg]\n    type = INSADMassPSPG\n    variable = p\n  [../]\n\n  [./momentum_convection]\n    type = INSADMomentumAdvection\n    variable = velocity\n  [../]\n  [./momentum_viscous]\n    type = INSADMomentumViscous\n    variable = velocity\n  [../]\n  [./momentum_pressure]\n    type = INSADMomentumPressure\n    variable = velocity\n    pressure = p\n    integrate_p_by_parts = true\n  [../]\n  [./momentum_gravity]\n    type = INSADGravityForce\n    variable = velocity\n    gravity = '0 -9.81 0'\n    block = 'outer'\n  [../]\n  [./momentum_supg]\n    type = INSADMomentumSUPG\n    variable = velocity\n    velocity = velocity\n    block = 'outer'\n  [../]\n\n  [./temperature_conduction]\n    type = ADHeatConduction\n    variable = T\n    block = 'outer'\n    thermal_conductivity = 'k'\n  [../]\n  [./temperature_advection]\n    type = INSADEnergyAdvection\n    variable = T\n    block = 'outer'\n  [../]\n  [./temperature_supg]\n    type = INSADEnergySUPG\n    variable = T\n    velocity = velocity\n    block = 'outer'\n  [../]\n\n  [./solid_temperature]\n    type = ADHeatConduction\n    variable = T\n    block = 'inner'\n    thermal_conductivity = 'k'\n  [../]\n  [./heat_source]\n    type = HeatSource\n    value = 1e9\n    variable = T\n    block = 'inner'\n  [../]\n[]\n\n[InterfaceKernels]\n  [./convection_heat_transfer]\n    type = ConjugateHeatTransfer\n    variable = T\n    T_fluid = T\n    neighbor_var = 'T'\n    boundary = 'inner_wall'\n    htc = 'htc'\n  [../]\n[]\n\n[BCs]\n  [./inlet_Tl]\n    type = DirichletBC\n    variable = T\n    boundary = 'outer_bottom'\n    value = 300\n  [../]\n  [./inlet_velocity]\n    type = VectorFunctionDirichletBC\n    variable = velocity\n    boundary = 'outer_bottom'\n    function_y = 1.5\n  [../]\n  [./outlet_p]\n    type = DirichletBC\n    variable = p\n    boundary = 'outer_top'\n    value = 0\n  [../]\n\n  [./no_slip]\n    type = VectorFunctionDirichletBC\n    variable = velocity\n    boundary = 'inner_wall outer_wall'\n    function_y = 0\n  [../]\n[]\n\n[Materials]\n  [./fluid_mat]\n    type = ADGenericConstantMaterial\n    prop_names = 'rho mu cp k'\n    prop_values = '10311 0.0061 152 8.8'\n    block = 'outer'\n  [../]\n  [./solid_mat]\n    type = ADGenericConstantMaterial\n    prop_names = 'rho cp k'\n    prop_values = '11085 238 5.95'\n    block = 'inner'\n  [../]\n  [./ins_mat]\n    type = INSADStabilized3Eqn\n    velocity = velocity\n    pressure = p\n    temperature = T\n    block='outer'\n  [../]\n  [./htc]\n    type = ADGenericFunctionMaterial\n    prop_names = htc\n    prop_values = htc_function\n  [../]\n[]\n\n[Functions]\n  [./htc_function]\n    type = ParsedFunction\n    value = '9e4'\n  [../]\n  [./ini_p]\n    type = ParsedFunction\n    value = '11085*9.81*(0.9-y)'\n  [../]\n[]\n\n[Preconditioning]\n  [Newton_SMP]\n    type = SMP\n    full = true\n    solve_type = 'NEWTON'\n  []\n[]\n\n[Executioner]\n  type = Steady\n  automatic_scaling = true\n  nl_rel_tol = 1e-8\n  l_tol = 1e-6\n  l_max_its = 500\n  nl_max_its = 200\n  petsc_options_iname = '-pc_type -pc_factor_mat_solver_package -ksp_gmres_restart'\n  petsc_options_value = 'lu       superlu_dist                  50'\n[]\n\n[VectorPostprocessors]\n  [./mid_T]\n    type = LineValueSampler\n    variable = 'T'\n    start_point = '0 0 0'\n    end_point = '0 0.9 0'\n    num_points = 91\n    sort_by = y\n  []\n[]\n\n[Outputs]\n  perf_graph = true\n  print_linear_residuals = false\n  csv = true\n  execute_on = 'timestep_end'\n  exodus = true\n  file_base = 'steady_0'\n[]\n\nTRANSIENT\n[Mesh]\n  file = '2layers_2d.msh'\n[]\n\n[Variables]\n  [./T]\n    initial_condition = 300\n  [../]\n  [./velocity]\n    family = LAGRANGE_VEC\n    block = 'outer'\n  [../]\n  [./p]\n    order = FIRST\n    family = LAGRANGE\n    block = 'outer'\n  [../]\n[]\n\n[ICs]\n  [./initial_velocity]\n    type = VectorConstantIC\n    x_value = 0\n    y_value = 1.5\n    z_value = 0\n    variable = velocity\n  [../]\n  [./initial_p]\n    type = FunctionIC\n    variable = p\n    function = ini_p\n  [../]\n[]\n\n[Kernels]\n  [./mass]\n    type = INSADMass\n    variable = p\n  [../]\n  [./mass_pspg]\n    type = INSADMassPSPG\n    variable = p\n  [../]\n\n  [./momentum_time]\n    type = INSADMomentumTimeDerivative\n    variable = velocity\n  [../]\n  [./momentum_convection]\n    type = INSADMomentumAdvection\n    variable = velocity\n  [../]\n  [./momentum_viscous]\n    type = INSADMomentumViscous\n    variable = velocity\n  [../]\n  [./momentum_pressure]\n    type = INSADMomentumPressure\n    variable = velocity\n    pressure = p\n    integrate_p_by_parts = true\n  [../]\n  [./momentum_gravity]\n    type = INSADGravityForce\n    variable = velocity\n    gravity = '0 -9.81 0'\n    block = 'outer'\n  [../]\n  [./momentum_supg]\n    type = INSADMomentumSUPG\n    variable = velocity\n    velocity = velocity\n    block = 'outer'\n  [../]\n\n  [./temperature_time]\n    type = INSADHeatConductionTimeDerivative\n    variable = T\n    block = 'outer'\n  [../]\n  [./temperature_conduction]\n    type = ADHeatConduction\n    variable = T\n    block = 'outer'\n    thermal_conductivity = 'k'\n  [../]\n  [./temperature_advection]\n    type = INSADEnergyAdvection\n    variable = T\n    block = 'outer'\n  [../]\n  [./temperature_supg]\n    type = INSADEnergySUPG\n    variable = T\n    velocity = velocity\n    block = 'outer'\n  [../]\n\n  [./solid_temperature_time]\n    type = ADHeatConductionTimeDerivative\n    variable = T\n    block = 'inner'\n    density_name = 'rho'\n    specific_heat = 'cp'\n  [../]\n  [./solid_temperature_conduction]\n    type = ADHeatConduction\n    variable = T\n    block = 'inner'\n    thermal_conductivity = 'k'\n  [../]\n  [./heat_source]\n    type = HeatSource\n    value = 1e9\n    variable = T\n    block = 'inner'\n  [../]\n[]\n\n[InterfaceKernels]\n  [./convection_heat_transfer]\n    type = ConjugateHeatTransfer\n    variable = T\n    T_fluid = T\n    neighbor_var = 'T'\n    boundary = 'inner_wall'\n    htc = 'htc'\n  [../]\n[]\n\n[BCs]\n  [./inlet_Tl]\n    type = DirichletBC\n    variable = T\n    boundary = 'outer_bottom'\n    value = 300\n  [../]\n  [./inlet_velocity]\n    type = VectorFunctionDirichletBC\n    variable = velocity\n    boundary = 'outer_bottom'\n    function_y = 1.5\n  [../]\n  [./outlet_p]\n    type = DirichletBC\n    variable = p\n    boundary = 'outer_top'\n    value = 0\n  [../]\n\n  [./no_slip]\n    type = VectorFunctionDirichletBC\n    variable = velocity\n    boundary = 'inner_wall outer_wall'\n    function_y = 0\n  [../]\n[]\n\n[Materials]\n  [./fluid_mat]\n    type = ADGenericConstantMaterial\n    prop_names = 'rho mu cp k'\n    prop_values = '10311 0.0061 152 8.8'\n    block = 'outer'\n  [../]\n  [./solid_mat]\n    type = ADGenericConstantMaterial\n    prop_names = 'rho cp k'\n    prop_values = '11085 238 5.95'\n    block = 'inner'\n  [../]\n  [./ins_mat]\n    type = INSADStabilized3Eqn\n    velocity = velocity\n    pressure = p\n    temperature = T\n    block='outer'\n  [../]\n  [./htc]\n    type = ADGenericFunctionMaterial\n    prop_names = htc\n    prop_values = htc_function\n  [../]\n[]\n\n[Functions]\n  [./htc_function]\n    type = ParsedFunction\n    value = '9e4'\n  [../]\n  [./ini_p]\n    type = ParsedFunction\n    value = '11085*9.81*(0.9-y)'\n  [../]\n[]\n\n[Preconditioning]\n  [./SMP]\n    type = SMP\n    full = true\n    solve_type = 'NEWTON'\n  [../]\n[]\n\n[Executioner]\n  type = Transient\n  num_steps = 100\n  dt = 1e-6\n  petsc_options_iname = '-pc_type -pc_asm_overlap -sub_pc_type -sub_pc_factor_levels -sub_pc_factor_shift_type'\n  petsc_options_value = 'asm      2               ilu          4                     NONZERO'\n  line_search = 'none'\n  nl_rel_tol = 1e-8\n  nl_abs_tol = 1e-10\n  automatic_scaling = true\n[]\n\n[Postprocessors]\n  [./max_T_inner]\n    type = ElementExtremeValue\n    variable = T\n    value_type = max\n    block = 'inner'\n  [../]\n  [./max_T_outer]\n    type = ElementExtremeValue\n    variable = T\n    value_type = max\n    block = 'outer'\n  [../]\n  [./min_T_inner]\n    type = ElementExtremeValue\n    variable = T\n    value_type = min\n    block = 'inner'\n  [../]\n  [./min_T_outer]\n    type = ElementExtremeValue\n    variable = T\n    value_type = min\n    block = 'outer'\n  [../]\n  [./average_T_inner]\n    type = ElementAverageValue\n    variable = T\n    block = 'inner'\n  [../]\n  [./average_T_outer]\n    type = ElementAverageValue\n    variable = T\n    block = 'outer'\n  [../]\n[]\n\n[Outputs]\n  perf_graph = true\n  print_linear_residuals = false\n  [./exodus]\n    type = Exodus\n    file_base = 'transient_0'\n    execute_on = 'FINAL'\n  [../]\n[]\n\nThis is mesh file.\n2layers_2d.zip",
+          "url": "https://github.com/idaholab/moose/discussions/21488",
+          "updatedAt": "2022-07-05T02:09:04Z",
+          "publishedAt": "2022-07-03T02:18:04Z",
+          "category": {
+            "name": "Q&A Modules: Navier-Stokes"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYou seem to have changed the preconditioning quite a bit as well.\nFor the steady state you use a direct solve, lu.\nFor the transient you use something more scalable, asm-lu, but also not as good at converging under any conditions.\nCould you please try lu for the transient too?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21488#discussioncomment-3071530",
+                  "updatedAt": "2022-07-03T04:08:37Z",
+                  "publishedAt": "2022-07-03T04:08:36Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sychang2021"
+                          },
+                          "bodyText": "I\u2019ve replaced\n  petsc_options_iname = '-pc_type -pc_asm_overlap -sub_pc_type -sub_pc_factor_levels -sub_pc_factor_shift_type'\n  petsc_options_value = 'asm      2               ilu          4                     NONZERO'\n\nwith\n  petsc_options_iname = '-pc_type -pc_factor_mat_solver_package -ksp_gmres_restart'\n  petsc_options_value = 'lu       superlu_dist                  50'\n\nBut simulation still does not converge.",
+                          "url": "https://github.com/idaholab/moose/discussions/21488#discussioncomment-3071596",
+                          "updatedAt": "2022-07-03T04:52:14Z",
+                          "publishedAt": "2022-07-03T04:52:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sychang2021"
+                          },
+                          "bodyText": "You are right, Guillaume! The root of the problem is preconditioning. I replace the original Executioner block with the following one, then it runs well.\n[Executioner]\n  type = Transient\n  num_steps = 100\n  dt = 1e-6\n  nl_rel_tol = 1e-8\n  nl_abs_tol = 1e-10\n  solve_type = 'NEWTON'\n  petsc_options = '-snes_converged_reason -ksp_converged_reason -snes_linesearch_monitor'\n  petsc_options_iname = '-pc_type -pc_factor_shift_type'\n  petsc_options_value = 'lu       NONZERO'\n  line_search = 'none'\n  nl_max_its = 30\n  l_max_its = 100\n[]\n\nBut I don't understand why PETSc options are set like this. Can you briefly explain it to me? I also want to learn how to set PETSc options, do you have any suggestions?",
+                          "url": "https://github.com/idaholab/moose/discussions/21488#discussioncomment-3071836",
+                          "updatedAt": "2022-07-03T06:45:14Z",
+                          "publishedAt": "2022-07-03T06:45:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "The PETSc manual is the best reference for petsc options we have very basic documentation here otherwise\nhttps://mooseframework.inl.gov/syntax/Preconditioning/\nhttps://mooseframework.inl.gov/source/executioners/Steady.html\nhttps://mooseframework.inl.gov/application_development/hypre.html\nLU is direct solve method, so it's more robust than iterative solves, but it also does not scale very well with the size of the problem",
+                          "url": "https://github.com/idaholab/moose/discussions/21488#discussioncomment-3081232",
+                          "updatedAt": "2022-07-05T02:07:24Z",
+                          "publishedAt": "2022-07-05T02:07:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sychang2021"
+                          },
+                          "bodyText": "Thank you for your advice. I'll learn it carefully.",
+                          "url": "https://github.com/idaholab/moose/discussions/21488#discussioncomment-3081239",
+                          "updatedAt": "2022-07-05T02:09:04Z",
+                          "publishedAt": "2022-07-05T02:09:04Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

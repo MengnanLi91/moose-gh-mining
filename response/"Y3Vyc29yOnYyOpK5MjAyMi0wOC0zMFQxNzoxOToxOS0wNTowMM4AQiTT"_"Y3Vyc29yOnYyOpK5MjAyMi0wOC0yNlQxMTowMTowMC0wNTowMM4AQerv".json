@@ -1,0 +1,1230 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMi0wOC0yNlQxMTowMTowMC0wNTowMM4AQerv"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Using the Plastic Deformation Gradient (Fp) Crystal Plasticity",
+          "author": {
+            "login": "Vandenbg"
+          },
+          "bodyText": "Hello, I am attempting to use the Plastic Deformation Gradient from the governing equations of Crystal Plasticity Stress to calculate the dislocation density in the material.\nI am unsure if this is possible, so far I have found that it may be possible to output the deformation gradient using output_properties. This would require knowing the name which the deformation gradient is tied to within the file, is there a way to find out the possible material properties that can be output using that line? From here I would want to use the gradient as a variable so I could apply a function to it.\nOther than that, I have thought about using post processors or auxvariables, however, I am unsure of how to connect the deformation gradient to these.\nAny advice/ direction would be of great assistance.",
+          "url": "https://github.com/idaholab/moose/discussions/21950",
+          "updatedAt": "2022-08-30T20:03:27Z",
+          "publishedAt": "2022-08-26T23:13:01Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nthe deformation is stored in the disp_xyz variables, the gradient should be the strain tensor material property, named as strain_xy for the relevant component. You can trigger material property output to get it or you can add the relevant Material...Aux to output it\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21950#discussioncomment-3491224",
+                  "updatedAt": "2022-08-27T23:42:27Z",
+                  "publishedAt": "2022-08-27T23:42:27Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Vandenbg"
+                          },
+                          "bodyText": "Thank you for the reply. This is mostly what I am looking for, however, I need the components of the strain tensor, plastic and elastic. In the aforementioned syntax page, the total, elastic, and plastic tensors are all used for different calculations. Are these stored in two different variables?\nAs for variable naming conventions you explained, is there a page with details I can reference?",
+                          "url": "https://github.com/idaholab/moose/discussions/21950#discussioncomment-3503104",
+                          "updatedAt": "2022-08-29T19:15:33Z",
+                          "publishedAt": "2022-08-29T19:15:33Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "sapitts"
+                  },
+                  "bodyText": "Hi @Vandenbg ,\nIn the crystal plasticity classes, we define the plastic deformation gradient and the total deformation gradient with respect to the reference configuration. @GiudGiud's answer refers to the tensor mechanics formulation derived with respect to the current configuration (in which the strain is Almansi strain calculated from the left Cauchy-Green deformation tensor).\nSince you mention wanting to calculate dislocation density values, I suspect you will want the right Cauchy-Green plastic deformation tensor. In the ComputeMultipleCrystalPlasticityStress class, the plastic deformation gradient is given the material property name _plastic_deformation_gradient, see \n  \n    \n      moose/modules/tensor_mechanics/src/materials/crystal_plasticity/ComputeMultipleCrystalPlasticityStress.C\n    \n    \n         Line 82\n      in\n      712a86c\n    \n  \n  \n    \n\n        \n          \n           _plastic_deformation_gradient(declareProperty<RankTwoTensor>(\"plastic_deformation_gradient\")), \n        \n    \n  \n\n\nWhat type of dislocation density are you trying to calculate?",
+                  "url": "https://github.com/idaholab/moose/discussions/21950#discussioncomment-3503186",
+                  "updatedAt": "2022-08-29T19:28:12Z",
+                  "publishedAt": "2022-08-29T19:26:19Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Vandenbg"
+                          },
+                          "bodyText": "Thank you for the clarifications. I am trying to calculate the number of dislocations at each point in my mesh as it is deformed via nano-indentation. To do so, I am following this reference which details a method to calculate the dislocation density tensor. In this reference, page 3, section 2, equation 3 is the route I am pursuing. If another method for calculating the number of dislocations and their position is available within MOOSE, I am open to suggestions.\nI appreciate your insight.",
+                          "url": "https://github.com/idaholab/moose/discussions/21950#discussioncomment-3503315",
+                          "updatedAt": "2022-08-29T19:46:47Z",
+                          "publishedAt": "2022-08-29T19:46:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sapitts"
+                          },
+                          "bodyText": "Ah, the Nye's tensor calculation for the geometrically necessary dislocations. You'll probably want to calculate that quantity as a material property, although material properties are computed at individual quadrature points (the _qp you see in the crystal plasticity code). A Nye's tensor calculated directly within a crystal plasticity model will depend on the plastic deformation gradient at just that single qp and will introduce mesh-dependence. Is the mesh-dependence issue why you asked about output options?",
+                          "url": "https://github.com/idaholab/moose/discussions/21950#discussioncomment-3504344",
+                          "updatedAt": "2022-08-29T23:29:33Z",
+                          "publishedAt": "2022-08-29T23:29:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Vandenbg"
+                          },
+                          "bodyText": "Unfortunately it is not, it just happened to be the first step I identified. While I'd like to do the calculation within MOOSE, It might not be possible and a separate script for data analysis may be needed. I planned to use a series of functions along side the deformation gradient to calculate the dislocation density at each point. I believe functions in MOOSE have the capabilities for the calculation. How do calculations work for material properties, can I still use functions? I am unsure how mesh dependance will play-out, I have not put thought into that issue.",
+                          "url": "https://github.com/idaholab/moose/discussions/21950#discussioncomment-3511613",
+                          "updatedAt": "2022-08-30T18:33:47Z",
+                          "publishedAt": "2022-08-30T18:33:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ngrilli"
+                          },
+                          "bodyText": "@Vandenbg you may want to calculate the geometrically necessary dislocation density starting from Fp\nby using a minimization procedure as described here:\nhttps://www.sciencedirect.com/science/article/pii/S0749641918300068\nThis can be done in MOOSE or as postprocessing and I may have some python script to share for this.\nAnother perspective is to use a dislocation-based constitutive model in which the time evolution of the GND is calculated\nduring the simulation based on the gradients of the slip rate on the different slip systems, as done here:\nhttps://www.sciencedirect.com/science/article/pii/S0749641920304940\nsee equations (48) and (49).\nI have implemented this second option here:\nhttps://github.com/ngrilli/c_pfor_am/blob/main/test/tests/SlipGradients/polycrystal_initial_GND.i\nThe advantage is that it does not require a specific assumption\nabout the energy minimization to discriminate between multiple solutions (i.e. given Fp, the GND densities are not unique)\nand gives a unique solution for the GND density on each slip system.\nTrust this helps,\nNicol\u00f2",
+                          "url": "https://github.com/idaholab/moose/discussions/21950#discussioncomment-3511743",
+                          "updatedAt": "2022-08-30T18:54:41Z",
+                          "publishedAt": "2022-08-30T18:54:40Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Vandenbg"
+                          },
+                          "bodyText": "Nicol\u00f2, Stephanie, I appreciate your insights on this issue. I'll pursue the second method given your advice.",
+                          "url": "https://github.com/idaholab/moose/discussions/21950#discussioncomment-3512048",
+                          "updatedAt": "2022-08-30T19:43:20Z",
+                          "publishedAt": "2022-08-30T19:43:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sapitts"
+                          },
+                          "bodyText": "Thanks for sharing the Demir paper @ngrilli!",
+                          "url": "https://github.com/idaholab/moose/discussions/21950#discussioncomment-3512167",
+                          "updatedAt": "2022-08-30T20:03:27Z",
+                          "publishedAt": "2022-08-30T20:03:27Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Duplicate Material property into AuxVariable",
+          "author": {
+            "login": "hokonkim"
+          },
+          "bodyText": "Hello, I have a question about duplicating material property into AuxVariable.\nI tried MaterialRealAux. But this outputs element volume-averaged material properties.\nI just want to capture the pure value of material properties.\nThe reason why I duplicate material property into AuxVariable is \"Material property doesn't have the xyz coordinate, but AuxVariable have the xyz coordinate after duplication.\"\nI want to track the change in Material properties matching xyz coordinates.\nWhat will be the best solution for me?",
+          "url": "https://github.com/idaholab/moose/discussions/21104",
+          "updatedAt": "2022-08-30T19:00:42Z",
+          "publishedAt": "2022-05-23T21:44:43Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nIf the auxvariable is a nodal variable you ll get a nodal value not a volume averaged one.\nWhat do you mean by 'pure' value?\nWhat do you mean by 'doesn't have the xyz coordinate' as well?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21104#discussioncomment-2807681",
+                  "updatedAt": "2022-05-23T22:23:04Z",
+                  "publishedAt": "2022-05-23T22:23:02Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hokonkim"
+                          },
+                          "bodyText": "[Materials]\n  [./tpbActivity]\n    type  = ParsedMaterial\n    block = 'PT_TPB_TET4'\n    f_name = 'tpbActivity_S0'\n    function = 'if(time = 0,\n                        s0_tpb_init,\n                        if(((V_Em - VolCr) / V_Em)>=0, s0_tpb_init * ((V_Em - VolCr) / V_Em), 0))'\n    args = 'V_Em s0_tpb_init'\n    material_property_names = 'VolCr time'\n  [../]\n[]\n\n[AuxVariables]\n  [./Copy_tpbActivity_S0]\n    family = MONOMIAL\n    block = 'PT_TPB_TET4'\n  [../]\n[]\n\n[AuxKernels]\n  [./copy_tpbActivity]\n    type = MaterialRealAux\n    property = tpbActivity_S0\n    variable = Copy_tpbActivity_S0\n    block = 'PT_TPB_TET4'\n  [../]\n[]\n\nAbove is a part of my code.\nI used \"Pure\" for the value without any additional processes(e.g., volume-averaged).\nIf I export the Material properties(Cell data in Paraview) through Paraview, then it didn't have XYZ coordinates.\nBut variables (Point data in Paraview) have XYZ coordinates.",
+                          "url": "https://github.com/idaholab/moose/discussions/21104#discussioncomment-2807743",
+                          "updatedAt": "2022-05-23T22:38:57Z",
+                          "publishedAt": "2022-05-23T22:38:57Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "how do you export the material properties?\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/21104#discussioncomment-2807749",
+                          "updatedAt": "2022-05-23T22:40:54Z",
+                          "publishedAt": "2022-05-23T22:40:53Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hokonkim"
+                          },
+                          "bodyText": "If I add command \"output = exodus\" in Material properties, then in the result file(*.e), the material property is stored as Cell data(in paraview).\nThen, I can export (save) the material property.",
+                          "url": "https://github.com/idaholab/moose/discussions/21104#discussioncomment-2807770",
+                          "updatedAt": "2022-05-23T22:50:12Z",
+                          "publishedAt": "2022-05-23T22:48:31Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "ok so the the default output from the materials block does this.\nBut with a nodal aux variable and MaterialRealAux you can get the nodal values. then it ll be point data",
+                          "url": "https://github.com/idaholab/moose/discussions/21104#discussioncomment-2807838",
+                          "updatedAt": "2022-05-23T23:08:09Z",
+                          "publishedAt": "2022-05-23T23:08:09Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hokonkim"
+                          },
+                          "bodyText": "How can I make a nodal aux variable from the current situation??",
+                          "url": "https://github.com/idaholab/moose/discussions/21104#discussioncomment-2807870",
+                          "updatedAt": "2022-05-23T23:19:29Z",
+                          "publishedAt": "2022-05-23T23:19:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "[AuxVariables]\n  [some_name]\n  []\n[]\n\n[AuxKernels]\n  [convert]\n    type = MaterialRealAux\n    variable = some_name\n    property = 'name of the property'\n  []\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/21104#discussioncomment-2807894",
+                          "updatedAt": "2022-05-23T23:26:40Z",
+                          "publishedAt": "2022-05-23T23:26:40Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hokonkim"
+                          },
+                          "bodyText": "As far as I remember, without specifying \u201cfamily = monomial\u201d in AuxVariables, I could not run the simulation properly.\nI will try the way as you suggested.",
+                          "url": "https://github.com/idaholab/moose/discussions/21104#discussioncomment-2807944",
+                          "updatedAt": "2022-05-23T23:48:25Z",
+                          "publishedAt": "2022-05-23T23:48:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "we are talking about output here so you should be able to use the lagrange family",
+                          "url": "https://github.com/idaholab/moose/discussions/21104#discussioncomment-2808030",
+                          "updatedAt": "2022-05-24T00:11:03Z",
+                          "publishedAt": "2022-05-24T00:11:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hokonkim"
+                          },
+                          "bodyText": "I got the error like below",
+                          "url": "https://github.com/idaholab/moose/discussions/21104#discussioncomment-2808156",
+                          "updatedAt": "2022-05-24T00:55:06Z",
+                          "publishedAt": "2022-05-24T00:55:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "umm ok. This is because it would be undefinied at a subdomain boundary, like we would not know which expression to use to compute the material property if it was different on both sides of the node\nCan you use AuxVariables with CONSTANT order MONOMIAL family to save the X, Y and Z coordinates then use that as the cell data?\nYou'd just need a FunctionAux and ParsedFunction to do this",
+                          "url": "https://github.com/idaholab/moose/discussions/21104#discussioncomment-2808648",
+                          "updatedAt": "2022-05-24T03:14:32Z",
+                          "publishedAt": "2022-05-24T03:14:32Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "ngrilli"
+                  },
+                  "bodyText": "Dear @hokonkim\nI think I do something similar here:\nhttps://github.com/ngrilli/c_pfor_am/blob/main/test/tests/SlipGradients/polycrystal_initial_GND.i\nI define first monomial auxvariables, e.g. slip_increment_1,\nI declare and assign a material property in the material object CrystalPlasticityDislocationUpdate,\nthen I use MaterialStdVectorAux to assign the material property to the AuxVariable.\nThis provide a linearly interpolated material property over the elements\nin the form of an AuxVariable.\nHope this helps,\nBest Regards,\nNicol\u00f2",
+                  "url": "https://github.com/idaholab/moose/discussions/21104#discussioncomment-2843875",
+                  "updatedAt": "2022-05-29T14:55:45Z",
+                  "publishedAt": "2022-05-29T14:54:59Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Vandenbg"
+                          },
+                          "bodyText": "Hello @ngrilli,\nI can't seem to find the syntax page for CrystalPlasticityDislocationUpdate, could you point it out to me?\nThank you,\nGavin",
+                          "url": "https://github.com/idaholab/moose/discussions/21104#discussioncomment-3504273",
+                          "updatedAt": "2022-08-29T23:12:42Z",
+                          "publishedAt": "2022-08-29T23:12:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "is it any of those?\nhttps://mooseframework.inl.gov/source/materials/crystal_plasticity/CrystalPlasticityKalidindiUpdate.html\nhttps://mooseframework.inl.gov/source/materials/crystal_plasticity/CrystalPlasticityTwinningKalidindiUpdate.html",
+                          "url": "https://github.com/idaholab/moose/discussions/21104#discussioncomment-3505586",
+                          "updatedAt": "2022-08-30T04:49:47Z",
+                          "publishedAt": "2022-08-30T04:49:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Vandenbg"
+                          },
+                          "bodyText": "It looks like the name may have changed at some point, that is the source of my confusion. Thank you!",
+                          "url": "https://github.com/idaholab/moose/discussions/21104#discussioncomment-3511784",
+                          "updatedAt": "2022-08-30T19:00:43Z",
+                          "publishedAt": "2022-08-30T19:00:42Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "run_tests error when compiling apps together",
+          "author": {
+            "login": "aarograh"
+          },
+          "bodyText": "I'm trying to compile a couple of applicaitons together to perform some coupled calculations.  Everything compiles, but when I try to run tests, I get this error.  I'm not sure what's going on.  I don't get it with any of the standalone applications.\n(moose) ag6@node20$  ./run_tests -j36 --dbg\nTraceback (most recent call last):\n  File \"/home/ag6/zoo/mole/./run_tests\", line 12, in <module>\n    TestHarness.buildAndRun(sys.argv, 'mole', MOOSE_DIR)\n  File \"/home/ag6/zoo/mole/moose/python/TestHarness/TestHarness.py\", line 181, in buildAndRun\n    harness.findAndRunTests()\n  File \"/home/ag6/zoo/mole/moose/python/TestHarness/TestHarness.py\", line 418, in findAndRunTests\n    self.scheduler.schedule(testers)\n  File \"/home/ag6/zoo/mole/moose/python/TestHarness/schedulers/Scheduler.py\", line 217, in schedule\n    j_dag = jobs.createJobs(testers)\n  File \"/home/ag6/zoo/mole/moose/python/TestHarness/JobDAG.py\", line 56, in createJobs\n    return self._checkDAG()\n  File \"/home/ag6/zoo/mole/moose/python/TestHarness/JobDAG.py\", line 105, in _checkDAG\n    self._doLast()\n  File \"/home/ag6/zoo/mole/moose/python/TestHarness/JobDAG.py\", line 133, in _doLast\n    self._doSkippedDependencies()\n  File \"/home/ag6/zoo/mole/moose/python/TestHarness/JobDAG.py\", line 191, in _doSkippedDependencies\n    if not job.getRunnable() or job.isFail() or job.isSkip():\n  File \"/home/ag6/zoo/mole/moose/python/TestHarness/schedulers/Job.py\", line 153, in getRunnable\n    return self.__tester.getRunnable(self.options)\n  File \"/home/ag6/zoo/mole/moose/python/TestHarness/testers/Tester.py\", line 238, in getRunnable\n    self._runnable = self.checkRunnableBase(options)\n  File \"/home/ag6/zoo/mole/moose/python/TestHarness/testers/Tester.py\", line 597, in checkRunnableBase\n    checks[\"registered_apps\"] = util.getExeRegisteredApps(self.specs[\"executable\"])\n  File \"/home/ag6/zoo/mole/moose/python/TestHarness/util.py\", line 735, in getExeRegisteredApps\n    data = getExeJSON(exe)\n  File \"/home/ag6/zoo/mole/moose/python/TestHarness/util.py\", line 718, in getExeJSON\n    output = output.split('**START JSON DATA**\\n')[1]\nIndexError: list index out of range",
+          "url": "https://github.com/idaholab/moose/discussions/21962",
+          "updatedAt": "2022-09-02T20:12:17Z",
+          "publishedAt": "2022-08-29T22:13:13Z",
+          "category": {
+            "name": "Q&A Tools"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "milljm"
+                  },
+                  "bodyText": "That is the application failing to produce proper JSON output. The TestHarness is asking the application for a dump of all your applications supported 'features'. Does the following not produce an error?\n./your_application-opt --json",
+                  "url": "https://github.com/idaholab/moose/discussions/21962#discussioncomment-3508852",
+                  "updatedAt": "2022-08-30T13:04:26Z",
+                  "publishedAt": "2022-08-30T13:03:59Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aarograh"
+                          },
+                          "bodyText": "Ah, yes, as it turns out that --json option does produce an error.  The output is below.  I am coupling the Mole application with Griffin.  The AddSpeciesAction is something inside Mole, so iot seems like perhaps some of the Mole components are not getting registered properly (interesting, because I didn't have this issue when coupling to a different application, but Griffin seems a lot more complicated in certain ways).  The output is below.  I'll start digging into it, but if you happen to have any quick suggestions please let me know and I'll try those.\nGriffin version:         git commit 6ba94fd on 2022-08-29\nFramework Information:\nMOOSE Version:           git commit 16505c7 on 2022-03-28\nLibMesh Version:\nPETSc Version:           3.16.5\nSLEPc Version:           3.16.2\nCurrent Time:            Tue Aug 30 09:19:15 2022\nExecutable Timestamp:    Tue Aug 30 09:16:43 2022\n\nParallelism:\n  Num Processors:        1\n  Num Threads:           1\n\nCommand line: ./mole-dbg --json\n\n\n\n*** ERROR ***\nA 'AddSpeciesActionTest' is not a registered Action\n\n\n\nStack frames: 11\n0: libMesh::print_trace(std::ostream&)\n1: moose::internal::mooseErrorRaw(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >)\n2: void mooseError<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&)\n3: ActionFactory::getValidParams(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)\n4: Parser::buildJsonSyntaxTree(JsonSyntaxTree&) const\n5: MooseApp::setupOptions()\n6: RattlesnakeApp::setupOptions()\n7: MooseApp::run()\n8: main\n9: __libc_start_main\n10: ./mole-dbg(+0x3079) [0x555fda0bc079]\napplication called MPI_Abort(MPI_COMM_WORLD, 1) - process 0\n[unset]: write_line error; fd=-1 buf=:cmd=abort exitcode=1\n:\nsystem msg for write_line failure : Bad file descriptor",
+                          "url": "https://github.com/idaholab/moose/discussions/21962#discussioncomment-3509138",
+                          "updatedAt": "2022-08-30T13:35:05Z",
+                          "publishedAt": "2022-08-30T13:35:04Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "how is it registered inside Mole? at the top of the source file under the copyright header",
+                          "url": "https://github.com/idaholab/moose/discussions/21962#discussioncomment-3509390",
+                          "updatedAt": "2022-08-30T14:05:35Z",
+                          "publishedAt": "2022-08-30T14:05:34Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "Off topic, I see this error frequently on Discussions. I think I'll spend some time on the TestHarness to produce a better error message...\n#21967",
+                          "url": "https://github.com/idaholab/moose/discussions/21962#discussioncomment-3509454",
+                          "updatedAt": "2022-08-30T14:20:48Z",
+                          "publishedAt": "2022-08-30T14:14:45Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aarograh"
+                          },
+                          "bodyText": "@milljm that would be great!\n@GiudGiud Here's the output of a source search for AddSpeciesActionTest.  I'm not sure which of these you're referring to, or perhaps I'm missing something completely?\nmole/src/base/moleApp.C:\n  63    registerSyntax(\"AddSpeciesAction\", \"Species/AddSpecies\");\n  64:   registerSyntax(\"AddSpeciesActionTest\", \"Species/AddSpeciesTest\");\n  65    registerSyntax(\"ConvectionAction\", \"Species/Convection\");\n\nmole/test/include/actions/AddSpeciesActionTest.h:\n  4  \n  5: class AddSpeciesActionTest : public AddSpeciesAction\n  6  {\n\n  8    static InputParameters validParams();\n  9:   AddSpeciesActionTest(const InputParameters & params);\n  10    virtual void act() override;\n\nmole/test/src/actions/AddSpeciesActionTest.C:\n   1: #include \"AddSpeciesActionTest.h\"\n   2  #include \"SpeciesDefinition.h\"\n\n   7  \n   8: registerMooseAction(\"moleApp\", AddSpeciesActionTest, \"add_species_variables\");\n   9: registerMooseAction(\"moleApp\", AddSpeciesActionTest, \"add_species_definition\");\n  10: registerMooseAction(\"moleApp\", AddSpeciesActionTest, \"add_kernel\");\n  11: registerMooseAction(\"moleApp\", AddSpeciesActionTest, \"mole_test\");\n  12  \n  13  InputParameters\n  14: AddSpeciesActionTest::validParams()\n  15  {\n\n  21  \n  22: AddSpeciesActionTest::AddSpeciesActionTest(const InputParameters & params)\n  23    : AddSpeciesAction(params)\n\n  27  void\n  28: AddSpeciesActionTest::act()\n  29  {",
+                          "url": "https://github.com/idaholab/moose/discussions/21962#discussioncomment-3509471",
+                          "updatedAt": "2022-08-30T14:16:30Z",
+                          "publishedAt": "2022-08-30T14:16:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "so AddSpeciesActionsTest is only in the test directory, but is referred to in\n64:   registerSyntax(\"AddSpeciesActionTest\", \"Species/AddSpeciesTest\");\n?\nthis seems problematic, unless Mole is always built with its test objects.\nThe problem is that nay combined application would not be built with all the sub-apps test objects\nI think you ll want to add some #ifdefs in the source code to prevent that",
+                          "url": "https://github.com/idaholab/moose/discussions/21962#discussioncomment-3509679",
+                          "updatedAt": "2022-08-30T14:44:18Z",
+                          "publishedAt": "2022-08-30T14:44:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aarograh"
+                          },
+                          "bodyText": "Hmm... ok... We had a lot of issues using the moleTestApp that was part of the original storked version of Mole.  It would work fine with mole standalone and mole coupled with SAM, but mole coupled with griffin would never work.  I kept getting a linking error that I was unable to resolve.  Perhaps that is related?  The specific linking error was that it could not find moleTestApp::registerApps() in main.C despite registerApps being clearly defined as part of the class in moleTestApp.h (which was also included in main.C).\nAll this registration stuff is pretty opaque to me.  Is there a guide somewhere on this stuff?  I think a better understanding of what's actually happening here would help solve a lot of challenges.  It's easy enough with just Mole but seems to get more complicated when other apps are involved.",
+                          "url": "https://github.com/idaholab/moose/discussions/21962#discussioncomment-3509926",
+                          "updatedAt": "2022-08-30T15:07:54Z",
+                          "publishedAt": "2022-08-30T15:07:54Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Dont think there is user documentation outside of the doxygen for it.\nmoleTestApp will not be compiled by default for a combined app since it's a test 'object'.\nIncluding the header is enough to let the compiler not error out because it sees the declaration, but the function definition will be missing.\nUse make -n on the combined app to see which files are being compiled and check whether moleTestApp.C and AddSpeciesTestAction.C are being compiled",
+                          "url": "https://github.com/idaholab/moose/discussions/21962#discussioncomment-3510009",
+                          "updatedAt": "2022-08-30T15:16:42Z",
+                          "publishedAt": "2022-08-30T15:16:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aarograh"
+                          },
+                          "bodyText": "Well I've removed moleTestApp.C completely from the repo so I know that's not being compiled.  I may back out that change and open a new discussion about that issue since I think it's separate from this one",
+                          "url": "https://github.com/idaholab/moose/discussions/21962#discussioncomment-3510442",
+                          "updatedAt": "2022-08-30T16:04:44Z",
+                          "publishedAt": "2022-08-30T16:04:44Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aarograh"
+                          },
+                          "bodyText": "Ok... I found in another discussion that I was missing BUILD_TEST_OBJECTS_LIB := yes in my MakeFile (seems like that should have been there by default, but whatever), which is why test test app was having issues.  Switching back to the test app and then adding that line in the Makefile looks to have resolved all these issues.",
+                          "url": "https://github.com/idaholab/moose/discussions/21962#discussioncomment-3511764",
+                          "updatedAt": "2022-08-30T18:58:16Z",
+                          "publishedAt": "2022-08-30T18:58:16Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Use Solution of Steady State as initial condition for MultiApp Transient Solution",
+          "author": {
+            "login": "TLWise"
+          },
+          "bodyText": "I have a geometry that I have successfully solved the physics for a steady state. I would like to make this solutions the initial conditions for the start of my transient multiapp solution. How do I accomplish this in moose? Is it possible to pull the solution for the initial mesh values of the transient app from the steady state output file?",
+          "url": "https://github.com/idaholab/moose/discussions/21964",
+          "updatedAt": "2022-08-30T14:58:53Z",
+          "publishedAt": "2022-08-30T03:05:33Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nyou may use either the checkpoint or exodus restart systems to achieve this.\nThe checkpoint system requires you to keep the exact same variables between both simulations. The exodus one is a little more lenient but you ll have to be careful to restart everything you need\nhttps://mooseframework.inl.gov/application_usage/restart_recover.html\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21964#discussioncomment-3505577",
+                  "updatedAt": "2022-08-30T04:47:43Z",
+                  "publishedAt": "2022-08-30T04:47:42Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "TLWise"
+                          },
+                          "bodyText": "Thank you very much! The information you shared worked.",
+                          "url": "https://github.com/idaholab/moose/discussions/21964#discussioncomment-3509827",
+                          "updatedAt": "2022-08-30T14:58:37Z",
+                          "publishedAt": "2022-08-30T14:58:37Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Accessing material property quadrature values on element boundaries",
+          "author": {
+            "login": "ttruster"
+          },
+          "bodyText": "Hello,\nI've been working on programming some interface (Nitsche/DG) applications, and I noticed from modeling an analytical solution that I am not correctly requesting the values of properties located at the boundary quadrature points.\nInstead, the values I am getting correspond to the centroid of the element and neighbor, duplicated along all _qp of the given interface kernel integration.\nI have checked this in Mortar Constraints, DG Kernels, and Interface Material/Kernels, and in all cases, when I request the property according to:\n    _heat_flux_e(getMaterialProperty<RealVectorValue>(_base_name_e + \"grad_t\")),\n    _heat_flux_n(getNeighborMaterialProperty<RealVectorValue>(_base_name_n + \"grad_t\")),\n\nthis leads to the element centroid value (of course different for the two elements when the analytical solution and the numerical solution have a non-constant gradient). Here, the material property is a simple test of just copying the value of the temperature field gradient into a material property, declared as:\n  : DerivativeMaterialInterface<Material>(parameters),\n    _temp(coupledValue(\"temp\")),\n    _grad_temp(coupledGradient(\"temp\")),\n    _base_name(isParamValid(\"base_name\") ? getParam<std::string>(\"base_name\") + \"_\" : \"\"),\n    _grad_t(declareProperty<RealVectorValue>(_base_name + \"grad_t\")),\n\nI've read here at \"Evaluation of Material Properties on Element Faces\" from https://mooseframework.inl.gov/syntax/Materials/index.html that there are supposedly values computed for _face and _neighbor. And at one point when I had an error in my input files, the error codes mentioned all 3 of the material variations.\nHowever, looking up the material getMaterialProperty(_base_name_e + \"grad_t_face\") produced an error message.\nCan you mention the proper way to request the boundary values of the material?\nI can provide some simple source code (penalty method) which when run in debug with breakpoints shows that the values of the material property gradient do not match the temperature variable gradient at the interface point.\nThanks,\nTim",
+          "url": "https://github.com/idaholab/moose/discussions/21951",
+          "updatedAt": "2022-09-02T20:12:10Z",
+          "publishedAt": "2022-08-28T20:23:15Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "jiangwen84"
+                  },
+                  "bodyText": "Hi Tim, I have been using DG and Interface Kernel to access material properties. I do not see any issues with that. What you did seems to be correct to me. It should produce the correct material properties on the boundary/interface. If you could provide me your code and simple test, I can take a quick look.",
+                  "url": "https://github.com/idaholab/moose/discussions/21951#discussioncomment-3495147",
+                  "updatedAt": "2022-08-28T22:06:53Z",
+                  "publishedAt": "2022-08-28T22:06:53Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ttruster"
+                          },
+                          "bodyText": "Hi Wen,\nI pulled out the files for the three sets of objects I've developed, and included a the test file for each and for CG-Kernel alone to show the analytical result. When the flag 'use_flux_penalty' is false, the dgkernel produces the exact solution, but for true then the gradient penalty term causes the solution to deviate.\nLet me know your thoughts, thanks,\nTim\nbeaver3.tar.gz",
+                          "url": "https://github.com/idaholab/moose/discussions/21951#discussioncomment-3502026",
+                          "updatedAt": "2022-08-29T16:29:24Z",
+                          "publishedAt": "2022-08-29T16:29:24Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "jiangwen84"
+                  },
+                  "bodyText": "@ttruster  I do not see any issues with your code. I printed out some values inside TestDGBase::precalculateMaterial(). The material properties you asked for have the same values as the temperature variable gradient. Do I misunderstand your question?\n_heat_flux_e[_qp] = (x,y,z)=(     0.5,     -0.5,        0)\n_heat_flux_n[_qp] = (x,y,z)=(     1.5,     -0.5,        0)\n_grad_u[_qp] = (x,y,z)=(     0.5,     -0.5,        0)\n_grad_u_neighbor[_qp] = (x,y,z)=(     1.5,     -0.5,        0)",
+                  "url": "https://github.com/idaholab/moose/discussions/21951#discussioncomment-3503294",
+                  "updatedAt": "2022-08-29T19:43:25Z",
+                  "publishedAt": "2022-08-29T19:43:11Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ttruster"
+                          },
+                          "bodyText": "@jiangwen84 Yeah, I now checked also in debug and see the same value for _heat_flux and _grad_t.\nSorry for my lengthy response below...\nI guess the issue is, it seems like the values of the variables at the physical quadrature point location don't seem to match with the analytical solution on the iteration after the first residual, and the analysis converges in one iteration which says that the residual and Jacobian are consistent with each other.\nFor the value use_flux_penalty = false, then the computed solution matches nodally with the analytical solution, as seen in Paraview from a PlotOverLine. But with use_flux_penalty = true, the computed result is different.\nThe term in the weak form is [(grad_test_e - grad_test_n) * normal] * penalty * [(grad_u_e - grad_u_n) * normal].\nFor the analytical solution ( u=x^2-y^2 and du = (2x, -2y) ), it is continuous everywhere and the gradient is continuous, so the jump should be zero at the converged solution.\nYet in both your printout and my tests, the values of the gradient on the e and n sides are not equal to each other.\nThat's what I'm not understanding: why does the reported value of the grad_u and grad_u_neighbor variable not seem to correspond with the boundary quadrature point location, even when the simulation (when converged and viewed in Paraview) has continuous values?\nThis apparent inconsistent location value is the explanation I am seeing for why the use_flux_penalty = true/false give different results.\nHere is an example for a 2x1 element model:\n_heat_flux_n[_qp]\n_coords\n[0]:1\n[1]:0\n[2]:0\n_heat_flux_e[_qp]\n_coords\n[0]:-1\n[1]:0\n[2]:0\n_grad_u_neighbor[_qp]\n_coords\n[0]:1\n[1]:0\n[2]:0\n_grad_u[_qp]\n_coords\n[0]:-1\n[1]:0\n[2]:0\n_q_point[_qp]\n_coords\n[0]:0\n[1]:-0.28867513459481287\n[2]:0\nTechnically, the du/dx value should be 0.0 on both sides, but it's not...",
+                          "url": "https://github.com/idaholab/moose/discussions/21951#discussioncomment-3504140",
+                          "updatedAt": "2022-08-29T22:34:47Z",
+                          "publishedAt": "2022-08-29T22:34:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "I found one issue with your DG input file. To use DG, you need to use a discontinuous variable. For that, you can use\n[Variables]\n  [./u]\n    order = FIRST\n    family = MONOMIAL\n  [../]\n[]\n\n\nThis is the output in paraview. Because the variable is first order, the gradient is constants. Looks like the grad_u and grad_u_neighbor are not the same and the output from the code seems to be correct. What do you think?",
+                          "url": "https://github.com/idaholab/moose/discussions/21951#discussioncomment-3504361",
+                          "updatedAt": "2022-08-29T23:35:01Z",
+                          "publishedAt": "2022-08-29T23:35:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ttruster"
+                          },
+                          "bodyText": "Yep, that's what late night work does to you...\nFound the problem: I had wanted to use SECOND order shape functions for all the tests, since the solution is quadratic. I forgot that you need both QUAD9 (in all the files) AND a SECOND variable type (in none of the files).\nI also forgot (or didn't know; thought it was only 1d) that the continuous Galerkin method for heat equation will also interpolate the solution in simple cases like this.\nSo: with SECOND variables for all the tests, I indeed recover the continuous field and gradient field like I was expecting.\nFYI: the DG solution \"runs\" fine with either biquadratic LAGRANGE or quadratic MONOMIAL functions, as long as I switch the BC type from FunctionDirichletBC to DGFunctionDiffusionDirichletBC. Not sure if that is intended or not; I run DG problems all the time in my other FE codes with Lagrange functions.\nSo: Thanks for the objective set of eyes! Always helps for finding these little things.",
+                          "url": "https://github.com/idaholab/moose/discussions/21951#discussioncomment-3504624",
+                          "updatedAt": "2022-08-30T00:48:56Z",
+                          "publishedAt": "2022-08-30T00:48:56Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "@ttruster  In MOOSE if you want to use DG, the family type has to be either L2_LAGRANGE or MONOMIAL. If you use LAGRANGE, you will have a continuous mesh and your DG kernel become useless.\nDGFunctionDiffusionDirichletBC weakly enforces the Dirichlet BC at the boundary. My understanding is for L2_LAGRANGE or MONOMIAL type of shape functions, the nodes are not placed on the boundaries, so you have to weakly enforce them instead of directly set their values.",
+                          "url": "https://github.com/idaholab/moose/discussions/21951#discussioncomment-3509669",
+                          "updatedAt": "2022-08-30T14:42:54Z",
+                          "publishedAt": "2022-08-30T14:42:53Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Does Jacobian important for the computation?",
+          "author": {
+            "login": "Oops-Qiao"
+          },
+          "bodyText": "Hello buddy,\nI want to ask that in the kernel, if we donot use the AD version, then we should write the weak form and Jacobian. Today I heard from my friend that the weak form should be well written, however, the Jacobian can be written with some terms igonored. Can anyone make comment for this? how and why.\nThank you in advance.\nKind regards,\nQiao",
+          "url": "https://github.com/idaholab/moose/discussions/21958",
+          "updatedAt": "2022-09-02T20:11:53Z",
+          "publishedAt": "2022-08-29T13:47:33Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nIs this in the context of using Newton's method or PJFNK?\nWith PJFNK, the jacobian may be used for preconditioning. Imperfect preconditioning may or may not affect convergence. If the jacobian is mostly correct, especially if there are correct diagonally dominant terms, then it's likely to converge anyway.\n\nHello buddy,\n\nwho is this buddy you refer to?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21958#discussioncomment-3502047",
+                  "updatedAt": "2022-08-29T16:31:09Z",
+                  "publishedAt": "2022-08-29T16:31:08Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Oops-Qiao"
+                          },
+                          "bodyText": "Thank you very much. I mean in the context of Newton method.",
+                          "url": "https://github.com/idaholab/moose/discussions/21958#discussioncomment-3502142",
+                          "updatedAt": "2022-08-29T16:40:47Z",
+                          "publishedAt": "2022-08-29T16:40:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Oops-Qiao"
+                          },
+                          "bodyText": "So what you mean here is in PJFNK, incorrect Jacobian just affect the convergence, not the solution right?",
+                          "url": "https://github.com/idaholab/moose/discussions/21958#discussioncomment-3502147",
+                          "updatedAt": "2022-08-29T16:42:09Z",
+                          "publishedAt": "2022-08-29T16:42:09Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Oops-Qiao"
+                          },
+                          "bodyText": "Hello buddy means Hello friend, am I right?",
+                          "url": "https://github.com/idaholab/moose/discussions/21958#discussioncomment-3502149",
+                          "updatedAt": "2022-08-29T16:42:46Z",
+                          "publishedAt": "2022-08-29T16:42:45Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "in both methods, an imperfect Jacobian will only affect the convergence, not the solution (if it is unique). You should search the litterature to learn more about convergence with imperfect Jacobians, we dont have much in the documentation.\nThe solution, which in a well-posed problem is unique, is uniquely defined such that the residual is 0.\nBuddy is pretty familiar for addressing other scientists who you do not know personally ;).",
+                          "url": "https://github.com/idaholab/moose/discussions/21958#discussioncomment-3502374",
+                          "updatedAt": "2022-08-29T17:09:50Z",
+                          "publishedAt": "2022-08-29T17:09:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Oops-Qiao"
+                          },
+                          "bodyText": "Ok, thank you very much and also for the explaination of buddy. \uff1a\uff09",
+                          "url": "https://github.com/idaholab/moose/discussions/21958#discussioncomment-3503941",
+                          "updatedAt": "2022-08-29T21:42:55Z",
+                          "publishedAt": "2022-08-29T21:42:54Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Modify test tolerances",
+          "author": {
+            "login": "aarograh"
+          },
+          "bodyText": "Hello, I'm having some challenges setting some test tolerances.  I've tried difference_tol and ratio_tol, both of which are in the output of run_tests --dump, and both of them result in this:\ntests:32: unused parameter \"difference_tol\"\ntests:33: unused parameter \"ratio_tol\"\n\nConversely, I tried setting abs_zero to a very high value since it appears in the dump just like the other 2.  This parameter worked and caused the test to pass.\nAny ideas why those parameters aren't working?  I'm sure I'm misunderstanding something but this is the first time I'm even remotely delving into the test harness.",
+          "url": "https://github.com/idaholab/moose/discussions/21949",
+          "updatedAt": "2022-09-02T20:11:47Z",
+          "publishedAt": "2022-08-26T20:54:17Z",
+          "category": {
+            "name": "Q&A Tools"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nthere\u2019s a difference between the parameter names in the test harness and in the utility the test harness leverages.\nabs_zero and rel_tolerr can be parsed by the test harness. I haven\u2019t seen the other two. If you have seen them elsewhere in the repository could you please point me to them?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21949#discussioncomment-3491229",
+                  "updatedAt": "2022-08-29T18:00:37Z",
+                  "publishedAt": "2022-08-27T23:44:41Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "It\u2019s weird they are in the dump though. I ll check when I get back",
+                          "url": "https://github.com/idaholab/moose/discussions/21949#discussioncomment-3491230",
+                          "updatedAt": "2022-08-27T23:45:17Z",
+                          "publishedAt": "2022-08-27T23:45:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aarograh"
+                          },
+                          "bodyText": "Thanks for the information, I'll give those names a try.  It would definitely be helpful if the --dump names reflected the actual names that could be used in the file.",
+                          "url": "https://github.com/idaholab/moose/discussions/21949#discussioncomment-3500456",
+                          "updatedAt": "2022-08-29T13:32:48Z",
+                          "publishedAt": "2022-08-29T13:32:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aarograh"
+                          },
+                          "bodyText": "@GiudGiud I tried rel_tol and still got unused parameter \"rel_tol\" in the test output so it seems like that didn't work.",
+                          "url": "https://github.com/idaholab/moose/discussions/21949#discussioncomment-3501247",
+                          "updatedAt": "2022-08-29T14:57:10Z",
+                          "publishedAt": "2022-08-29T14:57:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "so ratio_tol and difference_tol are only for Jacobian exactness testing.\nmy bad, it's not rel_tol but rel_err",
+                          "url": "https://github.com/idaholab/moose/discussions/21949#discussioncomment-3502411",
+                          "updatedAt": "2022-08-29T17:15:36Z",
+                          "publishedAt": "2022-08-29T17:15:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aarograh"
+                          },
+                          "bodyText": "Oh, got it.  rel_err is listed in the dump as well, so that's good.  Thank you!",
+                          "url": "https://github.com/idaholab/moose/discussions/21949#discussioncomment-3502425",
+                          "updatedAt": "2022-08-29T17:18:03Z",
+                          "publishedAt": "2022-08-29T17:18:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Yeah I double checked the dump.\nIt's organized by test type, the parameters you used previously are under the test type AnalyzeJacobian only",
+                          "url": "https://github.com/idaholab/moose/discussions/21949#discussioncomment-3502708",
+                          "updatedAt": "2022-08-29T18:00:18Z",
+                          "publishedAt": "2022-08-29T18:00:18Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Differences among auxiliary kernel, material and userobject.",
+          "author": {
+            "login": "Oops-Qiao"
+          },
+          "bodyText": "Hello buddy,\nIt has been awhile for me to undrstand the differences among auxiliary kernel, material and userobject.\nAnyone can give a brief introduction for the differences among these three cases.\nFor me, they all have the common chracteristic, that is, compute something then other objects can use their results.\nThank you in advance.\nBest regards,\nQiao",
+          "url": "https://github.com/idaholab/moose/discussions/21956",
+          "updatedAt": "2022-09-02T20:11:37Z",
+          "publishedAt": "2022-08-29T13:41:13Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Docs pages should help\nhttps://mooseframework.inl.gov/syntax/Materials/index.html\nhttps://mooseframework.inl.gov/syntax/AuxKernels/index.html\nhttps://mooseframework.inl.gov/syntax/UserObjects/index.html\nin short, you should try to use material properties if you can, especially if using AD.\nauxkernels are equally desirable to compute fields, but dont support AD, and cost more memory (storing an extra field)\nIf your calculation is very complicated, then you ll want to make a custom user object.",
+                  "url": "https://github.com/idaholab/moose/discussions/21956#discussioncomment-3502400",
+                  "updatedAt": "2022-08-29T17:13:51Z",
+                  "publishedAt": "2022-08-29T17:13:50Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "libmesh error - You requested to reuse the nonlinear residual vector as the base vector",
+          "author": {
+            "login": "rtaylo45"
+          },
+          "bodyText": "I ran into this error that seems to trace back to libmesh, i was wondering if someone could give me some insight.\nYou requested to reuse the nonlinear residual vector as the base vector for computing the action of the matrix-free Jacobian, but the vectors are not the same. Your physics must have states; either remove the states from your code or make sure that you set_mf_reuse_base(false)\nThanks,\nZack",
+          "url": "https://github.com/idaholab/moose/discussions/19496",
+          "updatedAt": "2022-08-29T15:57:14Z",
+          "publishedAt": "2021-11-29T19:06:34Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@fdkong",
+                  "url": "https://github.com/idaholab/moose/discussions/19496#discussioncomment-1717928",
+                  "updatedAt": "2022-08-25T18:02:08Z",
+                  "publishedAt": "2021-11-29T19:16:46Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "fdkong"
+                  },
+                  "bodyText": "@rtaylo45 Could you briefly state what problems are you solving? Are you working on contact problems? Does your problem have discontinuities?",
+                  "url": "https://github.com/idaholab/moose/discussions/19496#discussioncomment-1717944",
+                  "updatedAt": "2022-08-25T18:02:08Z",
+                  "publishedAt": "2021-11-29T19:19:57Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rtaylo45"
+                          },
+                          "bodyText": "The issue kinda comes up in a weird way. I am coupling SAM and an ORNL moose based app called Mole. I am compiling the codes together in the Mole make file. I can break this problem down into two cases:\n\nClone down both repos, i go into the SAM repo and call make. Go into the Mole repo call make. Run my unit tests and get some exodiff errors with the test associated with coupled Mole/SAM test (not the topic of this discussion) . I run a problem that includes a SAM flow loop and everything runs fine.\nClone down both repos, i go into the Mole repo and call make. The make file tells the code to go and compile SAM and link to it. Run my unit tests, which all pass. But when i try to run the flow loop problem, i get the error i showed above.\n\nWhat's interesting is that the problem only seems to show up for flow loop problems in SAM. Its possible that it will show up in other cases, but i have not found a case where it has. Im not exactly sure what SAM does under the hood to solve these flow problems but i can reach out to them and ask.",
+                          "url": "https://github.com/idaholab/moose/discussions/19496#discussioncomment-1718065",
+                          "updatedAt": "2022-08-25T18:02:17Z",
+                          "publishedAt": "2021-11-29T19:46:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "fdkong"
+                          },
+                          "bodyText": "It is interesting. There are two modes in SAM: \"stand-alone\" and \"work-with-other.\" That might explain the weird behavior you saw here. Option 1 you did should involve the SAM stand-alone mode that SAM developers might test extensively.  The option 2 you tried was the \"work-with-other\" mode, which might not be fully explored.\nIt could be another reason as well. We have an option to turn this error message off \"snesmf_reuse_base=false\" (executioner block), but we need to get to the bottom of the problem instead of just turning off messages.\nWhat was happening was that PETSc saw the nonlinear function change from nonlinear and linear iterations. That is not common, and in moose, that occurs primarily in mechanics contact module because of contact.\nA SAM developer might be helpful here @lingzou",
+                          "url": "https://github.com/idaholab/moose/discussions/19496#discussioncomment-1718199",
+                          "updatedAt": "2022-08-25T18:02:21Z",
+                          "publishedAt": "2021-11-29T20:06:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "travismui"
+                          },
+                          "bodyText": "Hi @fdkong @rtaylo45,\nI believe in SAM we actually set this param snesmf_reuse_base = false by default for our standalone mode. In the coupled Mole/SAM, this option is probably not being set which is why you're seeing the error messages. We are not modeling mechanical contact but there may be other factors that prevent us from using this optimization in some scenarios.",
+                          "url": "https://github.com/idaholab/moose/discussions/19496#discussioncomment-1737801",
+                          "updatedAt": "2022-08-25T18:02:22Z",
+                          "publishedAt": "2021-12-02T15:20:24Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Turning terms on or off can create this error right @fdkong ?\nI think this is a common thing to do for 1D TH.",
+                          "url": "https://github.com/idaholab/moose/discussions/19496#discussioncomment-1738689",
+                          "updatedAt": "2022-08-25T18:03:45Z",
+                          "publishedAt": "2021-12-02T17:16:15Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "fdkong"
+                          },
+                          "bodyText": "If the function has a state, we can not reuse the base from the nonlinear iteration. In this case, we need to use \"snesmf_reuse_base = false\" to disable that, otherwise you will see an error message. By default, we have \"snesmf_reuse_base = true\" in moose, which means we want to reuse the base from the nonlinear iteration to reduce the number of residual evaluations that is not cheap.\nI am not sure whether or not 1D TH has a state. The equations look just fine to me. There are some special materials?\nIf we are sure that the function has a state, then it is safe to turn the message off. Otherwise that could be a bug somewhere",
+                          "url": "https://github.com/idaholab/moose/discussions/19496#discussioncomment-1741596",
+                          "updatedAt": "2022-08-25T18:03:45Z",
+                          "publishedAt": "2021-12-03T03:32:56Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "sapitts"
+                  },
+                  "bodyText": "I've hit this same error in creating a regression test for a new tensor mechanics (crystal plasticity), no contact. I was able to get around the error in opt by moving all of my stateful increment calculations into a single method, but then hit the same error as given in the original posting in dbg.\nClearly I'm piggy-backing on this discussion topic, yet are there any recommendations for how to write materials to avoid this error? I've got an existing PR with the failing regression test and problematic code up ( #19502 ) if it peaks anyone's interest",
+                  "url": "https://github.com/idaholab/moose/discussions/19496#discussioncomment-1725065",
+                  "updatedAt": "2022-08-25T18:02:22Z",
+                  "publishedAt": "2021-11-30T22:13:38Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aarograh"
+                          },
+                          "bodyText": "@sapitts did you ever get any resolution on this?  I am currently running into this error as well in trying to update an app's MOOSE from March 28 to a more recent commit (July 20).",
+                          "url": "https://github.com/idaholab/moose/discussions/19496#discussioncomment-3477044",
+                          "updatedAt": "2022-08-25T18:07:05Z",
+                          "publishedAt": "2022-08-25T18:07:04Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sapitts"
+                          },
+                          "bodyText": "Hi @aarograh, I ended up lagging some of the stateful material properties, that were used to calculated other stateful material properties, in order to avoid the error and error message. There's a good chance that the error worked as intended and helped me avoid conflicting states. I hope that you can resolve the error in your code too!",
+                          "url": "https://github.com/idaholab/moose/discussions/19496#discussioncomment-3478321",
+                          "updatedAt": "2022-08-25T20:50:56Z",
+                          "publishedAt": "2022-08-25T20:50:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "I would second Fande's suggestion above: if your residual has state, then you can just set snesmf_reuse_base to false. If your residual doesn't have state, this is a bug. You should get to the bottom of this, otherwise you may get nondeterministic results.",
+                          "url": "https://github.com/idaholab/moose/discussions/19496#discussioncomment-3478594",
+                          "updatedAt": "2022-08-25T22:04:40Z",
+                          "publishedAt": "2022-08-25T22:04:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aarograh"
+                          },
+                          "bodyText": "I'm getting back into MOOSE after a couple years out of it, so I'm probably going to ask some stupid questions here.  What do you mean by \"if your residual has state\"?  This particular failure is for a test case of a pretty simple kernel in our application.  The fact that it works with MOOSE from March but not July is pretty concerning.\nI tried setting the snesmf_reuse_base = false and the solve just completely fails to converge the first timestep.  So based on your comment, there is a real problem going on here, but I'm not clear on where to begin in searching for the issue.  Perhaps a better understanding of \"state\"/\"stateful\" would clarify things for me.",
+                          "url": "https://github.com/idaholab/moose/discussions/19496#discussioncomment-3484184",
+                          "updatedAt": "2022-08-26T14:10:27Z",
+                          "publishedAt": "2022-08-26T14:10:26Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sapitts"
+                          },
+                          "bodyText": "We use here the phrase 'residual has state' to indicate that material properties, which depend on old material properties, from the previous timestep, are used in the calculation of the weak form of the PDE.\nAs an example, in rate-dependent tensor mechanics models, we calculate the stress divergence as a function of material properties (e.g. yield surface) that depend on the previous value (from the previous timestep) of that yield surface. We would say this yield surface material property is stateful or has state. This yield stress is used to calculate the stress, and that stress is used to calculate the stress divergence. In a tensor mechanics FEM simulation, we drive the stress divergence to as close to zero as we can (or within a tolerance), and that difference between the ideal zero and actual FEM calculation value is the residual. Because the residual depends on a stateful material property, through this chain, we say here that the residual has state. Hope this helps\nIf you have multiple stateful material properties in your code, as I did, I wonder if there is a potential for those stateful properties to get out of sync. If it was me debugging this type of problem, I'd start by checking to make sure all the material properties were initialized as expected and then walk through the system to monitor the values. I'm interested to hear the debugging recommendations from @hugary1995 too!",
+                          "url": "https://github.com/idaholab/moose/discussions/19496#discussioncomment-3501012",
+                          "updatedAt": "2022-08-29T14:33:58Z",
+                          "publishedAt": "2022-08-29T14:33:57Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to get the variable values from neighbor elements of current element\uff1f",
+          "author": {
+            "login": "xiaojbing"
+          },
+          "bodyText": "Hello\uff0c\nI want to know how to get the  variable from  nieghbor element, and which class need to be inherited.\nthank you.",
+          "url": "https://github.com/idaholab/moose/discussions/21907",
+          "updatedAt": "2022-08-26T16:01:00Z",
+          "publishedAt": "2022-08-20T11:42:00Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nCould you please give us more details about what you're trying to do here?\nTypically you would want to use the coupledNeighborValue from the Coupleable interface to retrieve the neighbor values.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21907#discussioncomment-3443772",
+                  "updatedAt": "2022-08-22T04:15:06Z",
+                  "publishedAt": "2022-08-22T04:15:06Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xiaojbing"
+                          },
+                          "bodyText": "Thank you.\nI want to caculate and refresh a coefficient every timestep.\nThis coefficient rely an average value of current element and surrounding element.\nFor example,  a is a value stored in current element , b , c , d are sepretedly the values stored in surrounding elements of current element. and I want to get 1/4(a+b+c+d).\nWhat should I do?",
+                          "url": "https://github.com/idaholab/moose/discussions/21907#discussioncomment-3444349",
+                          "updatedAt": "2022-08-22T08:56:41Z",
+                          "publishedAt": "2022-08-22T06:50:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "so is there a single value by element? Many variable types will have different values at each quadrature point",
+                          "url": "https://github.com/idaholab/moose/discussions/21907#discussioncomment-3448224",
+                          "updatedAt": "2022-08-22T14:30:58Z",
+                          "publishedAt": "2022-08-22T14:30:57Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xiaojbing"
+                          },
+                          "bodyText": "Thank you\nthe a b c d are the same variable, just in different element. An element only have one value, for example, A represent velocity, each element only have one velocity. I want to get an average velocity of current element and it's surrouding element. may not the value\nat quadrature point. So how to get the single value in different element?",
+                          "url": "https://github.com/idaholab/moose/discussions/21907#discussioncomment-3452473",
+                          "updatedAt": "2022-08-23T02:33:02Z",
+                          "publishedAt": "2022-08-23T02:33:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "For a generic finite element formulation there is no one single variable value in an element. Only constant monomial finite element types have constant elemental values",
+                          "url": "https://github.com/idaholab/moose/discussions/21907#discussioncomment-3455753",
+                          "updatedAt": "2022-08-23T11:32:21Z",
+                          "publishedAt": "2022-08-23T11:32:21Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xiaojbing"
+                          },
+                          "bodyText": "I am a new user of moose....\nfor example,\nIn ex_01 , every quadrature point have a variable diffused\uff0cthe value at other positions is interpolated, right?\n[Variables]\n  [./diffused]\n    order = FIRST\n    family = LAGRANGE\n  [../]\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/21907#discussioncomment-3463565",
+                          "updatedAt": "2022-08-24T08:32:25Z",
+                          "publishedAt": "2022-08-24T08:32:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "yes.\nYou may project the variable on a CONSTANT MONOMIAL basis if you want need a cell-average",
+                          "url": "https://github.com/idaholab/moose/discussions/21907#discussioncomment-3465241",
+                          "updatedAt": "2022-08-24T12:18:42Z",
+                          "publishedAt": "2022-08-24T12:18:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xiaojbing"
+                          },
+                          "bodyText": "Thank you.\nAnother question is how to get the variable in elements around the current element?\nCan I use a pointer to get the sourrounding elemental information? pointer  _current_elem in Kernel point to current element, right?",
+                          "url": "https://github.com/idaholab/moose/discussions/21907#discussioncomment-3465804",
+                          "updatedAt": "2022-08-24T13:32:00Z",
+                          "publishedAt": "2022-08-24T13:32:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "From current elem you can obtain the list of neighbors. From there you could obtain the degree-of-freedom (dof) index and index into the solution variable. I dont think we have any open example of doing this though",
+                          "url": "https://github.com/idaholab/moose/discussions/21907#discussioncomment-3467658",
+                          "updatedAt": "2022-08-24T16:57:36Z",
+                          "publishedAt": "2022-08-24T16:57:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "it's pretty hacky at this point",
+                          "url": "https://github.com/idaholab/moose/discussions/21907#discussioncomment-3467660",
+                          "updatedAt": "2022-08-24T16:57:56Z",
+                          "publishedAt": "2022-08-24T16:57:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xiaojbing"
+                          },
+                          "bodyText": "Thank you.\nThat is good, but not convient to get the variable value in cornel element.\n\nSo I want to ask a new question...\nThe variable values at each element node are interplated. which quadrature points are used to caculate the value at node? The element inner quadrature points around the node? if so, I want to to get the variable value at every current element node. And my question will be solved.",
+                          "url": "https://github.com/idaholab/moose/discussions/21907#discussioncomment-3470632",
+                          "updatedAt": "2022-08-25T02:57:23Z",
+                          "publishedAt": "2022-08-25T02:57:23Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

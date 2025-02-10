@@ -1,0 +1,738 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMS0wMy0xMFQxNjowNTowMy0wNjowMM4AMEj9"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "AuxKernels and ADMaterialPropertiy",
+          "author": {
+            "login": "joe61vette"
+          },
+          "bodyText": "Hi:\nTrying to code an AuxKernel for a Finite Volume based app that consumes material properties that are \"AD\".  As I understand it, AuxVars are not supported by the AD system.  So, there is no point in doing computations with AD properties inside an AuxKernel.\nThe return type for the AuxKernel is simply \"Real\".  But I want to use an AD Property inside it.  For example, the initialization has the line:\n_rho(getADMaterialProperty(\"density\")\nwith the above, I get a compile time error because it can't convert the return type to a double.  If I try to initialize with:\n_rho(getMaterialProperty(\"density\")\nI get a run time error of symbol not found.\nSo, how can I use an ADMaterialProperty inside an AuxKernel?\nThanks,\nJoe Kelly",
+          "url": "https://github.com/idaholab/moose/discussions/17283",
+          "updatedAt": "2022-09-19T04:08:09Z",
+          "publishedAt": "2021-03-10T23:12:02Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "ajacquey"
+                  },
+                  "bodyText": "Hi Joe,\nYou should add the following include to your AuxKernel src file:\n#include \"metaphysicl/raw_type.h\"\nand you can access the raw value of your AD material property via:\nMetaPhysicL::raw_value(_rho[_qp])\nI suppose you could also use directly _rho[_qp].value() but to be confirmed.\nAntoine",
+                  "url": "https://github.com/idaholab/moose/discussions/17283#discussioncomment-471777",
+                  "updatedAt": "2022-09-19T04:08:11Z",
+                  "publishedAt": "2021-03-11T22:18:56Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "joe61vette"
+                          },
+                          "bodyText": "Thanks Antoine.  The _rho[_qp].value() works great.",
+                          "url": "https://github.com/idaholab/moose/discussions/17283#discussioncomment-484147",
+                          "updatedAt": "2022-09-19T04:08:11Z",
+                          "publishedAt": "2021-03-15T14:17:33Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "srinath-chakravarthy"
+                  },
+                  "bodyText": "You are missing a template parameter for the property\n_rho(getADMaterialProperty(\"density\")) should work if it is declared as ADReal\nSame template is required for the non-AD property as well",
+                  "url": "https://github.com/idaholab/moose/discussions/17283#discussioncomment-471813",
+                  "updatedAt": "2022-10-23T21:09:08Z",
+                  "publishedAt": "2021-03-11T22:28:56Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "srinath-chakravarthy"
+                  },
+                  "bodyText": "oops _rho(getADMaterialProperty(\"density\"))",
+                  "url": "https://github.com/idaholab/moose/discussions/17283#discussioncomment-471814",
+                  "updatedAt": "2022-10-23T21:09:10Z",
+                  "publishedAt": "2021-03-11T22:29:23Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "srinath-chakravarthy"
+                  },
+                  "bodyText": "_rho(getADMaterialProperty<Real>(\"density\"))",
+                  "url": "https://github.com/idaholab/moose/discussions/17283#discussioncomment-471822",
+                  "updatedAt": "2022-12-28T06:10:26Z",
+                  "publishedAt": "2021-03-11T22:31:05Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "joe61vette"
+                  },
+                  "bodyText": "Thanks everyone.  Making sure that I had the template right and using _rho[_qp].value() was the answer.",
+                  "url": "https://github.com/idaholab/moose/discussions/17283#discussioncomment-484154",
+                  "updatedAt": "2022-12-28T06:10:25Z",
+                  "publishedAt": "2021-03-15T14:19:23Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Changing the Cahn-Hilliard kernel",
+          "author": {
+            "login": "souzanha"
+          },
+          "bodyText": "Hi moose-team,\nI want to couple a variable (concentration) into the Cahn-Hilliard kernel, c(1-c)Mgrad(mu). I'm not entirely sure I'm doing it correctly though. For example, the section where you iterate over all coupled variables:\n_// Iterate over all coupled variables\nfor (unsigned int i = 0; i < _n_args; ++i)\n_dmobdarg[i] = &getMaterialPropertyDerivative(mob_name, i);\n}\nIs it enough to do it this way and only include _c[_qp] in the residual and jacobian expressions? What am I missing? :\ninput file:\n[./wres]\ntype=SplitCHWResT\nvariable = mu\nmob_name = 1.76e-23\ncoupled_conc = c\n[../]\nSplitCHWResBaseT-file:\nprivate:\nconst VariableValue & _c;\n_c(coupledValue(\"coupled_conc\"))\nRESIDUAL\ntemplate \nReal\nSplitCHWResBaseT::computeQpResidual()\n{\nreturn _c[_qp] * (1-_c[_qp]) * _mob[_qp] * _grad_w[_qp] * _grad_test[_i][_qp];\n}\nJACOBIAN\ntemplate \nReal\nSplitCHWResBaseT::computeQpWJacobian()\n{\nreturn _c[_qp] * (1-_c[_qp]) * _mob[_qp] * _grad_phi[_j][_qp] * _grad_test[_i][_qp];\n}\nparams.addCoupledVar(\n\"coupled_conc\", \"Coupled concentration (if not specified kernel variable will be used)\");\nreturn params;",
+          "url": "https://github.com/idaholab/moose/discussions/17302",
+          "updatedAt": "2022-06-22T07:33:43Z",
+          "publishedAt": "2021-03-12T10:43:07Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "yucoutinho"
+                  },
+                  "bodyText": "hi @souzanha,\nIf I understood correctly, you are trying to make the mobility composition dependent as\nM(c) = c(1-c)Mconst\nInstead of modifying the Cahn-Hilliard kernel, you can create a material,\n[Materials]\n  [./mobility]\n    type = DerivativeParsedMaterial\n    f_name = mob\n    function = 'c*(1-c)*M'\n    args = c\n    constant_names =  M\n    constant_expressions = 1.76e-23\n    derivative_order = 1\n  [../]\n[]\n\nand then use the standard kernel\n[Kernels]\n  [./chw_res]\n    variable = w\n    type = SplitCHWRes\n    mob_name = mob\n  [../]\n[]\n\nCheck this example.\nCheers",
+                  "url": "https://github.com/idaholab/moose/discussions/17302#discussioncomment-478006",
+                  "updatedAt": "2022-06-22T12:35:31Z",
+                  "publishedAt": "2021-03-13T14:19:52Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "souzanha"
+                          },
+                          "bodyText": "Hi @yucoutinho!\nThank you for the suggestion. That is definitely a much better approach.",
+                          "url": "https://github.com/idaholab/moose/discussions/17302#discussioncomment-482732",
+                          "updatedAt": "2022-06-22T12:36:33Z",
+                          "publishedAt": "2021-03-15T08:05:18Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to implement a *.C file including a numerical integral function",
+          "author": {
+            "login": "sSajjad90"
+          },
+          "bodyText": "Hi everyone,\nI will define an integral to calculate the project's material properties, and I want to develop a customized *.C file.\nWhen I was exploring the available source files to find a sample, I found below user objects.\n\"ElementIntegralVariableUserObject\", \"ElementIntegralUserObject\" but I do not know how these file  could be taken part in or even useful or not...\nWould you please let me how I can implement the below integral? Somehow, with Or without using these user objects.\n\nI will solve the following equation at each time step to update \"a1\" for the other calculation. I got stock to how to figure out the integral.\nAny suggestion?",
+          "url": "https://github.com/idaholab/moose/discussions/17258",
+          "updatedAt": "2022-06-17T17:32:47Z",
+          "publishedAt": "2021-03-09T16:13:00Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "ngrilli"
+                  },
+                  "bodyText": "Dear @sSajjad90\nThe ElementIntegralVariableUserObject integrates a variable over the volume.\nI think what you want to do is to integrate over the variable \\rho; it is a one dimensional integral.\nYou could write your own custom material that calculates the integral using the coupled variable a_1\nThen you store the integral in a material property\nand you use the material property to implement a kernel for the second term in your last equation.\nI think the most difficult part is calculating the integral, c++ probably does not have a function for that.\nOtherwise, you will need to write your own .C code to integrate your function using an iterative method to check for convergence\nbecause your integral goes to infinity.\nAlso, you can check if wolfram alpha gives you an analytical expression for your integral.\nBest Regards,\nNicol\u00f2 Grilli\nNational University of Singapore",
+                  "url": "https://github.com/idaholab/moose/discussions/17258#discussioncomment-480369",
+                  "updatedAt": "2022-06-17T17:33:02Z",
+                  "publishedAt": "2021-03-14T12:32:31Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Failing TestHarness test - libquadmath",
+          "author": {
+            "login": "cyshi17"
+          },
+          "bodyText": "Hello,\nI'm running into an error with make -j 8, following the instructions for troubleshooting. I've tried updating and reinstalling moose, and the \"hello world\" example in the build troubleshooting runs fine. I've included a screenshot of the error I'm getting.\n\nAny help would be greatly appreciated. Thank you!",
+          "url": "https://github.com/idaholab/moose/discussions/16800",
+          "updatedAt": "2023-07-03T16:48:14Z",
+          "publishedAt": "2021-01-23T20:13:31Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nIt looks like you're missing libquadmath.\nPlease install it with \"conda install libquadmath\" or with your preferred package manager.\nBest,\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/16800#discussioncomment-305205",
+                  "updatedAt": "2023-07-03T16:48:14Z",
+                  "publishedAt": "2021-01-23T20:23:12Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cyshi17"
+                          },
+                          "bodyText": "Hi Guillaume,\nThank you for your suggestion! Unfortunately I can't seem to install it, as I get the error below. I've looked on anaconda.org as the printout suggests but it does not seem to exist in the cloud. I am using Conda to install this.",
+                          "url": "https://github.com/idaholab/moose/discussions/16800#discussioncomment-305222",
+                          "updatedAt": "2023-07-03T16:48:14Z",
+                          "publishedAt": "2021-01-23T20:38:02Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "sudo apt install libquadmath0 should work",
+                  "url": "https://github.com/idaholab/moose/discussions/16800#discussioncomment-305228",
+                  "updatedAt": "2023-07-03T16:48:22Z",
+                  "publishedAt": "2021-01-23T20:43:30Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "not sure why I thought conda had it",
+                          "url": "https://github.com/idaholab/moose/discussions/16800#discussioncomment-305229",
+                          "updatedAt": "2023-07-03T16:48:23Z",
+                          "publishedAt": "2021-01-23T20:44:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cyshi17"
+                          },
+                          "bodyText": "It worked! Thank you so much",
+                          "url": "https://github.com/idaholab/moose/discussions/16800#discussioncomment-305485",
+                          "updatedAt": "2023-07-03T16:48:25Z",
+                          "publishedAt": "2021-01-23T23:10:33Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "KaijieNing"
+                  },
+                  "bodyText": "I came across the same problem, and did it like this in the root account of Fedora Linux:\nsudo yum install libquadmath      #note: not using libquadmath0\nIt worked.",
+                  "url": "https://github.com/idaholab/moose/discussions/16800#discussioncomment-479145",
+                  "updatedAt": "2023-07-03T16:48:25Z",
+                  "publishedAt": "2021-03-13T21:45:25Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Python3 error while compiling on cluster",
+          "author": {
+            "login": "favinom"
+          },
+          "bodyText": "Hi all,\nI am compiling moose on my cluster, it worked to quite some versions ago.\nNow, when I go in test and make, I get\n/usr/bin/env: python3: No such file or directory\n[]/moose/framework/moose.mk:15: *** Build failed.  Stop.\nDoes it mean that I need python3?\nWe don't have it on the cluster and it always worked.\nMoreover, if I look at the line 15 of moose.mk, there is nothing concerning pyhton, but it is the part concerning CONDA.\nMany thanks\nMarco",
+          "url": "https://github.com/idaholab/moose/discussions/17300",
+          "updatedAt": "2021-03-17T19:42:43Z",
+          "publishedAt": "2021-03-12T09:03:21Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "ngrilli"
+                  },
+                  "bodyText": "Dear @favinom\nAre you using the installation procedure with conda or manual installation gcc/mpich?\nI believe if you use the manual installation, python3 on the cluster is not necessary for compiling moose.\nThere will be a python3 inside the miniconda installation.\nTrust this helps.\nBest Regards,\nNicol\u00f2 Grilli\nNational University of Singapore",
+                  "url": "https://github.com/idaholab/moose/discussions/17300#discussioncomment-474312",
+                  "updatedAt": "2021-03-12T13:05:47Z",
+                  "publishedAt": "2021-03-12T13:05:27Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "favinom"
+                  },
+                  "bodyText": "I am doing a manual installation.\n\nActually python3 is now on the cluster and I managed to compile moose.\nIt still gives problems but they will be object of another thread.\n\nGrazie\n\u2026\nOn Fri, Mar 12, 2021 at 2:05 PM Nicol\u00f2 Grilli ***@***.***> wrote:\n Dear @favinom <https://github.com/favinom>\n\n Are you using the installation procedure with conda or manual installation\n gcc/mpich?\n I believe if you use the manual installation, python3 on the cluster is\n not necessary for compiling moose.\n There will be a python3 inside the miniconda installation.\n\n Trust this helps.\n\n Best Regards,\n Nicol\u00f2 Grilli\n National University of Singapore\n\n \u2014\n You are receiving this because you were mentioned.\n Reply to this email directly, view it on GitHub\n <#17300 (comment)>,\n or unsubscribe\n <https://github.com/notifications/unsubscribe-auth/ACUELB66GFSLMNUBCCMVW5DTDIGSXANCNFSM4ZB4BWYA>\n .",
+                  "url": "https://github.com/idaholab/moose/discussions/17300#discussioncomment-479020",
+                  "updatedAt": "2021-03-13T20:51:50Z",
+                  "publishedAt": "2021-03-13T20:51:37Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "defining multiple blocks (block IDs) based on an image file",
+          "author": {
+            "login": "Ali-toghraee"
+          },
+          "bodyText": "Dear moose users,\nI am trying to create a semi poly-crystalline (multiphase) domain. Such that each I can assign each color a block id and that later I can use those IDs for my initial conditions. Some thing like the pic below.\n\nI am trying to use the \"ImageSubdomainGenerator\" . But I have a problem in assigning IDs to different colors and I only get 2 ids (high and low) as below\n\nCould any body help me how to do that. I have also included some part of the code below:\n[Mesh]\n[gen]\ntype = GeneratedMeshGenerator\ndim = 2\nnx = 200\nny = 100\nxmax = 200\nxmin = 0\n\nymax = 100\nymin = 0\n\nelem_type = QUAD4\n\n[]\n[./im1]\ninput = gen\ntype = ImageSubdomainGenerator\nfile = mesh00.png\nthreshold = 90\nlower_value = 6\nupper_value = 7\n[../]\n[./im2]\ninput = im1\ntype = ImageSubdomainGenerator\nfile = mesh00.png\nthreshold = 70\nlower_value = 4\nupper_value = 5\n[../]\n[./im3]\ninput = im2\ntype = ImageSubdomainGenerator\nfile = mesh00.png\nthreshold = 25\nlower_value = 2\nupper_value = 3\n[../]\n[]\n[Variables]\n[u]\n[]\n[]\n[Problem]\ntype = FEProblem\nsolve = false\n[]\n[Executioner]\ntype = Steady\n[]\n[Outputs]\nexecute_on = 'timestep_end'\nexodus = true\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/17298",
+          "updatedAt": "2022-08-27T06:45:22Z",
+          "publishedAt": "2021-03-12T00:45:24Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "Ali-toghraee"
+                  },
+                  "bodyText": "@WilkAndy",
+                  "url": "https://github.com/idaholab/moose/discussions/17298#discussioncomment-472179",
+                  "updatedAt": "2022-08-27T06:45:39Z",
+                  "publishedAt": "2021-03-12T00:46:07Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Hey @Ali-toghraee , i'm not really an expert in this.  did you tag me for a particular reason?",
+                          "url": "https://github.com/idaholab/moose/discussions/17298#discussioncomment-472334",
+                          "updatedAt": "2022-08-27T06:45:39Z",
+                          "publishedAt": "2021-03-12T01:58:14Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Ali-toghraee"
+                          },
+                          "bodyText": "Hi Andy,\nSorry to tag you. Since you helped me last time on \"modeling a multi phase multi-shape initial condition\" , I thought you could help me on this. Do you know who can help on this matter?\nBest",
+                          "url": "https://github.com/idaholab/moose/discussions/17298#discussioncomment-472359",
+                          "updatedAt": "2022-08-27T06:45:41Z",
+                          "publishedAt": "2021-03-12T02:02:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Let's just see who answers....",
+                          "url": "https://github.com/idaholab/moose/discussions/17298#discussioncomment-472374",
+                          "updatedAt": "2022-08-27T06:45:41Z",
+                          "publishedAt": "2021-03-12T02:07:23Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "ngrilli"
+                  },
+                  "bodyText": "Dear @Ali-toghraee\nI believe your ImageSubdomainGenerator blocks are cancelling each other, therefore you\nonly see the effect of the last one: so block IDs are only 2 and 3.\nIf you check the code MeshBaseImageSampler,\nyou will see that \"upper_value\" is the value set if the corresponding grayscale is higher than \"threshold\"\nwhile \"lower_value\" is the value set if the grayscale color is lower than \"threshold\".\nThe way you define your blocks is such that the next block always cancel the previous one\nbecause only two block IDs are assigned to the entire geometry each time.\nYou could try to restrict the ImageSubdomainGenerator objects to one of the block that is created by the\nprevious ImageSubdomainGenerator object and see if that works.\nI mean you can try to add\nblock = 7 (or block = 6)\nto [./im2]\nblock = 5 (or block = 4)\nto [./im3]\net cetera\nBest Regards,\nNicol\u00f2 Grilli\nNational University of Singapore",
+                  "url": "https://github.com/idaholab/moose/discussions/17298#discussioncomment-474601",
+                  "updatedAt": "2022-08-27T06:45:41Z",
+                  "publishedAt": "2021-03-12T14:20:11Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Ali-toghraee"
+                          },
+                          "bodyText": "Hello @ngrilli\nYour are exactly right about my ImageSubdomainGenerator blocks  cancelling each other. But I am not sure how to restrict them.\nBecause ,as you mentioned, each time they assign only 2 values ( high and low). I think we need to  define the input for the [./im2] be  \" block 6\"  instead of the whole [./im1] , but I dont know how to do that.\nCould you explain more on how to add \"block = x\" inside the  ImageSubdomainGenerator?\nwhen I add \"block = x\" , I see the error:\n*** ERROR ***\n/home/atoghraee/projects02/ox_poly/poly/mesh.i:40: unused parameter 'Mesh/im2/block'\n/home/atoghraee/projects02/ox_poly/poly/mesh.i:52: unused parameter 'Mesh/im3/block'",
+                          "url": "https://github.com/idaholab/moose/discussions/17298#discussioncomment-476173",
+                          "updatedAt": "2022-08-27T06:45:41Z",
+                          "publishedAt": "2021-03-12T20:23:26Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Ali-toghraee"
+                          },
+                          "bodyText": "Update:\nI changed my input file to:\n[Mesh]\n[gen]\ntype = GeneratedMeshGenerator\ndim = 2\nnx = 200\nny = 100\n\nxmax = 200\nxmin = 0\n\nymax = 100\nymin = 0\n\nelem_type = QUAD4\n\n[]\n[./im1]\ninput = gen\ntype = ImageSubdomainGenerator\nfile = mesh_gray.png\n# threshold = 20\nlower_value = 1\nupper_value = 6\n[../]\n\n[./im2]\ninput = im1\ntype = ImageSubdomainGenerator\nfile = mesh_gray.png\n# threshold = 50\n# block = 6\n# lower_value = 4\n# upper_value = 5\n[../]\n\n[./im3]\ninput = im2\ntype = ImageSubdomainGenerator\nfile = mesh_gray.png\n#  threshold = 25\n#  lower_value = 2\n#   upper_value = 3\n# block = 5\n[../]\n[]\n[Variables]\n[u]\n[]\n[]\n[Problem]\ntype = FEProblem\nsolve = false\n[]\n[Executioner]\ntype = Steady\n[]\n[Outputs]\nexecute_on = 'timestep_end'\nexodus = true\n[]\nnow for the input picture of:\n\nI get the result of:\n\n\nThe question is how to map 0-225 to the 1-6 block numbers\nAnd why the numbering is not consistent  with the gray scale! (darker=> lower , lighter => higher or vise versa)",
+                          "url": "https://github.com/idaholab/moose/discussions/17298#discussioncomment-476200",
+                          "updatedAt": "2022-08-27T06:45:47Z",
+                          "publishedAt": "2021-03-12T20:30:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ngrilli"
+                          },
+                          "bodyText": "Dear @Ali-toghraee\nApologies, I did not know that \"block\" cannot be used in ImageSubdomainGenerator.\nIn the base class MeshBaseImageSampler, there is the option \"component\", which means the RGB component.\nIf this is not set, the greyscale value is used, but I don't know how RGB is converted to greyscale.\nI suggest you try setting \"component = 0\" inside your ImageSubdomainGenerator blocks,\nso the red colour will be read. Then you can assign increasing values of the red colour to your different domains\nby modifying the image.\nBest Regards,\nNicol\u00f2 Grilli\nNational University of Singapore",
+                          "url": "https://github.com/idaholab/moose/discussions/17298#discussioncomment-478594",
+                          "updatedAt": "2022-08-27T06:46:12Z",
+                          "publishedAt": "2021-03-13T17:43:53Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Compilation problem",
+          "author": {
+            "login": "makeclean"
+          },
+          "bodyText": "Hi All\nIve not had this problem before, so perhaps its time for a module switch for me. Im compiling on an HPC system with openmpi-3.1.3 and gcc-7.2, PETSC builds fine, but libmesh isnt happy\nIn file included from /home/dc-davi4/moose/moose/scripts/../libmesh/src/systems/system_projection.C:110:0:\n./include/libmesh/generic_projector.h: In instantiation of \u2018libMesh::GenericProjector<FFunctor, GFunctor, FValue, ProjectionAction>::send_and_insert_dof_values(std::unordered_map<long unsigned int, std::pair<Value, unsigned int> >&, ProjectionAction&) const::<lambda(libMesh::processor_id_type, const std::vector<long unsigned int>&)> [with Value = double; FFunctor = libMesh::OldSolutionValue<double, &libMesh::FEMContext::point_value>; GFunctor = libMesh::OldSolutionValue<libMesh::VectorValue<double>, &libMesh::FEMContext::point_gradient>; FValue = double; ProjectionAction = libMesh::VectorSetAction<double>; libMesh::processor_id_type = unsigned int]\u2019:\n./include/libmesh/generic_projector.h:2853:35:   required from \u2018struct libMesh::GenericProjector<FFunctor, GFunctor, FValue, ProjectionAction>::send_and_insert_dof_values(std::unordered_map<long unsigned int, std::pair<Value, unsigned int> >&, ProjectionAction&) const [with Value = double; FFunctor = libMesh::OldSolutionValue<double, &libMesh::FEMContext::point_value>; GFunctor = libMesh::OldSolutionValue<libMesh::VectorValue<double>, &libMesh::FEMContext::point_gradient>; FValue = double; ProjectionAction = libMesh::VectorSetAction<double>]::<lambda(libMesh::processor_id_type, const class std::vector<long unsigned int>&)>\u2019\n./include/libmesh/generic_projector.h:2852:8:   required from \u2018void libMesh::GenericProjector<FFunctor, GFunctor, FValue, ProjectionAction>::send_and_insert_dof_values(std::unordered_map<long unsigned int, std::pair<Value, unsigned int> >&, ProjectionAction&) const [with Value = double; FFunctor = libMesh::OldSolutionValue<double, &libMesh::FEMContext::point_value>; GFunctor = libMesh::OldSolutionValue<libMesh::VectorValue<double>, &libMesh::FEMContext::point_gradient>; FValue = double; ProjectionAction = libMesh::VectorSetAction<double>]\u2019\n./include/libmesh/generic_projector.h:1215:3:   required from \u2018void libMesh::GenericProjector<FFunctor, GFunctor, FValue, ProjectionAction>::project(const ConstElemRange&) [with FFunctor = libMesh::OldSolutionValue<double, &libMesh::FEMContext::point_value>; GFunctor = libMesh::OldSolutionValue<libMesh::VectorValue<double>, &libMesh::FEMContext::point_gradient>; FValue = double; ProjectionAction = libMesh::VectorSetAction<double>; libMesh::ConstElemRange = libMesh::StoredRange<libMesh::MeshBase::const_element_iterator, const libMesh::Elem*>]\u2019\n/home/dc-davi4/moose/moose/scripts/../libmesh/src/systems/system_projection.C:393:48:   required from here\n./include/libmesh/generic_projector.h:2871:21: error: uninitialized variable \u2018val\u2019 in \u2018constexpr\u2019 function\n               Value val;\n                     ^~~\n./include/libmesh/generic_projector.h: In instantiation of \u2018libMesh::GenericProjector<FFunctor, GFunctor, FValue, ProjectionAction>::send_and_insert_dof_values(std::unordered_map<long unsigned int, std::pair<Value, unsigned int> >&, ProjectionAction&) const::<lambda(libMesh::processor_id_type, const std::vector<long unsigned int>&)> [with Value = double; FFunctor = libMesh::OldSolutionValue<libMesh::VectorValue<double>, &libMesh::FEMContext::point_value>; GFunctor = libMesh::OldSolutionValue<libMesh::TensorValue<double>, &libMesh::FEMContext::point_gradient>; FValue = libMesh::VectorValue<double>; ProjectionAction = libMesh::VectorSetAction<double>; libMesh::processor_id_type = unsigned int]\u2019:\n./include/libmesh/generic_projector.h:2853:35:   required from \u2018struct libMesh::GenericProjector<FFunctor, GFunctor, FValue, ProjectionAction>::send_and_insert_dof_values(std::unordered_map<long unsigned int, std::pair<Value, unsigned int> >&, ProjectionAction&) const [with Value = double; FFunctor = libMesh::OldSolutionValue<libMesh::VectorValue<double>, &libMesh::FEMContext::point_value>; GFunctor = libMesh::OldSolutionValue<libMesh::TensorValue<double>, &libMesh::FEMContext::point_gradient>; FValue = libMesh::VectorValue<double>; ProjectionAction = libMesh::VectorSetAction<double>]::<lambda(libMesh::processor_id_type, const class std::vector<long unsigned int>&)>\u2019\n./include/libmesh/generic_projector.h:2852:8:   required from \u2018void libMesh::GenericProjector<FFunctor, GFunctor, FValue, ProjectionAction>::send_and_insert_dof_values(std::unordered_map<long unsigned int, std::pair<Value, unsigned int> >&, ProjectionAction&) const [with Value = double; FFunctor = libMesh::OldSolutionValue<libMesh::VectorValue<double>, &libMesh::FEMContext::point_value>; GFunctor = libMesh::OldSolutionValue<libMesh::TensorValue<double>, &libMesh::FEMContext::point_gradient>; FValue = libMesh::VectorValue<double>; ProjectionAction = libMesh::VectorSetAction<double>]\u2019\n./include/libmesh/generic_projector.h:1215:3:   required from \u2018void libMesh::GenericProjector<FFunctor, GFunctor, FValue, ProjectionAction>::project(const ConstElemRange&) [with FFunctor = libMesh::OldSolutionValue<libMesh::VectorValue<double>, &libMesh::FEMContext::point_value>; GFunctor = libMesh::OldSolutionValue<libMesh::TensorValue<double>, &libMesh::FEMContext::point_gradient>; FValue = libMesh::VectorValue<double>; ProjectionAction = libMesh::VectorSetAction<double>; libMesh::ConstElemRange = libMesh::StoredRange<libMesh::MeshBase::const_element_iterator, const libMesh::Elem*>]\u2019\n/home/dc-davi4/moose/moose/scripts/../libmesh/src/systems/system_projection.C:404:55:   required from here\n./include/libmesh/generic_projector.h:2871:21: error: uninitialized variable \u2018val\u2019 in \u2018constexpr\u2019 function\n./include/libmesh/generic_projector.h: In instantiation of \u2018libMesh::GenericProjector<FFunctor, GFunctor, FValue, ProjectionAction>::send_and_insert_dof_values(std::unordered_map<long unsigned int, std::pair<Value, unsigned int> >&, ProjectionAction&) const::<lambda(libMesh::processor_id_type, const std::vector<long unsigned int>&)> [with Value = double; FFunctor = libMesh::FEMFunctionWrapper<double>; GFunctor = libMesh::FEMFunctionWrapper<libMesh::VectorValue<double> >; FValue = double; ProjectionAction = libMesh::VectorSetAction<double>; libMesh::processor_id_type = unsigned int]\u2019:\n./include/libmesh/generic_projector.h:2853:35:   required from \u2018struct libMesh::GenericProjector<FFunctor, GFunctor, FValue, ProjectionAction>::send_and_insert_dof_values(std::unordered_map<long unsigned int, std::pair<Value, unsigned int> >&, ProjectionAction&) const [with Value = double; FFunctor = libMesh::FEMFunctionWrapper<double>; GFunctor = libMesh::FEMFunctionWrapper<libMesh::VectorValue<double> >; FValue = double; ProjectionAction = libMesh::VectorSetAction<double>]::<lambda(libMesh::processor_id_type, const class std::vector<long unsigned int>&)>\u2019\n./include/libmesh/generic_projector.h:2852:8:   required from \u2018void libMesh::GenericProjector<FFunctor, GFunctor, FValue, ProjectionAction>::send_and_insert_dof_values(std::unordered_map<long unsigned int, std::pair<Value, unsigned int> >&, ProjectionAction&) const [with Value = double; FFunctor = libMesh::FEMFunctionWrapper<double>; GFunctor = libMesh::FEMFunctionWrapper<libMesh::VectorValue<double> >; FValue = double; ProjectionAction = libMesh::VectorSetAction<double>]\u2019\n./include/libmesh/generic_projector.h:1215:3:   required from \u2018void libMesh::GenericProjector<FFunctor, GFunctor, FValue, ProjectionAction>::project(const ConstElemRange&) [with FFunctor = libMesh::FEMFunctionWrapper<double>; GFunctor = libMesh::FEMFunctionWrapper<libMesh::VectorValue<double> >; FValue = double; ProjectionAction = libMesh::VectorSetAction<double>; libMesh::ConstElemRange = libMesh::StoredRange<libMesh::MeshBase::const_element_iterator, const libMesh::Elem*>]\u2019\n/home/dc-davi4/moose/moose/scripts/../libmesh/src/systems/system_projection.C:1131:43:   required from here\n./include/libmesh/generic_projector.h:2871:21: error: uninitialized variable \u2018val\u2019 in \u2018constexpr\u2019 function\n\n\nI have previously compiled on this system using those compilers, but I've since deleted the repo, so I couldnt tell you what the sha was.",
+          "url": "https://github.com/idaholab/moose/discussions/17282",
+          "updatedAt": "2022-06-29T09:29:25Z",
+          "publishedAt": "2021-03-10T21:15:55Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "makeclean"
+                  },
+                  "bodyText": "Heres more if this helps\nchecking for git... (cached) /usr/local/software/global/bin/git\n\n----------------------------------- SUMMARY -----------------------------------\n\nPackage version............... : metaphysicl-1.2.1\n\nC++ compiler.................. : mpicxx -std=gnu++17\nC++ compiler flags............ : -g -O2 -Wall\nInstall dir................... : /home/dc-davi4/moose/moose/scripts/../libmesh/installed\nBuild user.................... : dc-davi4\nBuild host.................... : login-e-11\nConfigure date................ : 2021-03-11 09:10\nBuild architecture............ : x86_64-pc-linux-gnu\nGit revision number........... : external\n\nOptional Packages for Testing:\n  MASA........................ : no\n  VEXCL....................... : no\n  TIMPI....................... : no\n\n-------------------------------------------------------------------------------",
+                  "url": "https://github.com/idaholab/moose/discussions/17282#discussioncomment-467733",
+                  "updatedAt": "2022-06-29T09:29:26Z",
+                  "publishedAt": "2021-03-11T09:11:16Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "@lindsayad @roystgnr any ideas on this one?",
+                          "url": "https://github.com/idaholab/moose/discussions/17282#discussioncomment-469562",
+                          "updatedAt": "2022-06-29T09:29:34Z",
+                          "publishedAt": "2021-03-11T14:21:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "roystgnr"
+                          },
+                          "bodyText": "I'm a bit dumbfounded.  That's certainly not a constexpr function, and it's okay to have an uninitialized value that later gets written before it's read.  I'd be sure this was a compiler bug except that I could swear I used to use gcc 7.2 all the time and never ran into anything like this.\nOh ... wait a minute.  I used to use gcc 7.2 all the time, with its default (C++11?) C++ standard settings.  What seems to be happening to @makeclean (love the username BTW) is that we're now requesting higher standards by default from compilers that provide them, and gcc 7.2 is probably right at that point where it's trying to support higher standards but not yet doing so reliably.  (in fact, ISTR it even having a couple bugs that forced me to upgrade to gcc 8 for an application that needed solid C++14 support; forget about C++17!)\nSo I think your easiest workaround in this case is to configure libMesh --with-cxx-std=2011 and don't let the compiler try to get fancy on you.",
+                          "url": "https://github.com/idaholab/moose/discussions/17282#discussioncomment-469695",
+                          "updatedAt": "2022-06-29T09:29:30Z",
+                          "publishedAt": "2021-03-11T14:46:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "roystgnr"
+                          },
+                          "bodyText": "Let us know if that works or not.  If not, then I certainly wouldn't try to talk you out of simply switching modules to use a newer compiler, but there are other possible workarounds you could try if you wanted to avoid that.\nI'm not sure what the best solution here is.  I don't want to turn down the default --with-cxx-std-max= setting, but perhaps that's the safest way to go.  I'd love to add more tests that could catch problems like this and back off to lower standards at configure time only when necessary, but I can't even imagine how to detect a problem like this.  What triggers a level of confusion so deep that it leaves gcc 7.2 unable to tell whether a constexpr keyword is there or not?",
+                          "url": "https://github.com/idaholab/moose/discussions/17282#discussioncomment-469713",
+                          "updatedAt": "2022-06-29T09:29:32Z",
+                          "publishedAt": "2021-03-11T14:50:33Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "makeclean"
+                          },
+                          "bodyText": "Thanks @roystgnr --with-cxx-std=2011 worked great, in the mean time i built a singularity image, but its always nice to have the bare metal version :)",
+                          "url": "https://github.com/idaholab/moose/discussions/17282#discussioncomment-473308",
+                          "updatedAt": "2022-06-29T10:09:52Z",
+                          "publishedAt": "2021-03-12T08:28:06Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Help understanding elemental variables",
+          "author": {
+            "login": "aprilnovak"
+          },
+          "bodyText": "Hi all,\nI'm trying to get a better understanding of the MultiAppNearestNodeTransfer, but am finding myself confused on the interpretation of elemental variables. On the MOOSE website, it says:\n\nfor elemental shape functions the DOF values are not associated with nodes.\n\nbut rather with quadrature points. But then in the transfer itself, the target points in the receiving app for FIRST MONOMIAL are set to the nodes of element: (code here)\nif (elemental) {\n\n           // For L2_LAGRANGE, we take all the nodes of element\n            for (auto & node : elem->node_ref_range())\n            {\n              points.push_back(node);\n              point_ids.push_back(node.id());\n            }\n\n}\n\nHow do these two statements reconcile with one another? I'm trying to figure out why transfers to/from FIRST MONOMIAL give strange-looking results for this transfer (see here), and I feel like this (apparent, to me) inconsistency might explain something.\nThanks!",
+          "url": "https://github.com/idaholab/moose/discussions/17273",
+          "updatedAt": "2022-08-30T15:37:03Z",
+          "publishedAt": "2021-03-10T15:23:34Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "loganharbour"
+                  },
+                  "bodyText": "In libMesh, the dofs for elemental variables are represented on the element themselves.\nLet's say you have a system with just a single first order, elemental variable and QUAD4 elems. Each QUAD4 elem would have 4 dofs associated with it (a value at each \"node\"; note I use \"node\" here because it's not actually stored on the Node object!). Then, all of the physical Node objects (which represent the vertices for each QUAD4 elem, which are shared between elems) have no dofs whatsoever. In addition, for first-order L2_LAGRANGE variables, the spatial location of each node (where the dofs live physically in space) happen to also be the physical location of the Nodes - even though the Node objects do not own the dofs!\nWithin the loop that you linked, we're specifying that we need a value for each of the dof values for the L2_LAGRANGE element (again, the Node locations are the locations for the dofs, even though the dofs don't live on the Node objects). I'm still working through the validity of using the Node ID (stored here) for the purposes of mapping the incoming evaluations here.",
+                  "url": "https://github.com/idaholab/moose/discussions/17273#discussioncomment-470242",
+                  "updatedAt": "2022-08-30T15:37:26Z",
+                  "publishedAt": "2021-03-11T16:30:41Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How can I run a single input file using MOOSE?",
+          "author": {
+            "login": "WilkAndy"
+          },
+          "bodyText": "Dear all,\nI just begin to learn how to use MOOSE. When I try to run an input file in tutorials, how could I give a command in the terminal? I mean not use ./run_tests for all, but just run one at a time.\nThanks in advance,\nQinglin",
+          "url": "https://github.com/idaholab/moose/discussions/16158",
+          "updatedAt": "2022-07-01T10:00:45Z",
+          "publishedAt": "2020-11-11T22:46:37Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "permcody"
+                  },
+                  "bodyText": "You use the -i flag followed by the name of your input file.\nExample:\n./inch-worm-opt -i my_input_file.i\nYou can get the complete list of command line options by using the -h flag.",
+                  "url": "https://github.com/idaholab/moose/discussions/16158#discussioncomment-127303",
+                  "updatedAt": "2022-07-01T10:00:45Z",
+                  "publishedAt": "2020-11-11T22:50:52Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "WilkAndy"
+                  },
+                  "bodyText": "Since you can ./run_tests then you must have successfully compiled and tested MOOSE.  Well done!   This is because the compilation will have produced a valid executable that was used by ./run_tests.  Have a look around in the directory that you used for ./run_tests and you will probably see an executable called your_app-opt, or combined-opt, etc.  It is the MOOSE executable.\n(If you compiled in debug mode, the executable will have -dbg on the end of its name.)\nThen, use .... what @permcody just wrote!    You might have to specify the paths, such as\n./inch-worm-opt -i path/to/my_input_file.i\n\nor\npath/to/inch-worm-opt -i another/path/to/my_input_file.i",
+                  "url": "https://github.com/idaholab/moose/discussions/16158#discussioncomment-127307",
+                  "updatedAt": "2022-07-01T10:00:46Z",
+                  "publishedAt": "2020-11-11T22:52:27Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Ali-toghraee"
+                          },
+                          "bodyText": "Hello Andy,\nI just installed moose (conda) and all the tests passed. I also did the \"make\" in the combined module folder and created the combined-opt file (however the tests did not run). Now I want to run my input files.\nPreviously, I used to navigate to the folder of my input file, and then opened that folder in a terminal , then I would typed:\n(moose) atoghraee@ME-DESKTOP102:~/projects02/ox_poly$ mpiexec -np 88 /home/atoghraee/projects02/moose/modules/combined/combined-opt -i fun05_absM_m8000_df.i\nBut now , when run this command I face the following errors ( part of that shown below).\n\nIs this because the combined-opt tests didnot run?\nI should mention that I already have a moose from 2019 in my projects forlder, to install the new version on moose using conda , I just followed the instructions in the \"https://mooseframework.inl.gov/getting_started/installation/conda.html\" and instead of \"projects\" folder , I created an used \"projects02\" . I would really appreciate if you could help me  make the moose up and running.\n\n(moose) atoghraee@ME-DESKTOP102:~/projects02/ox_poly$ mpiexec -np 88 /home/atoghraee/projects02/moose/modules/combined/combined-opt -i fun05_absM_m8000_df.i\n/home/atoghraee/projects02/moose/modules/combined/combined-opt: /opt/moose/gcc-7.3.0/lib64/libstdc++.so.6: version GLIBCXX_3.4.26' not found (required by /home/atoghraee/projects02/moose/modules/combined/test/lib/libcombined_test-opt.so.0) /home/atoghraee/projects02/moose/modules/combined/combined-opt: /opt/moose/gcc-7.3.0/lib64/libstdc++.so.6: version GLIBCXX_3.4.26' not found (required by /home/atoghraee/projects02/moose/modules/combined/lib/libcombined-opt.so.0)\n/home/atoghraee/projects02/moose/modules/combined/combined-opt: /opt/moose/gcc-7.3.0/lib64/libstdc++.so.6: version GLIBCXX_3.4.26' not found (required by /home/atoghraee/projects02/moose/framework/libmoose-opt.so.0) /home/atoghraee/projects02/moose/modules/combined/combined-opt: /opt/moose/gcc-7.3.0/lib64/libstdc++.so.6: version GLIBCXX_3.4.26' not found (required by /home/atoghraee/projects02/moose/modules/chemical_reactions/test/lib/libchemical_reactions_test-opt.so.0)\n/home/atoghraee/projects02/moose/modules/combined/combined-opt: /opt/moose/gcc-7.3.0/lib64/libstdc++.so.6: version GLIBCXX_3.4.26' not found (required by /home/atoghraee/projects02/moose/modules/fluid_properties/test/lib/libfluid_properties_test-opt.so.0) /home/atoghraee/projects02/moose/modules/combined/combined-opt: /opt/moose/gcc-7.3.0/lib64/libstdc++.so.6: version GLIBCXX_3.4.26' not found (required by /home/atoghraee/projects02/moose/modules/ray_tracing/test/lib/libray_tracing_test-opt.so.0)\n/home/atoghraee/projects02/moose/modules/combined/combined-opt: /opt/moose/gcc-7.3.0/lib64/libstdc++.so.6: version GLIBCXX_3.4.26' not found (required by /home/atoghraee/projects02/moose/modules/heat_conduction/test/lib/libheat_conduction_test-opt.so.0) /home/atoghraee/projects02/moose/modules/combined/combined-opt: /opt/moose/gcc-7.3.0/lib64/libstdc++.so.6: version GLIBCXX_3.4.26' not found (required by /home/atoghraee/projects02/moose/modules/level_set/test/lib/liblevel_set_test-opt.so.0)\n/home/atoghraee/projects02/moose/modules/combined/combined-opt: /opt/moose/gcc-7.3.0/lib64/libstdc++.so.6: version GLIBCXX_3.4.26' not found (required by /home/atoghraee/projects02/moose/modules/misc/test/lib/libmisc_test-opt.so.0) /home/atoghraee/projects02/moose/modules/combined/combined-opt: /opt/moose/gcc-7.3.0/lib64/libstdc++.so.6: version GLIBCXX_3.4.26' not found (required by /home/atoghraee/projects02/moose/modules/rdg/test/lib/librdg_test-opt.so.0)\n/home/atoghraee/projects02/moose/modules/combined/combined-opt: /opt/moose/gcc-7.3.0/lib64/libstdc++.so.6: version GLIBCXX_3.4.26' not found (required by /home/atoghraee/projects02/moose/modules/navier_stokes/test/lib/libnavier_stokes_test-opt.so.0) /home/atoghraee/projects02/moose/modules/combined/combined-opt: /opt/moose/gcc-7.3.0/lib64/libstdc++.so.6: version GLIBCXX_3.4.26' not found (required by /home/atoghraee/projects02/moose/modules/tensor_mechanics/test/lib/libtensor_mechanics_test-opt.so.0)\n/home/atoghraee/projects02/moose/modules/combined/combined-opt: /opt/moose/gcc-7.3.0/lib64/libstdc++.so.6: version `GLIBCXX_3.4.26' not found (required by",
+                          "url": "https://github.com/idaholab/moose/discussions/16158#discussioncomment-466467",
+                          "updatedAt": "2022-07-01T10:00:48Z",
+                          "publishedAt": "2021-03-11T02:04:08Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "EBSD Output format",
+          "author": {
+            "login": "KamalnathOSU"
+          },
+          "bodyText": "Dear MOOSE team,\nIn the Phase-field examples, we can take input from EBSD data and perform grain growth simulation (eg: IN100-111grn.i. Is there a way in which we can get the final microstructure in EBSD format?\nThanks,\nKamal",
+          "url": "https://github.com/idaholab/moose/discussions/16932",
+          "updatedAt": "2022-06-16T12:29:50Z",
+          "publishedAt": "2021-02-09T14:05:11Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "laagesen"
+                  },
+                  "bodyText": "We don't have the capability to do this currently- can you explain a bit more about what you are wanting to do? We may be able to suggest another route to accomplish it.",
+                  "url": "https://github.com/idaholab/moose/discussions/16932#discussioncomment-371795",
+                  "updatedAt": "2022-06-16T12:29:50Z",
+                  "publishedAt": "2021-02-15T21:19:46Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "KamalnathOSU"
+                          },
+                          "bodyText": "I am trying to study the growth of an amorphous (A) phase in a polycrystalline material ( G_1, G_2, G_3, ..., G_M ) at room temperature where grain growth can be neglected. The amorphous phase has significant growth rate even at room temperature. Hence, I want to  freeze the grain structure during the evolution of the amorphous phase A.  The amorphous phase interface with the solid grain (referred to as A-G_i ; i=1,2,..,M) has anisotropic mobility and it depends only on the orientation of the grain.\nI planned my simulation in two steps.\nStep1 : I generated a polycrystal structure from Dream.3D, relaxed it (to get diffuse interface) with phase-field module and got output of the microstructure. I was able to accomplish this step.\nStep2 : Load the relaxed polycrystal microstructure and simulate the growth of the amorphous phase. Here, I need to specify the anisotropic mobility of A-G_i in terms of the grain orientation. For this purpose, I need to know the number of grains co-existing  in a nodal point and its corresponding orientation.\nCan you please suggest me how to accomplish \"Step2\" ?",
+                          "url": "https://github.com/idaholab/moose/discussions/16932#discussioncomment-373961",
+                          "updatedAt": "2022-06-16T12:29:59Z",
+                          "publishedAt": "2021-02-16T15:17:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "laagesen"
+                          },
+                          "bodyText": "We don't currently have the capability to do exactly what you are trying; however, you could probably write some new code based on existing code. We do have the capability to set different grain boundary energies for different orientations, so you could use a similar approach to that code. Have a look at the documentation page https://mooseframework.inl.gov/modules/phase_field/Grain_Boundary_Anisotropy.html",
+                          "url": "https://github.com/idaholab/moose/discussions/16932#discussioncomment-374772",
+                          "updatedAt": "2022-06-16T12:30:10Z",
+                          "publishedAt": "2021-02-16T19:28:35Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "KamalnathOSU"
+                  },
+                  "bodyText": "Hi,\nI have another question on this topic. After I complete my grain growth simulation, I want to the load the grain structure  into AuxVariable and perform some calculations with it.\n1)How to the load the order parameters in AuxVariable ? The usual instructions will allow me to load the order parameters only in NonLinearVariable.\n2)How to load the euler angles corresponding to each grain ?\n-Kamal",
+                  "url": "https://github.com/idaholab/moose/discussions/16932#discussioncomment-465506",
+                  "updatedAt": "2022-06-16T12:30:13Z",
+                  "publishedAt": "2021-03-10T21:37:15Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "laagesen"
+                          },
+                          "bodyText": "if you want to put an order parameter into an AuxVariable, you can use a ParsedAux AuxKernel. You would need to create an AuxVariable, then use the AuxKernel with args = 'eta0' and function = 'eta1' for order parameter eta1.\nYou can use the OutputEulerAngles AuxKernel to do this. There are other objects that would be needed; have a look at moose/modules/phase_field/test/tests/grain_tracker_test/grain_tracker_ebsd.i for an example.",
+                          "url": "https://github.com/idaholab/moose/discussions/16932#discussioncomment-465626",
+                          "updatedAt": "2022-06-16T12:30:18Z",
+                          "publishedAt": "2021-03-10T22:05:03Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

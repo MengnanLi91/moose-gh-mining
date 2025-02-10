@@ -1,0 +1,900 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMi0wNy0wNlQxNDo1MDo0OS0wNTowMM4AP_xN"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "[Userobjects]",
+          "author": {
+            "login": "coskrrb2002"
+          },
+          "bodyText": "Dear users,\nI am trying to calculate a value by using Userobjects.\nInitial guessing of value A -> Use A to calculate quadrature point values -> Sum up all the values on a plane (or surface) -> If this value is not meet with some criteria, do it again by changing value A -> ... ->Until satisfy the criteria.\nAre there any Userobjects to support this method? or any other ways?\nBest regards,",
+          "url": "https://github.com/idaholab/moose/discussions/21497",
+          "updatedAt": "2022-07-08T07:59:36Z",
+          "publishedAt": "2022-07-05T04:57:07Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nHow often you trying to perform these iterations? Is this one iteration per time step or are you trying to converge the process every time step (or more often, every nonlinear/linear iteration) ?\nIs A a field or a single floating point value?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21497#discussioncomment-3085191",
+                  "updatedAt": "2022-07-05T13:39:12Z",
+                  "publishedAt": "2022-07-05T13:39:11Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "coskrrb2002"
+                          },
+                          "bodyText": "Dear Guillaume,\nI just have to perform this calculation once per time step at timestep_begin.\nA should be a single floating value, it doesn't have to be a field value.\nBest regards,\nNakkyu",
+                          "url": "https://github.com/idaholab/moose/discussions/21497#discussioncomment-3088573",
+                          "updatedAt": "2022-07-06T00:30:02Z",
+                          "publishedAt": "2022-07-06T00:30:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I think the easiest setup will be to place this A calculation in a MultiApp.\nThis multiapp will run a fake transient to determine A.\nYou will want to use this\nhttps://mooseframework.inl.gov/source/postprocessors/SideAverageValue.html\nto compute the value on the plane (add a sideset for the plane).\nthen you will want to use the control system to modify the value of A at each iteration:\nthis is the base one you could use\nhttps://mooseframework.inl.gov/source/controls/RealFunctionControl.html\nbut I tend to think you may want to use this one instead, which I wrote\nhttps://mooseframework.inl.gov/source/controls/PIDTransientControl.html",
+                          "url": "https://github.com/idaholab/moose/discussions/21497#discussioncomment-3088623",
+                          "updatedAt": "2022-07-06T00:48:24Z",
+                          "publishedAt": "2022-07-06T00:48:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "coskrrb2002"
+                          },
+                          "bodyText": "Thank you very much Guillaume.\nI will give it a try!",
+                          "url": "https://github.com/idaholab/moose/discussions/21497#discussioncomment-3089378",
+                          "updatedAt": "2022-07-06T04:44:13Z",
+                          "publishedAt": "2022-07-06T04:44:12Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "coskrrb2002"
+                          },
+                          "bodyText": "Is it possible to do this job by only using a SideIntegralPostprocessor?\nI know the SideIntegralPostprocessor supports the summation of values along with surfaces.\nBut, it seems like SideIntegralPostprocessor cannot do the calculation multipletimes like the below:\nInitial A value -> Calculate B on each quadrature point and sum all B values into value C (C = summation of B[_qp] for all surfaces) based on A value -> If B value is not met criteria, then update A -> Repeat until B is fulfilled the criteria\nI tried to make it as below, but I figured out this doesn't sum up all surfaces. This code just adds one element. (I guess).\nBecause I can't understand how to apply threadJoin().\nCan you give me some advice about it?\n-------------------------------------------------------------------------------------------------------------------\n//* This file is part of the MOOSE framework\n//* https://www.mooseframework.org\n//*\n//* All rights reserved, see COPYRIGHT for full restrictions\n//* https://github.com/idaholab/moose/blob/master/COPYRIGHT\n//*\n//* Licensed under LGPL 2.1, please see LICENSE for details\n//* https://www.gnu.org/licenses/lgpl-2.1.html\n\n#include \"EcorrPost.h\"\n\n#include \"libmesh/quadrature.h\"\n\n//registerMooseObject(\"corrosionApp\", EcorrPost);\n\nInputParameters\nEcorrPost::validParams()\n{\n  InputParameters params = SidePostprocessor::validParams();\n  params.addCoupledVar(\"T\",298.15,\"T\");\n  params.addRequiredCoupledVar(\"C9\",\"HS-\");\n  params.addCoupledVar(\"C1\",0,\"C1\");\n  params.addCoupledVar(\"C0\",0,\"C0\");\n  params.addCoupledVar(\"C3\",0,\"C3\");\n  params.addCoupledVar(\"C6\",0,\"C6\");\n  return params;\n}\n\nEcorrPost::EcorrPost(const InputParameters & parameters)\n  : SidePostprocessor(parameters),\n\t_qp(0),\n\t_integral_value(0),\n\t_qp_integration(true),\n\t_integral_value2(0),\n\t_OP(0),\n\t_Isum(0),\n    _T(coupledValue(\"T\")),\n    _C9(coupledValue(\"C9\")),\n    _C1(coupledValue(\"C1\")),\n    _C0(coupledValue(\"C0\")),\n    _C3(coupledValue(\"C3\")),\n    _C6(coupledValue(\"C6\")),\n    _mesh(_subproblem.mesh().getMesh())\n{\n}\n\nvoid\nEcorrPost::initialize()\n{\n  _integral_value = 0;\n  _integral_value2 = 0;\n  _Isum = 0;\n}\n\nvoid\nEcorrPost::execute()\n{\n\t_Isum += computeCurrents();\n}\n\nReal\nEcorrPost::getValue()\n{\n  _OP = -0.2;\n  std::cout << \"Initial Isum\" << _Isum << std::endl;\n  gatherSum(_Isum);\n\n  Real aaa = _current_side;\n  std::cout << \"Current node id:\" << aaa << std::endl;\n  std::cout << \"Gather Isum\" << _Isum << std::endl;\n  Real bbb = _mesh.n_active_elem();\n  Real ccc = _mesh.n_elem();\n  std::cout << \"Active elements number:\" << bbb << \"Total elements number\" << ccc << std::endl;\n\n  for (int i = 0; i < 5; i++)\n  {\n  if (_Isum > 1E-8)\n  {\n\t  initialize();\n\t  _OP = _OP - 1E-5;\n\t  execute();\n\t  gatherSum(_Isum);\n\t  std::cout << \"Isum\" << _Isum << std::endl;\n  }\n  else if (_Isum < -1E-8)\n  {\n\t  initialize();\n\t  _OP = _OP + 1E-5;\n\t  execute();\n\t  gatherSum(_Isum);\n\t  std::cout << \"Isum\" << _Isum << std::endl;\n  }\n  else\n\t  break;\n\n  }\n\n  return _Isum;\n}\n\nvoid\nEcorrPost::threadJoin(const UserObject & y) //As in the MOOSE index pages, it should not be used! Just use gathersum\n{\n  const EcorrPost & pps = static_cast<const EcorrPost &>(y);\n  _integral_value += pps._integral_value;\n  _integral_value2 += pps._integral_value2;\n  _Isum += pps._Isum;\n}\n\nReal\nEcorrPost::computeIntegral()\n{\n\treturn 0;\n}\n\nReal\nEcorrPost::computeCurrents()\n{\n  Real sum = 0;\n    for (_qp = 0; _qp < _qrule->n_points(); _qp++)\n    {\n      sum = _C1[_qp] + _C0[_qp] + _C3[_qp] + _C6[_qp] + _C9[_qp] + sum;\n    }\n  return sum;\n}",
+                          "url": "https://github.com/idaholab/moose/discussions/21497#discussioncomment-3090453",
+                          "updatedAt": "2022-07-06T19:40:08Z",
+                          "publishedAt": "2022-07-06T08:10:15Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "no this isnt going to work.\nThe postprocessors are part of a loop over all elements, which is in the internals of moose (the loops are in include/loops).\nWhat you did is not executing the postprocessor over the entire mesh several times, only over a single element\nYou need to decompose operations, and use a different object for each part of the process",
+                          "url": "https://github.com/idaholab/moose/discussions/21497#discussioncomment-3094929",
+                          "updatedAt": "2022-07-06T19:41:57Z",
+                          "publishedAt": "2022-07-06T19:41:56Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "coskrrb2002"
+                          },
+                          "bodyText": "Thank you for your comment!\nAs following your comments, multiapp + postprocessor works.\nNow I am trying to make an executioner file that can terminate the calculation of value A!\nThank you very much!",
+                          "url": "https://github.com/idaholab/moose/discussions/21497#discussioncomment-3097877",
+                          "updatedAt": "2022-07-07T06:59:33Z",
+                          "publishedAt": "2022-07-07T06:59:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "ok so to do that you may use a Terminator and store the A value as a postprocessor\nhttps://mooseframework.inl.gov/source/userobject/Terminator.html",
+                          "url": "https://github.com/idaholab/moose/discussions/21497#discussioncomment-3101562",
+                          "updatedAt": "2022-07-07T16:06:13Z",
+                          "publishedAt": "2022-07-07T16:06:08Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "coskrrb2002"
+                          },
+                          "bodyText": "Yes, thanks a lot! I found a terminator and modify it to finish the calculation between -1 < A < 1, and it works very well!\nCheers,\nnakkyu",
+                          "url": "https://github.com/idaholab/moose/discussions/21497#discussioncomment-3105860",
+                          "updatedAt": "2022-07-08T07:59:36Z",
+                          "publishedAt": "2022-07-08T07:59:36Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Input different elasticity tensor Cijkl in tensor_mechanics",
+          "author": {
+            "login": "hugy888"
+          },
+          "bodyText": "Hello,\nWe decided to calculate elastic properties of multiphase polycrystals using tensor_mechanics module.\nI found from test examples that Cijkl for single phase polycrystal could be input within Materials object as followed:\n  [./elasticity_tensor]\n    type = ComputeElasticityTensorCP\n    C_ijkl = '1.684e5 1.214e5 1.214e5 1.684e5 1.214e5 1.684e5 0.754e5 0.754e5 0.754e5'\n    fill_method = symmetric9\n    read_prop_user_object = prop_read\n  [../]\n\nI'm wondering there's a way that I could input different C_ijkls for different phases or elements? Similar to what we did to input different euler angles. Thanks.\n[UserObjects]\n  [./prop_read]\n    type = PropertyReadFile\n    prop_file_name = 'euler_ang_file.txt'\n    # Enter file data as prop#1, prop#2, .., prop#nprop\n    nprop = 3\n    read_type = block\n    nblock= 2\n  [../]\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/21486",
+          "updatedAt": "2022-07-21T23:51:23Z",
+          "publishedAt": "2022-07-01T23:09:46Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nIt would not be very hard to do but it's not present in the current code afaik. You can inspire yourself from the treatment of the euler angle with a PropertyReadFile.\nI ll let others comment on what spatial granularity is appropriate for the stiffness tensor.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21486#discussioncomment-3104908",
+                  "updatedAt": "2022-07-08T05:01:17Z",
+                  "publishedAt": "2022-07-08T05:01:17Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "MOOSE memory requirement is too high",
+          "author": {
+            "login": "sychang2021"
+          },
+          "bodyText": "Hi, MOOSE experts.\nI want to calculate a case with a lot of variables. It has 46,800 elements, 17 variables and 570,000 degrees of freedom.\n\nI used the lu method and the petsc settings are as follows:\n  petsc_options = '-snes_converged_reason -ksp_converged_reason -snes_linesearch_monitor'\n  petsc_options_iname = '-pc_type -pc_factor_shift_type'\n  petsc_options_value = 'lu       NONZERO'\n  line_search = 'none'\n\nBut when I run it on a computer with 64GB of RAM, the RAM is full and no results are produced. I think that the memory occupied by MOOSE may be too large, and it is not feasible to deal with some large-scale problems. Or is there some problem with my PETSc setup. I have tried ilu but the results do not converge, and only when using lu (maybe set to other options will also converge). Can you give me some advice on saving memory and guaranteeing convergence?",
+          "url": "https://github.com/idaholab/moose/discussions/21529",
+          "updatedAt": "2022-07-09T02:51:48Z",
+          "publishedAt": "2022-07-07T17:49:42Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "YaqiWang"
+                  },
+                  "bodyText": "What is your solve_type in Executioner input block? Its default value is PJFNK. Can you turn on Debug/show_actions=true on command-line so that we can know for sure the memory is due to LU (probably the case). That command-line option prints the memory usage at every setup stage. Did you try any other pc types like\n  petsc_options_iname = '-pc_type -pc_hypre_type'\n  petsc_options_value = 'hypre boomeramg'\n\nNote the preconditioning type is problem dependent. I know nothing about your physics.",
+                  "url": "https://github.com/idaholab/moose/discussions/21529#discussioncomment-3102885",
+                  "updatedAt": "2022-07-07T19:56:24Z",
+                  "publishedAt": "2022-07-07T19:55:25Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sychang2021"
+                          },
+                          "bodyText": "The solve_type is NEWTON. For some reason I need to get rid of things in NAME:\n[DBG][ACT] TASK (               no_action) TYPE (                     EmptyAction) NAME (        Periodic) Memory usage 84MB\n[DBG][ACT] TASK (               no_action) TYPE (                     EmptyAction) NAME (                ) Memory usage 84MB\n[DBG][ACT] TASK (finish_input_file_output) TYPE (                     EmptyAction) NAME (                ) Memory usage 84MB\n[DBG][ACT] TASK (          ns_meta_action) TYPE (                     INSFVAction) NAME (                ) Memory usage 84MB\n[DBG][ACT] TASK (           common_output) TYPE (              CommonOutputAction) NAME (         Outputs) Memory usage 84MB\n[DBG][ACT] TASK (       set_global_params) TYPE (              GlobalParamsAction) NAME (    GlobalParams) Memory usage 84MB\n[DBG][ACT] TASK ( setup_recover_file_base) TYPE (      SetupRecoverFileBaseAction) NAME (                ) Memory usage 84MB\n[DBG][ACT] TASK (   check_copy_nodal_vars) TYPE (             CopyNodalVarsAction) NAME (               T) Memory usage 84MB\n[DBG][ACT] TASK (   check_copy_nodal_vars) TYPE (             CopyNodalVarsAction) NAME (        velocity) Memory usage 84MB\n[DBG][ACT] TASK (   check_copy_nodal_vars) TYPE (             CopyNodalVarsAction) NAME (               p) Memory usage 84MB\n[DBG][ACT] TASK (   check_copy_nodal_vars) TYPE (             CopyNodalVarsAction) NAME (          ) Memory usage 84MB\n[DBG][ACT] TASK (   check_copy_nodal_vars) TYPE (             CopyNodalVarsAction) NAME (          ) Memory usage 84MB\n[DBG][ACT] TASK (   check_copy_nodal_vars) TYPE (             CopyNodalVarsAction) NAME (          ) Memory usage 84MB\n[DBG][ACT] TASK (   check_copy_nodal_vars) TYPE (             CopyNodalVarsAction) NAME (          ) Memory usage 84MB\n[DBG][ACT] TASK (   check_copy_nodal_vars) TYPE (             CopyNodalVarsAction) NAME (          ) Memory usage 84MB\n[DBG][ACT] TASK (   check_copy_nodal_vars) TYPE (             CopyNodalVarsAction) NAME (          ) Memory usage 84MB\n[DBG][ACT] TASK (   check_copy_nodal_vars) TYPE (                 Action) NAME (            ) Memory usage 84MB\n[DBG][ACT] TASK (   check_copy_nodal_vars) TYPE (             CopyNodalVarsAction) NAME (                ) Memory usage 84MB\n[DBG][ACT] TASK (              setup_mesh) TYPE (                 SetupMeshAction) NAME (            ) Memory usage 84MB\n[DBG][ACT] TASK (        add_geometric_rm) TYPE (    CreateDisplacedProblemAction) NAME (            ) Memory usage 84MB\n[DBG][ACT] TASK (        add_geometric_rm) TYPE (             AddPeriodicBCAction) NAME (               ) Memory usage 84MB\n[DBG][ACT] TASK (        add_geometric_rm) TYPE (             AddPeriodicBCAction) NAME (               ) Memory usage 84MB\n[DBG][ACT] TASK (        add_geometric_rm) TYPE (          AddRelationshipManager) NAME (                ) Memory usage 84MB\n[DBG][ACT] TASK ( execute_mesh_generators) TYPE (           ExecuteMeshGenerators) NAME (                ) Memory usage 84MB\n[DBG][ACT] TASK (       recover_meta_data) TYPE (      SetupRecoverFileBaseAction) NAME (                ) Memory usage 84MB\n[DBG][ACT] TASK (           set_mesh_base) TYPE (                 SetupMeshAction) NAME (            ) Memory usage 84MB\n[DBG][ACT] TASK (     attach_geometric_rm) TYPE (          AddRelationshipManager) NAME (                ) Memory usage 85MB\n[DBG][ACT] TASK (               init_mesh) TYPE (                 SetupMeshAction) NAME (            ) Memory usage 85MB\n[DBG][ACT] TASK (            prepare_mesh) TYPE (         SetupMeshCompleteAction) NAME (            ) Memory usage 126MB\n[DBG][ACT] TASK (     uniform_refine_mesh) TYPE (         SetupMeshCompleteAction) NAME (            ) Memory usage 126MB\n[DBG][ACT] TASK (     setup_mesh_complete) TYPE (         SetupMeshCompleteAction) NAME (            ) Memory usage 126MB\n[DBG][ACT] TASK (   determine_system_type) TYPE (      CreateProblemDefaultAction) NAME (                ) Memory usage 126MB\n[DBG][ACT] TASK (  create_problem_default) TYPE (      CreateProblemDefaultAction) NAME (                ) Memory usage 126MB\n[DBG][ACT] TASK (       setup_executioner) TYPE (         CreateExecutionerAction) NAME (     ) Memory usage 127MB\n[DBG][ACT] TASK (   check_integrity_early) TYPE (            CheckIntegrityAction) NAME (                ) Memory usage 131MB\n[DBG][ACT] TASK (  init_displaced_problem) TYPE (    CreateDisplacedProblemAction) NAME (            ) Memory usage 131MB\n[DBG][ACT] TASK (            add_variable) TYPE (               AddVariableAction) NAME (               ) Memory usage 131MB\n[DBG][ACT] TASK (            add_variable) TYPE (               AddVariableAction) NAME (        ) Memory usage 131MB\n[DBG][ACT] TASK (            add_variable) TYPE (               AddVariableAction) NAME (               ) Memory usage 131MB\n[DBG][ACT] TASK (            add_variable) TYPE (               AddVariableAction) NAME (          ) Memory usage 131MB\n[DBG][ACT] TASK (            add_variable) TYPE (               AddVariableAction) NAME (          ) Memory usage 131MB\n[DBG][ACT] TASK (            add_variable) TYPE (               AddVariableAction) NAME (          ) Memory usage 131MB\n[DBG][ACT] TASK (            add_variable) TYPE (               AddVariableAction) NAME (          ) Memory usage 131MB\n[DBG][ACT] TASK (            add_variable) TYPE (               AddVariableAction) NAME (          ) Memory usage 131MB\n[DBG][ACT] TASK (            add_variable) TYPE (               AddVariableAction) NAME (          ) Memory usage 131MB\n[DBG][ACT] TASK (            add_variable) TYPE (                 Action) NAME (            ) Memory usage 131MB\n[DBG][ACT] TASK (        add_aux_variable) TYPE (           DisplayGhostingAction) NAME (            ) Memory usage 131MB\n[DBG][ACT] TASK (add_external_aux_variables) TYPE (    AddExternalAuxVariableAction) NAME (                ) Memory usage 131MB\n[DBG][ACT] TASK (        setup_quadrature) TYPE (           SetupQuadratureAction) NAME (                ) Memory usage 131MB\n[DBG][ACT] TASK (            add_function) TYPE (               AddFunctionAction) NAME (    ) Memory usage 131MB\n[DBG][ACT] TASK (            add_function) TYPE (               AddFunctionAction) NAME (           ) Memory usage 131MB\n[DBG][ACT] TASK (         add_periodic_bc) TYPE (             AddPeriodicBCAction) NAME (               ) Memory usage 131MB\n[DBG][ACT] TASK (         add_periodic_bc) TYPE (             AddPeriodicBCAction) NAME (               ) Memory usage 131MB\n[DBG][ACT] TASK (         add_user_object) TYPE (           DisplayGhostingAction) NAME (            ) Memory usage 131MB\n[DBG][ACT] TASK (                  add_ic) TYPE (                 Action) NAME (            ) Memory usage 131MB\n[DBG][ACT] TASK (                  add_ic) TYPE (       AddInitialConditionAction) NAME () Memory usage 131MB\n[DBG][ACT] TASK (                  add_ic) TYPE (       AddInitialConditionAction) NAME (       ) Memory usage 131MB\n[DBG][ACT] TASK (                  add_ic) TYPE (       AddInitialConditionAction) NAME (         ) Memory usage 131MB\n[DBG][ACT] TASK (                  add_ic) TYPE (       AddInitialConditionAction) NAME (    ) Memory usage 131MB\n[DBG][ACT] TASK (                  add_ic) TYPE (       AddInitialConditionAction) NAME (    ) Memory usage 131MB\n[DBG][ACT] TASK (                  add_ic) TYPE (       AddInitialConditionAction) NAME (    ) Memory usage 131MB\n[DBG][ACT] TASK (                  add_ic) TYPE (       AddInitialConditionAction) NAME (    ) Memory usage 131MB\n[DBG][ACT] TASK (                  add_ic) TYPE (       AddInitialConditionAction) NAME (    ) Memory usage 131MB\n[DBG][ACT] TASK (                  add_ic) TYPE (       AddInitialConditionAction) NAME (    ) Memory usage 131MB\n[DBG][ACT] TASK (     add_preconditioning) TYPE (       SetupPreconditionerAction) NAME (             ) Memory usage 131MB\n[DBG][ACT] TASK (           ready_to_init) TYPE (                     EmptyAction) NAME (                ) Memory usage 131MB\n[DBG][ACT] TASK (           setup_dampers) TYPE (              SetupDampersAction) NAME (                ) Memory usage 131MB\n[DBG][ACT] TASK (    setup_residual_debug) TYPE (        SetupResidualDebugAction) NAME (           ) Memory usage 131MB\n[DBG][ACT] TASK (            add_transfer) TYPE (                 Action) NAME (            ) Memory usage 131MB\n[DBG][ACT] TASK (         copy_nodal_vars) TYPE (             CopyNodalVarsAction) NAME (               ) Memory usage 131MB\n[DBG][ACT] TASK (         copy_nodal_vars) TYPE (             CopyNodalVarsAction) NAME (        ) Memory usage 131MB\n[DBG][ACT] TASK (         copy_nodal_vars) TYPE (             CopyNodalVarsAction) NAME (               ) Memory usage 131MB\n[DBG][ACT] TASK (         copy_nodal_vars) TYPE (             CopyNodalVarsAction) NAME (          ) Memory usage 131MB\n[DBG][ACT] TASK (         copy_nodal_vars) TYPE (             CopyNodalVarsAction) NAME (          ) Memory usage 131MB\n[DBG][ACT] TASK (         copy_nodal_vars) TYPE (             CopyNodalVarsAction) NAME (          ) Memory usage 131MB\n[DBG][ACT] TASK (         copy_nodal_vars) TYPE (             CopyNodalVarsAction) NAME (          ) Memory usage 131MB\n[DBG][ACT] TASK (         copy_nodal_vars) TYPE (             CopyNodalVarsAction) NAME (          ) Memory usage 131MB\n[DBG][ACT] TASK (         copy_nodal_vars) TYPE (             CopyNodalVarsAction) NAME (          ) Memory usage 131MB\n[DBG][ACT] TASK (         copy_nodal_vars) TYPE (                 Action) NAME (            ) Memory usage 131MB\n[DBG][ACT] TASK (         copy_nodal_vars) TYPE (             CopyNodalVarsAction) NAME (                ) Memory usage 131MB\n[DBG][ACT] TASK (     copy_nodal_aux_vars) TYPE (             CopyNodalVarsAction) NAME (                ) Memory usage 131MB\n[DBG][ACT] TASK (            add_material) TYPE (               AddMaterialAction) NAME (            ) Memory usage 131MB\n[DBG][ACT] TASK (            add_material) TYPE (               AddMaterialAction) NAME (        ) Memory usage 131MB\n[DBG][ACT] TASK (            add_material) TYPE (               AddMaterialAction) NAME (         ) Memory usage 134MB\n[DBG][ACT] TASK (            add_material) TYPE (               AddMaterialAction) NAME (          ) Memory usage 134MB\n[DBG][ACT] TASK (            add_material) TYPE (               AddMaterialAction) NAME (            ) Memory usage 134MB\n[DBG][ACT] TASK (            add_material) TYPE (               AddMaterialAction) NAME (        ) Memory usage 134MB\n[DBG][ACT] TASK (            add_material) TYPE (               AddMaterialAction) NAME (         ) Memory usage 134MB\n[DBG][ACT] TASK (            add_material) TYPE (               AddMaterialAction) NAME (          ) Memory usage 135MB\n[DBG][ACT] TASK (            add_material) TYPE (               AddMaterialAction) NAME (            ) Memory usage 135MB\n[DBG][ACT] TASK (            add_material) TYPE (               AddMaterialAction) NAME (        ) Memory usage 135MB\n[DBG][ACT] TASK (            add_material) TYPE (               AddMaterialAction) NAME (         ) Memory usage 135MB\n[DBG][ACT] TASK (            add_material) TYPE (               AddMaterialAction) NAME (          ) Memory usage 135MB\n[DBG][ACT] TASK (            add_material) TYPE (               AddMaterialAction) NAME (         ) Memory usage 135MB\n[DBG][ACT] TASK (            add_material) TYPE (               AddMaterialAction) NAME (    ) Memory usage 135MB\n[DBG][ACT] TASK (            add_material) TYPE (               AddMaterialAction) NAME (             ) Memory usage 135MB\n[DBG][ACT] TASK (add_output_aux_variables) TYPE (            MaterialOutputAction) NAME (                ) Memory usage 135MB\n[DBG][ACT] TASK (        add_algebraic_rm) TYPE (    CreateDisplacedProblemAction) NAME (            ) Memory usage 135MB\n[DBG][ACT] TASK (        add_algebraic_rm) TYPE (             AddBCAction) NAME (               ) Memory usage 135MB\n[DBG][ACT] TASK (        add_algebraic_rm) TYPE (             AddBCAction) NAME (               ) Memory usage 135MB\n[DBG][ACT] TASK (        add_algebraic_rm) TYPE (          AddRelationshipManager) NAME (                ) Memory usage 135MB\n[DBG][ACT] TASK (         add_coupling_rm) TYPE (    CreateDisplacedProblemAction) NAME (            Mesh) Memory usage 135MB\n[DBG][ACT] TASK (         add_coupling_rm) TYPE (          AddRelationshipManager) NAME (                ) Memory usage 135MB\n[DBG][ACT] TASK (attach_geometric_rm_final) TYPE (          AddRelationshipManager) NAME (                ) Memory usage 135MB\n[DBG][ACT] TASK (     attach_algebraic_rm) TYPE (          AddRelationshipManager) NAME (                ) Memory usage 135MB\n[DBG][ACT] TASK (      attach_coupling_rm) TYPE (          AddRelationshipManager) NAME (                ) Memory usage 135MB\n[DBG][ACT] TASK (delete_remote_elements_after_late_geometric_ghosting) TYPE (         SetupMeshCompleteAction) NAME (            ) Memory usage 135MB\n[DBG][ACT] TASK (              add_output) TYPE (                SetupDebugAction) NAME (           Debug) Memory usage 135MB\n[DBG][ACT] TASK (              add_output) TYPE (              CommonOutputAction) NAME (         Outputs) Memory usage 135MB\n[DBG][ACT] TASK (              add_output) TYPE (                 AddOutputAction) NAME (          exodus) Memory usage 135MB\n[DBG][ACT] TASK (              add_output) TYPE (                 AddOutputAction) NAME (         console) Memory usage 135MB\n[DBG][ACT] TASK (              add_output) TYPE (                 AddOutputAction) NAME ( perfgraphoutput) Memory usage 135MB\n[DBG][ACT] TASK (       add_postprocessor) TYPE (                 Action) NAME (            ) Memory usage 135MB\n[DBG][ACT] TASK (       add_postprocessor) TYPE (          AddPostprocessorAction) NAME (          memory) Memory usage 135MB\n[DBG][ACT] TASK (       add_postprocessor) TYPE (          AddPostprocessorAction) NAME (      ) Memory usage 135MB\n[DBG][ACT] TASK (       add_postprocessor) TYPE (          AddPostprocessorAction) NAME (      ) Memory usage 135MB\n[DBG][ACT] TASK (       add_postprocessor) TYPE (          AddPostprocessorAction) NAME (      ) Memory usage 135MB\n[DBG][ACT] TASK (       add_postprocessor) TYPE (          AddPostprocessorAction) NAME (      ) Memory usage 135MB\n[DBG][ACT] TASK (       add_postprocessor) TYPE (          AddPostprocessorAction) NAME (      ) Memory usage 135MB\n[DBG][ACT] TASK (       add_postprocessor) TYPE (          AddPostprocessorAction) NAME (   ) Memory usage 135MB\n[DBG][ACT] TASK (       add_postprocessor) TYPE (          AddPostprocessorAction) NAME (  ) Memory usage 135MB\n[DBG][ACT] TASK (       add_postprocessor) TYPE (          AddPostprocessorAction) NAME (  ) Memory usage 135MB\n[DBG][ACT] TASK (       add_postprocessor) TYPE (          AddPostprocessorAction) NAME (  ) Memory usage 135MB\n[DBG][ACT] TASK (       add_postprocessor) TYPE (          AddPostprocessorAction) NAME (  ) Memory usage 135MB\n[DBG][ACT] TASK (       add_postprocessor) TYPE (          AddPostprocessorAction) NAME (      ) Memory usage 135MB\n[DBG][ACT] TASK (       add_postprocessor) TYPE (          AddPostprocessorAction) NAME (  ) Memory usage 135MB\n[DBG][ACT] TASK (       add_postprocessor) TYPE (          AddPostprocessorAction) NAME () Memory usage 135MB\n[DBG][ACT] TASK (       add_postprocessor) TYPE (          AddPostprocessorAction) NAME () Memory usage 135MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 Action) NAME (            ) Memory usage 135MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME (     ) Memory usage 135MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME (  ) Memory usage 135MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME (     ) Memory usage 135MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME () Memory usage 135MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME () Memory usage 136MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME (  ) Memory usage 136MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME (     ) Memory usage 136MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME (  ) Memory usage 136MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME (     ) Memory usage 136MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME () Memory usage 136MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME () Memory usage 136MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME (  ) Memory usage 136MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME (     ) Memory usage 136MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME (  ) Memory usage 136MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME (     ) Memory usage 136MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME () Memory usage 136MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME () Memory usage 136MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME (  ) Memory usage 136MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME (     ) Memory usage 136MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME (  ) Memory usage 136MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME (     ) Memory usage 136MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME () Memory usage 136MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME () Memory usage 136MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME (  ) Memory usage 136MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME (     ) Memory usage 136MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME (  ) Memory usage 136MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME (     ) Memory usage 136MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME () Memory usage 136MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME () Memory usage 136MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME (  ) Memory usage 136MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME (     ) Memory usage 136MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME (  ) Memory usage 137MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME (     ) Memory usage 137MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME () Memory usage 137MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME () Memory usage 137MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME (  ) Memory usage 137MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME (       ) Memory usage 137MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME (  ) Memory usage 137MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME () Memory usage 137MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME () Memory usage 137MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME () Memory usage 137MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME () Memory usage 137MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME () Memory usage 137MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME () Memory usage 137MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME () Memory usage 137MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME () Memory usage 137MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME () Memory usage 137MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME () Memory usage 137MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME () Memory usage 137MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME () Memory usage 137MB\n[DBG][ACT] TASK (              add_kernel) TYPE (                 AddKernelAction) NAME (     ) Memory usage 137MB\n[DBG][ACT] TASK (                  add_bc) TYPE (                 Action) NAME (            ) Memory usage 138MB\n[DBG][ACT] TASK (                  add_bc) TYPE (                     AddBCAction) NAME (   ) Memory usage 138MB\n[DBG][ACT] TASK (                  add_bc) TYPE (                     AddBCAction) NAME () Memory usage 138MB\n[DBG][ACT] TASK (                  add_bc) TYPE (                     AddBCAction) NAME (   ) Memory usage 138MB\n[DBG][ACT] TASK (                  add_bc) TYPE (                     AddBCAction) NAME () Memory usage 138MB\n[DBG][ACT] TASK (                  add_bc) TYPE (                     AddBCAction) NAME (   ) Memory usage 138MB\n[DBG][ACT] TASK (                  add_bc) TYPE (                     AddBCAction) NAME () Memory usage 138MB\n[DBG][ACT] TASK (                  add_bc) TYPE (                     AddBCAction) NAME (   ) Memory usage 138MB\n[DBG][ACT] TASK (                  add_bc) TYPE (                     AddBCAction) NAME () Memory usage 138MB\n[DBG][ACT] TASK (                  add_bc) TYPE (                     AddBCAction) NAME (   ) Memory usage 138MB\n[DBG][ACT] TASK (                  add_bc) TYPE (                     AddBCAction) NAME () Memory usage 138MB\n[DBG][ACT] TASK (                  add_bc) TYPE (                     AddBCAction) NAME (   ) Memory usage 138MB\n[DBG][ACT] TASK (                  add_bc) TYPE (                     AddBCAction) NAME () Memory usage 138MB\n[DBG][ACT] TASK (                  add_bc) TYPE (                     AddBCAction) NAME (    ) Memory usage 138MB\n[DBG][ACT] TASK (                  add_bc) TYPE (                     AddBCAction) NAME () Memory usage 138MB\n[DBG][ACT] TASK (                  add_bc) TYPE (                     AddBCAction) NAME (   ) Memory usage 138MB\n[DBG][ACT] TASK (                  add_bc) TYPE (                     AddBCAction) NAME (         ) Memory usage 138MB\n[DBG][ACT] TASK (          add_aux_kernel) TYPE (           DisplayGhostingAction) NAME (            ) Memory usage 139MB\n[DBG][ACT] TASK (          add_aux_kernel) TYPE (            MaterialOutputAction) NAME (                ) Memory usage 139MB\n[DBG][ACT] TASK (           add_dg_kernel) TYPE (                 Action) NAME (            ) Memory usage 139MB\n[DBG][ACT] TASK (    add_interface_kernel) TYPE (        AddInterfaceKernelAction) NAME () Memory usage 139MB\n[DBG][ACT] TASK (  coupling_functor_check) TYPE (      CouplingFunctorCheckAction) NAME () Memory usage 139MB\n[DBG][ACT] TASK (            init_problem) TYPE (               InitProblemAction) NAME (                ) Memory usage 139MB\nSetting Up\n  Initializing\n    Initializing Equation Systems...........                                             [ 65.60 s] [ 3839 MB]\n[DBG][ACT] TASK (            check_output) TYPE (               CheckOutputAction) NAME (                ) Memory usage 3979MB\n  Finished Initializing                                                                  [ 65.66 s] [ 3840 MB]\n[DBG][ACT] TASK (         check_integrity) TYPE (            CheckIntegrityAction) NAME (                ) Memory usage 3979MB\n[DBG][ACT] Finished executing all actions with memory usage 3979MB\n\nFinished Setting Up                                                                      [ 66.72 s] [ 3905 MB]\nFramework Information:\nMOOSE Version:           git commit 0d650f19e1 on 2021-09-10\nLibMesh Version:         \nPETSc Version:           3.15.1\nSLEPc Version:           3.15.1\nCurrent Time:            Fri Jul  8 09:09:29 2022\nExecutable Timestamp:    Fri Mar 11 10:26:14 2022\n\nParallelism:\n  Num Processors:          2\n  Num Threads:             1\n\nMesh: \n  Parallel Type:           replicated\n  Mesh Dimension:          3\n  Spatial Dimension:       3\n  Nodes:                   \n    Total:                 50569\n    Local:                 25840\n    Min/Max/Avg:           24729/25840/25284\n  Elems:                   \n    Total:                 46800\n    Local:                 23400\n    Min/Max/Avg:           23400/23400/23400\n  Num Subdomains:          3\n  Num Partitions:          2\n  Partitioner:             metis\n\nNonlinear System:\n  Num DOFs:                569711\n  Num Local DOFs:          289452\n  Variables:               \n  Finite Element Types:    \"LAGRANGE\" \"LAGRANGE_VEC\" \"LAGRANGE\" \"LAGRANGE\" \"MONOMIAL\" \n  Approximation Orders:    \"FIRST\" \"FIRST\" \"FIRST\" \"FIRST\" \"CONSTANT\" \n\nExecution Information:\n  Executioner:             Transient\n  TimeStepper:             ConstantDT\n  Solver Mode:             NEWTON\n  MOOSE Preconditioner:    SMP\n\nThe Executioner block is here:\n  type = Transient\n  num_steps = 100\n  dt = 2.5e-3\n  #end_time = 100\n\n  nl_rel_tol = 1e-8\n  nl_abs_tol = 1e-8\n\n  solve_type = 'NEWTON'\n  petsc_options = '-snes_converged_reason -ksp_converged_reason -snes_linesearch_monitor'\n  petsc_options_iname = '-pc_type -pc_hypre_type'\n  petsc_options_value = 'hypre boomeramg'\n  line_search = 'none'\n   # petsc_options_iname = '-snes_type'\n  # petsc_options_value = 'test'\n\n  nl_max_its = 30\n  l_max_its = 100\n  #steady_state_detection = true\n  #steady_state_tolerance = 1e-10\n\n  automatic_scaling = true",
+                          "url": "https://github.com/idaholab/moose/discussions/21529#discussioncomment-3104492",
+                          "updatedAt": "2022-07-08T02:58:02Z",
+                          "publishedAt": "2022-07-08T02:58:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "This all looks reasonable.\nDoes hypre converge for your physics though? I would expect not",
+                          "url": "https://github.com/idaholab/moose/discussions/21529#discussioncomment-3104516",
+                          "updatedAt": "2022-07-08T03:06:26Z",
+                          "publishedAt": "2022-07-08T03:06:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sychang2021"
+                          },
+                          "bodyText": "Hypre does not converge in a subproblem with only five variables, so it must also not converge in the overall problem.\nTime Step 1, time = 0.002, dt = 0.002\n 0 Nonlinear |R| = 9.082018e+03\nExecuting  Solving\n\n    Computing Jacobian                                                                   [  6.55 s] [  108 MB]\n  Still Solving\n  Linear solve did not converge due to DIVERGED_ITS iterations 100\n 1 Nonlinear |R| = 4.434229e+02\n    Computing Jacobian                                                                   [  6.39 s] [    1 MB]\n  Still Solving\n  Linear solve did not converge due to DIVERGED_ITS iterations 100\n 2 Nonlinear |R| = 3.809672e+02\n    Computing Jacobian                                                                   [  6.40 s] [    4 MB]\n  Still Solving\n  Linear solve did not converge due to DIVERGED_ITS iterations 100\n 3 Nonlinear |R| = 3.707293e+02\n    Computing Jacobian                                                                   [  6.37 s] [    1 MB]\n  Still Solving\n  Linear solve did not converge due to DIVERGED_ITS iterations 100\n 4 Nonlinear |R| = 3.504751e+02\n    Finished Computing Jacobian                                                          [  6.38 s] [    0 MB]\n  Still Solving\n  Linear solve did not converge due to DIVERGED_ITS iterations 100\n 5 Nonlinear |R| = 3.383492e+02\n    Computing Jacobian                                                                   [  6.37 s] [    0 MB]\n  Still Solving\n  Linear solve did not converge due to DIVERGED_ITS iterations 100\n 6 Nonlinear |R| = 3.363708e+02\n    Computing Jacobian                                                                   [  6.49 s] [    0 MB]\n  Still Solving\n  Linear solve did not converge due to DIVERGED_ITS iterations 100\n 7 Nonlinear |R| = 3.349424e+02\n    Computing Jacobian                                                                   [  6.52 s] [    1 MB]\n  Still Solving\n  Linear solve did not converge due to DIVERGED_ITS iterations 100\n 8 Nonlinear |R| = 3.346161e+02\n    Computing Jacobian                                                                   [  6.60 s] [    0 MB]\n\nNow that it looks reasonable, is there any solution for me. Because the problem of 47,000 grids is really small. But 64GB of memory can no longer meet its needs.",
+                          "url": "https://github.com/idaholab/moose/discussions/21529#discussioncomment-3104533",
+                          "updatedAt": "2022-07-08T03:12:06Z",
+                          "publishedAt": "2022-07-08T03:12:05Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "The easiest solution would be for you to find a larger machine to run the case on. Do you have access to a university cluster?\nThe harder solution would be for you to find a cheaper preconditioner for your physics. You will want to look at these pages:\nhttps://mooseframework.inl.gov/syntax/Preconditioning/index.html\nand create a custom split",
+                          "url": "https://github.com/idaholab/moose/discussions/21529#discussioncomment-3104549",
+                          "updatedAt": "2022-07-08T03:15:52Z",
+                          "publishedAt": "2022-07-08T03:15:52Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sychang2021"
+                          },
+                          "bodyText": "I think the first method is more feasible. I would also like to ask, when you use MOOSE to calculate large projects, such as the problem of 5 million grids, do you increase the memory or solve the problem by finding a cheaper preconditioner? If the problem of 17 variables and 50,000 grids already requires 64GB of memory, wouldn't the problem of 5 million grids require 7TB of memory? This is obviously not realistic. LU is the most memory-intensive algorithm. Do you have any other algorithm recommendations to save memory and ensure convergence?",
+                          "url": "https://github.com/idaholab/moose/discussions/21529#discussioncomment-3104583",
+                          "updatedAt": "2022-07-08T03:24:38Z",
+                          "publishedAt": "2022-07-08T03:24:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "We usually find a cheaper preconditioner.\nFor fluids like you are doing you could code up a linearized segregated scheme like SIMPLE",
+                          "url": "https://github.com/idaholab/moose/discussions/21529#discussioncomment-3104659",
+                          "updatedAt": "2022-07-08T03:46:02Z",
+                          "publishedAt": "2022-07-08T03:46:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sychang2021"
+                          },
+                          "bodyText": "OK, thank you for your suggestions. You're very helpful.",
+                          "url": "https://github.com/idaholab/moose/discussions/21529#discussioncomment-3104743",
+                          "updatedAt": "2022-07-08T04:05:36Z",
+                          "publishedAt": "2022-07-08T04:05:36Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "LU is the most expensive one pretty much.\nYou can try saving some amount of memory by using distributed meshes. But the big one is likely the preconditioner here",
+                  "url": "https://github.com/idaholab/moose/discussions/21529#discussioncomment-3102971",
+                  "updatedAt": "2022-07-07T20:10:23Z",
+                  "publishedAt": "2022-07-07T20:10:16Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Compilation Problem FC36 & GCC 12.1.1",
+          "author": {
+            "login": "makeclean"
+          },
+          "bodyText": "Current HEAD of MOOSE, fails to compile with GCC 12.1.1, with the following error\n/home/adavis/opt/moose/framework/scripts/get_repo_revision.py:15: DeprecationWarning: The distutils package is deprecated and slated for removal in Python 3.12. Use setuptools or check PEP 632 for potential alternatives\n  from distutils.version import LooseVersion\nIn file included from /home/adavis/opt/moose/framework/build/header_symlinks/ShapeElementUserObject.h:13,\n                 from /home/adavis/opt/moose/framework/src/userobject/ShapeElementUserObject.C:10,\n                 from /home/adavis/opt/moose/framework/build/unity_src/userobject_Unity.C:48:\n/home/adavis/opt/moose/framework/build/header_symlinks/ShapeUserObject.h: In instantiation of \u2018unsigned int ShapeUserObject<T>::coupled(const std::string&, unsigned int) const [with T = SideUserObject; std::string = std::__cxx11::basic_string<char>]\u2019:\n/home/adavis/opt/moose/framework/build/header_symlinks/ShapeUserObject.h:122:1:   required from here\n/home/adavis/opt/moose/framework/build/header_symlinks/ShapeUserObject.h:124:40: error: passing \u2018const ShapeUserObject<SideUserObject>\u2019 as \u2018this\u2019 argument discards qualifiers [-fpermissive]\n  124 |   const auto * var = Coupleable::getVar(var_name, comp);\n      |                      ~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~\nIn file included from /home/adavis/opt/moose/framework/build/header_symlinks/MooseObjectWarehouseBase.h:17,\n                 from /home/adavis/opt/moose/framework/build/header_symlinks/InitialConditionWarehouse.h:12,\n                 from /home/adavis/opt/moose/framework/build/header_symlinks/FEProblemBase.h:18,\n                 from /home/adavis/opt/moose/framework/build/header_symlinks/UserObjectInterface.h:14,\n                 from /home/adavis/opt/moose/framework/build/header_symlinks/UserObject.h:15,\n                 from /home/adavis/opt/moose/framework/build/header_symlinks/ElementUserObject.h:13,\n                 from /home/adavis/opt/moose/framework/build/header_symlinks/ActivateElementsUserObjectBase.h:12,\n                 from /home/adavis/opt/moose/framework/build/header_symlinks/ActivateElementsByPath.h:12,\n                 from /home/adavis/opt/moose/framework/src/userobject/ActivateElementsByPath.C:10,\n                 from /home/adavis/opt/moose/framework/build/unity_src/userobject_Unity.C:2:\n/home/adavis/opt/moose/framework/build/header_symlinks/Coupleable.h:1320:19: note:   in call to \u2018MooseVariable* Coupleable::getVar(const std::string&, unsigned int)\u2019\n 1320 |   MooseVariable * getVar(const std::string & var_name, unsigned int comp);\n      |                   ^~~~~~\n/home/adavis/opt/moose/framework/build/header_symlinks/ShapeUserObject.h: In instantiation of \u2018unsigned int ShapeUserObject<T>::coupled(const std::string&, unsigned int) const [with T = ElementUserObject; std::string = std::__cxx11::basic_string<char>]\u2019:\n/home/adavis/opt/moose/framework/build/header_symlinks/ShapeUserObject.h:122:1:   required from here\n/home/adavis/opt/moose/framework/build/header_symlinks/ShapeUserObject.h:124:40: error: passing \u2018const ShapeUserObject<ElementUserObject>\u2019 as \u2018this\u2019 argument discards qualifiers [-fpermissive]\n  124 |   const auto * var = Coupleable::getVar(var_name, comp);\n      |                      ~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~\n/home/adavis/opt/moose/framework/build/header_symlinks/Coupleable.h:1320:19: note:   in call to \u2018MooseVariable* Coupleable::getVar(const std::string&, unsigned int)\u2019\n 1320 |   MooseVariable * getVar(const std::string & var_name, unsigned int comp);\n      |                   ^~~~~~\nmake: *** [/home/adavis/opt/moose/framework/build.mk:144: /home/adavis/opt/moose/framework/build/unity_src/userobject_Unity.x86_64-pc-linux-gnu.opt.lo] Error 1\nmake: *** Waiting for unfinished jobs....\n\nLibmesh compiles fine, I've tried setting --with-cxx-std=2011 (and 14 and 17) but they all give the same failure.",
+          "url": "https://github.com/idaholab/moose/discussions/21456",
+          "updatedAt": "2022-07-21T23:51:17Z",
+          "publishedAt": "2022-06-29T16:51:53Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "loganharbour"
+                  },
+                  "bodyText": "Unfortunately we do not typically test major versioned compilers that are a year or two old, let alone one month old \ud83d\ude06\nIf you need to use GCC 12.1, we would happily accept a PR for this",
+                  "url": "https://github.com/idaholab/moose/discussions/21456#discussioncomment-3050988",
+                  "updatedAt": "2022-06-29T19:15:47Z",
+                  "publishedAt": "2022-06-29T19:15:46Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nIt seems this is a compiler warning that gets treated as an error to me. We can fix this pretty easily. Thanks for reporting it! If you dont get to it first we'll ping back here when it's fixed\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21456#discussioncomment-3051042",
+                  "updatedAt": "2022-06-29T19:28:43Z",
+                  "publishedAt": "2022-06-29T19:28:43Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nWe have fixed the error (really a compiler warning treated as an error out of caution).\nThere are still other warnings, mostly coming from Eigen which we will address in the near future, on the libmesh side.\nThe update is currently in next/ and should be propagated to devel and master once we have fixed other conflicting PRs.\nPlease let us know if you are still hitting any issue with building with gcc-12.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21456#discussioncomment-3103840",
+                  "updatedAt": "2022-07-07T23:37:38Z",
+                  "publishedAt": "2022-07-07T23:37:37Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "3D Berkovich Indentation Example Units",
+          "author": {
+            "login": "Vandenbg"
+          },
+          "bodyText": "Hello,\nI am having trouble establishing the units used for the example in:\nmoose/modules/contact/examples/3d_berkovich/\nThe journal file used to create the mesh does not specify units and neither does the input file itself. The mesh displaces at the same rate as time ending at 1.8. Units in finite element analysis are arbitrary, however, given the examples inputs there must be units associated with the displacement and time. I am assuming seconds and micrometers. Is there something I am missing, is there any way to confirm this?",
+          "url": "https://github.com/idaholab/moose/discussions/21535",
+          "updatedAt": "2022-07-07T22:15:42Z",
+          "publishedAt": "2022-07-07T21:02:51Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThere is documentation for this example\nhttps://mooseframework.inl.gov/modules/contact/BerkovichIndenterNodeFace.html\ndoes it help with the units? Seems time is in seconds.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21535#discussioncomment-3103319",
+                  "updatedAt": "2022-07-07T21:17:33Z",
+                  "publishedAt": "2022-07-07T21:17:32Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Vandenbg"
+                          },
+                          "bodyText": "Thank you for the quick reply, this does confirm time is in seconds. I was not able to gleam other units from this documentation or the nearby 2d examples when searching earlier.\nedit: it does note that the parameters for the material are arbitrary, however, I don't think this means that the length scale is too.",
+                          "url": "https://github.com/idaholab/moose/discussions/21535#discussioncomment-3103343",
+                          "updatedAt": "2022-07-07T21:26:01Z",
+                          "publishedAt": "2022-07-07T21:24:04Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I think you should be able to determine whether it's in m, mm or micrometer from your knowledge of the problem and the material properties a this point.",
+                          "url": "https://github.com/idaholab/moose/discussions/21535#discussioncomment-3103387",
+                          "updatedAt": "2022-07-07T21:37:19Z",
+                          "publishedAt": "2022-07-07T21:37:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Vandenbg"
+                          },
+                          "bodyText": "Given the stress output by running the simulation, it would make sense that the units are micrometers. Thank you for the help.",
+                          "url": "https://github.com/idaholab/moose/discussions/21535#discussioncomment-3103415",
+                          "updatedAt": "2022-07-07T21:46:20Z",
+                          "publishedAt": "2022-07-07T21:46:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "If I recall correctly, the length unit is micro meter and the stress is mpa.",
+                          "url": "https://github.com/idaholab/moose/discussions/21535#discussioncomment-3103575",
+                          "updatedAt": "2022-07-07T22:15:42Z",
+                          "publishedAt": "2022-07-07T22:15:42Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Grain growth actions",
+          "author": {
+            "login": "xueyang94"
+          },
+          "bodyText": "I am new to modeling grain growth. I saw that there are two actions available: the GrainGrowthAction and PolycrystalKernalAction. What are they major differences between the two? Also, I have a phase-field model with 5 phases. I want to add polycrystal structure to only one of the phases by Voronoi Tessellation. From what I understand, adding the microstructure only adds more phase parameters and interfacial energy. I know how to generate Voronoi Tessellation in the entire domain, but how to do it in only one phase? Thanks.",
+          "url": "https://github.com/idaholab/moose/discussions/21478",
+          "updatedAt": "2022-07-21T23:51:09Z",
+          "publishedAt": "2022-07-01T12:13:08Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@SudiptaBiswas @dschwen",
+                  "url": "https://github.com/idaholab/moose/discussions/21478#discussioncomment-3088636",
+                  "updatedAt": "2022-07-06T00:54:57Z",
+                  "publishedAt": "2022-07-06T00:54:57Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "SudiptaBiswas"
+                  },
+                  "bodyText": "PolycrystalKernalAction only adds the kernels needed for grain growth simulations, whereas GrainGrowthAction also adds the pieces needed to visualize the outputs. For your next question, you might need to modify the initial condition to do what you need. It would depend on how you are initializing different phases. For example, look into the PolycrystalVoronoiVoidIC regarding how to include a void phase.",
+                  "url": "https://github.com/idaholab/moose/discussions/21478#discussioncomment-3095422",
+                  "updatedAt": "2022-07-06T21:18:12Z",
+                  "publishedAt": "2022-07-06T21:18:06Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xueyang94"
+                          },
+                          "bodyText": "@SudiptaBiswas Thank you for helping. What outputs can GrainGrowthAction visualize other than bnds? Will GrainGrowthAction completely replace PolycrystalKernalAction?\nFor the next part, I tried using SubdomainBoundingBoxGenerator to get a block of mesh for assigning the grain structure because the phase has a rectangular geometry instead of a void. How is the interfacial width between two domains of mesh handled?",
+                          "url": "https://github.com/idaholab/moose/discussions/21478#discussioncomment-3100541",
+                          "updatedAt": "2022-07-07T13:47:02Z",
+                          "publishedAt": "2022-07-07T13:47:01Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Asymmetry in shell element model with symmetric loading.",
+          "author": {
+            "login": "Edward-Eth"
+          },
+          "bodyText": "I have a 2d shell element based model with full symmetry about the x axis, subject to a uniformly distributed pressure load on one edge, x displacement fixed on the other edge and y displacement fixed at the mid point of the edges. This model is fully symmetrical about the x axis. When run however, the results for stress in the 1(y) direction are asymmetric to a substantial degree (See image of contours). Weirdly however, the y displacements seem to be perfectly symmetrical. When I run a mesh that isn't tapered the y stress vanishes as you'd expect, and the X stress becomes uniform, so it seems that the issue is only arising when the mesh is tapered. I would appreciate any insight/advice that could be given on this as I've somewhat reached the end of my troubleshooting abilities in figuring this one out.\nStress 00 (xx) shows symmetry:\n\nDisplacement in x shows symmetry:\n\nAdditionally, the displacement in y also seems to show symmetry:\n\nHowever stress in 01 (xy) and 11 (yy) directions show asymmetry:\n\n\nThe stress values in y are comparable in magnitude to the values in x (160 in yy direction to 1000 in xx) which means this isn't just a numerical error on a value that is vanishingly small.\nThe input file used:\n[Mesh]\n  [base]\n    type = FileMeshGenerator\n    file = ShellTest1.ucd\n  []\n  [side_sets]\n    type = SideSetsFromNormalsGenerator\n    input = base\n    new_boundary = 'left right'\n    normals = '-1 0 0\n               1 0 0'\n    fixed_normal = true\n  []\n  [left_side_mid_node]\n    type = ExtraNodesetGenerator\n    input = side_sets\n    new_boundary = left_side_mid\n    coord = '0.0 0.0 0.0'\n  []\n  [right_side_mid_node]\n    type = ExtraNodesetGenerator\n    input = left_side_mid_node\n    new_boundary = right_side_mid\n    coord = '4.0 0.0 0.0'\n  []\n[]\n\n[Variables]\n  [disp_x]\n  []\n  [disp_y]\n  []\n  [disp_z]\n  []\n  [rot_x]\n  []\n  [rot_y]\n  []\n[]\n\n[AuxVariables]\n  [stress_00]\n  order = CONSTANT\n  family = MONOMIAL\n  []\n  [stress_11]\n  order = CONSTANT\n  family = MONOMIAL\n  []\n  [stress_22]\n  order = CONSTANT\n  family = MONOMIAL\n  []\n  [stress_01]\n  order = CONSTANT\n  family = MONOMIAL\n  []\n  [stress_10]\n  order = CONSTANT\n  family = MONOMIAL\n  []\n  [stress_02]\n  order = CONSTANT\n  family = MONOMIAL\n  []\n  [stress_20]\n  order = CONSTANT\n  family = MONOMIAL\n  []\n  [stress_12]\n  order = CONSTANT\n  family = MONOMIAL\n  []\n  [stress_21]\n  order = CONSTANT\n  family = MONOMIAL\n  []\n[]\n\n[Kernels]\n  [solid_disp_x]\n    type = ADStressDivergenceShell\n    block = 1\n    component = 0\n    variable = disp_x\n    through_thickness_order = SECOND\n  []\n  [solid_disp_y]\n    type = ADStressDivergenceShell\n    block = 1\n    component = 1\n    variable = disp_y\n    through_thickness_order = SECOND\n  []\n  [solid_disp_z]\n    type = ADStressDivergenceShell\n    block = 1\n    component = 2\n    variable = disp_z\n    through_thickness_order = SECOND\n  []\n  [solid_rot_x]\n    type = ADStressDivergenceShell\n    block = 1\n    component = 3\n    variable = rot_x\n    through_thickness_order = SECOND\n  []\n  [solid_rot_y]\n    type = ADStressDivergenceShell\n    block = 1\n    component = 4\n    variable = rot_y\n    through_thickness_order = SECOND\n  []\n[]\n\n[AuxKernels]\n  [stress_00]\n    type = RankTwoAux\n    variable = stress_00\n    rank_two_tensor = global_stress_t_points_0\n    index_i = 0\n    index_j = 0\n    execute_on = TIMESTEP_END\n  []\n  [stress_11]\n    type = RankTwoAux\n    variable = stress_11\n    rank_two_tensor = global_stress_t_points_0\n    index_i = 1\n    index_j = 1\n    execute_on = TIMESTEP_END\n  []\n  [stress_22]\n    type = RankTwoAux\n    variable = stress_22\n    rank_two_tensor = global_stress_t_points_0\n    index_i = 2\n    index_j = 2\n    execute_on = TIMESTEP_END\n  []\n  [stress_01]\n    type = RankTwoAux\n    variable = stress_01\n    rank_two_tensor = global_stress_t_points_0\n    index_i = 0\n    index_j = 1\n    execute_on = TIMESTEP_END\n  []\n  [stress_10]\n    type = RankTwoAux\n    variable = stress_10\n    rank_two_tensor = global_stress_t_points_0\n    index_i = 1\n    index_j = 0\n    execute_on = TIMESTEP_END\n  []\n  [stress_02]\n    type = RankTwoAux\n    variable = stress_02\n    rank_two_tensor = global_stress_t_points_0\n    index_i = 0\n    index_j = 2\n    execute_on = TIMESTEP_END\n  []\n  [stress_20]\n    type = RankTwoAux\n    variable = stress_20\n    rank_two_tensor = global_stress_t_points_0\n    index_i = 2\n    index_j = 0\n    execute_on = TIMESTEP_END\n  []\n  [stress_12]\n    type = RankTwoAux\n    variable = stress_12\n    rank_two_tensor = global_stress_t_points_0\n    index_i = 1\n    index_j = 2\n    execute_on = TIMESTEP_END\n  []\n  [stress_21]\n    type = RankTwoAux\n    variable = stress_21\n    rank_two_tensor = global_stress_t_points_0\n    index_i = 2\n    index_j = 1\n    execute_on = TIMESTEP_END\n  []\n[]\n\n[BCs]\n  [BC_0]\n    type = ADDirichletBC\n    variable = disp_x\n    value = 0.0\n    boundary = left\n  []\n  [BC_1]\n    type = ADDirichletBC\n    variable = disp_y\n    value = 0.0\n    boundary = left_side_mid\n  []\n  [BC_2]\n    type = ADPressure\n    variable = disp_x\n    component = 0\n    constant = -100.0\n    boundary = right\n    use_displaced_mesh = false\n  []\n[]\n\n[Materials]\n  [stress]\n    type = ADComputeShellStress\n    block = 1\n    through_thickness_order = SECOND\n  []\n  [elasticity]\n    type = ADComputeIsotropicElasticityTensorShell\n    youngs_modulus = 210000\n    poissons_ratio = 0.3\n    block = 1\n    through_thickness_order = SECOND\n  []\n  [strain]\n    type = ADComputeIncrementalShellStrain\n    block = 1\n    displacements = 'disp_x disp_y disp_z'\n    rotations = 'rot_x rot_y'\n    thickness = 0.1\n    through_thickness_order = SECOND\n  []\n[]\n\n[Executioner]\n  type = Steady\n  solve_type = NEWTON\n  automatic_scaling = true\n  nl_abs_tol = 1e-30\n  l_abs_tol = 1e-30\n  nl_max_its = 1000\n  l_max_its = 1000\n[]\n\n[Outputs]\n  [outfile]\n    type = Exodus\n  []\n[]\n\nAnd the mesh file:\n25 16 0 0 0 \n1 0.0 2.0 0.0 \n2 1.0 1.75 0.0 \n3 2.0 1.5 0.0 \n4 3.0 1.25 0.0 \n5 4.0 1.0 0.0 \n6 0.0 1.0 0.0 \n7 1.0 0.875 0.0 \n8 2.0 0.75 0.0 \n9 3.0 0.625 0.0 \n10 4.0 0.5 0.0 \n11 0.0 0.0 0.0 \n12 1.0 0.0 0.0 \n13 2.0 0.0 0.0 \n14 3.0 0.0 0.0 \n15 4.0 0.0 0.0 \n16 0.0 -1.0 0.0 \n17 1.0 -0.875 0.0 \n18 2.0 -0.75 0.0 \n19 3.0 -0.625 0.0 \n20 4.0 -0.5 0.0 \n21 0.0 -2.0 0.0 \n22 1.0 -1.75 0.0 \n23 2.0 -1.5 0.0 \n24 3.0 -1.25 0.0 \n25 4.0 -1.0 0.0 \n1 1 quad 1 6 7 2 \n2 1 quad 2 7 8 3 \n3 1 quad 3 8 9 4 \n4 1 quad 4 9 10 5 \n5 1 quad 6 11 12 7 \n6 1 quad 7 12 13 8 \n7 1 quad 8 13 14 9 \n8 1 quad 9 14 15 10 \n9 1 quad 11 16 17 12 \n10 1 quad 12 17 18 13 \n11 1 quad 13 18 19 14 \n12 1 quad 14 19 20 15 \n13 1 quad 16 21 22 17 \n14 1 quad 17 22 23 18 \n15 1 quad 18 23 24 19 \n16 1 quad 19 24 25 20",
+          "url": "https://github.com/idaholab/moose/discussions/20771",
+          "updatedAt": "2022-07-07T08:15:11Z",
+          "publishedAt": "2022-04-12T14:07:40Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "Edward-Eth"
+                  },
+                  "bodyText": "I should also mention that mesh refinement doesn't resolve this issue:",
+                  "url": "https://github.com/idaholab/moose/discussions/20771#discussioncomment-2552490",
+                  "updatedAt": "2022-06-13T15:10:04Z",
+                  "publishedAt": "2022-04-12T14:12:47Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "Edward-Eth"
+                  },
+                  "bodyText": "Could someone at leas run this in their own moose-app to let me know if the issue is reproducible?",
+                  "url": "https://github.com/idaholab/moose/discussions/20771#discussioncomment-2565066",
+                  "updatedAt": "2022-06-13T15:09:12Z",
+                  "publishedAt": "2022-04-14T07:51:01Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@bwspenc @dschwen @jiangwen84 who works on shell elements?",
+                          "url": "https://github.com/idaholab/moose/discussions/20771#discussioncomment-2568156",
+                          "updatedAt": "2022-06-13T15:08:14Z",
+                          "publishedAt": "2022-04-14T16:32:50Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Edward-Eth"
+                          },
+                          "bodyText": "Anyone had a chance to look at this yet?",
+                          "url": "https://github.com/idaholab/moose/discussions/20771#discussioncomment-2607535",
+                          "updatedAt": "2022-06-13T15:08:10Z",
+                          "publishedAt": "2022-04-21T09:22:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@jain651",
+                          "url": "https://github.com/idaholab/moose/discussions/20771#discussioncomment-2908360",
+                          "updatedAt": "2022-06-08T19:20:11Z",
+                          "publishedAt": "2022-06-08T19:20:09Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jain651"
+                          },
+                          "bodyText": "@hrishiv would you please also look into this? Maybe create a test case along with others (that you are already developing to represent this problem.",
+                          "url": "https://github.com/idaholab/moose/discussions/20771#discussioncomment-2939494",
+                          "updatedAt": "2022-06-13T15:10:24Z",
+                          "publishedAt": "2022-06-13T15:08:08Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "neuphris"
+                          },
+                          "bodyText": "@Edward-Eth Thanks for pointing us to a bug in shell element. I was able to replicate it and figure out that the rotation matrix is calculated just once at the start of the simulation and is not stored. Hence, the rotation matrix for the last element was used to transform the stress and strain for all the elements giving incorrect stress and strain distribution. I\nwas able to get the symmetric stress distribution by storing the rotation matrices. Will open a pull request for this.",
+                          "url": "https://github.com/idaholab/moose/discussions/20771#discussioncomment-3005299",
+                          "updatedAt": "2022-06-22T20:31:44Z",
+                          "publishedAt": "2022-06-22T20:31:43Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Edward-Eth"
+                          },
+                          "bodyText": "Awesome, glad I could be of assistance and thanks for fixing it \ud83d\udc4d",
+                          "url": "https://github.com/idaholab/moose/discussions/20771#discussioncomment-3008239",
+                          "updatedAt": "2022-06-23T08:12:03Z",
+                          "publishedAt": "2022-06-23T08:12:02Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "Edward-Eth"
+                  },
+                  "bodyText": "Issue resolved pending Pull Request #21385 for the fixed code.",
+                  "url": "https://github.com/idaholab/moose/discussions/20771#discussioncomment-3008247",
+                  "updatedAt": "2022-06-23T08:24:52Z",
+                  "publishedAt": "2022-06-23T08:12:58Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "neuphris"
+                          },
+                          "bodyText": "Just wanted to give you heads up with applying the pressure BC to shell element. The pressure is designed to be applied over an area and when you are applying  pressure to the shell edge it uses only two quadrature points. Hence the team decided to generate an error message when pressure is applied to the edge as several MOOSE test cases were failing when a test file with pressure BC was used for shell element. You can use the resultant force to each node/edge instead of the pressure.",
+                          "url": "https://github.com/idaholab/moose/discussions/20771#discussioncomment-3094179",
+                          "updatedAt": "2022-07-06T17:20:56Z",
+                          "publishedAt": "2022-07-06T17:20:54Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Edward-Eth"
+                          },
+                          "bodyText": "How would I set resultant force? Would that be a neumann BC or would it be best to use something like a ConstantRate nodal kernel?",
+                          "url": "https://github.com/idaholab/moose/discussions/20771#discussioncomment-3098356",
+                          "updatedAt": "2022-07-07T08:15:15Z",
+                          "publishedAt": "2022-07-07T08:15:11Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Adding nodal constraint equation",
+          "author": {
+            "login": "jessecarterMOOSE"
+          },
+          "bodyText": "Does MOOSE have a system in place like the linear constraint system in Abaqus  that would allow specific variables at specific nodes sum to zero? Might not necessarily need to be a MOOSE Constraint constraint, but maybe this could be handled with a kernel?\nSpecifically I'd like to apply this to mesh displacement variables rather than applying typical displacement boundary conditions.",
+          "url": "https://github.com/idaholab/moose/discussions/21500",
+          "updatedAt": "2022-07-07T11:57:45Z",
+          "publishedAt": "2022-07-05T13:37:30Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nMy guess is no, seems like it would be an object that would contribute to many different variable residuals and it's not commonly done.\nBut it s totally possible and would not be too too difficult, just need to rewrite the computeJacobian and computeResidual routines.\n@lindsayad to make sure\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21500#discussioncomment-3088383",
+                  "updatedAt": "2022-07-05T23:41:57Z",
+                  "publishedAt": "2022-07-05T23:41:57Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "lindsayad"
+                  },
+                  "bodyText": "I don't think we currently have an object as generic as you describe, but we definitely have systems that would support it. Either NodalConstraints or NodalKernels should be able to do the job",
+                  "url": "https://github.com/idaholab/moose/discussions/21500#discussioncomment-3094151",
+                  "updatedAt": "2022-07-06T17:17:19Z",
+                  "publishedAt": "2022-07-06T17:17:17Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jessecarterMOOSE"
+                          },
+                          "bodyText": "Thanks. I think I might be able to make it work with NodalKernels. How does the theory for that system compare with regular Kernels, i.e. weak form and Jacobians and such?",
+                          "url": "https://github.com/idaholab/moose/discussions/21500#discussioncomment-3096445",
+                          "updatedAt": "2022-07-07T01:26:28Z",
+                          "publishedAt": "2022-07-07T01:26:27Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "NodalKernels were originally created for equations without spatial derivative terms (they could have d/dt terms) but for which the variable was still a spatially varying field. Because there are no spatial derivative terms (at least in the use case the system was originally intended for), there are no weak forms. The equations you are solving for presumably depend on the nonlinear degrees of freedom, so you still have Jacobians",
+                          "url": "https://github.com/idaholab/moose/discussions/21500#discussioncomment-3096965",
+                          "updatedAt": "2022-07-07T03:53:18Z",
+                          "publishedAt": "2022-07-07T03:53:17Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Use number of nodes in a nodeset in an equation",
+          "author": {
+            "login": "Edward-Eth"
+          },
+          "bodyText": "Hi, I am attempting to apply an out of plane distributed load to a shell element model. Looking at examples, and with experiments of my own, it seems the ADPressure BC doesn't allow the application of loads in the Z direction on a boundary on a 2D X-Y generated mesh. The example (modules/tensor_mechanics/test/tests/shell/static/beam_bending_moment_AD.i) shows the use of a ConstantRate nodal kernel to apply an out of plane distributed nodal force, however if you don't know the number of nodes on the boundary while writing the input file, it is impossible to correctly define a distributed load this way. As such I was wondering if it is possible to return the number of nodes in a boundary to a function to calculate a force per node equivalent to a certain desired \"total\" force (ie pressure x area)",
+          "url": "https://github.com/idaholab/moose/discussions/21463",
+          "updatedAt": "2022-07-21T23:51:03Z",
+          "publishedAt": "2022-06-30T08:19:49Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nIn a function directly no, but you can use a postprocessor to count the nodes, then use a parsedfunction to use that value in a function.\nhttps://mooseframework.inl.gov/source/postprocessors/NumNodes.html\nhttps://mooseframework.inl.gov/source/functions/MooseParsedFunction.html\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21463#discussioncomment-3059057",
+                  "updatedAt": "2022-06-30T19:33:58Z",
+                  "publishedAt": "2022-06-30T19:33:57Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Edward-Eth"
+                          },
+                          "bodyText": "Is NumNodes able to operate on a subdomain or boundary to return the number of nodes in/on the same? It seems to lack a boundary or block input to allow it to do that?",
+                          "url": "https://github.com/idaholab/moose/discussions/21463#discussioncomment-3082982",
+                          "updatedAt": "2022-07-05T08:34:23Z",
+                          "publishedAt": "2022-07-05T08:34:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "It cannot. We'd need to add block or boundary restriction.\nIt's not very hard to do, do you need block or boundary?",
+                          "url": "https://github.com/idaholab/moose/discussions/21463#discussioncomment-3085156",
+                          "updatedAt": "2022-07-05T13:35:58Z",
+                          "publishedAt": "2022-07-05T13:35:54Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "KhaledNabilSharafeldin"
+                  },
+                  "bodyText": "If these nodes belong to a sideset, and you know the sideset name/ID, you can get the list of node IDs in that sideset and apply the condition in an Action.\nso all you need to do is. make a new action that has a function that sets up the list of node IDs, then take that list and use it as a parameter to set up the BC you're trying to do.\nI am not sure which BCs you are trying to use but that much I know.\nyou can get the boundaryID by name using _mesh->getBoundaryID(name)\nand you can use that ID to get the list of nodeIDs _mesh->getNodeList(boundaryID) which returns a std::vector<dof_id_type>",
+                  "url": "https://github.com/idaholab/moose/discussions/21463#discussioncomment-3090323",
+                  "updatedAt": "2022-07-06T07:48:51Z",
+                  "publishedAt": "2022-07-06T07:48:47Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "yup from the code-side you can use these routines.",
+                          "url": "https://github.com/idaholab/moose/discussions/21463#discussioncomment-3094988",
+                          "updatedAt": "2022-07-06T19:51:55Z",
+                          "publishedAt": "2022-07-06T19:51:55Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "RandomInterface share the generated random number across different kernels",
+          "author": {
+            "login": "KhaledNabilSharafeldin"
+          },
+          "bodyText": "Hello,\nI am using the RandomInterface to generate a random number inside a kernel. Is there a way to share this exact number for different kernels on the same node?\nThanks in advance,\nKhaled",
+          "url": "https://github.com/idaholab/moose/discussions/21496",
+          "updatedAt": "2022-07-07T05:46:43Z",
+          "publishedAt": "2022-07-04T22:28:45Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nLooking at the doxygen, I dont think so. Every time the getRandomReal() is called for that node, it gets a new number.\nhttps://mooseframework.inl.gov/docs/doxygen/moose/classRandomInterface.html\nYou could save this real in a material property or an auxvariable if you want to share it across multiple objects on the same elements/qps\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21496#discussioncomment-3080742",
+                  "updatedAt": "2022-07-04T23:35:54Z",
+                  "publishedAt": "2022-07-04T23:35:54Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "KhaledNabilSharafeldin"
+                          },
+                          "bodyText": "Thank you @GiudGiud! I ended up setting up a user object to do just that, it executes in timestep_begin and has a getter function that passes the result without producing new random numbers. I can share the UO for reference here, if it's needed.\nBut I have another question because the documentation on RandomInterface might be throwing me off a bit. it is saying that\n\n...you don't want to be producing new random numbers with each linear iteration as this can impact the convergence of the solver. You can avoid this problem If you \"reset\" the random number generators every \"linear\" iteration...\n\nso that means if I set the setRandomResetFrequency(EXEC_LINEAR) it would keep generating the same number over and over during these linear itterations? what about the next time step? would it generate the same number again? does the seed change after it is being set initially?\nThe reason I am asking this is because I keep getting the same pattern in my run, I will need to look more into it, but even if I use time(NULL) to provide a unique seed other than the default it seems to be almost identical result.\nThanks again for the reply!\nBest,\nKhaled",
+                          "url": "https://github.com/idaholab/moose/discussions/21496#discussioncomment-3090395",
+                          "updatedAt": "2022-07-06T08:02:06Z",
+                          "publishedAt": "2022-07-06T07:59:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Ah this is a good point. I think it ll indeed reset all the time, between linear iterations.\nThe random numbers only depend on the location, the seed and the number of numbers previously generated it seems.\nI think you should modify the seed of the randomData object at each time step if you want to change the pattern between time steps.\nNote that you are getting the same seed between runs on purpose. This really helps debugging to keep the same seed",
+                          "url": "https://github.com/idaholab/moose/discussions/21496#discussioncomment-3094979",
+                          "updatedAt": "2022-07-06T19:50:49Z",
+                          "publishedAt": "2022-07-06T19:50:49Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,694 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMi0wMS0zMVQxMDo1Mjo1Ny0wNjowMM4AOpoN"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "PETSC tests failing on SLURM cluster",
+          "author": {
+            "login": "aikubo"
+          },
+          "bodyText": "Hello, I am installing MOOSE on our cluster as a cluster user.\nWhen I try running the PETSC tests using the following lines\nmake PETSC_DIR=/home/akubo/myprojects/moose_models/moose/scripts/../petsc PETSC_ARCH=arch-moose\nI get the following error:\nUsing PETSC_DIR=/home/akubo/myprojects/moose_models/moose/petsc and PETSC_ARCH=arch-moose\nPossible error running C/C++ src/snes/tutorials/ex19 with 1 MPI process\nSee http://www.mcs.anl.gov/petsc/documentation/faq.html\n[n142][[15633,1],0][btl_openib_component.c:1649:init_one_device] error obtaining device attributes for mlx5_0 errno says Protocol not supported\n--------------------------------------------------------------------------\nWARNING: There was an error initializing an OpenFabrics device.\n\n  Local host:   n142\n  Local device: mlx5_0\n--------------------------------------------------------------------------\nlid velocity = 0.0016, prandtl # = 1., grashof # = 1.\nNumber of SNES iterations = 2\nPossible error running C/C++ src/snes/tutorials/ex19 with 2 MPI processes\nSee http://www.mcs.anl.gov/petsc/documentation/faq.html\n--------------------------------------------------------------------------\nThere are not enough slots available in the system to satisfy the 2 slots\nthat were requested by the application:\n  ./ex19\n\nEither request fewer slots for your application, or make more slots available\nfor use.\n--------------------------------------------------------------------------\n1,5c1,8\n< lid velocity = 0.0016, prandtl # = 1., grashof # = 1.\n<   0 SNES Function norm 0.0406612 \n<   1 SNES Function norm 4.12227e-06 \n<   2 SNES Function norm 6.098e-11 \n< Number of SNES iterations = 2\n---\n> --------------------------------------------------------------------------\n> There are not enough slots available in the system to satisfy the 2 slots\n> that were requested by the application:\n>   ./ex19\n> \n> Either request fewer slots for your application, or make more slots available\n> for use.\n> --------------------------------------------------------------------------\n/home/akubo/myprojects/moose_models/moose/petsc/src/snes/tutorials\nPossible problem with ex19 running with hypre, diffs above\n=========================================\n1,9c1,8\n< lid velocity = 0.0625, prandtl # = 1., grashof # = 1.\n<   0 SNES Function norm 0.239155 \n<     0 KSP Residual norm 0.235858 \n<     1 KSP Residual norm < 1.e-11\n<   1 SNES Function norm 6.81968e-05 \n<     0 KSP Residual norm 2.30906e-05 \n<     1 KSP Residual norm < 1.e-11\n<   2 SNES Function norm < 1.e-11\n< Number of SNES iterations = 2\n---\n> --------------------------------------------------------------------------\n> There are not enough slots available in the system to satisfy the 2 slots\n> that were requested by the application:\n>   ./ex19\n> \n> Either request fewer slots for your application, or make more slots available\n> for use.\n> --------------------------------------------------------------------------\n/home/akubo/myprojects/moose_models/moose/petsc/src/snes/tutorials\nPossible problem with ex19 running with mumps, diffs above\n=========================================\n0a1,7\n> [n142][[15690,1],0][btl_openib_component.c:1649:init_one_device] error obtaining device attributes for mlx5_0 errno says Protocol not supported\n> --------------------------------------------------------------------------\n> WARNING: There was an error initializing an OpenFabrics device.\n> \n>   Local host:   n142\n>   Local device: mlx5_0\n> --------------------------------------------------------------------------\n/home/akubo/myprojects/moose_models/moose/petsc/src/snes/tutorials\nPossible problem with ex19 running with superlu_dist, diffs above\n=========================================\nCompleted test examples\n\nI have attached the configure.log file.\nconfigure.log\nI think it might be an issue with SLURM and job allocation? I used the slurm srun command to request and interactive session using one node. But I am not sure how to continue.\nI appreciate any advice or suggestions.",
+          "url": "https://github.com/idaholab/moose/discussions/20020",
+          "updatedAt": "2022-06-01T02:26:30Z",
+          "publishedAt": "2022-01-12T01:21:31Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nWhat exactly did you type for srun, and by default how many cores do you get with one node?\nIt seems to be complaining because it only has one MPI slot and it needs two for the tests. You can change the number of slots (oversuscribe) with the advice given here:\nhttps://stackoverflow.com/questions/35704637/mpirun-not-enough-slots-available\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20020#discussioncomment-1955102",
+                  "updatedAt": "2022-06-01T02:26:30Z",
+                  "publishedAt": "2022-01-12T14:08:31Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aikubo"
+                          },
+                          "bodyText": "The specific srun command from above error is just:\n srun --account=myaccount --partition=mypartition --x11 --pty --mem=4G bash\nThis defaults to one core on one node.\nThere are 40 cores per node:\n$ grep -c processor /proc/cpuinfo\n40\n\nThank you for referring me to that stackexchange I do think that is the issue. However ,the tests still fail.\nI have tried a couple different solutions but still get the same error:\n\n\nAdded the --oversubscribe flag to the /src/snes/tutorial/makefile in the mpi compilation step. This may not be the correct place for this flag so that may be the problem. I have attached the makefile that I edited below.\nmakefile_oversubscribe.txt\n\n\nAdded the -hostfile flag in the same place. And added localhost slots=1,2,...4 etc\n\n\nAdded both --oversubscribe and -hostfile to  /src/snes/tutorial/makefile\n\n\nInvoked a variety of srun environments\n\n\n\n-n 2\n-N 1 --cpus-per-task=2\n*-n 2 --cpus-per-task=2\n\n\nTried running it from sbatch using these settings\n#!/bin/bash\n  #SBATCH --nodes=1            ### Number of Nodes\n  #SBATCH --ntasks-per-node=2 ### Number of tasks (MPI processes)\n  #SBATCH --out=out.out\n  #SBATCH --err=err.out\n  module load gcc/7.3\n  module load openmpi\n  \n  \n  srun ./test_petsc.sh\n\n\n\n\n\nthe test_petsc.sh file is just  make PETSC_DIR=/home/akubo/myprojects/moose_models/moose/scripts/../petsc PETSC_ARCH=arch-moose\n\nStill getting the same error. I think that I am on the right track right now but maybe I am looking at the wrong makefile.\nReally appreciate your help with this.\nThese are the modules loaded:\nCurrently Loaded Modules:\n  1) slurm/19.05   2) cmake/3.12.4   3) gcc/7.3   4) openmpi/2.1",
+                          "url": "https://github.com/idaholab/moose/discussions/20020#discussioncomment-1959265",
+                          "updatedAt": "2022-06-01T02:26:30Z",
+                          "publishedAt": "2022-01-13T01:02:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nI m actually not sure we are on the right track with the oversuscribing now. Finding threads that say this is an OpenFabrics issue\nhttps://users.open-mpi.narkive.com/ha9nLcfD/ompi-error-with-open-mpi-2-0-0-error-obtaining-device-attributes-for-mlx5-0-errno-says-cannot\nAnd this\nopen-mpi/ompi#8260\nCould be tied to openmpi? 2.1 is fairly old. Do you have newer modules available on this cluster?\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/20020#discussioncomment-1959466",
+                          "updatedAt": "2022-06-14T19:37:40Z",
+                          "publishedAt": "2022-01-13T02:12:05Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aikubo"
+                          },
+                          "bodyText": "I found this advice on using the PETSC tests with SLURM and tried it but got the same results\nhttps://researchcomputing.princeton.edu/support/knowledge-base/petsc\nCould be tied to openmpi. I have contacted my cluster admin to see about different versions.\nThank you,\nAllison",
+                          "url": "https://github.com/idaholab/moose/discussions/20020#discussioncomment-1965437",
+                          "updatedAt": "2022-06-14T19:37:45Z",
+                          "publishedAt": "2022-01-13T20:58:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "any update on this?",
+                          "url": "https://github.com/idaholab/moose/discussions/20020#discussioncomment-2083918",
+                          "updatedAt": "2022-07-07T12:12:49Z",
+                          "publishedAt": "2022-01-31T18:53:59Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aikubo"
+                          },
+                          "bodyText": "I was able to get PETSC and libmesh compiled with the following modules\n$ module list\n\nCurrently Loaded Modules:\n  1) slurm/19.05   2) gcc/7.3   3) mpich/3.2   4) python3/3.6.5   5) cmake/3.15.4\n\n\nThank you for your help!",
+                          "url": "https://github.com/idaholab/moose/discussions/20020#discussioncomment-2092588",
+                          "updatedAt": "2022-07-07T12:12:49Z",
+                          "publishedAt": "2022-02-01T23:31:39Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "mamba install error",
+          "author": {
+            "login": "rtaylo45"
+          },
+          "bodyText": "Hello,\nI am reinstalling conda/mamba from scratch on a remote machine. I have installed conda and i installed mamba using conda with the following commands conda install mamba -n base -c conda-forge. I have added the inl channel and when i try to install moose-tools and moose-libmesh but i get the following error.\nLooking for: ['moose-tools', 'moose-libmesh']\n\npkgs/main/linux-64       [====================] (00m:00s) No change\npkgs/main/noarch         [====================] (00m:00s) No change\npkgs/r/linux-64          [====================] (00m:00s) No change\npkgs/r/noarch            [====================] (00m:00s) No change\npublic/linux-64          [====================] (00m:00s) No change\npublic/noarch            [====================] (00m:00s) No change\nEncountered problems while solving:\n  - nothing provides gxx_linux-64 9.3.0 h0d07fa4_29 needed by moose-tools-2021.07.13-py39haff3c87_0\n  - nothing provides libpng 1.6.37 hed695b0_2 needed by moose-libmesh-2021.06.30-build_1\n\nRunning mamba list has the following packages.\n# packages in environment at /home/qt5/miniconda3/envs/moose:\n#\n# Name                    Version                   Build  Channel\n_libgcc_mutex             0.1                        main\n_openmp_mutex             4.5                       1_gnu\n_sysroot_linux-64_curr_repodata_hack 3                   haa98f57_10\nbinutils_impl_linux-64    2.35.1               h27ae35d_9\nbinutils_linux-64         2.35.1              h454624a_30\ngcc_impl_linux-64         9.3.0               h6df7d76_17\ngcc_linux-64              9.3.0               h1ee779e_30\ngxx_impl_linux-64         9.3.0               hbdd7822_17\ngxx_linux-64              9.3.0               h7e70986_30\nkernel-headers_linux-64   3.10.0              h57e8cba_10\nld_impl_linux-64          2.35.1               h7274673_9\nlibgcc-devel_linux-64     9.3.0               hb95220a_17\nlibgcc-ng                 9.3.0               h5101ec6_17\nlibgomp                   9.3.0               h5101ec6_17\nlibstdcxx-devel_linux-64  9.3.0               hf0c5c8d_17\nlibstdcxx-ng              9.3.0               hd4cf53a_17\nsysroot_linux-64          2.17                h57e8cba_10\n\nThanks,\nZack",
+          "url": "https://github.com/idaholab/moose/discussions/20187",
+          "updatedAt": "2022-06-10T17:09:43Z",
+          "publishedAt": "2022-01-31T22:50:43Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "milljm"
+                  },
+                  "bodyText": "Interesting. These are very old versions. We're certainly into the early 2022's on moose-libmesh. What instructional page were you following? Perhaps we have a bad page lingering around that we need to deal with!",
+                  "url": "https://github.com/idaholab/moose/discussions/20187#discussioncomment-2085394",
+                  "updatedAt": "2022-06-10T17:09:47Z",
+                  "publishedAt": "2022-01-31T23:49:09Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Installation from scratch shouldnt lead to an old version, this is indeed interesting.\n@milljm what's the latest version of moose-libmesh? Having an update issue as well and I want to try a new solution.",
+                          "url": "https://github.com/idaholab/moose/discussions/20187#discussioncomment-2086260",
+                          "updatedAt": "2022-06-10T17:09:48Z",
+                          "publishedAt": "2022-02-01T04:20:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rtaylo45"
+                          },
+                          "bodyText": "@milljm I went to the moose install doc and saw that some changes were made. Mainly that there is a direct install of mamba and not an install of conda first then having conda install mamba. I thought this was kinda weird so i went to the mamba site. They said that i could still install mamba using conda so i just installed conda then used conda to install mamba. I could have messed up by installing an old version of conda? Im gonna try installing conda again to fix this issue. I did see on the moose install guide that they still say conda when referring to a lot of things, which i think is a typo considering they moose now recommends a direct install of mamba.\nIs there a reason that moose now recommends directly installing mamba and not conda?",
+                          "url": "https://github.com/idaholab/moose/discussions/20187#discussioncomment-2086320",
+                          "updatedAt": "2022-06-10T17:09:49Z",
+                          "publishedAt": "2022-02-01T04:48:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rtaylo45"
+                          },
+                          "bodyText": "Ok so i followed the install guide to the T and it looks like everything installed right. I still think this is kinda a strange error but i guess this is why you follow the install guide.",
+                          "url": "https://github.com/idaholab/moose/discussions/20187#discussioncomment-2086436",
+                          "updatedAt": "2022-06-10T17:09:56Z",
+                          "publishedAt": "2022-02-01T05:35:54Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "Oh I see, this is truly a 're-install' attempt. I think I got confused with the phrase 'from scratch' :)\nIn this case, I am willing to bet there is a pre-existing 'moose' Conda environment stuck on some old versions of our packages. It happens, and not your fault! What I'd like you to do, is delete this stuck environment:\nconda activate base\nconda env remove -n moose\nand then create it again.\nmamba create -n moose moose-libmesh moose-tools\nI believe that will bring you up to latest versions.",
+                          "url": "https://github.com/idaholab/moose/discussions/20187#discussioncomment-2089572",
+                          "updatedAt": "2022-07-01T23:52:05Z",
+                          "publishedAt": "2022-02-01T14:57:36Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "libMesh Update (2022.01.19) and January 2022 News",
+          "author": {
+            "login": "cticenhour"
+          },
+          "bodyText": "A new libMesh made its way to the MOOSE master branch in January. For those using the conda packages, please perform\nconda update --all\n\nin your MOOSE conda environment. The appropriate moose-libmesh package version should be 2022.01.19. For those using the the libMesh submodule, please run in the moose/scripts directory\n./update_and_rebuild_libmesh.sh\n\nafter updating your copy of MOOSE.\nMore details on the content of this update can be found in the January 2022 Newsletter. If issues are experienced in updating from earlier versions of the moose-libmesh package, please see the comment in #19532 for information on how to fix your environment.",
+          "url": "https://github.com/idaholab/moose/discussions/20189",
+          "updatedAt": "2022-10-07T04:20:26Z",
+          "publishedAt": "2022-02-01T14:11:21Z",
+          "category": {
+            "name": "News"
+          },
+          "comments": {
+            "edges": []
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "PorousFlow Permeable BCs",
+          "author": {
+            "login": "Flolaffel"
+          },
+          "bodyText": "Hello,\nI want to simulate a porous body which is subjected to a ramp displacement (FunctionDirichletBC) at the top. The sides and bottom are confined, the top is unconfined so fluid flow should occur there, but the FunctionDirichletBC makes it impermeable. How can I make my BC permeable for the fluid?",
+          "url": "https://github.com/idaholab/moose/discussions/20165",
+          "updatedAt": "2022-06-02T15:23:45Z",
+          "publishedAt": "2022-01-28T16:37:07Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "WilkAndy"
+                  },
+                  "bodyText": "Short answer: see https://mooseframework.inl.gov/modules/porous_flow/boundaries.html\nLonger answer: this is difficult both conceptually and numerically/physically.  That is, you are coupling the porous flow within your sample to some other physics that governs the fluid's physics in the atmosphere.  The rate of fluid transfer between the two obviously depends on the physics in the atmosphere.  So what is that physics?   You have to decide, and the above link gives you some suggestions.  For the type of problem that i'm often doing recently, i make a thin,  permeable layer and then use a PorousFlowOutflow BC, but in the past i've used the PorousFlowSink to good effect",
+                  "url": "https://github.com/idaholab/moose/discussions/20165#discussioncomment-2069549",
+                  "updatedAt": "2022-06-02T15:23:41Z",
+                  "publishedAt": "2022-01-28T21:51:58Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Flolaffel"
+                          },
+                          "bodyText": "Thank, it works now with PorousFlowOutflow. I tried that before and it didn't work. Guess I just got some settings wrong the first time.",
+                          "url": "https://github.com/idaholab/moose/discussions/20165#discussioncomment-2087890",
+                          "updatedAt": "2022-06-02T15:23:41Z",
+                          "publishedAt": "2022-02-01T10:33:27Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Slanted bicrystal Grain boundary",
+          "author": {
+            "login": "Leni-Yeo"
+          },
+          "bodyText": "Good afternoon,\nI hope that you are doing well.\nI was wondering if there were any way to have an initial condition with a slanted boundary between two crystals; with an inclination at various degrees, but still able to use grain tracker. I have been trying to apply the various Phase Filed initial conditions from MOOSE to get that, but I keep failing.\nThank you in advance for the help.",
+          "url": "https://github.com/idaholab/moose/discussions/20168",
+          "updatedAt": "2023-12-03T06:54:14Z",
+          "publishedAt": "2022-01-28T21:59:30Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "SudiptaBiswas"
+                  },
+                  "bodyText": "The short answer probably is that no, we don't have a way to specify GB angle for bicrystal structure. Having said that,  if you create a bicrystal with any of the polycrystal initial conditions, you will be able to generate a slanted GB (I have done this with Voronoi IC). You might not have precise control over the angle though. Alternatively, you can derive from https://mooseframework.inl.gov/source/ics/BoundingBoxIC.html and create a new initial condition.",
+                  "url": "https://github.com/idaholab/moose/discussions/20168#discussioncomment-2085902",
+                  "updatedAt": "2023-12-03T06:54:19Z",
+                  "publishedAt": "2022-02-01T02:04:45Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Leni-Yeo"
+                          },
+                          "bodyText": "I see. I will try as you suggested.\nThank you for the answer.",
+                          "url": "https://github.com/idaholab/moose/discussions/20168#discussioncomment-2085979",
+                          "updatedAt": "2023-12-03T06:54:19Z",
+                          "publishedAt": "2022-02-01T02:30:34Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Stochastic Tools module, POD-RB for generalized eigenvalue problems?",
+          "author": {
+            "login": "crb3874"
+          },
+          "bodyText": "I'm looking into using the Stochastic Tools module for generating surrogate POD-RB models for neutron diffusion problems similar to the example here. However, I see that the listed requirement is for the problem to be a scalar-valued linear steady-state PDE with a suitable affine decomposition, meaning a problem like A(mu) u = b(mu). I'd like to do this as an eigenvalue problem with fission, so a problem of the form A(mu) u = lambda B(mu) u - examples like this using POD/PGD have appeared in the literature, and I've implemented it outside of MOOSE.\nI understand this is not currently available functionality - before I go too deep down the rabbit hole of trying to make modifications on my branch (and likely getting it wrong right away)... is this feasible with the current implementation/is there any advice on where to start looking to make changes/additions? Thanks in advance!",
+          "url": "https://github.com/idaholab/moose/discussions/19645",
+          "updatedAt": "2022-09-21T12:55:12Z",
+          "publishedAt": "2021-12-15T21:51:48Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@zachmprince",
+                  "url": "https://github.com/idaholab/moose/discussions/19645#discussioncomment-1824579",
+                  "updatedAt": "2022-09-21T12:55:12Z",
+                  "publishedAt": "2021-12-16T15:55:33Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@somu15 @zachmprince could you please share your comments on this?",
+                          "url": "https://github.com/idaholab/moose/discussions/19645#discussioncomment-2084059",
+                          "updatedAt": "2022-09-21T12:55:12Z",
+                          "publishedAt": "2022-01-31T19:17:12Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "crb3874"
+                          },
+                          "bodyText": "@GiudGiud Thank you for doubling back on this - I think this question can be resolved though, as I was able to get this working for myself without too much issue (turned out to be much simpler than expected).",
+                          "url": "https://github.com/idaholab/moose/discussions/19645#discussioncomment-2084316",
+                          "updatedAt": "2022-09-21T12:55:24Z",
+                          "publishedAt": "2022-01-31T19:58:09Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Error in visualization of vonmises stress",
+          "author": {
+            "login": "echo1115"
+          },
+          "bodyText": "Hello everyone,\nWhen analyzing circular plates with holes, i applied pressure to the internal holes. However, by using the postprocessing software ParaView, the visualization of vonmises stress is always close to zero, while the visualization of strain is reasonable.",
+          "url": "https://github.com/idaholab/moose/discussions/19668",
+          "updatedAt": "2022-09-30T01:42:42Z",
+          "publishedAt": "2021-12-19T13:14:47Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nIt seems to be exactly 0 here. What time are you plotting this at?\nGuillaume\nPS: please paste input files (in quotes for formatting) rather than post screenshots.",
+                  "url": "https://github.com/idaholab/moose/discussions/19668#discussioncomment-1844206",
+                  "updatedAt": "2022-09-30T01:42:42Z",
+                  "publishedAt": "2021-12-19T21:29:07Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@echo1115 any update on this?",
+                          "url": "https://github.com/idaholab/moose/discussions/19668#discussioncomment-2084034",
+                          "updatedAt": "2022-09-30T01:42:42Z",
+                          "publishedAt": "2022-01-31T19:13:03Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Conda install produces an \"Unsolveable Error\" with no other information",
+          "author": {
+            "login": "Sriram2631"
+          },
+          "bodyText": "Bug Description\n\nSteps to Reproduce\n\nImpact",
+          "url": "https://github.com/idaholab/moose/discussions/19948",
+          "updatedAt": "2022-02-23T06:54:40Z",
+          "publishedAt": "2021-12-27T12:52:10Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "Sriram2631"
+                  },
+                  "bodyText": "Following the steps for installation, the conda install command produces an \"Unsolveable Error\" and provides no further information. Unsure whether this is an issue with conda or MOOSE or with my linux system itself.\nFor reference: OS - Ubuntu 20.04.3 LTS",
+                  "url": "https://github.com/idaholab/moose/discussions/19948#discussioncomment-1907539",
+                  "updatedAt": "2022-01-04T18:17:57Z",
+                  "publishedAt": "2021-12-27T12:55:31Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "loganharbour"
+                  },
+                  "bodyText": "Converted to a discussion.\n@Sriram2631 can you please provide more information? What steps did you do exactly? Show the commands and paste the entire error.",
+                  "url": "https://github.com/idaholab/moose/discussions/19948#discussioncomment-1907542",
+                  "updatedAt": "2022-01-04T18:18:35Z",
+                  "publishedAt": "2022-01-04T18:18:25Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@Sriram2631",
+                          "url": "https://github.com/idaholab/moose/discussions/19948#discussioncomment-2084029",
+                          "updatedAt": "2022-01-31T19:12:32Z",
+                          "publishedAt": "2022-01-31T19:12:32Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Presplitting mesh and Manual Periodic boundaries",
+          "author": {
+            "login": "KhaledNabilSharafeldin"
+          },
+          "bodyText": "Hello,\nCurrently I have a large mesh for which, when I try to run a problem with pre-split mesh and manual periodic boundaries, I get this error\n[59] ./include/libmesh/remote_elem.h, line 120, compiled Sep  9 2021 at 12:30:06\n\n\n*** ERROR ***\nError: not implemented!\n\nif i comment out this BC it works fine:\n  [./Periodic]\n     [./manual_rx1]\n       variable = 'rho1x  rho1y   rho1z   rho2x   rho2y   rho2z   rho3x   rho3y   rho3z   rho4x  rho4y   rho4z   rho5x   rho5y   rho5z   rho6x   rho6y   rho6z rho7x  rho7y   rho7z   rho8x   rho8y   rho8z   rho9x   rho9y   rho9z   rho10x  rho10y   rho10z   rho11x   rho11y   rho11z   rho12x   rho12y   rho12z cxx cxy cxz cyx cyy cyz czx czy czz zx zy zz'       \n       primary = 'left1'\n       secondary = 'right1'\n       translation = '5 0 0'\n     [../]\n\n     \n     [./manual_ry1]\n       variable = 'rho1x  rho1y   rho1z   rho2x   rho2y   rho2z   rho3x   rho3y   rho3z   rho4x  rho4y   rho4z   rho5x   rho5y   rho5z   rho6x   rho6y   rho6z rho7x  rho7y   rho7z   rho8x   rho8y   rho8z   rho9x   rho9y   rho9z   rho10x  rho10y   rho10z   rho11x   rho11y   rho11z   rho12x   rho12y   rho12z cxx cxy cxz cyx cyy cyz czx czy czz zx zy zz'\n       primary = 'back1'\n       secondary = 'front1'\n       translation = '0 5 0'\n     [../]\n     [./manual_rz1]\n       variable = 'rho1x  rho1y   rho1z   rho2x   rho2y   rho2z   rho3x   rho3y   rho3z   rho4x  rho4y   rho4z   rho5x   rho5y   rho5z   rho6x   rho6y   rho6z rho7x  rho7y   rho7z   rho8x   rho8y   rho8z   rho9x   rho9y   rho9z   rho10x  rho10y   rho10z   rho11x   rho11y   rho11z   rho12x   rho12y   rho12z cxx cxy cxz cyx cyy cyz czx czy czz zx zy zz'\n       primary = 'bottom1'\n       secondary = 'top1'\n       #translation = '0 0 1.0515947'\n       #translation = '0 0 1.042052099'\n       #translation = '0 0 1.024085683'\n       #translation = '0 0 1.414213562'\n       translation = '0 0 5.303300859'\n      #  translation = '0 0 5.120428415'\n      #  translation = '0 0 4.093776102'\n       #translation = '0 0 5'\n     [../]\n\nThanks in advance!",
+          "url": "https://github.com/idaholab/moose/discussions/19659",
+          "updatedAt": "2022-07-07T06:01:51Z",
+          "publishedAt": "2021-12-16T23:26:24Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYou should first try using the distributed mesh option, passing --distributed-mesh on the command line.\nPre-splitting the mesh is used to pay once the cost of partitioning then be able to skip that step later on. Distributing the mesh is the real memory saver here.\nThis error seems like something you are trying to use is not implemented. Can you try the automatic periodic boundary conditions?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/19659#discussioncomment-1829424",
+                  "updatedAt": "2022-07-07T06:01:47Z",
+                  "publishedAt": "2021-12-16T23:33:29Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "KhaledNabilSharafeldin"
+                          },
+                          "bodyText": "--use-distributed-mesh doesn't work for this mesh unfortunately, but if i use a machine with higher memory it does work. That's why I am looking into using pre-split mesh.\nusing auto_direction for periodic condition doesn't seem to work either.\n    [./Periodic]\n     [./all]\n       variable = 'rho1x  rho1y   rho1z   rho2x   rho2y   rho2z   rho3x   rho3y   rho3z   rho4x  rho4y   rho4z   rho5x   rho5y   rho5z   rho6x   rho6y   rho6z rho7x  rho7y   rho7z   rho8x   rho8y   rho8z   rho9x   rho9y   rho9z   rho10x  rho10y   rho10z   rho11x   rho11y   rho11z   rho12x   rho12y   rho12z cxx cxy cxz cyx cyy cyz czx czy czz zx zy zz'       \n        auto_direction = 'x y z'\n     [../]\n [../]",
+                          "url": "https://github.com/idaholab/moose/discussions/19659#discussioncomment-1829617",
+                          "updatedAt": "2022-07-07T06:01:46Z",
+                          "publishedAt": "2021-12-17T00:00:45Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "What do you mean it doesnt work? What errors are you getting?",
+                          "url": "https://github.com/idaholab/moose/discussions/19659#discussioncomment-1829728",
+                          "updatedAt": "2022-07-07T06:01:46Z",
+                          "publishedAt": "2021-12-17T00:04:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "KhaledNabilSharafeldin"
+                          },
+                          "bodyText": "Same as before:\n./include/libmesh/remote_elem.h, line 120, compiled Sep  9 2021 at 12:30:06\n\n\n*** ERROR ***\nError: not implemented!",
+                          "url": "https://github.com/idaholab/moose/discussions/19659#discussioncomment-1829797",
+                          "updatedAt": "2022-07-07T06:01:45Z",
+                          "publishedAt": "2021-12-17T00:06:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "KhaledNabilSharafeldin"
+                          },
+                          "bodyText": "and --use-distributed-mesh runs out of memory",
+                          "url": "https://github.com/idaholab/moose/discussions/19659#discussioncomment-1829822",
+                          "updatedAt": "2022-07-07T06:03:30Z",
+                          "publishedAt": "2021-12-17T00:08:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "What are all these variables? All Lagrange first order or anything different?\nHave you tried running this case in serial or with very few processes with a replicated mesh?",
+                          "url": "https://github.com/idaholab/moose/discussions/19659#discussioncomment-1841139",
+                          "updatedAt": "2022-07-07T06:03:30Z",
+                          "publishedAt": "2021-12-18T16:29:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "as was noted on another post, --distributed-mesh is the correct command line option. Closing this.",
+                          "url": "https://github.com/idaholab/moose/discussions/19659#discussioncomment-2084015",
+                          "updatedAt": "2022-07-07T06:03:30Z",
+                          "publishedAt": "2022-01-31T19:10:09Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Diverged line searches after a restart",
+          "author": {
+            "login": "mangerij"
+          },
+          "bodyText": "I have a fairly large input file with a lot of moving parts that converges just fine and gives the correct output.\nI then take the output as an initial condition for precisely the same input file and I get diverged line searches on the first time step after the second nonlinear iteration.\nI find that if I increase my time step to around where it was when the original calculation was used, it converges no problem. But if it is too small, then I get diverged line searches.\nHas anyone encountered this before?",
+          "url": "https://github.com/idaholab/moose/discussions/20167",
+          "updatedAt": "2022-07-09T08:32:13Z",
+          "publishedAt": "2022-01-28T16:46:31Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\ndoes it look like it s converging between 1st and 2nd iteration?\nDoes it converge without a line search? \u2018Line_search=none\u2019 in the Executioner parameter\nDid you restart everything, even the auxvaruables?\nAre you using the default 1st order implicit time scheme?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20167#discussioncomment-2068907",
+                  "updatedAt": "2022-07-09T08:32:14Z",
+                  "publishedAt": "2022-01-28T19:32:19Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mangerij"
+                          },
+                          "bodyText": "Yes, converges perfectly between first and second nonlinear iterations.\nTurning line search off does not let it converge.\nI am restarting all auxvariables yes.\nAnd yes, using implicit-euler.\nAnd I should mention that I avoided this problem by taking larger time steps.  But I found this issue to be strange to me and took me a while to figure it out.",
+                          "url": "https://github.com/idaholab/moose/discussions/20167#discussioncomment-2079530",
+                          "updatedAt": "2022-07-09T08:32:15Z",
+                          "publishedAt": "2022-01-31T07:59:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@fdkong does the default line search have some sort of history / informed by previous searches feature?",
+                          "url": "https://github.com/idaholab/moose/discussions/20167#discussioncomment-2082132",
+                          "updatedAt": "2022-07-09T08:32:16Z",
+                          "publishedAt": "2022-01-31T15:00:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "fdkong"
+                          },
+                          "bodyText": "@fdkong does the default line search have some sort of history / informed by previous searches feature?\n\nNo, linesearch does not store history.\nThe issue happened here might be caused by an incomplete restart. If we restart correctly, the nonlinear and linear residuals should be the same.\nWe could enable checkpoint files and restart from the previous time step for debugging. Then compare the solver behaviors of the restarted simulation with the original one at the same time step.\n\nI then take the output as an initial condition for precisely the same input file\n\n@mangerij\nWhat kind of files you restart with? Exodus or check point?",
+                          "url": "https://github.com/idaholab/moose/discussions/20167#discussioncomment-2082270",
+                          "updatedAt": "2022-07-09T08:32:16Z",
+                          "publishedAt": "2022-01-31T15:22:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mangerij"
+                          },
+                          "bodyText": "Exodus. What is a checkpoint file? Sorry I cannot keep up to date with all the goodies in the framework.\nBy the way, this is probably what happened? Since I am testing something and didn't set an end to the simulation, I just killed the solve by ctrl+C to terminal.",
+                          "url": "https://github.com/idaholab/moose/discussions/20167#discussioncomment-2082687",
+                          "updatedAt": "2022-07-09T08:32:19Z",
+                          "publishedAt": "2022-01-31T16:18:45Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "See this page\nhttps://mooseframework.inl.gov/application_usage/restart_recover.html\nCheckpoint is the more official way of restarting simulations.\nSo the exodus was generated after a Ctrl+C ? You could have been unlucky there and stopped it during writing",
+                          "url": "https://github.com/idaholab/moose/discussions/20167#discussioncomment-2082765",
+                          "updatedAt": "2022-07-09T08:32:19Z",
+                          "publishedAt": "2022-01-31T16:27:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "fdkong"
+                          },
+                          "bodyText": "Exodus.\n\nThen I won't be surprised you got different behaviors by restarting from Exodus.  You only got the solution back from Exodus, but you lost other things.\nA better way to do restart is to use checkpoint.",
+                          "url": "https://github.com/idaholab/moose/discussions/20167#discussioncomment-2082892",
+                          "updatedAt": "2022-07-09T08:32:19Z",
+                          "publishedAt": "2022-01-31T16:42:50Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "fdkong"
+                          },
+                          "bodyText": "So the exodus was generated after a Ctrl+C ? You could have been unlucky there and stopped it during writing\n\nNot only that. checkpoint has extra information to restart the exact simulation ...",
+                          "url": "https://github.com/idaholab/moose/discussions/20167#discussioncomment-2082969",
+                          "updatedAt": "2022-07-09T08:32:19Z",
+                          "publishedAt": "2022-01-31T16:52:57Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

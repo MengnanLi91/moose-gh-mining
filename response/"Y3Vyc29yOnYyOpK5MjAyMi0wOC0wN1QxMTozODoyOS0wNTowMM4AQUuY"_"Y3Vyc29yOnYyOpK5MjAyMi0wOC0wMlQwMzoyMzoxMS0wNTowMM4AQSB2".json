@@ -1,0 +1,780 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMi0wOC0wMlQwMzoyMzoxMS0wNTowMM4AQSB2"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Applying 2 types of BCs on a single surface (surface + nodeset) [PorousFlow]",
+          "author": {
+            "login": "Traiwit"
+          },
+          "bodyText": "Hi guys, so I have a surface and a nodeset in a single mesh\nThe nodeset (blue dots) represents the river on this surface\n\nfor the surface I'd like to apply this BC\n[./drain_TOPOLSRF_Y2008_M01] \ntype = PorousFlowPiecewiseLinearSink \nvariable = porepressure \nboundary = 'TOPOLSRF_Y2008_M01'\npt_vals = '-1e9 1e9' \nmultipliers = '-1e9 1e9' \nflux_function = 1 \nv = min\nPT_shift = -98100 \nuse_mobility = true\nfluid_phase = 0\n[../]\n\nand the nodeset I just want to set pwp of those nodes = 0\nI know that MOOSE cannot project BC directly into a nodeset (which is very weird), but I know how to work around it (see the thread below)\n#21209\nNow I want both BCs at the same time i.e. pwp of those nodes = 0 & PorousFlowPiecewiseLinearSink on the rest of the surface.\nIs there a way to work around this?\nKind regards,\nTraiwit",
+          "url": "https://github.com/idaholab/moose/discussions/21751",
+          "updatedAt": "2022-08-06T05:14:18Z",
+          "publishedAt": "2022-08-02T13:43:29Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "Traiwit"
+                  },
+                  "bodyText": "I see MOOSE can convert node list into side list\nhttps://mooseframework.inl.gov/source/mesh/MooseMesh.html\n construct_side_list_from_node_list=true\nHowever, it converts all the nodesets into sidesets\nis there a way to specifically convert only 1 nodeset into a surface?",
+                  "url": "https://github.com/idaholab/moose/discussions/21751#discussioncomment-3313086",
+                  "updatedAt": "2022-08-03T05:10:38Z",
+                  "publishedAt": "2022-08-03T05:10:37Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "not currently. We are adding a generator which should be able to do this in its final form here:\n#21196\nbut currently it still does all sidesets / nodesets.\nWhat you could do is turn the conversions off in MOOSE and do it somewhere else like in Cubit",
+                          "url": "https://github.com/idaholab/moose/discussions/21751#discussioncomment-3316089",
+                          "updatedAt": "2022-08-03T12:42:01Z",
+                          "publishedAt": "2022-08-03T12:42:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "Hi @GiudGiud, so NodeSetToSideSetGenerator from that PR still does not do what I want, right? I will need to wait then",
+                          "url": "https://github.com/idaholab/moose/discussions/21751#discussioncomment-3316231",
+                          "updatedAt": "2022-08-03T13:00:24Z",
+                          "publishedAt": "2022-08-03T13:00:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "yeah both are still geared towards all sidesets/ all nodesets.\nBut you should be able to rename part of a nodeset or a sideset. So while all are converted, you may be able to extract the one you care about?",
+                          "url": "https://github.com/idaholab/moose/discussions/21751#discussioncomment-3325504",
+                          "updatedAt": "2022-08-04T13:42:31Z",
+                          "publishedAt": "2022-08-04T13:42:30Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "PorousFlowPiecewiseLinearSink may be set naturally I think then for pwp of those nodes = 0 you could look at using a NodalKernel to set the BC instead, maybe with a penalty.\nWhat do you get when trying to set both directly?",
+                  "url": "https://github.com/idaholab/moose/discussions/21751#discussioncomment-3316173",
+                  "updatedAt": "2022-08-03T12:51:55Z",
+                  "publishedAt": "2022-08-03T12:51:40Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "What do you get when trying to set both directly?\n\nI just realised that #21209 wouldn't work, because in that case I specify pwp values to the target nodes and leave pwp the rest to 0. However, in this particular case, I want my target nodes pwp to be 0 and don't assign anything to the rest. (pwp = pore water pressure)",
+                          "url": "https://github.com/idaholab/moose/discussions/21751#discussioncomment-3316260",
+                          "updatedAt": "2022-08-03T13:03:41Z",
+                          "publishedAt": "2022-08-03T13:03:40Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "do you have a nodeset that only has the nodes you want to set the pwp to 0 ?",
+                          "url": "https://github.com/idaholab/moose/discussions/21751#discussioncomment-3325513",
+                          "updatedAt": "2022-08-04T13:45:09Z",
+                          "publishedAt": "2022-08-04T13:45:08Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "@GiudGiud NodalKernel works, at least it starts solving, I will get back to you once I get the results.\nKind regards,\nTraiwit",
+                          "url": "https://github.com/idaholab/moose/discussions/21751#discussioncomment-3330477",
+                          "updatedAt": "2022-08-05T05:18:37Z",
+                          "publishedAt": "2022-08-05T05:18:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "all works fine now, thank you @GiudGiud\nBut yeh, I'd rather move NodalKernel into Nodal BC or we should have this type of object, to us it's like the most basic type of BCs (even more basic than surface BC)\nKind regards,\nTraiwit\n[BCs]\n[./water_grad_lTOPOLSRF_WALLS_SRFSET]\ntype = FunctionDirichletBC\nvariable = porepressure\nboundary = 'TOPOLSRF_WALLS_SRFSET'\nfunction = ini_pp\n[../]\n[./drain_DRAINSRF_Y1996_M01]\ntype = PorousFlowPiecewiseLinearSinkBEH\nvariable = porepressure\nboundary = 'DRAINSRF_Y1996_M01'\npt_vals = '0 1e9'\nmultipliers = '0 1e9'\nflux_function = 1\nv = min\nPT_shift = 0\nuse_mobility = true\nfluid_phase = 0\n[../]\n[./drain_TOPOLSRF_Y1996_M01]\ntype = PorousFlowPiecewiseLinearSinkBEH\nvariable = porepressure\nboundary = 'TOPOLSRF_Y1996_M01'\npt_vals = '-1e9 1e9'\nmultipliers = '-1e9 1e9'\nflux_function = 1e-06\nv = min\nPT_shift = -29430\nuse_mobility = true\nfluid_phase = 0\n[../]\n[]\n[NodalKernels]\n[./bc_river]\ntype = PenaltyDirichletNodalKernel\nvariable = porepressure\nvalue = 0\nboundary = 'TOPO_RIVERSANDLAKES_NSET'\npenalty = 1e10\n[../]\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/21751#discussioncomment-3332479",
+                          "updatedAt": "2022-08-05T10:26:38Z",
+                          "publishedAt": "2022-08-05T10:26:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I'm glad. If you get difficulties with the penalty you could try a constraint with a scalar variable lagrange multiplier btw\nWell nodesets are very alike, whether internal or external to the mesh, and also the action done by nodal kernels is supposed to be local to a single node and not really be too aware of its spatial location. Anyway maybe it's not set in stone but I think that s why we dont have nodal BCs, only nodal kernels.",
+                          "url": "https://github.com/idaholab/moose/discussions/21751#discussioncomment-3338134",
+                          "updatedAt": "2022-08-06T05:14:18Z",
+                          "publishedAt": "2022-08-06T05:14:18Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Recovery",
+          "author": {
+            "login": "klaw13"
+          },
+          "bodyText": "Hi, I'm facing issues with using the \"--recover\" option on my simulation.\n*** ERROR *** ERROR: Neither one of the following files can be located: '_mesh.cpr/1/header.cpr' nor '_mesh.cpr' If you are running a parallel job, double check that you've created a split for 1 ranks. Note: One of paths above may refer to a valid directory on your system, however we are attempting to read a valid header file.\nThe checkpoint file is being created in the directory I'm running the simulation from.",
+          "url": "https://github.com/idaholab/moose/discussions/21761",
+          "updatedAt": "2022-08-05T12:58:17Z",
+          "publishedAt": "2022-08-03T13:58:48Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\ndo you have an execute_on flag set in the Outputs block by any chance?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21761#discussioncomment-3318756",
+                  "updatedAt": "2022-08-03T17:57:10Z",
+                  "publishedAt": "2022-08-03T17:57:09Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "klaw13"
+                          },
+                          "bodyText": "No, I do not. My output block is as follows:\n[Outputs]\n  exodus = true\n  perf_graph = true\n  print_linear_residuals = true\n  \n  [./checkpoint]\n    type = Checkpoint\n    num_files = 2\n    use_displaced = True\n  []\n  [console]\n    type = Console\n    all_variable_norms = true\n  []\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/21761#discussioncomment-3318771",
+                          "updatedAt": "2022-08-04T13:12:52Z",
+                          "publishedAt": "2022-08-03T17:59:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "ok thanks different issue then.\nCan you specify the prefix for the recover file? on the command line\nAre you creating the checkpoint in parallel or in serial? Are you loading it with the same number of processes?\nbtw i think you want to use triple quotes for formatting",
+                          "url": "https://github.com/idaholab/moose/discussions/21761#discussioncomment-3325296",
+                          "updatedAt": "2022-08-04T13:14:26Z",
+                          "publishedAt": "2022-08-04T13:14:26Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "klaw13"
+                          },
+                          "bodyText": "Ah, thanks!\nThe checkpoint directory is hydSq_629_checkpoint_cp with a subdirectory of 5250_mesh.cpr which has a meta_data_mesh.rd file and a 1/header.cpr and 1/split-1-0.cpr\nThe command I use to call the recovery is\n ../../eel-opt -i hydSq_629.i --recover",
+                          "url": "https://github.com/idaholab/moose/discussions/21761#discussioncomment-3326477",
+                          "updatedAt": "2022-08-04T15:43:10Z",
+                          "publishedAt": "2022-08-04T15:42:48Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "yes after that command you will need to pass the name of the folder.\nIf you type ../../eel-opt --help it ll say that\n  --recover [file_base]                             Continue the calculation.  If file_base is omitted then the most recent recovery file will be utilized",
+                          "url": "https://github.com/idaholab/moose/discussions/21761#discussioncomment-3329544",
+                          "updatedAt": "2022-08-05T00:51:11Z",
+                          "publishedAt": "2022-08-05T00:51:11Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "ykvishal"
+                  },
+                  "bodyText": "I faced similar issue. When I edited folder name by replacing checkpoint to out (i.e. rename hydSq_629_checkpoint_cp to hydSq_629_out_cp), the  --recover option was working.\nIn future, you can use this block\n [./out]\n     type = Checkpoint\n     num_files = 2\n     use_displaced = True\n []",
+                  "url": "https://github.com/idaholab/moose/discussions/21761#discussioncomment-3328430",
+                  "updatedAt": "2022-08-04T20:17:09Z",
+                  "publishedAt": "2022-08-04T20:14:56Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "klaw13"
+                          },
+                          "bodyText": "That worked, thank you so much!",
+                          "url": "https://github.com/idaholab/moose/discussions/21761#discussioncomment-3328551",
+                          "updatedAt": "2022-08-04T20:34:35Z",
+                          "publishedAt": "2022-08-04T20:34:34Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "for future reference, the folder name should be passed as an argument to --recover. out works here because it s the default",
+                          "url": "https://github.com/idaholab/moose/discussions/21761#discussioncomment-3329550",
+                          "updatedAt": "2022-08-05T00:52:08Z",
+                          "publishedAt": "2022-08-05T00:52:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "klaw13"
+                          },
+                          "bodyText": "Perfect, thank you!",
+                          "url": "https://github.com/idaholab/moose/discussions/21761#discussioncomment-3333439",
+                          "updatedAt": "2022-08-05T12:58:18Z",
+                          "publishedAt": "2022-08-05T12:58:17Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Implementing the mortar Jacobian",
+          "author": {
+            "login": "hugary1995"
+          },
+          "bodyText": "Hi, I am trying to implement a non-AD version of PenaltyEqualValueConstraint as follows:\nReal\nRegularPenaltyEqualValueConstraint::computeQpResidual(Moose::MortarType mortar_type)\n{\n  switch (mortar_type)\n  {\n    case Moose::MortarType::Secondary:\n    {\n      auto residual =\n          -(_u_primary[_qp] - _u_secondary[_qp]) * _penalty_value * _test_secondary[_i][_qp];\n\n      return residual;\n    }\n\n    case Moose::MortarType::Primary:\n    {\n      auto residual =\n          (_u_primary[_qp] - _u_secondary[_qp]) * _penalty_value * _test_primary[_i][_qp];\n\n      return residual;\n    }\n\n    default:\n      return 0;\n  }\n}\n\nReal\nRegularPenaltyEqualValueConstraint::computeQpJacobian(Moose::ConstraintJacobianType jacobian_type,\n                                                      unsigned int jvar)\n{\n  typedef Moose::ConstraintJacobianType JType;\n\n  switch (jacobian_type)\n  {\n    case JType::SecondarySecondary:\n      if (jvar == _secondary_var.number())\n        return (*_phi)[_j][_qp] * _penalty_value * _test_secondary[_i][_qp];\n      break;\n\n    case JType::SecondaryPrimary:\n      if (jvar == _primary_var.number())\n        return -(*_phi)[_j][_qp] * _penalty_value * _test_secondary[_i][_qp];\n      break;\n\n    case JType::PrimarySecondary:\n      if (jvar == _secondary_var.number())\n        return -(*_phi)[_j][_qp] * _penalty_value * _test_primary[_i][_qp];\n      break;\n\n    case JType::PrimaryPrimary:\n      if (jvar == _primary_var.number())\n        return (*_phi)[_j][_qp] * _penalty_value * _test_primary[_i][_qp];\n      break;\n\n    default:\n      return 0;\n  }\n\n  return 0;\n}\nHowever, the matrix assembled using the non-AD mortar constraint isn't the same as the AD version (it is mainly missing some off-diagonal entries). I must be missing some Jacobian contributions somewhere. @lindsayad @recuero do you have any idea what might be going on here?\nThanks,\nGary",
+          "url": "https://github.com/idaholab/moose/discussions/21771",
+          "updatedAt": "2022-08-04T00:18:32Z",
+          "publishedAt": "2022-08-03T20:53:00Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "I also commented out line 145-147 in MortarConstraint.C:\n      // There's no actual coupling between secondary and primary dofs\n      // if ((jacobian_type == JType::SecondaryPrimary) || (jacobian_type ==\n      // JType::PrimarySecondary))\n      //   continue;",
+                  "url": "https://github.com/idaholab/moose/discussions/21771#discussioncomment-3319904",
+                  "updatedAt": "2022-08-03T20:56:09Z",
+                  "publishedAt": "2022-08-03T20:56:08Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "ttruster"
+                  },
+                  "bodyText": "All:\nI've also noticed a similar issue when deriving from the MortarConstraint class that the assembled matrix seems to miss the values that are being computed for PrimarySecondary and SecondaryPrimary.\nI'll add that I have also commented the lines\n// There's no actual coupling between secondary and primary dofs\nif ((jacobian_type == JType::SecondaryPrimary) || (jacobian_type == JType::PrimarySecondary))\ncontinue;\nwithin the MortarConstraint.C file in the 7/29/2022 version of the code. And I can confirm from VSCode debugging that there are some non-zero entries in the local k matrix of the PrimarySecondary, and a call is made to accumulate that matrix.\nThanks,\nTim",
+                  "url": "https://github.com/idaholab/moose/discussions/21771#discussioncomment-3319930",
+                  "updatedAt": "2022-08-03T20:59:45Z",
+                  "publishedAt": "2022-08-03T20:59:44Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "lindsayad"
+                  },
+                  "bodyText": "Are you guys making sure that you are using an SMP matrix with full = true? If you use solve_type = NEWTON or you have AD objects in your simulation, then we programmatically set that in the framework. But if you are using PJFNK with no AD objects, then by default you will only get diagonal matrix entries",
+                  "url": "https://github.com/idaholab/moose/discussions/21771#discussioncomment-3320569",
+                  "updatedAt": "2022-08-03T23:28:16Z",
+                  "publishedAt": "2022-08-03T23:28:15Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "although if you are running this with the same variable for both secondary_variable and primary_variable then that is not a concern",
+                          "url": "https://github.com/idaholab/moose/discussions/21771#discussioncomment-3320577",
+                          "updatedAt": "2022-08-03T23:31:49Z",
+                          "publishedAt": "2022-08-03T23:31:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "I was using newton, and the same variable on primary and secondary.",
+                          "url": "https://github.com/idaholab/moose/discussions/21771#discussioncomment-3320598",
+                          "updatedAt": "2022-08-03T23:39:21Z",
+                          "publishedAt": "2022-08-03T23:39:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "I see the problem. Assembly::cacheJacobianMortar does not accumulate the SecondaryPrimary or PrimarySecondary blocks. That method is unused by AD but is used by the hand-coded objects. Do you think you'll put up a PR for this non-AD object? If so, you (or I) could put the fix for that method in that PR",
+                          "url": "https://github.com/idaholab/moose/discussions/21771#discussioncomment-3320612",
+                          "updatedAt": "2022-08-03T23:42:46Z",
+                          "publishedAt": "2022-08-03T23:42:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "I see! I'll do it. Thanks!",
+                          "url": "https://github.com/idaholab/moose/discussions/21771#discussioncomment-3320617",
+                          "updatedAt": "2022-08-03T23:44:24Z",
+                          "publishedAt": "2022-08-03T23:44:24Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "PETSc has been updated to 3.16.6",
+          "author": {
+            "login": "cticenhour"
+          },
+          "bodyText": "A new PETSc made its way to the MOOSE master branch yesterday. For those using the conda packages, please perform\nmamba update --all\n\nin your MOOSE conda environment. The appropriate moose-petsc package version should be 3.16.6 with build build_0. For those using the the PETSc submodule, please run in the moose/scripts directory\n./update_and_rebuild_petsc.sh\n\nafter updating your copy of MOOSE. Because you have updated PETSc, you will also need to run the update_and_rebuild_libmesh.sh script in order for libMesh to use the new PETSc.",
+          "url": "https://github.com/idaholab/moose/discussions/21765",
+          "updatedAt": "2022-08-03T17:20:50Z",
+          "publishedAt": "2022-08-03T17:20:49Z",
+          "category": {
+            "name": "News"
+          },
+          "comments": {
+            "edges": []
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Tutorial execute file couldn't found in directory",
+          "author": {
+            "login": "seongwonHam"
+          },
+          "bodyText": "Hello, MOOSE users.\nI'm starter of MOOSE and I ran some examples to understand MOOSE.\nToday, I start to tutorial02_multiapps in /projects/moose/tutorials/tutorial02_multiapps, but I can't found execute file in this path, there only exist some input files.\nI have some experience of MOOSE example and tutorial01, but I had ran the program with the input file and -opt file to calculate it. So, I wonder how can I execute the tutorial02 and get some output file at /projects/moose/tutorials/tutorial02_multiapps.\nPlease let me know how can I do this.\nThanks.",
+          "url": "https://github.com/idaholab/moose/discussions/21747",
+          "updatedAt": "2022-08-03T03:02:52Z",
+          "publishedAt": "2022-08-02T03:22:03Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThe app is in moose/tutorials/tutorial02_multiapps/app and you may build the executable in that folder. Then you will have to refer to it to run your input files.\nYou could also probably build just any MOOSE executable for this tutorial, they would all work for this tutorial.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21747#discussioncomment-3307708",
+                  "updatedAt": "2022-08-02T12:38:55Z",
+                  "publishedAt": "2022-08-02T12:38:54Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "seongwonHam"
+                          },
+                          "bodyText": "Oh, I see. I'll follow it.\nThanks!",
+                          "url": "https://github.com/idaholab/moose/discussions/21747#discussioncomment-3312614",
+                          "updatedAt": "2022-08-03T03:02:52Z",
+                          "publishedAt": "2022-08-03T03:02:51Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "MultiApp System: Having a main app with no nonlinear variables at all",
+          "author": {
+            "login": "matthiasneuner"
+          },
+          "bodyText": "Hi there,\nI am currently trying to set up a MOOSE multi app system, where one main app provides two sub apps with data,\nbut the main app itself actually should not solve anythig ( it should just move around the data). Hence,\nit requires no nonlinear variables, just an aux system.\nHowever, running a MOOSE .i file without nonlinear variables gives me\n No variables specified in the FEProblemBase 'MOOSE Problem'\nIs there a way to have a MOOSE app which just passes around data to/from sub apps in a transient simulation?",
+          "url": "https://github.com/idaholab/moose/discussions/21755",
+          "updatedAt": "2022-08-02T16:46:25Z",
+          "publishedAt": "2022-08-02T16:12:53Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nJust add a dummy one\n[Variables]\n  [dummy] []\n[]\n\nOR skip the checks\n[Problem]\n  skip_nl_system_check = true\n  solve = false\n[]",
+                  "url": "https://github.com/idaholab/moose/discussions/21755#discussioncomment-3309653",
+                  "updatedAt": "2022-08-02T16:38:49Z",
+                  "publishedAt": "2022-08-02T16:38:48Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "matthiasneuner"
+                          },
+                          "bodyText": "Great, thank you !",
+                          "url": "https://github.com/idaholab/moose/discussions/21755#discussioncomment-3309706",
+                          "updatedAt": "2022-08-02T16:46:25Z",
+                          "publishedAt": "2022-08-02T16:46:24Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Create solution from AuxVariables",
+          "author": {
+            "login": "matthiasneuner"
+          },
+          "bodyText": "Assuming that 2 sub apps (all identical meshes, also the main app) are computing 2 solutions,\nI would like to add (or subtract) them in an AuxVariable, and set them as a new solution for the next iteration step, e.g.,\n  / - > solution_n -> sub_app_1 -> sub_sol_1 \n /  - > solution_n -> sub_app_2 -> sub_sol_2\n|\n|                       V\n|\n|        aux_sol = sub_sol_1 + sub_sol_2\n|\n|                       V  \n|\n \\---- solution_n+1 = aux_sol\n\nIs that possible in Moose? Which modules would be relevant for this case?\nIn particular, how can I set the current solution from the AuxVariable?\nThank you in advance!",
+          "url": "https://github.com/idaholab/moose/discussions/21746",
+          "updatedAt": "2022-08-02T16:46:38Z",
+          "publishedAt": "2022-08-02T02:19:04Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYou could:\n1)\n\nwrite your own transfer which does that directly\n\n\n\n\nOR (I am assuming by solution you mean a NON LINEAR, eg a main, variable here btw)\n\nadd an auxvariables for storage on sub app 1\ntransfer the other auxvariable from subapp 2 to subapp 1, using the CopyTransfer since you have the same meshes\nuse a ParsedAux to compute the difference and store it in a third variable on subapp1\ntransfer it to the main app to overwrite the initial condition\nThe tricky thing is that the subapps will have to be executed on different schedules for this to work, because we currently do not support this: execute main app, execute app2, transfer from 2 to 1, execute app1. So use TIMESTEP_BEGIN/END/ other execute_on to stagger everything in the right order.\nPlease consider using the verbose_multiapps parameter of the FEProblem to check the execution order.\nHere we are working around the fact that auxkernels cannot initialize main variables\n\n\n\n\nOR\n\nadd two auxvariables for storage on main app\ntransfer the auxvariables from subapps to main app, using the CopyTransfer since you have the same meshes\nwrite a user object yourself (should not be too hard in terms of UOs) that does the difference and stores in the nonlinear variable\nThis has the advantage that the execution schedule is a lot more natural. But you ll have to write code\n\nHope this helps,\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21746#discussioncomment-3307779",
+                  "updatedAt": "2022-08-02T12:48:31Z",
+                  "publishedAt": "2022-08-02T12:48:30Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "matthiasneuner"
+                          },
+                          "bodyText": "Thank you very much; it seems approach 3) is the way to go.\nI think that using such an approach my main_app actually needs no 'nonlinear variables' at all, since the main app should not solve directly.\nCurrently, this gives me an error message  No variables specified in the FEProblemBase 'MOOSE Problem'.\nI hope that this is supported, but I will create another question for this.",
+                          "url": "https://github.com/idaholab/moose/discussions/21746#discussioncomment-3309415",
+                          "updatedAt": "2022-08-02T16:09:56Z",
+                          "publishedAt": "2022-08-02T16:09:54Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "oh the main app isnt solving a NL system?\nThen just use a ParsedAux in option 3) to store the difference in the 3rd AuxVariable",
+                          "url": "https://github.com/idaholab/moose/discussions/21746#discussioncomment-3309646",
+                          "updatedAt": "2022-08-02T16:58:59Z",
+                          "publishedAt": "2022-08-02T16:37:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "matthiasneuner"
+                          },
+                          "bodyText": "Yes, I think that will be the best solution :-) . Thank you again!",
+                          "url": "https://github.com/idaholab/moose/discussions/21746#discussioncomment-3309704",
+                          "updatedAt": "2022-08-02T16:46:04Z",
+                          "publishedAt": "2022-08-02T16:46:03Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Kernel TotalLagrangianStressDivergence and DerivativeParsedMaterial",
+          "author": {
+            "login": "rcontinuum"
+          },
+          "bodyText": "Hello,\nI'm struggling a bit with the new TotalLagrangianStressDivergence kernel. I want to couple this kernel to a Phase Field Kernel which uses/accesses a DerivativeParsedMaterial (e.g., like in crack2d_iso.i from Phase Field Fracture)\n[Materials]\n  [degradation]\n    type = DerivativeParsedMaterial\n    f_name = 'degradation'\n    args = 'c'\n    function = '(1.0-c)^2'\n    derivative_order = 2\n  []\n  ...\n\nTo retrieve the first derivative of this Material function I need to do something like (see ComputePFFractureStressBase.C, old TensorMechanics)\nComputePFFractureStressBase::ComputePFFractureStressBase(const InputParameters & parameters)\n  : ComputeStressBase(parameters),\n  ...\n  _dDdc(getMaterialPropertyDerivative<Real>(\"D_name\", getVar(\"c\", 0)->name())),   // get first derivative wrt 'c'\n\nNow, in   ComputeStressBase.h (old TensorMechanics) we have\nclass ComputeStressBase : public DerivativeMaterialInterface<Material>\nwhereas in ComputeLagrangianStressBase.h (new TensorMechanics)  we have\nclass ComputeLagrangianStressBase : public Material\nIf I understand correct, but I have little experience with MOOSE, then this : public Material prevents me from accessing the first derivative by  getMaterialPropertyDerivative<Real>\nI could try to change in ComputeLagrangianStressBase.h to\nclass ComputeLagrangianStressBase : public DerivativeMaterialInterface<Material>\nand in ComputeLagrangianStressBase.C change ***Material***\nComputeLagrangianStressBase::ComputeLagrangianStressBase(const InputParameters & parameters)\n: ***Material***(parameters),\n\nbut before I go this route (and \"get lost\") I like to ask the experts in the field for some advise.\nCheers and thank you",
+          "url": "https://github.com/idaholab/moose/discussions/21749",
+          "updatedAt": "2022-08-02T14:14:03Z",
+          "publishedAt": "2022-08-02T09:16:38Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "I have plan to change add derivative interface in the new stress calculators, so this will work out-of-the-box in the future.\nMeanwhile, you can add the derivative interface decorator anywhere you like, i.e. in the class you are actually retrieving the derivatives.",
+                  "url": "https://github.com/idaholab/moose/discussions/21749#discussioncomment-3307508",
+                  "updatedAt": "2022-08-02T12:11:08Z",
+                  "publishedAt": "2022-08-02T12:11:07Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rcontinuum"
+                          },
+                          "bodyText": "I have plan to change add derivative interface in the new stress calculators, so this will work out-of-the-box in the future.\n\nThat sounds good. It's not really urgent, so I simply wait.\nMeanwhile I just \"hard code\" the functions and their derivatives into the material model. But I thought DerivativeParsedMaterial would give me a bit more flexibility in the input file.\nThank you",
+                          "url": "https://github.com/idaholab/moose/discussions/21749#discussioncomment-3307806",
+                          "updatedAt": "2022-08-02T12:54:03Z",
+                          "publishedAt": "2022-08-02T12:54:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Yeah, my point was you don't have to wait. I assume you have something like this in your stress calculator:\nclass MyStressCalculator : public ParentStressCalculator\nsimply change it to\nclass MyStressCalculator : public DerivativeMaterialInterface<ParentStressCalculator>\nand you'll get all the interface apis.",
+                          "url": "https://github.com/idaholab/moose/discussions/21749#discussioncomment-3307883",
+                          "updatedAt": "2022-08-02T13:04:53Z",
+                          "publishedAt": "2022-08-02T13:04:52Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rcontinuum"
+                          },
+                          "bodyText": "Ah, this is how it works.\nThanks",
+                          "url": "https://github.com/idaholab/moose/discussions/21749#discussioncomment-3308485",
+                          "updatedAt": "2022-08-02T14:14:04Z",
+                          "publishedAt": "2022-08-02T14:14:03Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Any reason you can't get the material property derivative as a material property directly, with the \"dCdXXX\" name directly?\nSorry if this doesnt make sense, not necessarily super familiar with this system",
+                  "url": "https://github.com/idaholab/moose/discussions/21749#discussioncomment-3307691",
+                  "updatedAt": "2022-08-02T12:35:15Z",
+                  "publishedAt": "2022-08-02T12:35:14Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Outputting a material property at the nodes of an element",
+          "author": {
+            "login": "Aayush-T"
+          },
+          "bodyText": "Hi everyone,\nI am trying to output a material property such as resolved shear stress (RSS) (in tensor mechanics module) at each node of an element. I tried various approaches such as:\n\nDefining RSS as an elemental variable (constant Monomial) and using Pointvalue in the postprocessor.\nDefining RSS as a nodal variable (first order Lagrange) and using \"selected_qp\" in the auxkernel (throws an error).\nDefining RSS as an elemental variable (constant Monomial) and using \"selected_qp\" in the auxkernel.\nOutputting .vtk\n\nI am getting exactly the same values of RSS at all nodes in an element. This seems incorrect to me because the displacement differs at each node due to which shear stress should also be different. I suspect that the output is actually the Element average value in both exodus (Paraview) and csv files. I would really appreciate if someone can confirm whether the RSS should be the same at all nodes or different.\nThanks and regards,\nAayush Trivedi",
+          "url": "https://github.com/idaholab/moose/discussions/21594",
+          "updatedAt": "2022-08-02T10:45:26Z",
+          "publishedAt": "2022-07-15T14:10:01Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "sapitts"
+                  },
+                  "bodyText": "Hi @Aayush-T,\nThe resolved shear stress is a material property and is thus computed at each of the quadrature points, see \n  \n    \n      moose/modules/tensor_mechanics/src/materials/crystal_plasticity/CrystalPlasticityStressUpdateBase.C\n    \n    \n         Line 416\n      in\n      4cb06f1\n    \n  \n  \n    \n\n        \n          \n           _tau[_qp][i] = pk2.doubleContraction(_flow_direction[_qp][i]); \n        \n    \n  \n\n\nGetting the different quadrature point values as output is a bit trickier. When I want to create a \"pretty picture\" of the resolved shear stress, I use a first order Monomial value, which paraview will interpret as a variable value, e.g. the auxvariable setting produces the following picture (from one of our regression tests)\n  [twin_tau_4]\n    order = FIRST\n    family = MONOMIAL\n  []\n\n\nI am less sure of how to get the different quadrature point values in the CSV file. We do have the  ElementVariableValue postprocessor, but that will still give the average of the material property across the single element. Your selected_qp approach may work here\n@GiudGiud do you know of a way to output the value of a material property at a specific _qp to a csv?",
+                  "url": "https://github.com/idaholab/moose/discussions/21594#discussioncomment-3193490",
+                  "updatedAt": "2022-07-21T00:05:09Z",
+                  "publishedAt": "2022-07-21T00:05:09Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nActually you're in luck, because the MaterialVPP is the ONLY object I know that outputs CSVs on qps\nhttps://mooseframework.inl.gov/source/vectorpostprocessors/MaterialVectorPostprocessor.html\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/21594#discussioncomment-3194008",
+                          "updatedAt": "2022-07-21T02:31:15Z",
+                          "publishedAt": "2022-07-21T02:31:15Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Aayush-T"
+                          },
+                          "bodyText": "Thank you!",
+                          "url": "https://github.com/idaholab/moose/discussions/21594#discussioncomment-3306766",
+                          "updatedAt": "2022-08-02T10:45:26Z",
+                          "publishedAt": "2022-08-02T10:45:26Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Coupling between structural elements (beam and shell) and 3D solid elements",
+          "author": {
+            "login": "Kavan-Khaledi"
+          },
+          "bodyText": "Dear MOOSE team,\nI have successfully used the PorousFlow module to simulate tunneling in fully saturated porous rocks. Now, I am trying to add support elements such as rock bolts (beam elements) and shotcrete lining (shell elements) to the model. However, the structural elements (beam and shell) have 3 additional degrees of freedom (bending moments). Is it at all possible to couple (tie) a beam or shell element to a 3D solid element? I would be very grateful for your help.\nBest Regards,\nKavan",
+          "url": "https://github.com/idaholab/moose/discussions/21734",
+          "updatedAt": "2022-08-02T08:23:11Z",
+          "publishedAt": "2022-08-01T09:27:14Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "There is an EqualValueEmbeddedConstraint you might find useful. https://mooseframework.inl.gov/source/constraints/EqualValueEmbeddedConstraint.html",
+                  "url": "https://github.com/idaholab/moose/discussions/21734#discussioncomment-3297053",
+                  "updatedAt": "2022-08-01T13:16:45Z",
+                  "publishedAt": "2022-08-01T13:16:44Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Kavan-Khaledi"
+                          },
+                          "bodyText": "Thank you very much @hugary1995 :) The displacements of a solid element can be easily coupled to the displacements of a Beam element with this EmbeddedConstraint. Thanks;)",
+                          "url": "https://github.com/idaholab/moose/discussions/21734#discussioncomment-3305602",
+                          "updatedAt": "2022-08-02T08:23:11Z",
+                          "publishedAt": "2022-08-02T08:23:11Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,632 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyNC0wNi0wOFQwMTo0NTo0OC0wNTowMM4AZ6DR"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "How to draw a spiral block/boundary?",
+          "author": {
+            "login": "Yasunaoka"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nHi guys, I recently wanted to draw a spiral p=e^\u03b8\uff08(as shown by the green line on the diagram) or a series of points on that spiral over a 2D circular mesh so that I can specify the initial condition variable c=1 in the region. i have tried a few objects but didn't succeed. Does anyone know how to implement this elegantly please? Any help is much appreciated!",
+          "url": "https://github.com/idaholab/moose/discussions/27860",
+          "updatedAt": "2024-06-12T07:41:31Z",
+          "publishedAt": "2024-06-11T12:51:26Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nDo you want the mesh to have a spirally shape? Or simply cover part of the domain with a spiral?\nYou are looking for 2D surface right? Or a 1D spiral curve?\nUse this generator\nhttps://mooseframework.inl.gov/source/meshgenerators/ConcentricCircleMeshGenerator.html\nThen this one to transform the circles into spirals\nhttps://mooseframework.inl.gov/source/meshgenerators/ParsedNodeTransformGenerator.html\nYou'll have to figure out the transformation in cartesian coordinates\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/27860#discussioncomment-9739575",
+                  "updatedAt": "2024-06-11T13:45:44Z",
+                  "publishedAt": "2024-06-11T13:45:43Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Yasunaoka"
+                          },
+                          "bodyText": "Sorry, I may have missed the point, I currently do have a circular mesh AnnularMeshGenerator already:\n\nSo far, I have gotten the following linear initial condition via BoundingBoxIC\n\nBut now I'm trying to get the spiral pattern shown in the green line below, and I'm not finding the right way to do it.",
+                          "url": "https://github.com/idaholab/moose/discussions/27860#discussioncomment-9740445",
+                          "updatedAt": "2024-06-11T15:00:39Z",
+                          "publishedAt": "2024-06-11T15:00:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "if you want the mesh to rigorously align with the spiral, you could rotate the mesh (not evenly, with the parsedTransform) first.\nthen use a ParsedGenerateSideset to select the spiral sideset\nIf you are OK with a jagged edge, then you could simply use the ParsedGenerateSideset to approximately draw the spiral bit within the mesh",
+                          "url": "https://github.com/idaholab/moose/discussions/27860#discussioncomment-9740506",
+                          "updatedAt": "2024-06-11T15:05:58Z",
+                          "publishedAt": "2024-06-11T15:05:57Z",
+                          "isAnswer": true
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Yasunaoka"
+                          },
+                          "bodyText": "That's exactly what I want! That's great! Thank you so much!",
+                          "url": "https://github.com/idaholab/moose/discussions/27860#discussioncomment-9748143",
+                          "updatedAt": "2024-06-12T07:41:31Z",
+                          "publishedAt": "2024-06-12T07:41:31Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Seeking clarification on the distinction between Points, Nodes, Vertices, and Quadrature Points in libmesh",
+          "author": {
+            "login": "hityyds"
+          },
+          "bodyText": "I am working on calculating the center point of an element's side by averaging the coordinates of each vertex. I have been exploring the information available regarding libmesh::Elem for this purpose. However, I am currently confused about the differences among Point, Node, Vertex, and Quadrature Point.\nMy current understanding is as follows:\nA Point solely contains coordinate information.\nA Node builds upon a Point and is associated with degrees of freedom; every Node contains a Point.\nIn MOOSE, each Quadrature Point corresponds to unknown variables (i.e. degrees of freedom), suggesting it should be linked to a Node.\nThe number of Vertices is determined by the type of the element, representing physically existing points.\nThe confusion arises from the fact that both Nodes and Vertices seem to use the same indexing scheme when accessing their positions via the elem->point(n) function.\n Point Elem::vertex_average() const\n {\n   Point cp;\n \n   const auto n_vertices = this->n_vertices();\n \n   for (unsigned int n=0; n<n_vertices; n++)\n     cp.add (this->point(n));\n \n   return (cp /= static_cast<Real>(n_vertices));\n }\nstd::unique_ptr<MeshBase>\nCoarseMeshMappingForCMFD::generate()\n{\n    ......\n\n    // Check if the fine elem is nested in the coarse element\n    for (unsigned int n = 0; n < elem->n_nodes(); n++)\n    {\n      // Get the node: we need to manually move it towards the centroid to\n      // ensure that nothing weird happes due to round-off\n      Point current_node = elem->point(n);\n\n      ......\n}\n\nThis gives me the impression that Vertices and Nodes share the same index set, which seems contradictory given that their counts are different.\nFurthermore, my understanding suggests that each element has its unique set of Quadrature Points while Nodes can be shared across elements. This seemingly contradicts my earlier notion that each Quadrature Point corresponds to a single Node.\nI would greatly appreciate your help in clarifying these concepts and how they relate to finding the center point of an element's side. Thank you in advance for your attention and assistance.",
+          "url": "https://github.com/idaholab/moose/discussions/26837",
+          "updatedAt": "2024-06-12T01:58:51Z",
+          "publishedAt": "2024-02-19T15:37:50Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "rnpratoori"
+                  },
+                  "bodyText": "You are wrong to conclude that each Quadrature point corresponds to a node. Quadrature point is usually something that is located within the element, not on the boundary/vertices of the element like nodes. Quadrature points differ based on the shape of elements and more predominantly the shape functions used. Both of these will determine how many Quadrature points are there for a particular element and also their respective locations.",
+                  "url": "https://github.com/idaholab/moose/discussions/26837#discussioncomment-9741774",
+                  "updatedAt": "2024-06-11T17:03:08Z",
+                  "publishedAt": "2024-06-11T17:03:08Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hityyds"
+                          },
+                          "bodyText": "Thank you very much for your reminder.",
+                          "url": "https://github.com/idaholab/moose/discussions/26837#discussioncomment-9745278",
+                          "updatedAt": "2024-06-12T01:58:42Z",
+                          "publishedAt": "2024-06-12T01:58:41Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Why a postprocessed variable displays zero?",
+          "author": {
+            "login": "amerallaf"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nHello,\nI am trying to postprocess the heat_source variable (source_integral), but it keeps showing me the value as zero. The heat_source has a greater value than zero, because whenever I change it, the maximum temperature value also changes, but I still get the source_integral as zero.\nI would appreciate your help in solving this issue.\nHere is my input:\nL = 300.0\nT_fluid = ${fparse 280.0 + 273.15}\n\n[Mesh]\n  [file]\n    type = FileMeshGenerator\n    file = mesh_in.e\n  []\n[]\n\n[Variables]\n  [temp]\n    initial_condition = ${T_fluid}\n  []\n[]\n\n[AuxVariables]\n  [./heat_source]\n\n  [../]\n[]\n\n[Kernels]\n  [hc]\n    type = HeatConduction\n    variable = temp\n  []\n  [heat_source]\n    type = HeatSource\n    value = 250 \n    variable = temp\n    block = '2 3'\n  []\n[]\n\n[Functions]\n  [T_fluid]\n    type = ParsedFunction\n    expression = '573.0 + 50.0 * (z / 300.0)'\n  []\n[]\n\n[BCs]\n  [surface]\n    type = ConvectiveFluxFunction\n    T_infinity = T_fluid\n\n    # convert from W/m2/K to W/cm2/K\n    coefficient = ${fparse 1000.0/100.0/100.0}\n    variable = temp\n    boundary = 'rmax_c'\n  []\n[]\n\n[ThermalContact]\n  # This adds boundary conditions bewteen the fuel and the cladding, which represents\n  # the heat flux in both directions as\n  # q''= h * (T_1 - T_2)\n  # where h is a conductance that accounts for conduction through a material and\n  # radiation between two infinite parallel plate gray bodies.\n  [one_to_two]\n    type = GapHeatTransfer\n    variable = temp\n    primary = 'rmax'\n    secondary = 'rmin_c'\n\n    # we will use a quadrature-based approach to find the gap width and cross-side temperature\n    quadrature = true\n\n    # emissivity of the fuel\n    emissivity_primary = 0.8\n\n    # emissivity of the clad\n    emissivity_secondary = 0.8\n\n    # thermal conductivity of the gap material\n    gap_conductivity = 1.0\n\n    # geometric terms related to the gap\n    gap_geometry_type = CYLINDER\n    cylinder_axis_point_1 = '0 0 0'\n    cylinder_axis_point_2 = '0 0 ${L}'\n  []\n[]\n\n[Materials]\n  [k_clad]\n    type = GenericConstantMaterial\n    prop_values = '0.5'\n    prop_names = 'thermal_conductivity'\n    block = '1'\n  []\n  [k_fuel]\n    type = GenericConstantMaterial\n    prop_values = '0.05'\n    prop_names = 'thermal_conductivity'\n    block = '2 3'\n  []\n[]\n\n[Executioner]\n  type = Transient\n  nl_abs_tol = 1e-8\n  num_steps = 5\n  petsc_options_iname = '-pc_type -pc_hypre_type'\n  petsc_options_value = 'hypre boomeramg'\n[]\n\n[Outputs]\n  exodus = true\n  print_linear_residuals = false\n[]\n\n[Postprocessors]\n  [source_integral]\n    type = ElementIntegralVariablePostprocessor\n    variable = heat_source\n  []\n  [max_T]\n    type = NodalExtremeValue\n    variable = temp\n  []\n[]\nand this is the mesh input\nr_pin = 0.39218\nclad_ir = 0.40005\nclad_or = 0.45720\nL = 300.0\n\n[Mesh]\n  [clad] # This makes a circular annulus that will represent the clad\n    type = AnnularMeshGenerator\n    nr = 3\n    nt = 20\n    rmin = ${clad_ir}\n    rmax = ${clad_or}\n    quad_subdomain_id = 1\n    tri_subdomain_id = 0\n  []\n  [extrude_clad] # this extrudes the circular annulus in the axial direction\n    type = AdvancedExtruderGenerator\n    input = clad\n    heights = '${L}'\n    num_layers = '40'\n    direction = '0 0 1'\n  []\n\n  # A sideset in MOOSE is both an ID and a name.\n  # This renames the sideset numbers on the clad inner surface (0) and outer surface (1)\n  # to (5) and (4), respectively. This is done to avoid name collisions with another\n  # AnnularMeshGenerator we use for the fuel pellet. After we rename the sideset IDs, we\n  # need another RenameBoundaryGenerator to rename the sideset names.\n  [rename_clad]\n    type = RenameBoundaryGenerator\n    input = extrude_clad\n    old_boundary = '1 0' # outer surface, inner surface\n    new_boundary = '5 4'\n  []\n  [rename_clad_names]\n    type = RenameBoundaryGenerator\n    input = rename_clad\n    old_boundary = 'rmax rmin' # outer surface, inner surface\n    new_boundary = 'rmax_c rmin_c'\n  []\n\n  [fuel] # this makes a circle that will represent the fuel\n    type = AnnularMeshGenerator\n    nr = 10\n    nt = 20\n    rmin = 0\n    rmax = ${r_pin}\n    quad_subdomain_id = 2\n    tri_subdomain_id = 3\n    growth_r = -1.2\n  []\n  [extrude] # this extrudes the circle in the axial direction\n    type = AdvancedExtruderGenerator\n    input = fuel\n    heights = '${L}'\n    num_layers = '40'\n    direction = '0 0 1'\n  []\n  [combine]\n    type = CombinerGenerator\n    inputs = 'rename_clad_names extrude'\n  []\n\n  # one of the mesh generators does not work with distributed mesh\n  parallel_type = replicated\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/27786",
+          "updatedAt": "2024-06-11T17:39:34Z",
+          "publishedAt": "2024-06-04T17:34:41Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nIn paraview are you visualizing the last time step?\nThe default is to show you the initial condition",
+                  "url": "https://github.com/idaholab/moose/discussions/27786#discussioncomment-9670806",
+                  "updatedAt": "2024-06-04T23:51:20Z",
+                  "publishedAt": "2024-06-04T23:51:19Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "amerallaf"
+                          },
+                          "bodyText": "Hello @GiudGiud,\nI am checking all time steps and it is zero always.\nSee the figure below:\n\nBut the interesting thing is if I change the power the temperature changes accordingly:\nFor heat_source=250\n\nFor heat_source=350",
+                          "url": "https://github.com/idaholab/moose/discussions/27786#discussioncomment-9680060",
+                          "updatedAt": "2024-06-05T16:05:27Z",
+                          "publishedAt": "2024-06-05T16:05:26Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Can you look at the field instead?\nThis graph is likely showing a value at the wrong location",
+                          "url": "https://github.com/idaholab/moose/discussions/27786#discussioncomment-9683558",
+                          "updatedAt": "2024-06-06T00:23:33Z",
+                          "publishedAt": "2024-06-06T00:23:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Maybe not\nHow did you compute heat_source in the simulation ?",
+                          "url": "https://github.com/idaholab/moose/discussions/27786#discussioncomment-9683567",
+                          "updatedAt": "2024-06-06T00:25:12Z",
+                          "publishedAt": "2024-06-06T00:25:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "In your input the postprocessor is called source_integral not heat_source. So what are you plotting in that graph?",
+                          "url": "https://github.com/idaholab/moose/discussions/27786#discussioncomment-9683757",
+                          "updatedAt": "2024-06-06T00:59:26Z",
+                          "publishedAt": "2024-06-06T00:59:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "amerallaf"
+                          },
+                          "bodyText": "Sorry for the confusion, it is the same variable, I just ran a different version of the script\n  [heat_source]\n    type = ElementIntegralVariablePostprocessor\n    variable = heat_source\n  []\nI also tried the field and still shows zero (for any time step).",
+                          "url": "https://github.com/idaholab/moose/discussions/27786#discussioncomment-9690866",
+                          "updatedAt": "2024-06-06T14:47:58Z",
+                          "publishedAt": "2024-06-06T14:46:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I think there is some confusion here\nyou are creating a heat source in the equation with this kernel\n  [heat_source]\n    type = HeatSource\n    value = 250 \n    variable = temp\n    block = '2 3'\n  []\n\nwhich does NOT use a heat_source auxiliary variable. That auxiliary variable is currently doing nothing, sitting at a 0 value.\nIf you want to use this variable:\n\nuse an auxiliary kernel or a transfer to set the heat source aux variable\nuse a CoupledForce kernel to make use of the heat_source variable in the equations",
+                          "url": "https://github.com/idaholab/moose/discussions/27786#discussioncomment-9696925",
+                          "updatedAt": "2024-06-07T04:46:53Z",
+                          "publishedAt": "2024-06-07T04:46:53Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "amerallaf"
+                          },
+                          "bodyText": "Thanks a lot @GiudGiud , now it is working well.\nI did the following in the end:\n[AuxVariables]\n  [power]\n    block = '2 3'\n    initial_condition = 300\n  []\n[]\n\n[Kernels]\n  [hc]\n    type = HeatConduction\n    variable = temp\n  []\n  [source]\n    type = CoupledForce\n    variable = temp\n    v = power\n    block = '2 3'\n  []\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/27786#discussioncomment-9706669",
+                          "updatedAt": "2024-06-07T19:35:58Z",
+                          "publishedAt": "2024-06-07T19:35:57Z",
+                          "isAnswer": true
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "amerallaf"
+                          },
+                          "bodyText": "Currently I am trying to turn this variable into a function of time by doing the following:\n[AuxVariables]\n  [power]\n    block = '2 3'\n    initial_condition = 300\n  []\n[]\n\n[AuxKernels]\n  [./reconstruct_power]\n    type = FunctionAux\n    variable = power\n    function = Fiss_Function\n  [../]\n[]\n\n[Kernels]\n  [source]\n    type = CoupledForce\n    variable = temp\n    v = power\n    block = '2 3'\n  [../]\n[]\n\n[Functions]\n  [Fiss_Function]\n    type = ParsedFunction\n    expression = 't* ${power}'\n  []\n[]\nBut I am getting the following error:\n*** ERROR ***\nno variable 'power' found for substitution expression\nI would really appreciate your advice on this.",
+                          "url": "https://github.com/idaholab/moose/discussions/27786#discussioncomment-9706717",
+                          "updatedAt": "2024-06-07T19:44:12Z",
+                          "publishedAt": "2024-06-07T19:41:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Nothing in the snippet you pasted asks for a source auxiliary variable?",
+                          "url": "https://github.com/idaholab/moose/discussions/27786#discussioncomment-9709664",
+                          "updatedAt": "2024-06-08T03:24:01Z",
+                          "publishedAt": "2024-06-08T03:24:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "amerallaf"
+                          },
+                          "bodyText": "No this is the whole thing:\n*** ERROR ***\n..../solid_CoupledForce_time_1.i:54.5: no variable 'power' found for substitution expression\nStack frames: 11\n0: libMesh::print_trace(std::ostream&)\n1: moose::internal::mooseErrorRaw(std::__cxx11::basic_string<char, std::char_traits, std::allocator >, std::__cxx11::basic_string<char, std::char_traits, std::allocator >)\n2: void mooseError<std::__cxx11::basic_string<char, std::char_traits, std::allocator >&>(std::__cxx11::basic_string<char, std::char_traits, std::allocator >&)\n3: Moose::Builder::build()\n4: MooseApp::setupOptions()\n5: MooseApp::run()\n6: ./cardinal-opt(+0x3264) [0x7f5694ed0264]\n7: main\n8: /lib/x86_64-linux-gnu/libc.so.6(+0x29d90) [0x7f5685af9d90]\n9: __libc_start_main\n10: ./cardinal-opt(+0x34dd) [0x7f5694ed04dd]\napplication called MPI_Abort(MPI_COMM_WORLD, 1) - process 0\n[unset]: write_line error; fd=-1 buf=:cmd=abort exitcode=1\n:\nsystem msg for write_line failure : Bad file descriptor",
+                          "url": "https://github.com/idaholab/moose/discussions/27786#discussioncomment-9731481",
+                          "updatedAt": "2024-06-10T20:28:19Z",
+                          "publishedAt": "2024-06-10T20:28:18Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Pull request steps",
+          "author": {
+            "login": "Leni-Yeo"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nGood morning.\nI have a general question about \"Pull requests\".\nI submitted one (#27816) for the first time recently.\nI saw that there are checks that have failed (46 errored and 1 failing checks), so I tried to see the details next to them, but the results screen doesn't load/show anything even after a day. I don't know if I have something to do/fix anything on my end or if I just have to wait till the developers complete a process first.",
+          "url": "https://github.com/idaholab/moose/discussions/27863",
+          "updatedAt": "2024-06-11T18:02:14Z",
+          "publishedAt": "2024-06-11T16:37:23Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThanks for reaching out. I replied there with more information.\nThe output of the testing is already in the PR, but maybe you could not see it\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/27863#discussioncomment-9741756",
+                  "updatedAt": "2024-06-11T17:01:41Z",
+                  "publishedAt": "2024-06-11T17:01:40Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "how to compute a strain wich is about hydrostaic stress",
+          "author": {
+            "login": "wangzhaohao"
+          },
+          "bodyText": "Hello, I want to compute a strain wich is about hydrostaic stress.\nso I write this class\n  _stress(this->template getMaterialPropertyByName<RankTwoTensor>(\"stress\")),\n\n    // theoretical density fraction perecent\n    if (_geom_type == OxidalDensificationTempl<is_ad>::PLATE)\n      _hydro_stress = _stress[_qp].trace() / 3.0;\n    else if (_geom_type == OxidalDensificationTempl<is_ad>::CYLINDER)\n      _hydro_stress = (_stress[_qp](0, 0) + _stress[_qp](1, 1)) / 2.0;\nand when i test this, there is somthing wrong\ndensification <- all_strain <- stress <- densification\nMy input .i is like this\n[Materials]\n  [elasticity_tensor]\n    type = ComputeIsotropicElasticityTensor\n    youngs_modulus = 2e11\n    poissons_ratio = 0.3\n  []\n  [density]\n    type = Density\n    density = 10e3\n  []\n  [densification]\n    type = OxidalDensification\n    burnup = burnup\n    temperature = temp\n    densification_model = MATPRO\n    plutonium_concentration = plutonium_concentration\n    grain_size = grain_size\n    OM_ratio = OM_ratio\n    density = density\n    eigenstrain_name = 'denficaton_eigenstrain'\n  [] \n  [stress]\n    type = ComputeFiniteStrainElasticStress\n  []\n[]\nand I find some useful code in there ADViscoplasticityStressUpdate\nso I need to pubic parent class like ADViscoplasticityStressUpdateBase?\nI also find the hydrostatic stress is been defined in RankTwoScalarAux, so I also write the other code\n_hydro_stress(this->template coupledValue(\"hydro_stress\"))\nMy question is What is the difference between the latter and the former\uff1f\nSecond question is about creep in #27783\nwhy MOOSE PowerLawCreepUpdateStress use the\n\nCan I think of the formula in the box as von Mises? if not, what are the advantages of doing this?\nThanks for your reply",
+          "url": "https://github.com/idaholab/moose/discussions/27834",
+          "updatedAt": "2024-06-11T16:11:16Z",
+          "publishedAt": "2024-06-08T14:08:16Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nFor the first question, do you mean that the code complains about a circular dependency?\ndensification <- all_strain <- stress <- densification\n\nif so then one option would be to move your code into the strain material.\nFor the second question,\n@tophmatthews @jasondhales",
+                  "url": "https://github.com/idaholab/moose/discussions/27834#discussioncomment-9717261",
+                  "updatedAt": "2024-06-09T03:32:37Z",
+                  "publishedAt": "2024-06-09T03:32:36Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "wangzhaohao"
+                          },
+                          "bodyText": "if so then one option would be to move your code into the strain material.\n\nthanks. yes there has a circular wrong.\nI don't sure how to do move code into strain material. Is there has similar code?\nI use a auxvariable to get hydrosticity stress with ranktwoscalaraux. later i post my code.",
+                          "url": "https://github.com/idaholab/moose/discussions/27834#discussioncomment-9718886",
+                          "updatedAt": "2024-06-09T12:18:49Z",
+                          "publishedAt": "2024-06-09T12:18:48Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "wangzhaohao"
+                          },
+                          "bodyText": "In both code i public ComputeEigenstrainBaseTempl\nfirst code has the circular dependency\n  _stress(this->template getMaterialPropertyByName<RankTwoTensor>(\"stress\")),\n\ntemplate <bool is_ad>\nvoid\nOxidalDensificationTempl<is_ad>::computeProperties()\n{\n    if (_geom_type == OxidalDensificationTempl<is_ad>::PLATE)\n      _hydro_stress = _stress[_qp].trace() / 3.0;\n    else if (_geom_type == OxidalDensificationTempl<is_ad>::CYLINDER)\n      _hydro_stress = (_stress[_qp](0, 0) + _stress[_qp](1, 1)) / 2.0;\n}\nwhith test.i\n[Materials]\n  [elasticity_tensor]\n    type = ComputeIsotropicElasticityTensor\n    youngs_modulus = 2e11\n    poissons_ratio = 0.3\n  []\n  [density]\n    type = Density\n    density = 10e3\n  []\n  [densification]\n    type = OxidalDensification\n    burnup = burnup\n    temperature = temp\n    densification_model = MATPRO\n    plutonium_concentration = plutonium_concentration\n    grain_size = grain_size\n    OM_ratio = OM_ratio\n    density = density\n    eigenstrain_name = 'denficaton_eigenstrain'\n  [] \n  [stress]\n    type = ComputeFiniteStrainElasticStress\n  []\n[]\nsecond way code is\n   _hydro_stress(this->template coupledValue(\"hydro_stress\")),\nwith test.i is\n  [hydro_stress]\n    type = RankTwoScalarAux\n    variable = hydro_stress\n    rank_two_tensor = stress\n    scalar_type = hydrostatic\n  []\n  [densification]\n    type = OxidalDensification\n    burnup = burnup\n    temperature = temp\n    densification_model = MATPRO\n    plutonium_concentration = plutonium_concentration\n    grain_size = grain_size\n    OM_ratio = OM_ratio\n    density = density\n    eigenstrain_name = 'denficaton_eigenstrain'\n    hydro_stress = hydro_stress\n  [] \n  [stress]\n    type = ComputeFiniteStrainElasticStress\n  []",
+                          "url": "https://github.com/idaholab/moose/discussions/27834#discussioncomment-9719782",
+                          "updatedAt": "2024-06-09T15:43:48Z",
+                          "publishedAt": "2024-06-09T15:43:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "by move code I mean move the definition and computation of the material property.\nThinking about it, it might not help. The properties should not define on each other like this. And if they do, you have to find a way to break the dependency.\nMaybe consider lagging one term? Using the value from the previous time step",
+                          "url": "https://github.com/idaholab/moose/discussions/27834#discussioncomment-9721879",
+                          "updatedAt": "2024-06-10T00:50:10Z",
+                          "publishedAt": "2024-06-10T00:50:10Z",
+                          "isAnswer": true
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "wangzhaohao"
+                          },
+                          "bodyText": "Hello, I do as you advice\nin the code\n_stress_old(this->template getMaterialPropertyOldByName<RankTwoTensor>(\"stress\"))\nthe result show is same with second way above.",
+                          "url": "https://github.com/idaholab/moose/discussions/27834#discussioncomment-9722284",
+                          "updatedAt": "2024-06-10T02:19:57Z",
+                          "publishedAt": "2024-06-10T02:19:56Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "the result show is same with second way above.\n\nSo if the problem is transient then using an old material property just turned whichever time integration scheme into a explicit-implicit scheme. It likely is now 1st order in time (if it was not already)\nIt is not necessarily an issue.",
+                          "url": "https://github.com/idaholab/moose/discussions/27834#discussioncomment-9741246",
+                          "updatedAt": "2024-06-11T16:11:16Z",
+                          "publishedAt": "2024-06-11T16:11:16Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to Access Variable Values at Specific Points in a Kernel",
+          "author": {
+            "login": "hityyds"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nI want to compute a 2D equation that includes a term representing the difference in a variable's values at two positions, such as u(x,1)\u2212u(x,\u22121). How can I access the variable solution at arbitrary points in a Kernel?\nThank you all for your attention. I would be especially grateful if someone could provide a solution to this issue.",
+          "url": "https://github.com/idaholab/moose/discussions/27861",
+          "updatedAt": "2024-06-11T14:33:20Z",
+          "publishedAt": "2024-06-11T13:49:43Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThe easiest way to do this will be to use the Functor arguments of variables.\nYou use a ElemPointArg as an argument to the evaluation of the variable, with something similar to this pseudo code (use the doxygen to find the actual routines):\n// First, get a point locator from the mesh\n_pl = _mesh.getPointLocator();\nconst auto other_elem = _pl.locate_elem(point + (0,1,0));\nconst ElemPointArg elem_point(other_elem, point + (0,1,0));\nconst auto value_other_elem = _var(elem_point, determineState());\n\nthen this gets you the location at the a point + 1 on the second axis\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/27861#discussioncomment-9740123",
+                  "updatedAt": "2024-06-11T14:33:20Z",
+                  "publishedAt": "2024-06-11T14:33:20Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Who generates my stress_xy, ...xz, ...?",
+          "author": {
+            "login": "jmeier"
+          },
+          "bodyText": "Dear Community,\nIn my Moose input file I use the \"Physics/SolidMechanics/QuasiStatic\" block. The model itself works fine.\nI only request stress_xx, _yy, and _zz to be present as AuxVariable but Moose is generating all the others too. Moose writes:\nAuxiliary System:\n  Num DOFs:                270028\n  Num Local DOFs:          17325\n  Variables:               { \"stress_xx\" \"stress_yy\" \"stress_zz\" \"stress_xy\" \"stress_xz\" ... \"stress_yz\" \n                             \"stress_zx\" \"stress_zy\" \"p\" \"q\" } \n  Finite Element Types:    \"MONOMIAL\" \n  Approximation Orders:    \"CONSTANT\" \n\nI'd like to restrict Moose to have only Variables: { \"stress_xx\" \"stress_yy\" \"stress_zz\" \"p\" \"q\" } \nMy questions are: Why Moose does this and how can I restrict the AuxVariables generated?\nMy \"Physics/SolidMechanics/QuasiStatic\" block looks like (this is my only block of this type, no includes in my file...):\n[Physics]\n  [SolidMechanics]\n    [QuasiStatic]\n      [.all]\n        strain = SMALL\n        incremental = true\n        add_variables = true\n        eigenstrain_names = ini_stress\n        generate_output = 'stress_xx stress_yy stress_zz'\n      []\n    []\n  []\n[]\n\nThere are some additional AuxVariables and AuxKernels:\n[AuxVariables]\n  [p]\n    order = CONSTANT\n    family = MONOMIAL\n  []\n  [q]\n    order = CONSTANT\n    family = MONOMIAL\n  []\n[]\n\n[AuxKernels]\n  [p]\n    type = RankTwoScalarAux\n    rank_two_tensor = stress\n    variable = p\n    scalar_type = hydrostatic\n  []\n  [q]\n    type = RankTwoScalarAux\n    rank_two_tensor = stress\n    variable = q\n    scalar_type = vonmisesStress\n  []\n[]\n\nOutput-block looks like:\n[Outputs]\n  exodus = true\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/27819",
+          "updatedAt": "2024-06-10T06:18:56Z",
+          "publishedAt": "2024-06-07T13:12:12Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThis could be modified in the QuasiStaticSolidMechanics. We simply havent worked on limiting the output.\nFeel free to make a pull request if you really need this\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/27819#discussioncomment-9711275",
+                  "updatedAt": "2024-06-08T07:15:31Z",
+                  "publishedAt": "2024-06-08T07:15:31Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jmeier"
+                          },
+                          "bodyText": "Dear Guillaume,\nThank you for the clarification! I checked the code of QuasiStaticSolidMechanicsPhysics, but realized that the restriction of the output must be done by someone more experienced.\nJ\u00f6rg",
+                          "url": "https://github.com/idaholab/moose/discussions/27819#discussioncomment-9723490",
+                          "updatedAt": "2024-06-10T06:35:10Z",
+                          "publishedAt": "2024-06-10T06:18:50Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Installation Errors when trying Building PETSc, libMesh, and WASP during offline install of MOOSE",
+          "author": {
+            "login": "vikramroybarc"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A Getting Started is the most appropriate category for my question (trouble installing, beginner user, ...)\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (avoid screenshots if possible, triple back quotes before/after pasted text, etc)\n\nIssue or question about MOOSE\nI am trying to install moose using offline method as described in https://mooseframework.inl.gov/getting_started/installation/offline_installation.html\nWhile trying to Build PETSC, WASP and LIBMesh I am encouring several errors. They are listed below\nvikramr@VikramRoy:~/projects/moose/scripts$ ./diagnostics.sh \n\n##################################################################################################\nInfluential Environment Variables\n\nCC=mpicc\nCONDA_CHANNEL=https://conda.software.inl.gov/public\nCURL_CA_BUNDLE=\nCXX=mpicxx\nF77=mpif77\nF90=mpif90\nFC=mpif90\nLD_LIBRARY_PATH=/usr/local/cuda-12.4/lib64:/usr/local/cuda-12.4/lib64\nMOOSE_JOBS=6\nPATH=/home/vikramr/Phd/Paradis/KGParadis/bin:/usr/local/cuda-12.4/bin:/home/vikramr/Phd/Paradis/KGParadis/bin:/usr/local/cuda-12.4/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin\nREQUESTS_CA_BUNDLE=\nSSL_CERT_FILE=\n\n##################################################################################################\nCompiler(s) (CC CXX FC F77 F90):\n\nCC=/usr/bin/mpicc\nCC -show:\ngcc -I/usr/lib/x86_64-linux-gnu/openmpi/include -I/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi -L/usr/lib/x86_64-linux-gnu/openmpi/lib -lmpi\nCC version:     gcc (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0\n\nCXX=/usr/bin/mpicxx\nCXX -show:\ng++ -I/usr/lib/x86_64-linux-gnu/openmpi/include -I/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi -L/usr/lib/x86_64-linux-gnu/openmpi/lib -lmpi_cxx -lmpi\nCXX version:    g++ (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0\n\nFC=/usr/bin/mpif90\nFC -show:\ngfortran -I/usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi -I/usr/lib/x86_64-linux-gnu/openmpi/lib -L/usr/lib/x86_64-linux-gnu/openmpi/lib/fortran/gfortran -lmpi_usempif08 -lmpi_usempi_ignore_tkr -lmpi_mpifh -lmpi -lopen-rte -lopen-pal -lhwloc -levent_core -levent_pthreads -lm -lz\nFC version:     GNU Fortran (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0\n\nF77=/usr/bin/mpif77\nF77 -show:\ngfortran -I/usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi -I/usr/lib/x86_64-linux-gnu/openmpi/lib -L/usr/lib/x86_64-linux-gnu/openmpi/lib/fortran/gfortran -lmpi_usempif08 -lmpi_usempi_ignore_tkr -lmpi_mpifh -lmpi -lopen-rte -lopen-pal -lhwloc -levent_core -levent_pthreads -lm -lz\nF77 version:    GNU Fortran (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0\n\nF90=/usr/bin/mpif90\nF90 -show:\ngfortran -I/usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi -I/usr/lib/x86_64-linux-gnu/openmpi/lib -L/usr/lib/x86_64-linux-gnu/openmpi/lib/fortran/gfortran -lmpi_usempif08 -lmpi_usempi_ignore_tkr -lmpi_mpifh -lmpi -lopen-rte -lopen-pal -lhwloc -levent_core -levent_pthreads -lm -lz\nF90 version:    GNU Fortran (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0\n\nOK\n\n##################################################################################################\nPython Sanity Checks\n\nVerify `/usr/bin/env python3 --version` (reporting as: Python 3.10.12),\nmatches versions for: `which python3 && which python`\n\n\nWARNING: `python` does not exist\nThis does not mean there will be a failure, but some shebangs in some python\nfiles may still be relying on calling: `/usr/bin/env python` (Python 2.x era)\nOK\n\n##################################################################################################\nPython Modules (TestHarness, run-ability)\n\nOK\n\nvikramr@VikramRoy:~/projects/moose/scripts$ cd ~/projects/moose/scripts\nexport MOOSE_JOBS=6 METHODS=opt\n./update_and_rebuild_petsc.sh --skip-submodule-update --with-packages-download-dir=~/projects/downloads\n./update_and_rebuild_libmesh.sh --skip-submodule-update\n./update_and_rebuild_wasp.sh --skip-submodule-update\n/home/vikramr/projects/moose/scripts\nINFO: Checking for HDF5...\nINFO: HDF5 library not detected, opting to download via PETSc...\n=============================================================================================\n                         Configuring PETSc to compile on your system\n=============================================================================================\n=============================================================================================\n                                     ***** WARNING *****\n  Found environment variable: CC=mpicc. Ignoring it! Use \"./configure CC=$CC\" if you really\n  want to use this value\n=============================================================================================\n=============================================================================================\n                                     ***** WARNING *****\n  Found environment variable: CXX=mpicxx. Ignoring it! Use \"./configure CXX=$CXX\" if you\n  really want to use this value\n=============================================================================================\n=============================================================================================\n                                     ***** WARNING *****\n  Found environment variable: FC=mpif90. Ignoring it! Use \"./configure FC=$FC\" if you\n  really want to use this value\n=============================================================================================\n=============================================================================================\n                                     ***** WARNING *****\n  Found environment variable: F77=mpif77. Ignoring it! Use \"./configure F77=$F77\" if you\n  really want to use this value\n=============================================================================================\n=============================================================================================\n                                     ***** WARNING *****\n  Found environment variable: F90=mpif90. Ignoring it! Use \"./configure F90=$F90\" if you\n  really want to use this value\n=============================================================================================\n=============================================================================================\n                                     ***** WARNING *****\n  Using default C optimization flags \"-g -O\". You might consider manually setting optimal\n  optimization flags for your system with COPTFLAGS=\"optimization flags\" see\n  config/examples/arch-*-opt.py for examples\n=============================================================================================\n=============================================================================================\n                                     ***** WARNING *****\n  Using default Cxx optimization flags \"-g -O\". You might consider manually setting optimal\n  optimization flags for your system with CXXOPTFLAGS=\"optimization flags\" see\n  config/examples/arch-*-opt.py for examples\n=============================================================================================\n=============================================================================================\n                                     ***** WARNING *****\n  Using default FC optimization flags \"-g -O\". You might consider manually setting optimal\n  optimization flags for your system with FOPTFLAGS=\"optimization flags\" see\n  config/examples/arch-*-opt.py for examples\n=============================================================================================\n=============================================================================================\n                                     ***** WARNING *****\n  Using default CUDA optimization flags \"-O3\". You might consider manually setting optimal\n  optimization flags for your system with CUDAOPTFLAGS=\"optimization flags\" see\n  config/examples/arch-*-opt.py for examples\n=============================================================================================\n=============================================================================================\n       Trying to download /home/vikramr/projects/downloads/hdf5-1.12.2.tar.bz2 for HDF5\n=============================================================================================\n=============================================================================================\n                   Running configure on HDF5; this may take several minutes\n=============================================================================================\n=============================================================================================\n                     Running make on HDF5; this may take several minutes\n=============================================================================================\n=============================================================================================\n                 Running make install on HDF5; this may take several minutes\n=============================================================================================\n=============================================================================================\n     Trying to download /home/vikramr/projects/downloads/pkg-fblaslapack for FBLASLAPACK\n=============================================================================================\n\n*********************************************************************************************\n           UNABLE to CONFIGURE with GIVEN OPTIONS (see configure.log for details):\n---------------------------------------------------------------------------------------------\n  Error during download/extract/detection of FBLASLAPACK:\n  Unknown compression type in URL: /home/vikramr/projects/downloads/pkg-fblaslapack\n*********************************************************************************************\n\nThere was an error. Exiting...\nPETSc submodule will be used. PETSc submodule is our default solver.\nIMPORTANT: If you did not run the update_and_rebuild_petsc.sh script yet, please run it before building libMesh\n---------------------------------------------\n----------- Configuring libMesh -------------\n---------------------------------------------\nchecking build system type... x86_64-pc-linux-gnu\nchecking host system type... x86_64-pc-linux-gnu\nchecking target system type... x86_64-pc-linux-gnu\nchecking for a BSD-compatible install... /home/vikramr/projects/moose/scripts/../libmesh/build-aux/install-sh -C\nchecking whether build environment is sane... yes\nchecking for a race-free mkdir -p... /usr/bin/mkdir -p\nchecking for gawk... no\nchecking for mawk... mawk\nchecking whether make sets $(MAKE)... yes\nchecking whether make supports nested variables... yes\nchecking whether UID '1000' is supported by ustar format... yes\nchecking whether GID '1000' is supported by ustar format... yes\nchecking how to create a ustar tar archive... gnutar\nchecking whether make supports nested variables... (cached) yes\nchecking whether to enable maintainer-specific portions of Makefiles... no\nchecking for src/base/libmesh.C... no\n<<< Configuring build directory for VPATH build >>>\nchecking for perl... /usr/bin/perl\nnote: MPI library path not given...\nnote: MPI library path not given...\n/home/vikramr/projects/moose/scripts/../petsc/lib/petsc/conf/variables:140: /home/vikramr/projects/moose/scripts/../petsc/arch-moose/lib/petsc/conf/petscvariables: No such file or directory\nmake: *** No rule to make target '/home/vikramr/projects/moose/scripts/../petsc/arch-moose/lib/petsc/conf/petscvariables'.  Stop.\n/home/vikramr/projects/moose/scripts/../petsc/lib/petsc/conf/variables:140: /home/vikramr/projects/moose/scripts/../petsc/arch-moose/lib/petsc/conf/petscvariables: No such file or directory\nmake: *** No rule to make target '/home/vikramr/projects/moose/scripts/../petsc/arch-moose/lib/petsc/conf/petscvariables'.  Stop.\n/home/vikramr/projects/moose/scripts/../petsc/lib/petsc/conf/variables:140: /home/vikramr/projects/moose/scripts/../petsc/arch-moose/lib/petsc/conf/petscvariables: No such file or directory\nmake: *** No rule to make target '/home/vikramr/projects/moose/scripts/../petsc/arch-moose/lib/petsc/conf/petscvariables'.  Stop.\n/home/vikramr/projects/moose/scripts/../petsc/lib/petsc/conf/variables:140: /home/vikramr/projects/moose/scripts/../petsc/arch-moose/lib/petsc/conf/petscvariables: No such file or directory\nmake: *** No rule to make target '/home/vikramr/projects/moose/scripts/../petsc/arch-moose/lib/petsc/conf/petscvariables'.  Stop.\n/home/vikramr/projects/moose/scripts/../petsc/lib/petsc/conf/variables:140: /home/vikramr/projects/moose/scripts/../petsc/arch-moose/lib/petsc/conf/petscvariables: No such file or directory\nmake: *** No rule to make target '/home/vikramr/projects/moose/scripts/../petsc/arch-moose/lib/petsc/conf/petscvariables'.  Stop.\n/home/vikramr/projects/moose/scripts/../petsc/lib/petsc/conf/variables:140: /home/vikramr/projects/moose/scripts/../petsc/arch-moose/lib/petsc/conf/petscvariables: No such file or directory\nmake: *** No rule to make target '/home/vikramr/projects/moose/scripts/../petsc/arch-moose/lib/petsc/conf/petscvariables'.  Stop.\n/home/vikramr/projects/moose/scripts/../petsc/lib/petsc/conf/variables:140: /home/vikramr/projects/moose/scripts/../petsc/arch-moose/lib/petsc/conf/petscvariables: No such file or directory\nmake: *** No rule to make target '/home/vikramr/projects/moose/scripts/../petsc/arch-moose/lib/petsc/conf/petscvariables'.  Stop.\n/home/vikramr/projects/moose/scripts/../petsc/lib/petsc/conf/variables:140: /home/vikramr/projects/moose/scripts/../petsc/arch-moose/lib/petsc/conf/petscvariables: No such file or directory\nmake: *** No rule to make target '/home/vikramr/projects/moose/scripts/../petsc/arch-moose/lib/petsc/conf/petscvariables'.  Stop.\nchecking whether make supports the include directive... yes (GNU style)\nchecking whether the C compiler works... yes\nchecking for C compiler default output file name... a.out\nchecking for suffix of executables... \nchecking whether we are cross compiling... no\nchecking for suffix of object files... o\nchecking whether the compiler supports GNU C... yes\nchecking whether mpicc accepts -g... yes\nchecking for mpicc option to enable C11 features... none needed\nchecking whether mpicc understands -c and -o together... yes\nchecking dependency style of mpicc... gcc3\nchecking whether the compiler supports GNU Fortran... yes\nchecking whether mpif90 accepts -g... yes\nchecking whether the compiler supports GNU Fortran 77... yes\nchecking whether mpif77 accepts -g... yes\nchecking whether the compiler supports GNU C++... yes\nchecking whether mpicxx accepts -g... yes\nchecking for mpicxx option to enable C++11 features... none needed\nchecking dependency style of mpicxx... gcc3\n<<< C++ compiler is gcc-11.x >>>\nchecking for a sed that does not truncate output... /usr/bin/sed\nchecking for C++ compiler vendor... gnu\nconfigure: Seeking a C++ standard between \"2014\" and \"2017\"\nchecking whether mpicxx supports C++17 features by default... yes\nchecking for C++11 auto keyword support... yes\nchecking for C++11 range-based for loop support... yes\nchecking for C++11 initializer list support... yes\nchecking for C++11 std::unique_ptr support... yes\nchecking for C++11 std::make_unique workaround support... yes\nchecking for C++11 std::tuple support... yes\nchecking for C++11 lambda support... yes\nchecking for C++11 fixed type enumeration support... yes\nchecking for C++11 fixed type enumeration forward declaration support... yes\nchecking for C++11 override keyword support... yes\nchecking for C++11 move constructor support... yes\nchecking for C++11 deleted functions support... yes\nchecking for C++11 defaulted functions support... yes\nchecking for C++11 nullptr support... yes\nchecking for C++11 'final' keyword support... yes\nchecking for C++11 decltype support... yes\nchecking for C++11 std::begin/end support for arrays... yes\nchecking for C++11 std container erase() functions returning iterators... yes\nchecking for C++11 std container emplace() functions... yes\nchecking for C++11 std::iota algorithm... yes\nchecking for C++11 std::vector::data() API... yes\nchecking for C++11 std::shared_ptr support... yes\nchecking for C++11 rvalue references support... yes\nchecking for C++11 std::to_string() support... yes\nchecking for C++11 constexpr support... yes\nchecking for C++11 variadic template support... yes\nchecking for C++11 alias declarations support... yes\nchecking for C++11 std::array... yes\nchecking for C++11 std::isnan... yes\nchecking for C++11 std::isinf... yes\nchecking for C++17 std::*::merge... yes\nconfigure: Found C++17 standard support\nchecking whether mpicxx supports C++14 features by default... yes\nconfigure: Found C++14 standard support\nchecking whether mpicxx supports C++11 features by default... yes\nconfigure: Found C++11 standard support\nconfigure: Using support for C++17 standard\n<<< Adding -ftrapping-math for FPE safety >>>\n<<< Configuring libMesh with methods \"opt\" >>>\n<<< Compiler warnings are just warnings >>>\n<<< Disabling extra paranoid compiler warnings >>>\nchecking for C++14 std::make_unique support... yes\nchecking for C++11 std::regex support... yes\nchecking for C++11 <thread> support... yes\nchecking for C++11 <condition_variable> support... yes\nchecking for C++11 <type_traits> support... yes\nchecking for C++11 std::asinh support in <cmath>... yes\nchecking for C++11 std::acosh support in <cmath>... yes\nchecking for C++11 std::atanh support in <cmath>... yes\nchecking for C++11 std::asinh(complex) support in <complex>... yes\nchecking for C++11 std::acosh(complex) support in <complex>... yes\nchecking for C++11 std::atanh(complex) support in <complex>... yes\nchecking for C++11 std::erf support in <cmath>... yes\nchecking for C++17 fallthrough attribute support... yes, but disabled.\nchecking for __attribute__ ((fallthrough)) support... yes\nchecking how to print strings... printf\nchecking for a sed that does not truncate output... (cached) /usr/bin/sed\nchecking for grep that handles long lines and -e... /usr/bin/grep\nchecking for egrep... /usr/bin/grep -E\nchecking for fgrep... /usr/bin/grep -F\nchecking for ld used by mpicc... /usr/bin/ld\nchecking if the linker (/usr/bin/ld) is GNU ld... yes\nchecking for BSD- or MS-compatible name lister (nm)... /usr/bin/nm -B\nchecking the name lister (/usr/bin/nm -B) interface... BSD nm\nchecking whether ln -s works... yes\nchecking the maximum length of command line arguments... 1572864\nchecking how to convert x86_64-pc-linux-gnu file names to x86_64-pc-linux-gnu format... func_convert_file_noop\nchecking how to convert x86_64-pc-linux-gnu file names to toolchain format... func_convert_file_noop\nchecking for /usr/bin/ld option to reload object files... -r\nchecking for file... file\nchecking for objdump... objdump\nchecking how to recognize dependent libraries... pass_all\nchecking for dlltool... no\nchecking how to associate runtime and link libraries... printf %s\\n\nchecking for ar... ar\nchecking for archiver @FILE support... @\nchecking for strip... strip\nchecking for ranlib... ranlib\nchecking command to parse /usr/bin/nm -B output from mpicc object... ok\nchecking for sysroot... no\nchecking for a working dd... /usr/bin/dd\nchecking how to truncate binary pipes... /usr/bin/dd bs=4096 count=1\nchecking for mt... mt\nchecking if mt is a manifest tool... no\nchecking for stdio.h... yes\nchecking for stdlib.h... yes\nchecking for string.h... yes\nchecking for inttypes.h... yes\nchecking for stdint.h... yes\nchecking for strings.h... yes\nchecking for sys/stat.h... yes\nchecking for sys/types.h... yes\nchecking for unistd.h... yes\nchecking for dlfcn.h... yes\nchecking for objdir... .libs\nchecking if mpicc supports -fno-rtti -fno-exceptions... no\nchecking for mpicc option to produce PIC... -fPIC -DPIC\nchecking if mpicc PIC flag -fPIC -DPIC works... yes\nchecking if mpicc static flag -static works... no\nchecking if mpicc supports -c -o file.o... yes\nchecking if mpicc supports -c -o file.o... (cached) yes\nchecking whether the mpicc linker (/usr/bin/ld -m elf_x86_64) supports shared libraries... yes\nchecking whether -lc should be explicitly linked in... no\nchecking dynamic linker characteristics... GNU/Linux ld.so\nchecking how to hardcode library paths into programs... immediate\nchecking whether stripping libraries is possible... yes\nchecking if libtool supports shared libraries... yes\nchecking whether to build shared libraries... yes\nchecking whether to build static libraries... no\nchecking how to run the C++ preprocessor... mpicxx -E\nchecking for ld used by mpicxx... /usr/bin/ld -m elf_x86_64\nchecking if the linker (/usr/bin/ld -m elf_x86_64) is GNU ld... yes\nchecking whether the mpicxx linker (/usr/bin/ld -m elf_x86_64) supports shared libraries... yes\nchecking for mpicxx option to produce PIC... -fPIC -DPIC\nchecking if mpicxx PIC flag -fPIC -DPIC works... yes\nchecking if mpicxx static flag -static works... no\nchecking if mpicxx supports -c -o file.o... yes\nchecking if mpicxx supports -c -o file.o... (cached) yes\nchecking whether the mpicxx linker (/usr/bin/ld -m elf_x86_64) supports shared libraries... yes\nchecking dynamic linker characteristics... (cached) GNU/Linux ld.so\nchecking how to hardcode library paths into programs... immediate\nchecking if libtool supports shared libraries... yes\nchecking whether to build shared libraries... yes\nchecking whether to build static libraries... no\nchecking for mpif77 option to produce PIC... -fPIC\nchecking if mpif77 PIC flag -fPIC works... yes\nchecking if mpif77 static flag -static works... no\nchecking if mpif77 supports -c -o file.o... yes\nchecking if mpif77 supports -c -o file.o... (cached) yes\nchecking whether the mpif77 linker (/usr/bin/ld -m elf_x86_64) supports shared libraries... yes\nchecking dynamic linker characteristics... (cached) GNU/Linux ld.so\nchecking how to hardcode library paths into programs... immediate\nchecking if libtool supports shared libraries... yes\nchecking whether to build shared libraries... yes\nchecking whether to build static libraries... no\nchecking for mpif90 option to produce PIC... -fPIC\nchecking if mpif90 PIC flag -fPIC works... yes\nchecking if mpif90 static flag -static works... no\nchecking if mpif90 supports -c -o file.o... yes\nchecking if mpif90 supports -c -o file.o... (cached) yes\nchecking whether the mpif90 linker (/usr/bin/ld -m elf_x86_64) supports shared libraries... yes\nchecking dynamic linker characteristics... (cached) GNU/Linux ld.so\nchecking how to hardcode library paths into programs... immediate\nchecking Major version... 1\nchecking Minor version... 8\nchecking Point version... 0-pre\nchecking whether ln -s works... yes\nchecking for a sed that does not truncate output... (cached) /usr/bin/sed\nchecking for pkg-config... /usr/bin/pkg-config\nchecking whether the compiler implements namespaces... yes\nchecking for mpicxx options needed to detect all undeclared functions... none needed\n---------------------------------------------\n------- Configuring compiler features -------\n---------------------------------------------\n<<< Default floating point is double precision (double) >>>\nchecking for C/C++ restrict keyword... no\nchecking for pwd.h... yes\n<<< Configuring library with getpwuid >>>\n<<< Configuring library with exception throwing support >>>\n<<< Configuring library with compile timestamps >>>\nchecking size of short int... 2\nchecking size of int... 4\nchecking size of unsigned int... 4\nchecking size of size_t... 8\nchecking size of long int... 8\nchecking size of float... 4\nchecking size of double... 8\nchecking size of void *... 8\nchecking size of function_pointer... 8\nchecking whether the compiler supports Run-Time Type Identification... yes\nchecking for getopt.h... yes\nchecking for stdlib.h... (cached) yes\nchecking for sys/time.h... yes\nchecking for process.h... no\nchecking for csignal... yes\nchecking for sys/resource.h... yes\nchecking whether the compiler has locale... yes\nchecking whether the compiler has stringstream... yes\nchecking for fenv.h... yes\nchecking for xmmintrin.h... yes\nchecking whether sigaction is declared... yes\nchecking for mkdir with two arguments... yes\nchecking for direct.h... no\nchecking whether _mkdir is declared... no\nchecking for mkstemp... yes\nchecking for gettimeofday... yes\nchecking for sys/utsname.h... yes\nchecking whether the compiler supports std::unordered_multimap... yes\nchecking whether the compiler supports std::unordered_map... yes\nchecking whether the compiler supports std::unordered_multiset... yes\nchecking whether the compiler supports std::unordered_set... yes\nchecking whether the compiler supports std::hash... yes\nchecking for library containing dlopen... none required\nchecking whether the c++ compiler supports dlopen/dlsym/dlclose... yes\nchecking whether the compiler supports GCC C++ ABI name demangling... yes\nchecking whether the c++ compiler supports glibc backtrace... yes\nchecking if errno.h can be wrapped in namespace... yes\n---------------------------------------------\n----- Done configuring compiler features ----\n---------------------------------------------\n---------------------------------------------\n----- Configuring core library features -----\n---------------------------------------------\nconfiguring gdb command... \"no\"\n>>> INFO: Disabling library warnings <<<\n>>> Configuring library without warnings <<<\n<<< Configuring library with deprecated code support >>>\n../configure: line 48474: irrelevant=yes: command not found\n<<< Configuring library to require ``include \"libmesh/etc.h\"'' style >>>\n<<< Configuring library to keep names in libMesh namespace >>>\nconfiguring size of boundary_id... 2\nconfiguring size of dof_id... 4\nconfiguring size of processor_id... 4\nconfiguring size of subdomain_id... 2\n<<< Configuring library with unique id support >>>\nconfiguring size of unique_id... 8\n<<< Configuring library with AMR support >>>\n<<< Configuring library with variational smoother support >>>\n<<< Configuring library with periodic BC support >>>\n<<< Configuring library with Dirichlet constraint support >>>\n<<< --enable-parmesh is deprecated; use --enable-distmesh >>>\nconfiguring size of mapvector chunks: 1\n<<< Configuring library to use ghosted local vectors >>>\n<<< Configuring library to store node valence >>>\n<<< Configuring library with higher order p-FEM shapes >>>\n<<< Configuring library with second derivatives >>>\n<<< Configuring library with real number support >>>\n<<< Configuring library with reference counting support >>>\n<<< Configuring library example suite support >>>\n---------------------------------------------\n-- Done configuring core library features ---\n---------------------------------------------\n---------------------------------------------\n----- Configuring for optional packages -----\n---------------------------------------------\nchecking for built-in XDR support... no\nchecking for XDR support in /usr/include/tirpc... yes\nchecking for boostlib >= 1.57.0... yes\n<<< Using external boost installation >>>\nchecking for boost::movelib::unique_ptr support... yes\nnote: Checking /lib and /include for MPI\nnote: Could not find /lib/libmpi(.a/.so/.dylib)\nmpicxx Compiler Supports MPI \n<<< Found PETSc 3.20.3 installation in /home/vikramr/projects/moose/scripts/../petsc ... >>>\nchecking whether we can compile a trivial PETSc program... no\nchecking for TAO support via PETSc... no\nconfigure: error: *** PETSc was not found, but --enable-petsc-required was specified.\nRunning make -j 6...\nmake: *** No targets specified and no makefile found.  Stop.\n\nConfiguring wasp build directory\n\n-- PROJECT_SOURCE_DIR='/home/vikramr/projects/moose/framework/contrib/wasp'\n-- PROJECT_BINARY_DIR='/home/vikramr/projects/moose/framework/contrib/wasp/build'\n-- wasp_TRIBITS_DIR='/home/vikramr/projects/moose/framework/contrib/wasp/TriBITS/tribits'\n-- TriBITS_VERSION_STRING='0.9 (Dev)'\n-- CMAKE_VERSION='3.22.1'\n-- CMAKE_GENERATOR='Unix Makefiles'\n-- CMAKE_HOST_SYSTEM_NAME='Linux'\n-- wasp_HOSTNAME='VikramRoy'\n-- Could NOT find PythonInterp (missing: PYTHON_EXECUTABLE) (Required is at least version \"2.6\")\n-- PYTHON_EXECUTABLE='PYTHON_EXECUTABLE-NOTFOUND'\n\nSetting up major user options ...\n\nCMake Warning (dev) at TriBITS/tribits/core/utils/AdvancedSet.cmake:57 (SET):\n  implicitly converting 'FILENAME' to 'STRING' type.\nCall Stack (most recent call first):\n  TriBITS/tribits/core/package_arch/TribitsGlobalMacros.cmake:666 (ADVANCED_SET)\n  TriBITS/tribits/core/package_arch/TribitsProjectImpl.cmake:124 (TRIBITS_DEFINE_GLOBAL_OPTIONS_AND_DEFINE_EXTRA_REPOS)\n  TriBITS/tribits/core/package_arch/TribitsProjectImpl.cmake:341 (TRIBITS_PROJECT_IMPL)\n  CMakeLists.txt:96 (TRIBITS_PROJECT_ENABLE_ALL)\nThis warning is for project developers.  Use -Wno-dev to suppress it.\n\n-- Setting up testframework...\n-- Adding /home/vikramr/projects/moose/framework/contrib/wasp/testframework/modules to CMAKE_MODULE_PATH\n-- Evaluating generation of DOCX and PDF...\n-- DOCX : '/home/vikramr/projects/moose/framework/contrib/wasp/build/WorkbenchAnalysisSequenceProcessor.docx'\n-- PDF : '/home/vikramr/projects/moose/framework/contrib/wasp/build/WorkbenchAnalysisSequenceProcessor.pdf'\n-- Found sed: '/usr/bin/sed'\n-- Adding MD copy target for 'README.md'\n-- Adding MD copy target for 'waspcore/README.md'\n-- Adding MD copy target for 'waspexpr/README.md'\n-- Adding MD copy target for 'wasphive/README.md'\n-- Adding MD copy target for 'waspsiren/README.md'\n-- Adding MD copy target for 'waspson/README.md'\n-- Adding MD copy target for 'waspddi/README.md'\n-- Adding MD copy target for 'waspeddi/README.md'\n-- Adding MD copy target for 'wasphalite/README.md'\n-- Adding MD copy target for 'wasplsp/README.md'\n-- Adding MD copy target for 'wasputils/README.md'\n-- Adding MD copy target for 'wasppy/README.md'\n-- Transformation copy logic : COMMAND;/usr/bin/cmake;-E;copy;\"/home/vikramr/projects/moose/framework/contrib/wasp/README.md\";\"/home/vikramr/projects/moose/framework/contrib/wasp/build/README.md\";COMMAND;/usr/bin/cmake;-E;copy;\"/home/vikramr/projects/moose/framework/contrib/wasp/waspcore/README.md\";\"/home/vikramr/projects/moose/framework/contrib/wasp/build/waspcore/README.md\";COMMAND;/usr/bin/cmake;-E;copy;\"/home/vikramr/projects/moose/framework/contrib/wasp/waspexpr/README.md\";\"/home/vikramr/projects/moose/framework/contrib/wasp/build/waspexpr/README.md\";COMMAND;/usr/bin/cmake;-E;copy;\"/home/vikramr/projects/moose/framework/contrib/wasp/wasphive/README.md\";\"/home/vikramr/projects/moose/framework/contrib/wasp/build/wasphive/README.md\";COMMAND;/usr/bin/cmake;-E;copy;\"/home/vikramr/projects/moose/framework/contrib/wasp/waspsiren/README.md\";\"/home/vikramr/projects/moose/framework/contrib/wasp/build/waspsiren/README.md\";COMMAND;/usr/bin/cmake;-E;copy;\"/home/vikramr/projects/moose/framework/contrib/wasp/waspson/README.md\";\"/home/vikramr/projects/moose/framework/contrib/wasp/build/waspson/README.md\";COMMAND;/usr/bin/cmake;-E;copy;\"/home/vikramr/projects/moose/framework/contrib/wasp/waspddi/README.md\";\"/home/vikramr/projects/moose/framework/contrib/wasp/build/waspddi/README.md\";COMMAND;/usr/bin/cmake;-E;copy;\"/home/vikramr/projects/moose/framework/contrib/wasp/waspeddi/README.md\";\"/home/vikramr/projects/moose/framework/contrib/wasp/build/waspeddi/README.md\";COMMAND;/usr/bin/cmake;-E;copy;\"/home/vikramr/projects/moose/framework/contrib/wasp/wasphalite/README.md\";\"/home/vikramr/projects/moose/framework/contrib/wasp/build/wasphalite/README.md\";COMMAND;/usr/bin/cmake;-E;copy;\"/home/vikramr/projects/moose/framework/contrib/wasp/wasplsp/README.md\";\"/home/vikramr/projects/moose/framework/contrib/wasp/build/wasplsp/README.md\";COMMAND;/usr/bin/cmake;-E;copy;\"/home/vikramr/projects/moose/framework/contrib/wasp/wasputils/README.md\";\"/home/vikramr/projects/moose/framework/contrib/wasp/build/wasputils/README.md\";COMMAND;/usr/bin/cmake;-E;copy;\"/home/vikramr/projects/moose/framework/contrib/wasp/wasppy/README.md\";\"/home/vikramr/projects/moose/framework/contrib/wasp/build/wasppy/README.md\"\n-- Adding wasp directories for relative include paths.\n\nReading list of native packages from /home/vikramr/projects/moose/framework/contrib/wasp/PackagesList.cmake\n\n-- wasp_NUM_PACKAGES='2'\n\nReading list of native TPLs from /home/vikramr/projects/moose/framework/contrib/wasp/./TPLsList.cmake\n\n-- wasp_NUM_TPLS='0'\n\nProcessing Project, Repository, and Package dependency files and building internal dependencies graph ...\n\n-- wasp_NUM_SE_PACKAGES='16'\n\nExplicitly enabled packages on input (by user):  0\n\nExplicitly enabled SE packages on input (by user):  waspsiren wasphit wasplsp 3\n\nExplicitly disabled packages on input (by user or by default):  testframework 1\n\nExplicitly disabled SE packages on input (by user or by default):  testframework 1\n\nExplicitly enabled TPLs on input (by user):  0\n\nExplicitly disabled TPLs on input (by user or by default):  0\n\nDisabling all packages that have a required dependency on disabled TPLs and optional package TPL support based on TPL_ENABLE_<TPL>=OFF ...\n\n\nDisabling subpackages for hard disables of parent packages due to wasp_ENABLE_<PARENT_PACKAGE>=OFF ...\n\n\nDisabling forward required SE packages and optional intra-package support that have a dependancy on disabled SE packages wasp_ENABLE_<TRIBITS_PACKAGE>=OFF ...\n\n-- Setting waspcore_ENABLE_TESTS=OFF because waspcore has a required test/example dependence on disabled package testframework\n-- Setting waspcore_ENABLE_EXAMPLES=OFF because waspcore has a required test/example dependence on disabled package testframework\n-- Setting waspsiren_ENABLE_TESTS=OFF because waspsiren has a required test/example dependence on disabled package testframework\n-- Setting waspsiren_ENABLE_EXAMPLES=OFF because waspsiren has a required test/example dependence on disabled package testframework\n-- Setting waspexpr_ENABLE_TESTS=OFF because waspexpr has a required test/example dependence on disabled package testframework\n-- Setting waspexpr_ENABLE_EXAMPLES=OFF because waspexpr has a required test/example dependence on disabled package testframework\n-- Setting waspson_ENABLE_TESTS=OFF because waspson has a required test/example dependence on disabled package testframework\n-- Setting waspson_ENABLE_EXAMPLES=OFF because waspson has a required test/example dependence on disabled package testframework\n-- Setting waspddi_ENABLE_TESTS=OFF because waspddi has a required test/example dependence on disabled package testframework\n-- Setting waspddi_ENABLE_EXAMPLES=OFF because waspddi has a required test/example dependence on disabled package testframework\n-- Setting waspeddi_ENABLE_TESTS=OFF because waspeddi has a required test/example dependence on disabled package testframework\n-- Setting waspeddi_ENABLE_EXAMPLES=OFF because waspeddi has a required test/example dependence on disabled package testframework\n-- Setting waspjson_ENABLE_TESTS=OFF because waspjson has a required test/example dependence on disabled package testframework\n-- Setting waspjson_ENABLE_EXAMPLES=OFF because waspjson has a required test/example dependence on disabled package testframework\n-- Setting wasphive_ENABLE_TESTS=OFF because wasphive has a required test/example dependence on disabled package testframework\n-- Setting wasphive_ENABLE_EXAMPLES=OFF because wasphive has a required test/example dependence on disabled package testframework\n-- Setting wasphit_ENABLE_TESTS=OFF because wasphit has a required test/example dependence on disabled package testframework\n-- Setting wasphit_ENABLE_EXAMPLES=OFF because wasphit has a required test/example dependence on disabled package testframework\n-- Setting wasphalite_ENABLE_TESTS=OFF because wasphalite has a required test/example dependence on disabled package testframework\n-- Setting wasphalite_ENABLE_EXAMPLES=OFF because wasphalite has a required test/example dependence on disabled package testframework\n-- Setting wasplsp_ENABLE_TESTS=OFF because wasplsp has a required test/example dependence on disabled package testframework\n-- Setting wasplsp_ENABLE_EXAMPLES=OFF because wasplsp has a required test/example dependence on disabled package testframework\n-- Setting waspdakota_ENABLE_TESTS=OFF because waspdakota has a required test/example dependence on disabled package testframework\n-- Setting waspdakota_ENABLE_EXAMPLES=OFF because waspdakota has a required test/example dependence on disabled package testframework\n-- Setting wasputils_ENABLE_TESTS=OFF because wasputils has a required test/example dependence on disabled package testframework\n-- Setting wasputils_ENABLE_EXAMPLES=OFF because wasputils has a required test/example dependence on disabled package testframework\n\nEnabling subpackages for hard enables of parent packages due to wasp_ENABLE_<PARENT_PACKAGE>=ON ...\n\n\nEnabling all required (and optional since wasp_ENABLE_ALL_OPTIONAL_PACKAGES=ON) upstream SE packages for current set of enabled packages (wasp_ENABLE_SECONDARY_TESTED_CODE=OFF) ...\n\n-- Setting wasp_ENABLE_waspcore=ON because wasplsp has a required dependence on waspcore\n-- Setting wasp_ENABLE_waspjson=ON because wasplsp has a required dependence on waspjson\n-- Setting wasp_ENABLE_waspson=ON because wasplsp has a required dependence on waspson\n-- Setting wasp_ENABLE_wasphive=ON because wasplsp has a required dependence on wasphive\n-- Setting wasp_ENABLE_wasphalite=ON because wasplsp has a required dependence on wasphalite\n-- Setting wasp_ENABLE_waspexpr=ON because wasphalite has a required dependence on waspexpr\n-- Setting wasp_ENABLE_waspddi=ON because wasphive has a required dependence on waspddi\n\nEnabling all optional intra-package enables <TRIBITS_PACKAGE>_ENABLE_<DEPPACKAGE> that are not currently disabled if both sets of packages are enabled ...\n\n\nEnabling all remaining required TPLs for current set of enabled packages ...\n\n\nEnabling all optional package TPL support <TRIBITS_PACKAGE>_ENABLE_<DEPTPL> not currently disabled for enabled TPLs ...\n\n\nEnabling TPLs based on <TRIBITS_PACKAGE>_ENABLE_<TPL>=ON if TPL is not explicitly disabled ...\n\n\nSet cache entries for optional packages/TPLs and tests/examples for packages actually enabled ...\n\n\nEnabling the shell of non-enabled parent packages (mostly for show) that have at least one subpackage enabled ...\n\n-- Setting wasp_ENABLE_wasp=ON because wasp_ENABLE_waspcore=ON\n\nFinal set of enabled packages:  wasp 1\n\nFinal set of enabled SE packages:  waspcore waspsiren waspexpr waspson waspddi waspjson wasphive wasphit wasphalite wasplsp wasp 11\n\nFinal set of non-enabled packages:  testframework 1\n\nFinal set of non-enabled SE packages:  testframework waspeddi waspdakota wasputils wasppy 5\n\nFinal set of enabled TPLs:  0\n\nFinal set of non-enabled TPLs:  0\n\nProbing the environment ...\n\n-- USE_XSDK_DEFAULTS='FALSE'\n-- BUILD_SHARED_LIBS='ON'\n-- CMAKE_BUILD_TYPE='RELEASE'\n-- The C compiler identification is GNU 11.4.0\n-- Detecting C compiler ABI info\n-- Detecting C compiler ABI info - done\n-- Check for working C compiler: /usr/bin/mpicc - skipped\n-- Detecting C compile features\n-- Detecting C compile features - done\n-- CMAKE_C_COMPILER_ID='GNU'\n-- CMAKE_C_COMPILER_VERSION='11.4.0'\n-- The CXX compiler identification is GNU 11.4.0\n-- Detecting CXX compiler ABI info\n-- Detecting CXX compiler ABI info - done\n-- Check for working CXX compiler: /usr/bin/mpicxx - skipped\n-- Detecting CXX compile features\n-- Detecting CXX compile features - done\n-- CMAKE_CXX_COMPILER_ID='GNU'\n-- CMAKE_CXX_COMPILER_VERSION='11.4.0'\n-- wasp_SET_INSTALL_RPATH='TRUE'\n-- CMAKE_INSTALL_RPATH_USE_LINK_PATH='TRUE'\n-- CMAKE_INSTALL_RPATH='/home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib;$ORIGIN/../lib'\n-- Looking for C++ include sys/time.h\n-- Looking for C++ include sys/time.h - found\n-- Looking for C++ include time.h\n-- Looking for C++ include time.h - found\n-- Looking for C++ include stdint.h\n-- Looking for C++ include stdint.h - found\n-- Looking for C++ include inttypes.h\n-- Looking for C++ include inttypes.h - found\n-- Found Perl: /usr/bin/perl (found version \"5.34.0\") \n-- Search for C++11 compiler flag ...\n-- Performing Test CXX11_FLAGS_COMPILE_RESULT_0\n-- Performing Test CXX11_FLAGS_COMPILE_RESULT_0 - Success\n-- Successful C++11 flag: '-std=c++11'\n-- Performing Test CXX11_CONSECUTIVE_RIGHT_ANGLE_BRACKETS\n-- Performing Test CXX11_CONSECUTIVE_RIGHT_ANGLE_BRACKETS - Success\n-- Performing Test CXX11_AUTOTYPEDVARIABLES\n-- Performing Test CXX11_AUTOTYPEDVARIABLES - Success\n-- Performing Test CXX11_LAMBDAS\n-- Performing Test CXX11_LAMBDAS - Success\n-- wasp_ENABLE_CXX11=ON\n-- Performing Test MATH_LIBRARY_IS_SUPPLIED\n-- Performing Test MATH_LIBRARY_IS_SUPPLIED - Success\n-- Performing Test FINITE_VALUE_HAVE_GLOBAL_ISNAN\n-- Performing Test FINITE_VALUE_HAVE_GLOBAL_ISNAN - Failed\n-- Performing Test FINITE_VALUE_HAVE_STD_ISNAN\n-- Performing Test FINITE_VALUE_HAVE_STD_ISNAN - Success\n-- Performing Test FINITE_VALUE_HAVE_GLOBAL_ISINF\n-- Performing Test FINITE_VALUE_HAVE_GLOBAL_ISINF - Failed\n-- Performing Test FINITE_VALUE_HAVE_STD_ISINF\n-- Performing Test FINITE_VALUE_HAVE_STD_ISINF - Success\n-- Could NOT find Doxygen (missing: DOXYGEN_EXECUTABLE) \n\nGetting information for all enabled TPLs ...\n\n\nSetting up testing support ...\n\n\nConfiguring individual enabled wasp packages ...\n\nProcessing enabled package: wasp (core, siren, expr, son, ddi, json, hive, hit, halite, lsp)\n-- Performing Test WASP_USE_CXX_FLAG__Wno_deprecated_register\n-- Performing Test WASP_USE_CXX_FLAG__Wno_deprecated_register - Success\n--NOTICE: Flex not found. Generating/updating lexer disabled.\n--NOTICE: Flex not found. Generating/updating lexer disabled.\n--NOTICE: Flex not found. Generating/updating lexer disabled.\n--NOTICE: Flex not found. Generating/updating lexer disabled.\n--NOTICE: Flex not found. Generating/updating lexer disabled.\n-- Performing Test WASP_USE_CXX_FLAG__wd4146\n-- Performing Test WASP_USE_CXX_FLAG__wd4146 - Failed\n-- Performing Test WASP_USE_CXX_FLAG__wd4018\n-- Performing Test WASP_USE_CXX_FLAG__wd4018 - Failed\n--NOTICE: Flex not found. Generating/updating lexer disabled.\n\nNo ETI support requested by packages.\n\n\nSkipping setup for distribution because wasp_ENABLE_CPACK_PACKAGING=OFF\n\n\nFinished configuring wasp!\n\n-- Configuring done\n-- Generating done\n-- Build files have been written to: /home/vikramr/projects/moose/framework/contrib/wasp/build\n[  4%] Building CXX object waspcore/CMakeFiles/waspcore.dir/Definition.cpp.o\n[  4%] Building CXX object waspcore/CMakeFiles/waspcore.dir/Interpreter.cpp.o\n[  8%] Building CXX object waspcore/CMakeFiles/waspcore.dir/Object.cpp.o\n[  8%] Building CXX object waspcore/CMakeFiles/waspcore.dir/utils.cpp.o\n[  8%] Built target copy_md\n[  8%] Built target sed_md\n[ 10%] Combining README.md;waspcore/README.md;waspexpr/README.md;wasphive/README.md;waspsiren/README.md;waspson/README.md;waspddi/README.md;waspeddi/README.md;wasphalite/README.md;wasplsp/README.md;wasputils/README.md;wasppy/README.md into WASP_README.md\n[ 10%] Built target combine_md\n[ 13%] Linking CXX shared library libwaspcore.so\n[ 13%] Built target waspcore\n[ 15%] Building CXX object waspsiren/CMakeFiles/waspsiren.dir/SIRENLexer.cpp.o\n[ 17%] Building CXX object waspsiren/CMakeFiles/waspsiren.dir/SIRENParser.cpp.o\n[ 19%] Building CXX object waspson/CMakeFiles/waspson.dir/SONLexer.cpp.o\n[ 21%] Building CXX object waspexpr/CMakeFiles/waspexpr.dir/ExprContext.cpp.o\n[ 23%] Building CXX object wasphit/CMakeFiles/wasphit.dir/HITLexer.cpp.o\n[ 26%] Building CXX object waspjson/CMakeFiles/waspjson.dir/JSONLexer.cpp.o\n[ 28%] Building CXX object wasphit/CMakeFiles/wasphit.dir/HITParser.cpp.o\n[ 30%] Building CXX object waspjson/CMakeFiles/waspjson.dir/JSONParser.cpp.o\n[ 32%] Building CXX object waspson/CMakeFiles/waspson.dir/SONParser.cpp.o\n[ 34%] Building CXX object wasphit/CMakeFiles/wasphit.dir/HITNodeView.cpp.o\n[ 36%] Linking CXX shared library libwaspsiren.so\n[ 36%] Built target waspsiren\n[ 39%] Building CXX object waspson/CMakeFiles/waspson.dir/SONNodeView.cpp.o\n[ 41%] Building CXX object waspexpr/CMakeFiles/waspexpr.dir/ExprLexer.cpp.o\n[ 43%] Building CXX object waspexpr/CMakeFiles/waspexpr.dir/ExprParser.cpp.o\n[ 45%] Linking CXX shared library libwasphit.so\n[ 47%] Building CXX object waspjson/CMakeFiles/waspjson.dir/JSONNodeView.cpp.o\n[ 47%] Built target wasphit\n[ 50%] Building CXX object wasphive/CMakeFiles/wasphive.dir/HIVE.cpp.o\n[ 52%] Building CXX object waspjson/CMakeFiles/waspjson.dir/JSONObjectLexer.cpp.o\n[ 54%] Linking CXX shared library libwaspson.so\n[ 54%] Built target waspson\n[ 56%] Building CXX object waspjson/CMakeFiles/waspjson.dir/JSONObjectParser.cpp.o\n[ 58%] Building CXX object waspddi/CMakeFiles/waspddi.dir/DDILexer.cpp.o\n[ 60%] Building CXX object waspddi/CMakeFiles/waspddi.dir/DDIParser.cpp.o\n[ 63%] Building CXX object waspddi/CMakeFiles/waspddi.dir/DDINodeView.cpp.o\n[ 65%] Linking CXX shared library libwaspexpr.so\n[ 65%] Built target waspexpr\n[ 67%] Building CXX object waspexpr/CMakeFiles/exprlist.dir/ListExpr.cpp.o\n[ 69%] Linking CXX shared library libwasphive.so\n[ 69%] Built target wasphive\n[ 71%] Linking CXX shared library libwaspjson.so\n[ 71%] Built target waspjson\n[ 76%] Building CXX object wasphalite/CMakeFiles/wasphalite.dir/DataAccessor.cpp.o\n[ 80%] Building CXX object wasplsp/CMakeFiles/wasplsp.dir/ServerImpl.cpp.o\n[ 80%] Building CXX object wasplsp/CMakeFiles/wasplsp.dir/ClientImpl.cpp.o\n[ 80%] Building CXX object wasplsp/CMakeFiles/wasplsp.dir/LSP.cpp.o\n[ 82%] Linking CXX shared library libwaspddi.so\n[ 82%] Built target waspddi\n[ 84%] Building CXX object wasphalite/CMakeFiles/wasphalite.dir/SubStringIndexer.cpp.o\n/home/vikramr/projects/moose/framework/contrib/wasp/wasplsp/LSP.cpp: In function \u2018bool wasp::lsp::RPCStringToObject(const string&, wasp::DataObject&, std::ostream&)\u2019:\n/home/vikramr/projects/moose/framework/contrib/wasp/wasplsp/LSP.cpp:73:67: warning: comparison of integer expressions of different signedness: \u2018long unsigned int\u2019 and \u2018int\u2019 [-Wsign-compare]\n   73 |     if ( full_buffer.eof() || rpcstr.size() - full_buffer.tellg() != content_length_val )\n      |                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~\n[ 86%] Building CXX object wasplsp/CMakeFiles/wasplsp.dir/SymbolIterator.cpp.o\n[ 89%] Building CXX object wasphalite/CMakeFiles/wasphalite.dir/HaliteWorkflow.cpp.o\n[ 91%] Building CXX object wasplsp/CMakeFiles/wasplsp.dir/LSPInterpreter.cpp.o\n/home/vikramr/projects/moose/framework/contrib/wasp/wasplsp/LSPInterpreter.cpp: In member function \u2018bool wasp::lsp::LSPInterpreter::addSymbolsToTree(wasp::lsp::SymbolIterator::SP&)\u2019:\n/home/vikramr/projects/moose/framework/contrib/wasp/wasplsp/LSPInterpreter.cpp:366:70: warning: comparison of integer expressions of different signedness: \u2018size_t\u2019 {aka \u2018long unsigned int\u2019} and \u2018int\u2019 [-Wsign-compare]\n  366 |         if ( additional_new_lines == 0 && ( previous_symbol_end_line == symbol_start_line ) )\n      |                                             ~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~\n[ 93%] Linking CXX executable exprlist\n[ 93%] Built target exprlist\n[ 95%] Building CXX object wasphalite/CMakeFiles/wasphalite.dir/HaliteNodeView.cpp.o\nAt global scope:\ncc1plus: note: unrecognized command-line option \u2018-Wno-deprecated-register\u2019 may have been intended to silence earlier diagnostics\nAt global scope:\ncc1plus: note: unrecognized command-line option \u2018-Wno-deprecated-register\u2019 may have been intended to silence earlier diagnostics\n[ 97%] Linking CXX shared library libwasplsp.so\n[ 97%] Built target wasplsp\n[100%] Linking CXX shared library libwasphalite.so\n[100%] Built target wasphalite\nInstall the project...\n-- Install configuration: \"RELEASE\"\n-- Installing: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/./WASP_README.md\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/./LICENSE\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/scripts/test_moose_app_integration.sh\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/scripts/test_moose_app_integration.sh\n-- Installing: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwaspcore.so.4.3.0\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwaspcore.so.04\n-- Set runtime path of \"/home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwaspcore.so.4.3.0\" to \"/home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib:$ORIGIN/../lib\"\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwaspcore.so\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspcore/Definition.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspcore/Format.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspcore/FlexLexer.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspcore/Interpreter.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspcore/Interpreter.i.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspcore/Iterator.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspcore/location.hh\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspcore/Object.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspcore/StringPool.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspcore/StringPool.i.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspcore/TokenPool.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspcore/TokenPool.i.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspcore/TreeNodePool.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspcore/TreeNodePool.i.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspcore/utils.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspcore/decl.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspcore/wasp_bug.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspcore/wasp_node.h\n-- Installing: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwaspsiren.so.4.3.0\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwaspsiren.so.04\n-- Set runtime path of \"/home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwaspsiren.so.4.3.0\" to \"/home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib:$ORIGIN/../lib\"\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwaspsiren.so\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspsiren/SIRENInterpreter.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspsiren/SIRENInterpreter.i.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspsiren/SIRENLexer.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspsiren/SIRENLexer.lex\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspsiren/SIRENParser.bison\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspsiren/SIRENParser.hpp\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspsiren/SIRENResultSet.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspsiren/SIRENResultSet.i.h\n-- Installing: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwaspexpr.so.4.3.0\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwaspexpr.so.04\n-- Set runtime path of \"/home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwaspexpr.so.4.3.0\" to \"/home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib:$ORIGIN/../lib\"\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwaspexpr.so\n-- Installing: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/bin/exprlist\n-- Set runtime path of \"/home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/bin/exprlist\" to \"/home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib:$ORIGIN/../lib\"\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspexpr/ExprContext.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspexpr/ExprLexer.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspexpr/ExprParser.hpp\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspexpr/ExprInterpreter.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspexpr/ExprInterpreter.i.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspexpr/Expr.lex\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspexpr/Expr.bison\n-- Installing: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwaspson.so.4.3.0\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwaspson.so.04\n-- Set runtime path of \"/home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwaspson.so.4.3.0\" to \"/home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib:$ORIGIN/../lib\"\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwaspson.so\n-- Installing: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspson/son_config.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspson/SONInterpreter.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspson/SONInterpreter.i.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspson/SONLexer.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspson/SONLexer.lex\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspson/SONNodeView.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspson/SONNodeView.i.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspson/SONParser.bison\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspson/SONParser.hpp\n-- Installing: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwaspddi.so.4.3.0\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwaspddi.so.04\n-- Set runtime path of \"/home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwaspddi.so.4.3.0\" to \"/home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib:$ORIGIN/../lib\"\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwaspddi.so\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspddi/DDILexer.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspddi/DDILexer.lex\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspddi/DDINodeView.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspddi/DDINodeView.i.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspddi/DDIParser.bison\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspddi/DDIParser.hpp\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspddi/DDInterpreter.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspddi/DDInterpreter.i.h\n-- Installing: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwaspjson.so.4.3.0\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwaspjson.so.04\n-- Set runtime path of \"/home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwaspjson.so.4.3.0\" to \"/home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib:$ORIGIN/../lib\"\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwaspjson.so\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspjson/JSONInterpreter.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspjson/JSONInterpreter.i.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspjson/JSONLexer.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspjson/JSONLexer.lex\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspjson/JSONNodeView.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspjson/JSONNodeView.i.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspjson/JSONObjectLexer.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspjson/JSONObjectLexer.lex\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspjson/JSONObjectParser.bison\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspjson/JSONObjectParser.hpp\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspjson/JSONParser.bison\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/waspjson/JSONParser.hpp\n-- Installing: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwasphive.so.4.3.0\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwasphive.so.04\n-- Set runtime path of \"/home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwasphive.so.4.3.0\" to \"/home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib:$ORIGIN/../lib\"\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwasphive.so\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/wasphive/AlphaNum.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/wasphive/HIVE.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/wasphive/HIVE.i.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/wasphive/InputDefinition.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/wasphive/InputDefinition.i.h\n-- Installing: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwasphit.so.4.3.0\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwasphit.so.04\n-- Set runtime path of \"/home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwasphit.so.4.3.0\" to \"/home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib:$ORIGIN/../lib\"\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwasphit.so\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/wasphit/HITLexer.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/wasphit/HITParser.hpp\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/wasphit/HITInterpreter.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/wasphit/HITInterpreter.i.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/wasphit/HITNodeView.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/wasphit/HITNodeView.i.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/wasphit/HIT.lex\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/wasphit/HIT.bison\n-- Installing: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwasphalite.so.4.3.0\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwasphalite.so.04\n-- Set runtime path of \"/home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwasphalite.so.4.3.0\" to \"/home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib:$ORIGIN/../lib\"\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwasphalite.so\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/wasphalite/DataAccessor.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/wasphalite/HaliteInterpreter.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/wasphalite/HaliteInterpreter.i.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/wasphalite/HaliteNodeView.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/wasphalite/HaliteNodeView.i.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/wasphalite/HaliteWorkflow.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/wasphalite/SubStringIndexer.h\n-- Installing: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwasplsp.so.4.3.0\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwasplsp.so.04\n-- Set runtime path of \"/home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwasplsp.so.4.3.0\" to \"/home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib:$ORIGIN/../lib\"\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/lib/libwasplsp.so\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/wasplsp/Client.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/wasplsp/ClientImpl.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/wasplsp/Connection.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/wasplsp/IOStreamConnection.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/wasplsp/LSP.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/wasplsp/LSPInterpreter.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/wasplsp/Server.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/wasplsp/ServerImpl.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/wasplsp/SymbolIterator.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/wasplsp/ThreadConnection.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/wasplsp/WaspServer.h\n-- Up-to-date: /home/vikramr/projects/moose/scripts/../framework/contrib/wasp/install/include/wasplsp/WaspServer.i.h\n\nKindly suggest what is wrong in above process and how do I install moose correctly. Thankyou\nDiagnostics for MOOSE installation issues\nvikramr@VikramRoy:~/projects/moose/scripts$ ./diagnostics.sh\n##################################################################################################\nInfluential Environment Variables\nCC=mpicc\nCONDA_CHANNEL=https://conda.software.inl.gov/public\nCURL_CA_BUNDLE=\nCXX=mpicxx\nF77=mpif77\nF90=mpif90\nFC=mpif90\nLD_LIBRARY_PATH=/usr/local/cuda-12.4/lib64:/usr/local/cuda-12.4/lib64\nMOOSE_JOBS=6\nPATH=/home/vikramr/Phd/Paradis/KGParadis/bin:/usr/local/cuda-12.4/bin:/home/vikramr/Phd/Paradis/KGParadis/bin:/usr/local/cuda-12.4/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin\nREQUESTS_CA_BUNDLE=\nSSL_CERT_FILE=\n##################################################################################################\nCompiler(s) (CC CXX FC F77 F90):\nCC=/usr/bin/mpicc\nCC -show:\ngcc -I/usr/lib/x86_64-linux-gnu/openmpi/include -I/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi -L/usr/lib/x86_64-linux-gnu/openmpi/lib -lmpi\nCC version:     gcc (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0\nCXX=/usr/bin/mpicxx\nCXX -show:\ng++ -I/usr/lib/x86_64-linux-gnu/openmpi/include -I/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi -L/usr/lib/x86_64-linux-gnu/openmpi/lib -lmpi_cxx -lmpi\nCXX version:    g++ (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0\nFC=/usr/bin/mpif90\nFC -show:\ngfortran -I/usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi -I/usr/lib/x86_64-linux-gnu/openmpi/lib -L/usr/lib/x86_64-linux-gnu/openmpi/lib/fortran/gfortran -lmpi_usempif08 -lmpi_usempi_ignore_tkr -lmpi_mpifh -lmpi -lopen-rte -lopen-pal -lhwloc -levent_core -levent_pthreads -lm -lz\nFC version:     GNU Fortran (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0\nF77=/usr/bin/mpif77\nF77 -show:\ngfortran -I/usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi -I/usr/lib/x86_64-linux-gnu/openmpi/lib -L/usr/lib/x86_64-linux-gnu/openmpi/lib/fortran/gfortran -lmpi_usempif08 -lmpi_usempi_ignore_tkr -lmpi_mpifh -lmpi -lopen-rte -lopen-pal -lhwloc -levent_core -levent_pthreads -lm -lz\nF77 version:    GNU Fortran (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0\nF90=/usr/bin/mpif90\nF90 -show:\ngfortran -I/usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi -I/usr/lib/x86_64-linux-gnu/openmpi/lib -L/usr/lib/x86_64-linux-gnu/openmpi/lib/fortran/gfortran -lmpi_usempif08 -lmpi_usempi_ignore_tkr -lmpi_mpifh -lmpi -lopen-rte -lopen-pal -lhwloc -levent_core -levent_pthreads -lm -lz\nF90 version:    GNU Fortran (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0\nOK\n##################################################################################################\nPython Sanity Checks\nVerify /usr/bin/env python3 --version (reporting as: Python 3.10.12),\nmatches versions for: which python3 && which python\nWARNING: python does not exist\nThis does not mean there will be a failure, but some shebangs in some python\nfiles may still be relying on calling: /usr/bin/env python (Python 2.x era)\nOK\n##################################################################################################\nPython Modules (TestHarness, run-ability)\nOK",
+          "url": "https://github.com/idaholab/moose/discussions/27833",
+          "updatedAt": "2024-06-09T03:38:20Z",
+          "publishedAt": "2024-06-08T08:01:50Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThe petsc install step failed\n*********************************************************************************************\n           UNABLE to CONFIGURE with GIVEN OPTIONS (see configure.log for details):\n---------------------------------------------------------------------------------------------\n  Error during download/extract/detection of FBLASLAPACK:\n  Unknown compression type in URL: /home/vikramr/projects/downloads/pkg-fblaslapack\n*********************************************************************************************\n\nThere was an error. Exiting...\n\nso there is no point moving forward to installing libmesh. It will fail, it requires petsc.\nIt seems the FBLASLAPACK package is not downloaded properly. Maybe it got corrupted somehow.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/27833#discussioncomment-9717275",
+                  "updatedAt": "2024-06-09T03:38:21Z",
+                  "publishedAt": "2024-06-09T03:38:20Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Volume integration over \"half\" of my mesh",
+          "author": {
+            "login": "mangerij"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nHello,\nI want to only volume integrate an AuxVariable half of my mesh. I found InternalVolume which seems to do what I would like... but all of the examples define a region with a boundary/sideset. I would like:\nIntegrate this quantity from -xmin to xmax, -ymin to ymax and 0 to zmax (or zmin to 0)\nParaView can do this quite fast by using the Clip filter and the selecting the IntegrateVariables filter but I want to track this quantity over 1000s of time steps. Making a subdomain is not possible because I am using tets and it will be rather tricky to pick out the nodes that sit around the z = 0.0 point.\nAny ideas? Thanks!",
+          "url": "https://github.com/idaholab/moose/discussions/27823",
+          "updatedAt": "2024-06-08T08:46:06Z",
+          "publishedAt": "2024-06-07T15:52:22Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nif you do NOT want to add a new block to the simulation, then this is what the MeshDivision system is for.\nCreate a mesh division that cuts the mesh in two region\nhttps://mooseframework.inl.gov/source/meshdivisions/CartesianGridDivision.html\nUse this VPP to integrate separately over the two regions\nhttps://mooseframework.inl.gov/source/vectorpostprocessors/MeshDivisionFunctorReductionVectorPostprocessor.html\nSet the variable as the functor.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/27823#discussioncomment-9711094",
+                  "updatedAt": "2024-06-08T06:50:37Z",
+                  "publishedAt": "2024-06-08T06:50:36Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mangerij"
+                          },
+                          "bodyText": "Guillaume, this works with tets?",
+                          "url": "https://github.com/idaholab/moose/discussions/27823#discussioncomment-9711467",
+                          "updatedAt": "2024-06-08T07:43:31Z",
+                          "publishedAt": "2024-06-08T07:43:31Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "It works if the tets are aligned with the half boundary",
+                          "url": "https://github.com/idaholab/moose/discussions/27823#discussioncomment-9711729",
+                          "updatedAt": "2024-06-08T08:24:29Z",
+                          "publishedAt": "2024-06-08T08:24:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "If they are not you can use any other type of mesh division. Something like Function bins with a ParsedFunction is probably able to catch other simple subdivisions",
+                          "url": "https://github.com/idaholab/moose/discussions/27823#discussioncomment-9711860",
+                          "updatedAt": "2024-06-08T08:46:06Z",
+                          "publishedAt": "2024-06-08T08:46:06Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Irregular Geometry",
+          "author": {
+            "login": "engrmessi"
+          },
+          "bodyText": "I am struggling with how to create an irregular pit shape for my phase field simulation. Please see attached",
+          "url": "https://github.com/idaholab/moose/discussions/27826",
+          "updatedAt": "2024-06-08T06:45:48Z",
+          "publishedAt": "2024-06-07T16:28:46Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nIf you have the analytical description of this shape use a ParsedFunction and a FUnctionIC\nIf you have pictures of the irregular shape you can try an ImageFunction and a FunctionIC.\nElse you'll want to write a new Function object to describe the shape and use a FunctionIC\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/27826#discussioncomment-9711076",
+                  "updatedAt": "2024-06-08T06:45:48Z",
+                  "publishedAt": "2024-06-08T06:45:47Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

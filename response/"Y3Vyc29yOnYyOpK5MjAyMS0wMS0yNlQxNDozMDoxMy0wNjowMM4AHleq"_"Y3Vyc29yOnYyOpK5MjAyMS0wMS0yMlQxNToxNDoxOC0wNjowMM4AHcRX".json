@@ -1,0 +1,1145 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMS0wMS0yMlQxNToxNDoxOC0wNjowMM4AHcRX"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "When are materials evaluated?",
+          "author": {
+            "login": "matthiasneuner"
+          },
+          "bodyText": "Hello, I am trying to figuring out how and when materials are evaluated during a transient simulation using the classical NEWTON scheme.\nAssume that I have a simple linear stress-strain material for the tensor mechanics module. Within computeQpProperties(),  both the 1) current stress and 2) the derivative Jacobian_mult for assembling the Jacobian are computed simultaneously. Such a simultaneous computation is reasonable for e.g., plasticity models, where the jacobian is computed as a byproduct of the return mapping algorithm.\nConsidering a single element with a single quadrature point, a simple print statement gives me following output:\nTime Step 0, time = 0                                                                                                                                                                    \n                                                                                                                                                                                         \nTime Step 1, time = 0.1, dt = 0.1                                                                                                                                                        \nMaterial @ qp 0 evaluated                         # evaluation n.1 with zero strain                                                                                                                                                          \nMaterial @ qp 0 evaluated                         # evaluation n.2  for computing the residual                                                                                                                                       \n 0 Nonlinear |R| = 1.414214e-01                                                                                                                                                          \nMaterial @ qp 0 evaluated                         # evaluation n.3 for computing the Jacobian                                                                                                                                      \n      0 Linear |R| = 1.414214e-01                                                                                                                                                        \n      1 Linear |R| = 2.220446e-17                                                                                                                                                        \n  Linear solve converged due to CONVERGED_RTOL iterations 1                                                                                                                              \nMaterial @ qp 0 evaluated                         # evaluation n.4 for checking convergence after solving                                                                                                                                       \n 1 Nonlinear |R| = 3.925231e-17                                                                                                                                                            \nNonlinear solve converged due to CONVERGED_FNORM_ABS iterations 1                                                                                                                        \n Solve Converged!                                                                                                                                                                        \n                                                                                                                                                                                         \nOutlier Variable Residual Norms:                                                                                                                                                         \n  disp_x: 3.925231e-17\n\nTime Step 2, time = 0.2, dt = 0.1\nMaterial @ qp 0 evaluated \nMaterial @ qp 0 evaluated \n 0 Nonlinear |R| = 1.414214e-01\nMaterial @ qp 0 evaluated \n      0 Linear |R| = 1.414214e-01\n      1 Linear |R| = 2.220446e-17\n  Linear solve converged due to CONVERGED_RTOL iterations 1\nMaterial @ qp 0 evaluated \n 1 Nonlinear |R| = 0.000000e+00\nNonlinear solve converged due to CONVERGED_FNORM_ABS iterations 1\n Solve Converged!\n\nSo, within each time step, the material is evaluated 4 times (!), which seems a lot for a linear simulation.\n\nThe first evaluation is unclear to me,\nthe second one is for computing the residual,\nthe third one is for computing the Jacobian,\nand the fourth one is for checking convergence (which is trivially satisfied after one iteration in this example).\n\nMy questions are:\n\nWhy is the first evaluation performed in each time step with a zero strain increment?\nWhy are evaluation 2 and evaluation 3 separated, although properties stress and Jacobian_mult are computed simultenously (which means that it is readily available after evaluation 2, evalation 3 is performed with the exact same solution and accordingly, produces the same result)?\n\nThank you in advance !",
+          "url": "https://github.com/idaholab/moose/discussions/16710",
+          "updatedAt": "2022-07-07T00:39:24Z",
+          "publishedAt": "2021-01-15T17:29:21Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@rwcarlsen might be able to help on this as I think he's looking into this now",
+                  "url": "https://github.com/idaholab/moose/discussions/16710#discussioncomment-299211",
+                  "updatedAt": "2022-07-07T00:39:28Z",
+                  "publishedAt": "2021-01-21T14:39:01Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "rwcarlsen"
+                  },
+                  "bodyText": "Evaluations 2 and 3 (residual and jac) are indeed a (known) underoptimization in the framework with AD (automatic differentiation) at least.  But it looks like you are using material objects that manually calculate a jacobian contribution along with every residual evaluation. In that case - the material object just needs to be smarter.  Materials can ask the framework what operation (residual/jac) is triggering a given material evaluation - those materials could be updated to query that state and omit unnecessary calcs accordingly.\nWith respect to the redundant work when using AD - there are some subtleties about how the residual and jacobian calcs are integrated between MOOSE and PETSc that make it not quite as straight forward for us to combine them into one evaluation so instead we compute the residual during residual evaluation and then compute the residual and jacobian together during the jacobian evaluation (even though we don't need the residual again).\nI honestly can't remember what the detail is around the 1st evaluation.  Probably @lindsayad or @fdkong could clarify that one.",
+                  "url": "https://github.com/idaholab/moose/discussions/16710#discussioncomment-309199",
+                  "updatedAt": "2022-07-07T00:39:28Z",
+                  "publishedAt": "2021-01-25T17:11:57Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "There are two residual evaluations done before the first jacobian evaluation. The first residual evaluation is done by MOOSE; the second is done by PETSc. This is another known place of under-optimization, at least pending some criteria regarding preset boundary conditions.\nIf you are running a real problem with PJFNK, then the extra residual evaluation in the beginning is not very impactful since you may be doing 10 to 30 residual evaluations per nonlinear iteration.",
+                          "url": "https://github.com/idaholab/moose/discussions/16710#discussioncomment-309466",
+                          "updatedAt": "2022-07-07T00:39:32Z",
+                          "publishedAt": "2021-01-25T18:24:13Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "fdkong"
+                  },
+                  "bodyText": "Why is the first evaluation performed in each time step with a zero strain increment?\n\nWe knew this. It could be optimized out in the future for some cases\n\nWhy are evaluation 2 and evaluation 3 separated, although properties stress and Jacobian_mult are computed simultenously (which means that it is readily available after evaluation 2, evalation 3 is performed with the exact same solution and accordingly, produces the same result)?\n\nJacobian and Residual evaluations are involved from PETSc side via two different call-back functions. The Jacobian evaluation needs to compute material again because we do not store the materials from the earlier residual computation. Materials are expensive to store. That being said, storing materials might use a lot of memory when considering the values at each quadrature point are needed.",
+                  "url": "https://github.com/idaholab/moose/discussions/16710#discussioncomment-309700",
+                  "updatedAt": "2022-07-07T00:39:33Z",
+                  "publishedAt": "2021-01-25T20:00:54Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "matthiasneuner"
+                  },
+                  "bodyText": "Thank you all for the elaborate answers!\nI am dealing mostly with complex (expensive) plasticity models. As mentioned, for such models the (consistent algorithmic) Jacobian is computed as a byproduct along with the return mapping algorithm. A separate computing would require to completely repeat the return mapping algorithm. Accordingly, I believe the same concerns as for AD materials apply.\nHowever, despite the expensive nature of those material models, I am currently surprised that for large scale simulations the overhead of the multiple material evaluation only has negligible influence (In my case: An accumulated Residual/Jacobian percentage of 25% compared to ~75% taken by the linear solve). So I agree that there is not very much potential for optimization.",
+                  "url": "https://github.com/idaholab/moose/discussions/16710#discussioncomment-310757",
+                  "updatedAt": "2022-07-07T00:39:35Z",
+                  "publishedAt": "2021-01-26T08:24:11Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "INL partners with Coreform to improve open-source modeling and simulation tool MOOSE",
+          "author": {
+            "login": "aeslaughter"
+          },
+          "bodyText": "https://inl.gov/article/inl-partners-with-coreform-to-improve-open-source-modeling-and-simulation-tool-moose/",
+          "url": "https://github.com/idaholab/moose/discussions/16774",
+          "updatedAt": "2022-07-07T20:26:50Z",
+          "publishedAt": "2021-01-21T13:31:49Z",
+          "category": {
+            "name": "News"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "mangerij"
+                  },
+                  "bodyText": "Very cool, does this mean there will be some sort of MOOSE system in the works that uses Coreform's tool to optimize simulations?",
+                  "url": "https://github.com/idaholab/moose/discussions/16774#discussioncomment-299110",
+                  "updatedAt": "2022-07-07T20:26:50Z",
+                  "publishedAt": "2021-01-21T14:05:37Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "permcody"
+                          },
+                          "bodyText": "Not in the short term. The immediate focus will be making Cubit a good pre/post processing tool for use with MOOSE.",
+                          "url": "https://github.com/idaholab/moose/discussions/16774#discussioncomment-300802",
+                          "updatedAt": "2022-07-07T20:26:51Z",
+                          "publishedAt": "2021-01-21T21:45:03Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "WilkAndy"
+                  },
+                  "bodyText": "Details?  This sounds important, but i'm not sure exactly what it means to me.\n\na\n\u2026\n________________________________________\nFrom: John <notifications@github.com>\nSent: Friday, 22 January 2021 12:05 AM\nTo: idaholab/moose\nCc: Subscribed\nSubject: Re: [idaholab/moose] INL partners with Coreform to improve open-source modeling and simulation tool MOOSE (#16774)\n\nVery cool, does this mean there will be some sort of MOOSE system in the works that uses Coreform's tool to optimize simulations?\n\n\u2014\nYou are receiving this because you are subscribed to this thread.\nReply to this email directly, view it on GitHub<#16774 (comment)>, or unsubscribe<https://github.com/notifications/unsubscribe-auth/ABS6CVJ46772MQ5M4HHY3NLS3AYEHANCNFSM4WM3W5MA>.",
+                  "url": "https://github.com/idaholab/moose/discussions/16774#discussioncomment-300589",
+                  "updatedAt": "2022-07-07T20:26:51Z",
+                  "publishedAt": "2021-01-21T20:04:52Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "permcody"
+                          },
+                          "bodyText": "Cubit now has a limited free product available. We are continuing to negotiate with Coreform to negotiate both of our business models.",
+                          "url": "https://github.com/idaholab/moose/discussions/16774#discussioncomment-300804",
+                          "updatedAt": "2022-07-07T20:27:00Z",
+                          "publishedAt": "2021-01-21T21:46:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GregVernon"
+                          },
+                          "bodyText": "@WilkAndy To add to what Cody has mentioned, we at Coreform have been collaborating with INL to get smooth-splines supported by MOOSE - via Bezier extraction.  We've been helping/partnering with Roy Stogner to support these elements in libMesh (see GitHub issue), developing a solution for Exodus to support Bezier extraction data-structures (see GitHub issue), we've added support for Bezier cells (the piecewise components of splines) in VTK and they're now supported in ParaView 5.8 and later (see KitWare blog post), and we will soon support exporting Bezier extraction from Coreform Cubit - as a native capability.\nWhat does this mean?  Bezier extraction is the method that links traditional FEM with spline-based FEM.  Thus support of Bezier extraction throughout the FEM workflow (Meshing tool: Cubit; Mesh file: Exodus; FEM library: libMesh; Post-processing: ParaView) enables spline-based FEM to a broad audience. You can think of spline-based FEM as a generalization of FEM that allows for use of smooth basis functions.  Smoothness of the basis can provide benefits like having defined derivatives (face-normals) at element boundaries - making things like contact, ray-tracing, etc. more well-behaved.  Smooth splines have been recognized as being useful for FEM at least since this insightful review paper by Gilbert Strang (1973) of Richard Courant's development of FEM.  We're hopeful that our collaboration will finally enable practical FEM analyses using spline basis functions - and implemented within MOOSE!",
+                          "url": "https://github.com/idaholab/moose/discussions/16774#discussioncomment-309423",
+                          "updatedAt": "2022-07-07T20:27:01Z",
+                          "publishedAt": "2021-01-25T18:06:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "fdkong"
+                          },
+                          "bodyText": "It is an exciting path",
+                          "url": "https://github.com/idaholab/moose/discussions/16774#discussioncomment-309729",
+                          "updatedAt": "2022-07-07T20:27:17Z",
+                          "publishedAt": "2021-01-25T20:12:54Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "MPI - Fatal Error",
+          "author": {
+            "login": "12arya129"
+          },
+          "bodyText": "Hello,\nCan anyone help me with this one? I tried using MPI on one of the examples from Moose Virtual Workshop - Summer 2020, it's working fine with no MPI.\nAm also attaching core numbers.\nThank you",
+          "url": "https://github.com/idaholab/moose/discussions/16799",
+          "updatedAt": "2022-11-24T17:49:12Z",
+          "publishedAt": "2021-01-23T12:43:30Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hi\nHave you tried the solutions proposed in stack_overflow_mpich ?\nIt has to do with the local hosts.\nBest,\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/16799#discussioncomment-304547",
+                  "updatedAt": "2023-01-10T21:42:27Z",
+                  "publishedAt": "2021-01-23T12:51:38Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "12arya129"
+                          },
+                          "bodyText": "Thanks a lot for the link, yes it worked. I changed that hostname of terminal from \"sudo hostnamectl set-hostname xyz\" and edited hostname file with \"sudo nano /etc/hosts\"",
+                          "url": "https://github.com/idaholab/moose/discussions/16799#discussioncomment-308266",
+                          "updatedAt": "2023-01-10T21:42:36Z",
+                          "publishedAt": "2021-01-25T11:34:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "12arya129"
+                          },
+                          "bodyText": "The problem still persists, that earlier code ran but next one gave me the same error. I check the hostname which was same for terminal and the file.\n\nAny suggestions?",
+                          "url": "https://github.com/idaholab/moose/discussions/16799#discussioncomment-308613",
+                          "updatedAt": "2023-01-10T21:42:36Z",
+                          "publishedAt": "2021-01-25T14:11:54Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "What is the contents of your hosts file?\ncat /etc/hosts\n\nAlso, would it be possible to not post pictures of text? The reason for this, is because when searching for relevant issues on the discussion board, it's impossible to search for text inside pictures, and so your issue never comes up (gethostbyname is no-where in this discussion until just now because I wrote it).",
+                          "url": "https://github.com/idaholab/moose/discussions/16799#discussioncomment-308718",
+                          "updatedAt": "2023-01-10T21:54:38Z",
+                          "publishedAt": "2021-01-25T14:45:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "12arya129"
+                          },
+                          "bodyText": "Oh thanks for the advice. Below are the contents\n127.0.0.1 Arya\nThe following lines are desirable for IPv6 capable hosts\n::1     ip6-localhost ip6-loopback\nfe00::0 ip6-localnet\nff00::0 ip6-mcastprefix\nff02::1 ip6-allnodes\nff02::2 ip6-allrouters",
+                          "url": "https://github.com/idaholab/moose/discussions/16799#discussioncomment-309586",
+                          "updatedAt": "2023-01-10T21:54:37Z",
+                          "publishedAt": "2021-01-25T19:09:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "fdkong"
+                          },
+                          "bodyText": "It is interesting. What is the result of  command-line: hostname?\nYou might then = add whatever result you get from the command line to /etc/hosts",
+                          "url": "https://github.com/idaholab/moose/discussions/16799#discussioncomment-309723",
+                          "updatedAt": "2023-01-10T21:54:37Z",
+                          "publishedAt": "2021-01-25T20:10:22Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "warnings when adding DerivativeTwoPhaseMaterial to KKS example",
+          "author": {
+            "login": "jessecarterMOOSE"
+          },
+          "bodyText": "If I add a DerivativeTwoPhaseMaterial to a KKS example problem using this block:\n  [./two_phase]\n    type = DerivativeTwoPhaseMaterial\n    f_name = Fsum\n    args = 'cl cs'\n    eta = eta\n    derivative_order = 2\n    fa_name = fl\n    fb_name = fs\n  [../]    \n\nI get some warnings from the kernels when running the problem:\n*** Warning ***\nMissing coupled variables {eta} (add them to args parameter of ChemPotSolute)\n\n\n*** Warning ***\nMissing coupled variables {eta} (add them to args parameter of ChemPotSolute)\n\n\n*** Warning ***\nMissing coupled variables {eta, cs} (add them to args parameter of CHBulk)\n\nI'm curious why this is. I see now that the kernels mentioned in the warnings take the single-phase chemical energy materials and do not need eta, so the DerivativeTwoPhaseMaterial is adding a global dependency on eta? Is this something I need to worry about? I wouldn't imagine that adding extra variable dependences would matter (except maybe in terms of performance) but wanted to check that this is expected behavior.",
+          "url": "https://github.com/idaholab/moose/discussions/16766",
+          "updatedAt": "2022-07-18T22:43:46Z",
+          "publishedAt": "2021-01-20T20:13:01Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "laagesen"
+                  },
+                  "bodyText": "Hey Jesse, these warnings are triggered by the validateNonlinearCoupling function in initialSetup() for both these kernels. Are you supplying Fsum to these kernels after you added it? I'm guessing not but just wanted to make sure.",
+                  "url": "https://github.com/idaholab/moose/discussions/16766#discussioncomment-300987",
+                  "updatedAt": "2022-07-18T22:44:01Z",
+                  "publishedAt": "2021-01-22T00:00:11Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jessecarterMOOSE"
+                          },
+                          "bodyText": "No I left everything else the same. I'm only making some extra materials for validation/postprocessing reasons.",
+                          "url": "https://github.com/idaholab/moose/discussions/16766#discussioncomment-301021",
+                          "updatedAt": "2022-07-18T22:44:13Z",
+                          "publishedAt": "2021-01-22T00:28:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jessecarterMOOSE"
+                          },
+                          "bodyText": "@laagesen the results come out the same either way, so is it safe to ignore the warnings? Would that always be the case?",
+                          "url": "https://github.com/idaholab/moose/discussions/16766#discussioncomment-309057",
+                          "updatedAt": "2022-07-18T22:44:13Z",
+                          "publishedAt": "2021-01-25T16:31:12Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "laagesen"
+                          },
+                          "bodyText": "Yes it should be safe to ignore it. Although the message is a bit confusing and we will try to look into why it's getting triggered in this situation, which is not desired. In general this warning is only telling you that you are missing coupled variables which might be needed for a calculation of Jacobians. So it should not affect the results you get even in a situation where you are actually missing something. It could potentially make convergence worse, but should not affect the answer you get (assuming convergences tolerances are set to reasonable values).",
+                          "url": "https://github.com/idaholab/moose/discussions/16766#discussioncomment-309427",
+                          "updatedAt": "2022-07-18T22:44:13Z",
+                          "publishedAt": "2021-01-25T18:08:45Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jessecarterMOOSE"
+                          },
+                          "bodyText": "Makes sense. Thanks!",
+                          "url": "https://github.com/idaholab/moose/discussions/16766#discussioncomment-309435",
+                          "updatedAt": "2022-07-18T22:44:25Z",
+                          "publishedAt": "2021-01-25T18:11:58Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Conservative Advection with coupled variable - upwind scheme",
+          "author": {
+            "login": "ngrilli"
+          },
+          "bodyText": "Dear MOOSE Users,\n\nI would like to solve this equation where \\rho is the variable and q and p are coupled variables.\nv is a velocity that I can import in the kernel as a MaterialProperty.\nI would like a kernel for the terms on the right hand-side that has the upwind scheme.\nI mean, I want the integral over the whole volume of the terms on the right side to be zero (in case of Neumann BC = zero flux).\nThe same as ConservativeAdvection in the framework, but with a coupled variable instead.\nIs there anything ready for this in the moose modules?\nIf not, I would like to create my own kernel starting from ConservativeAdvection\nand I will need to access the nodal values of the coupled variable to make the upwind scheme.\nIn the ConservativeAdvection kernel, this is done by:\n_u_nodal(_var.dofValues()),\nHow do I do the same for a coupled variable? Is there anything similar in moose?\nThank you very much in advance for your help.\nBest Regards,\nNicol\u00f2 Grilli\nNational University of Singapore",
+          "url": "https://github.com/idaholab/moose/discussions/16675",
+          "updatedAt": "2022-06-20T10:19:08Z",
+          "publishedAt": "2021-01-13T11:47:40Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "aeslaughter"
+                  },
+                  "bodyText": "@lindsayad Do we have an example of this sort of upwind scheme?",
+                  "url": "https://github.com/idaholab/moose/discussions/16675#discussioncomment-279411",
+                  "updatedAt": "2022-06-20T10:19:09Z",
+                  "publishedAt": "2021-01-13T15:28:24Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "Not with coupled variables. @ngrilli you could do:\n_q_nodal(getVar(\"q\", 0)->dofValues()),\n_p_nodal(getVar(\"p\", 0)->dofValues())\n\ngetVar is a method inherited from the Coupleable interface. The arguments to getVar are the name of the coupled variable (whatever the name is in your params.addCoupledVar(\"name\", \"doc_string\")) and then the variable component, which is usually 0. But we do allow users to pass a vector of variables to a single coupled var parameter (this is not well advertised or known).",
+                          "url": "https://github.com/idaholab/moose/discussions/16675#discussioncomment-279772",
+                          "updatedAt": "2022-06-20T10:19:28Z",
+                          "publishedAt": "2021-01-13T17:45:28Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ngrilli"
+                          },
+                          "bodyText": "Dear @aeslaughter and @lindsayad\nThank you very much, this is very helpful.\nI will develop my own kernel and will made it available in my github.\nBest Regards,\nNicol\u00f2 Grilli\nNational University of Singapore",
+                          "url": "https://github.com/idaholab/moose/discussions/16675#discussioncomment-281218",
+                          "updatedAt": "2022-06-20T10:19:27Z",
+                          "publishedAt": "2021-01-14T07:56:29Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "ngrilli"
+                  },
+                  "bodyText": "Dear MOOSE Users,\nI have developed the following kernel for the conservative advection of a coupled variable:\nhttps://github.com/ngrilli/c_pfor_am/blob/main/src/kernels/ConservativeAdvectionCoupled.C\nIt seems to work when I use the full upwind scheme for my simulations.\nHowever, I am not sure if the out of diagonal Jacobian is correct in the case of full upwind scheme.\nSpecifically, in:\nConservativeAdvectionCoupled::fullUpwind(JacRes res_or_jac)\nI have used the nodal values of the coupled variable instead of the nodal value of the variable used in ConservativeAdvection\nHowever, I am not sure if the following lines are storing the out of diagonal Jacobian properly\n(and I have the same doubt for the residual):\nif (res_or_jac == JacRes::CALCULATE_JACOBIAN)\n{\naccumulateTaggedLocalMatrix();\nif (_has_diag_save_in)\n{\n  unsigned int rows = _local_ke.m();\n  DenseVector<Number> diag(rows);\n  for (unsigned int i = 0; i < rows; i++)\n    diag(i) = _local_ke(i, i);\n\n  Threads::spin_mutex::scoped_lock lock(Threads::spin_mtx);\n  for (const auto & var : _diag_save_in)\n    var->sys().solution().add_vector(diag, var->dofIndices());\n}\n\n}\nBest Regards,\nNicol\u00f2 Grilli\nNational University of Singapore",
+                  "url": "https://github.com/idaholab/moose/discussions/16675#discussioncomment-304841",
+                  "updatedAt": "2022-06-20T10:19:33Z",
+                  "publishedAt": "2021-01-23T16:29:20Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "The pasted lines of code, whether right or wrong, will not actually have any impact on the accuracy of your matrix being fed to PETSc. These lines are usually only for visualization purposes; perhaps you already knew that?\nYou can test the accuracy of your Jacobian using the command line options: -snes_test_jacobian -snes_test_jacobian_view. I would only run this test for smallish problems, e.g. 1000 dofs or less, ideally 30 dofs or less in order to truly understand the output from -snes_test_jacobian_view.\nAre you worried about the speed of your simulation? If you do not care about a factor of 1.5 or so, I would highly recommend doing this with automatic differentiation, and then you will have no concern about the accuracy of your Jacobian.",
+                          "url": "https://github.com/idaholab/moose/discussions/16675#discussioncomment-309143",
+                          "updatedAt": "2022-06-23T13:13:02Z",
+                          "publishedAt": "2021-01-25T16:54:59Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Alpha in capillaryPressureVG as a function of temperature",
+          "author": {
+            "login": "mcacace"
+          },
+          "bodyText": "This post is on the porous flow module.\nI am trying to help a colleague of mine to implement a VG retention curve where the alpha coefficient is not considered as constant but varies with the background temperature condition. Looking at the respective uo, it does seem to me (first glance though) that the basic virtual functions can retrieve this information via the corresponding qp during their call. This said, being my first attempt with the module was wondering what would be the best way to implement such functional behaviour.\nThanks for helping,\nMauro",
+          "url": "https://github.com/idaholab/moose/discussions/16735",
+          "updatedAt": "2022-06-16T10:35:07Z",
+          "publishedAt": "2021-01-18T23:26:46Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "cpgr"
+                  },
+                  "bodyText": "Hi Mauro,\nWithout thinking about it too much, one way might be to change the param alpha to a coupled variable, and then use an auxvariable to compute the temperature-dependent value of alpha. Like you said, you could then pass _alpha[_qp] into the various methods in this class.\nLet me know if you need a hand,\nChris",
+                  "url": "https://github.com/idaholab/moose/discussions/16735#discussioncomment-292281",
+                  "updatedAt": "2022-06-16T10:35:09Z",
+                  "publishedAt": "2021-01-19T03:22:10Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mcacace"
+                          },
+                          "bodyText": "Dear Chris,\nthanks for the prompt reply. Was thinking the same, but wanted to be sure I was heading the right direction. Will get at it and let you know if I have any problem.",
+                          "url": "https://github.com/idaholab/moose/discussions/16735#discussioncomment-292568",
+                          "updatedAt": "2022-06-16T10:35:29Z",
+                          "publishedAt": "2021-01-19T07:50:54Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "fparisio-zz"
+                  },
+                  "bodyText": "Dear Chris,\nI am working with Mauro and together we are trying to explore the role of capillary forces in water-vapor systems. I have built a first simple example employing PorousFlowFluidStateSingleComponent where primary variables are pliq and h (files attached). The model is a single element and I am fixing enthalpy and pressure in order to follow an evaporation isotherm (here, 200 \u00b0C). Once the whole fluid has evaporated and liquid saturation is null, a full gas phase forms at a gas pressure which is controlled by the retention curve properties. Because the upper limit of pressure in the water EOS is 100 MPa, the maximum pressure has to be fixed accordingly, to avoid that the gas pressure increases to values that are above such limits (for our cases, approx. pc_max=70 MPa). Now, we observe that once the water has fully evaporated and the gas saturation is 1, the pressure to compute EOS properties is suddenly taken as the gas pressure (pliq is meaningless with fully gaseous phase) and this results in a jump in temperature up to approximately 550 \u00b0C. Now, this temperature is the result of the fixed value of enthalpy and pressure once the liquid phase disappears. Because of the shape and parametrization of the retention curve, this jump is more pronounced for a material that shows higher retention capabilities or, in other words, it is proportional to pc_max (see figure with different cases of pc_max). I understand this is how VG works (or any other retention model), but in reality, once the liquid phase has disappeared, the capillary pressure should be null and pgas=pliq at sgas=1. One way around could be achieved by a residual saturation that prevents a full evaporation (sgas<1 always), but that case implies higher values of capillary pressure and, as a consequence, gas pressure exceeds the threshold pgas>100 MPa and EOS cannot be computed.\nAt present, we are not sure what would be the best way out of this loop and we would like to ask you if you have any suggestion for us. In the examples provided in PorousFlow, the maximum capillary pressure is usually rather low (around 1 MPa) and the problem does not arise (or, the temperature jump is rather small). We could also discuss about the fact that perhaps retention properties of rocks are overestimated: the colored experimental retention curves (from Li and Horne, 2006) in figure d are experiments from reservoir rocks obtained with Mercury Porosimetry Intrusion, which might not be completely representative of water-vapor systems. Especially at high temperature, the lower surface tension would cause a decrease of retention capabilities of a porous medium and a lower pc_max (hence, our idea of a temperature-dependent alpha in the VG curve). Nonetheless, even with reduced retention capabilities (tens of MPa of pc_max), the current formulation falls short (although we understand it is an intrinsic problem of the retention theory).\nThank you very much for your help,\nFrancesco\nRef.:\nLi, K. and Horne, R.N., 2006. Fractal modeling of capillary pressure curves for The Geysers rocks. Geothermics, 35(2), pp.198-207.\n\nmoose_input.tar.gz",
+                  "url": "https://github.com/idaholab/moose/discussions/16735#discussioncomment-296755",
+                  "updatedAt": "2022-06-16T10:35:29Z",
+                  "publishedAt": "2021-01-20T17:22:41Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "fparisio-zz"
+                          },
+                          "bodyText": "PS: we can also discuss this matter off-line if it requires longer replies and if you are interested in discussing more about the details.",
+                          "url": "https://github.com/idaholab/moose/discussions/16735#discussioncomment-296762",
+                          "updatedAt": "2022-06-16T10:35:42Z",
+                          "publishedAt": "2021-01-20T17:24:28Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "No, let's keep this online - it might be useful for someone in the future",
+                          "url": "https://github.com/idaholab/moose/discussions/16735#discussioncomment-297246",
+                          "updatedAt": "2022-06-16T10:35:42Z",
+                          "publishedAt": "2021-01-20T20:42:36Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "WilkAndy"
+                  },
+                  "bodyText": "I can't make any better suggestions than what's already been said (all your suggestions are potentially good ones, i think), but just wanted to say how exciting it is to see PorousFlow being used in this way.  When we created it, we tried to make it flexible enough that it'd be able to handle cases such as this, and i'm so pleased it's working for you.\nMy uneducated opinion is that you're using VG in situations where it's incorrect.  I don't think i've seen experimental literature at such high temperatures and low liquid saturations.\nAlso, just for my interest, what's the problem with the behaviour at zero liquid saturation?  Are you trying to boil water and then do something with it afterwards?\na",
+                  "url": "https://github.com/idaholab/moose/discussions/16735#discussioncomment-297245",
+                  "updatedAt": "2022-06-16T10:35:43Z",
+                  "publishedAt": "2021-01-20T20:42:15Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "fparisio-zz"
+                          },
+                          "bodyText": "@WilkAndy your opinion is actually very well educated! I agree that experimental evidence lacks at such low saturations and that it is not straight forward to extend retention curves to water-vapor systems. Perhaps the most informative study in this sense is by Li and Horne (2007).\nThe test simulated has no a particular significance other than exploring the capillary forces that develop during an evaporation isotherm. It will be functional to a more systematic study. Thank you for your input and we will post here whevener we find a proper way to handle the problem.\nFrancesco\nRef:\nLi, K. and Horne, R.N., 2007. Systematic study of steam\u2013water capillary pressure. Geothermics, 36(6), pp.558-574.",
+                          "url": "https://github.com/idaholab/moose/discussions/16735#discussioncomment-308481",
+                          "updatedAt": "2022-06-16T10:35:45Z",
+                          "publishedAt": "2021-01-25T13:34:01Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "cpgr"
+                  },
+                  "bodyText": "Interesting work!\nI'm not sure what the best step is, but will think about it today. From memory, the temperature is calculated from pressure and enthalpy using the IAPWS97 equation, and it has something like this:\nswitch(phase):\n\ncase liquid:\n  T = T_from_p_h(liq_p, h)\n\ncase gas:\n  T = T_from_p_h(gas_p, h)\n\nwhich could cause the sudden jump in temperature that you observe.\nChris",
+                  "url": "https://github.com/idaholab/moose/discussions/16735#discussioncomment-297494",
+                  "updatedAt": "2022-06-16T10:36:05Z",
+                  "publishedAt": "2021-01-20T22:47:40Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "fparisio-zz"
+                          },
+                          "bodyText": "So it seems, that a switch occurs whenever the liquid phase disappears. The effect of capillary pressure is to introduce a discontinuity in the pressure at full evaporation, which then translates into a temperature jump.",
+                          "url": "https://github.com/idaholab/moose/discussions/16735#discussioncomment-308494",
+                          "updatedAt": "2022-06-16T10:36:07Z",
+                          "publishedAt": "2021-01-25T13:35:59Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "more cleavage plane in ACInterfaceCleavageFracture",
+          "author": {
+            "login": "wsfsz123"
+          },
+          "bodyText": "Hi, all,\nThe kernel modification of ACInterfaceCleavageFracture is used to simulate the anisotropic fracture with transverse isotropic (one cleavage plane), then if I want to use it to simulate the cubic symmetric with two cleavage plane or more, like three cleavage plane, refer to \"S. Teichtmeister, Phase field modeling of fracture in anisotropic brittle solids, 2017\". What should I do?\nThanks,\nShizhe",
+          "url": "https://github.com/idaholab/moose/discussions/16249",
+          "updatedAt": "2022-09-16T02:39:24Z",
+          "publishedAt": "2020-11-19T08:56:11Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "aeslaughter"
+                  },
+                  "bodyText": "@dschwen @laagesen @SudiptaBiswas Do you have an answer for this, it seems to have slipped through without a response.",
+                  "url": "https://github.com/idaholab/moose/discussions/16249#discussioncomment-146870",
+                  "updatedAt": "2022-09-16T02:39:26Z",
+                  "publishedAt": "2020-12-04T02:13:33Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "jiangwen84"
+                  },
+                  "bodyText": "Sorry for the late reply. I think one way is to introduce additional phase field damage parameters to represent fractures on different cleavage planes, and enforce the sum of all damage parameters to be 1.",
+                  "url": "https://github.com/idaholab/moose/discussions/16249#discussioncomment-147195",
+                  "updatedAt": "2022-09-16T02:39:26Z",
+                  "publishedAt": "2020-12-04T14:59:14Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "jiangwen84"
+                  },
+                  "bodyText": "If you want to implement Teichtmeister's approach, I think we should generalize ACInterfaceCleavageFracture to include more than one preferred planes in anisotropic metro A. We do not have that capability yet, but it should be straightforward to do. Let me know if you would like to contribute, and we can provide you some guidance.",
+                  "url": "https://github.com/idaholab/moose/discussions/16249#discussioncomment-147208",
+                  "updatedAt": "2022-09-16T02:39:27Z",
+                  "publishedAt": "2020-12-04T15:11:32Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "wsfsz123"
+                  },
+                  "bodyText": "Thank you! I tried, but A is a second-order tensor, can only represent one cleavage plane, to introduce bi-cleavage plane, it should include Laplace (second-order) of c to the fracture density function,  then Allen-Cahn is not suitable anymore, does any evolution method works for it on MOOSE?",
+                  "url": "https://github.com/idaholab/moose/discussions/16249#discussioncomment-147650",
+                  "updatedAt": "2022-09-16T02:39:28Z",
+                  "publishedAt": "2020-12-05T00:53:58Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "Are you referring to the third term of equation (38) in  Teichtmeister's paper?",
+                          "url": "https://github.com/idaholab/moose/discussions/16249#discussioncomment-149012",
+                          "updatedAt": "2022-09-16T02:39:29Z",
+                          "publishedAt": "2020-12-07T15:13:51Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "wsfsz123"
+                          },
+                          "bodyText": "Thank you, I quit this method, it seems not suitable for my problem. I am now trying to modify Gc(theta) directly (see attached figure, the reference to https://doi.org/10.1016/j.jmps.2020.104253), it is similar to ACInterfaceKobayashi kernels, but I have encountered the convergence problem even at the first step, attached is my input file. Besides, may I know how to choose the parameters or methods in executioners to improve the calculation efficiency on MOOSE?\nThanks,\nShizhe\n\n[crack_Kobayashi.txt](https://github.com/idaholab/moose/files/5693543/crack_Kobayashi.txt)",
+                          "url": "https://github.com/idaholab/moose/discussions/16249#discussioncomment-207291",
+                          "updatedAt": "2022-09-16T02:39:29Z",
+                          "publishedAt": "2020-12-15T05:30:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "Let us set use_current_history_variable = false first, and see if it improves the convergence. To further simplify the model, you can also set decomposition_type = none, to reduce nonlinearity.",
+                          "url": "https://github.com/idaholab/moose/discussions/16249#discussioncomment-218014",
+                          "updatedAt": "2022-09-16T02:39:29Z",
+                          "publishedAt": "2020-12-17T04:37:54Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "wsfsz123"
+                  },
+                  "bodyText": "I tried and failed. since gc is constant before, now I need to use gc (grad(c)), do I need to modify the code in ComputeLinearElasticPFFractureStress.C, and how?",
+                  "url": "https://github.com/idaholab/moose/discussions/16249#discussioncomment-220810",
+                  "updatedAt": "2022-09-16T02:39:28Z",
+                  "publishedAt": "2020-12-18T02:46:46Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "Yes. If your Gc is a function of normal (gradient of c), you need to account for the derivative of G_c respect to c. Current implementation assumes Gc does not depend on c. To make the change, you have to make Gc as a derivative material, and add its derivative (g_d in eqn 23 in your referred paper) to the driving force term.",
+                          "url": "https://github.com/idaholab/moose/discussions/16249#discussioncomment-234932",
+                          "updatedAt": "2022-09-16T02:39:33Z",
+                          "publishedAt": "2020-12-22T15:57:35Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "wsfsz123"
+                  },
+                  "bodyText": "The g_d is calculated in InterfaceOrientationMaterial (defined as _deps), so I think it could be used directly (ACInterfaceKobayashi is used for the gradient part of the fracture energy), my problem is: in the non-gradient term (f_elastic+Gc/2l*c^2), do I need to modify the calculation? I am thinking that Gc depends on the gradient of c, not c, so the partial gradient of c for this term shouldn't consider the gradient of Gc. But during my simulation, it has a convergence problem even when I only consider the non-gradient term (no ACinterface term).",
+                  "url": "https://github.com/idaholab/moose/discussions/16249#discussioncomment-236057",
+                  "updatedAt": "2022-09-16T02:39:35Z",
+                  "publishedAt": "2020-12-23T01:50:56Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "First, I think you should remove ACInterfaceKobayashi2. ACInterfaceKobayashi2 is the double-well potential term, and should not be considered in phase field fracture model.\nSecondly, you should definitely use chain rule to include the derivative of Gc respect to c through \\nabla c. See the second term on the right side of eqn 14 , and eon 16 in Shahed Rezaei's paper.\nLastly, you should make sure you use a consistent Mobility in your input file.  For phase field fracture model, the M = 1/(gc*visco). I saw you defined another M that was used in   ACInterfaceKobayashi1",
+                          "url": "https://github.com/idaholab/moose/discussions/16249#discussioncomment-236210",
+                          "updatedAt": "2022-09-16T02:39:36Z",
+                          "publishedAt": "2020-12-23T05:21:55Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "wsfsz123"
+                  },
+                  "bodyText": "I have further questions about the parameter type in MOOSE.\nsuch as the following code in the material section, where c is the order parameter, then, my question is must gc_prop be a constant? if I have defined gc_prop to be a field that depends on the location (x,y), is it still works for this expression or should I put the gc_prop in \"args='? In the other words, the parameter in material_property_names should be constant or any type?\n[./local_fracture_energy]\ntype = DerivativeParsedMaterial\nf_name = local_fracture_energy\nargs = 'c'\nmaterial_property_names = 'gc_prop l'\nfunction = 'c^2 * gc_prop / 2 / l'\nderivative_order = 2\n[../]\nThanks,\nShizhe",
+                  "url": "https://github.com/idaholab/moose/discussions/16249#discussioncomment-292547",
+                  "updatedAt": "2022-09-16T02:39:37Z",
+                  "publishedAt": "2021-01-19T07:26:30Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "The gc_prop can be a function material that depends on (x,y,z,t). The args is the coupled variable name, and for your case it should not include gc_prop.",
+                          "url": "https://github.com/idaholab/moose/discussions/16249#discussioncomment-294751",
+                          "updatedAt": "2022-09-16T02:39:40Z",
+                          "publishedAt": "2021-01-19T23:58:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "Currently, gc_prop cannot be a function of damage parameter because we do not account for the derivative of gc_prop respect to the damage variable in our material class.\nIf that is something you need in the future, It should be straightforward to modify the codes to make gc_prop that depends on damage variable.",
+                          "url": "https://github.com/idaholab/moose/discussions/16249#discussioncomment-294756",
+                          "updatedAt": "2022-09-16T02:39:40Z",
+                          "publishedAt": "2021-01-20T00:02:30Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "wsfsz123"
+                  },
+                  "bodyText": "Then, do I need to modify the definition of gc_prop in ComputePFFractureStressBase.C : _gc(getMaterialProperty(\"gc_prop\"))? Besides, I can't find any code of *.i  have use the gc_prop directly except the definition in ComputePFFractureStressBase.C.",
+                  "url": "https://github.com/idaholab/moose/discussions/16249#discussioncomment-297800",
+                  "updatedAt": "2022-09-16T02:39:40Z",
+                  "publishedAt": "2021-01-21T00:51:16Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "If you use a function material to define gc_prop, you do not need to change the source code.\nFor regression tests, we usually define gc_prop as GenericConstantMaterial\n[./pfbulkmat]\ntype = GenericConstantMaterial\nprop_names = 'gc_prop l visco'\nprop_values = '1e-3 0.04 1e-4'\n[../]",
+                          "url": "https://github.com/idaholab/moose/discussions/16249#discussioncomment-302703",
+                          "updatedAt": "2022-09-16T02:39:41Z",
+                          "publishedAt": "2021-01-22T15:57:47Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "wsfsz123"
+                  },
+                  "bodyText": "Thank you! and how to solve the negative damage order parameter problem? could I restrict the range of the order parameter to be [0,1]?",
+                  "url": "https://github.com/idaholab/moose/discussions/16249#discussioncomment-306110",
+                  "updatedAt": "2022-09-16T02:39:42Z",
+                  "publishedAt": "2021-01-24T12:17:22Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "modules/combined/test/tests/phase_field_fracture/crack2d_vi_solver.i",
+                          "url": "https://github.com/idaholab/moose/discussions/16249#discussioncomment-307345",
+                          "updatedAt": "2022-09-16T02:39:42Z",
+                          "publishedAt": "2021-01-25T02:08:58Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "PTScotch Compilation issue on HPC",
+          "author": {
+            "login": "ajsummers"
+          },
+          "bodyText": "Let me know if I didn't provide enough information about my environment. I'm trying to install MOOSE on an HPC cluster (I don't have root privileges).\nI started off using the standard Linux installation method. Installed Miniconda and the Moose environment, then cloned in the repository. After this, I followed the GCC/MPICH manual installation method.\nOS: CentOS 6.10\nInstead of installing gcc, mpich, and cmake manually, I added the modules from the HPC's library:\nmodule load gcc/8.1.0\nmodule load mpich/3.2.1\n\nexport PACKAGES_DIR=/tools\n\nexport PATH=$PACKAGES_DIR/gcc-8.1.0/bin:$PACKAGES_DIR/mpich-3.2.1/bin:$PATH\nexport LD_LIBRARY_PATH=$PACKAGES_DIR/gcc-8.1.0/lib64:$PACKAGES_DIR/gcc-8.1.0/lib:$PACKAGE$\nexport C_INCLUDE_PATH=$PACKAGES_DIR/mpich-3.2.1/include:$C_INCLUDE_PATH\nexport CPLUS_INCLUDE_PATH=$PACKAGES_DIR/mpich-3.2.1/include:$CPLUS_INCLUDE_PATH\nexport FPATH=$PACKAGES_DIR/mpich-3.2.1/include:$FPATH\nexport MANPATH=$PACKAGES_DIR/mpich-3.2.1/share/man:$MANPATH\nexport CC=mpicc\nexport CXX=mpicxx\nexport FC=mpif90\nexport F90=mpif90\n\nmodule load cmake/gcc/3.12.3\n\nWhen running\n./scripts/update_and_rebuild_petsc.sh --download-mumps=0 --with-64-bit-indices=1\nI get the following error:\n\nI've attached the configure.log file in the petsc directory below.\nI read a post somewhere that hinted at a compatibility issue between MUMPS and PTScotch, but I'm not sure.\nThank you in advance for any help!\nconfigure.log",
+          "url": "https://github.com/idaholab/moose/discussions/16711",
+          "updatedAt": "2022-07-06T13:13:58Z",
+          "publishedAt": "2021-01-15T20:09:39Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "mangerij"
+                  },
+                  "bodyText": "I saw this earlier today.\n\nYou can disable the PTScotch flag to get around it if possible\n\nOn Jan 15, 2021 10:10 PM, ajsummers <notifications@github.com> wrote:\n\n*Message sent from a system outside of UConn.*\n\n\nLet me know if I didn't provide enough information about my environment. I'm trying to install MOOSE on an HPC cluster (I don't have root privileges).\n\nI started off using the standard Linux installation method. Installed Miniconda and the Moose environment, then cloned in the repository. After this, I followed the GCC/MPICH manual installation method.\n\nOS: CentOS 6.10\nInstead of installing gcc, mpich, and cmake manually, I added the modules from the HPC's library:\n\nmodule load gcc/8.1.0\nmodule load mpich/3.2.1\n\nexport PACKAGES_DIR=/tools\n\nexport PATH=$PACKAGES_DIR/gcc-8.1.0/bin:$PACKAGES_DIR/mpich-3.2.1/bin:$PATH\nexport LD_LIBRARY_PATH=$PACKAGES_DIR/gcc-8.1.0/lib64:$PACKAGES_DIR/gcc-8.1.0/lib:$PACKAGE$\nexport C_INCLUDE_PATH=$PACKAGES_DIR/mpich-3.2.1/include:$C_INCLUDE_PATH\nexport CPLUS_INCLUDE_PATH=$PACKAGES_DIR/mpich-3.2.1/include:$CPLUS_INCLUDE_PATH\nexport FPATH=$PACKAGES_DIR/mpich-3.2.1/include:$FPATH\nexport MANPATH=$PACKAGES_DIR/mpich-3.2.1/share/man:$MANPATH\nexport CC=mpicc\nexport CXX=mpicxx\nexport FC=mpif90\nexport F90=mpif90\n\nmodule load cmake/gcc/3.12.3\n\n\nWhen running\n./scripts/update_and_rebuild_petsc.sh --download-mumps=0 --with-64-bit-indices=1\n\nI get the following error:\n[image]<https://nam10.safelinks.protection.outlook.com/?url=https%3A%2F%2Fuser-images.githubusercontent.com%2F64990120%2F104772688-6db0fc80-5739-11eb-847e-61a6b7b85c4b.png&data=04%7C01%7Cjohn.mangeri%40uconn.edu%7C0c403f25836e43026b3e08d8b9918783%7C17f1a87e2a254eaab9df9d439034b080%7C0%7C0%7C637463382030424332%7CUnknown%7CTWFpbGZsb3d8eyJWIjoiMC4wLjAwMDAiLCJQIjoiV2luMzIiLCJBTiI6Ik1haWwiLCJXVCI6Mn0%3D%7C1000&sdata=dlsW6dV%2Ffco4NRhNrCjWPa3Wok9cj%2BbrludoSfmFwKY%3D&reserved=0>\n\nI've attached the configure.log file in the petsc directory below.\n\nI read a post somewhere that hinted at a compatibility issue between MUMPS and PTScotch, but I'm not sure.\n\nThank you in advance for any help!\nconfigure.log<https://nam10.safelinks.protection.outlook.com/?url=https%3A%2F%2Fgithub.com%2Fidaholab%2Fmoose%2Ffiles%2F5822695%2Fconfigure.log&data=04%7C01%7Cjohn.mangeri%40uconn.edu%7C0c403f25836e43026b3e08d8b9918783%7C17f1a87e2a254eaab9df9d439034b080%7C0%7C0%7C637463382030434326%7CUnknown%7CTWFpbGZsb3d8eyJWIjoiMC4wLjAwMDAiLCJQIjoiV2luMzIiLCJBTiI6Ik1haWwiLCJXVCI6Mn0%3D%7C1000&sdata=Ds9fRGe%2BGj00fEpJQ3hDoQckRx4F%2F5ZgYckxMC52sCc%3D&reserved=0>\n\n\u2014\nYou are receiving this because you are subscribed to this thread.\nReply to this email directly, view it on GitHub<https://nam10.safelinks.protection.outlook.com/?url=https%3A%2F%2Fgithub.com%2Fidaholab%2Fmoose%2Fdiscussions%2F16711&data=04%7C01%7Cjohn.mangeri%40uconn.edu%7C0c403f25836e43026b3e08d8b9918783%7C17f1a87e2a254eaab9df9d439034b080%7C0%7C0%7C637463382030434326%7CUnknown%7CTWFpbGZsb3d8eyJWIjoiMC4wLjAwMDAiLCJQIjoiV2luMzIiLCJBTiI6Ik1haWwiLCJXVCI6Mn0%3D%7C1000&sdata=uUU5gLc4fxWA%2BjN9sf7qOpzhHzvVHsLsUpXvsxBDJOA%3D&reserved=0>, or unsubscribe<https://nam10.safelinks.protection.outlook.com/?url=https%3A%2F%2Fgithub.com%2Fnotifications%2Funsubscribe-auth%2FABZ65FFFQXLCCL6EGZRPHQTS2COJHANCNFSM4WERP6YA&data=04%7C01%7Cjohn.mangeri%40uconn.edu%7C0c403f25836e43026b3e08d8b9918783%7C17f1a87e2a254eaab9df9d439034b080%7C0%7C0%7C637463382030444327%7CUnknown%7CTWFpbGZsb3d8eyJWIjoiMC4wLjAwMDAiLCJQIjoiV2luMzIiLCJBTiI6Ik1haWwiLCJXVCI6Mn0%3D%7C1000&sdata=%2BcKi114IB3Rtps%2FuWu%2BuogBA%2F64cN83vvpIzJ6sMz7E%3D&reserved=0>.",
+                  "url": "https://github.com/idaholab/moose/discussions/16711#discussioncomment-286911",
+                  "updatedAt": "2022-07-06T13:14:25Z",
+                  "publishedAt": "2021-01-16T16:51:59Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ajsummers"
+                          },
+                          "bodyText": "Thank you for your response.\nI tried including the following flags on the script ./scripts/update_and_rebuild_petsc.sh:\n--download-ptscotch=0\n--with-ptscotch=0\nThis seemed to have teased out a potential problem with my C++ compiler. I'm going to check more into this.\nWould it be advisable to continue in the installation without ptscotch?",
+                          "url": "https://github.com/idaholab/moose/discussions/16711#discussioncomment-292453",
+                          "updatedAt": "2022-07-06T13:17:23Z",
+                          "publishedAt": "2021-01-19T06:09:33Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "fdkong"
+                          },
+                          "bodyText": "The simulation will be fine even without ptscotch. Most of partitions are handled by parmetis or Metis",
+                          "url": "https://github.com/idaholab/moose/discussions/16711#discussioncomment-302724",
+                          "updatedAt": "2022-07-06T13:17:27Z",
+                          "publishedAt": "2021-01-22T16:03:25Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "fdkong"
+                  },
+                  "bodyText": "You might send us a wrong configure.log since it did not say anything about ptscoth.\n\n\nYou might not need conda on HPC. What I would like to do is to module load gcc, mpich and cmake, and then build PETSc/libmesh/moose.",
+                  "url": "https://github.com/idaholab/moose/discussions/16711#discussioncomment-291370",
+                  "updatedAt": "2022-07-06T13:17:26Z",
+                  "publishedAt": "2021-01-18T16:47:16Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ajsummers"
+                          },
+                          "bodyText": "On the first note: I just noticed this. I assumed that the configure.log file directly under the petsc directory would be the correct one. Is there somewhere else I should be looking?\nI will try installing moose without the conda environment and update this discussion soon.",
+                          "url": "https://github.com/idaholab/moose/discussions/16711#discussioncomment-292447",
+                          "updatedAt": "2022-07-06T13:17:53Z",
+                          "publishedAt": "2021-01-19T06:06:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "fdkong"
+                          },
+                          "bodyText": "On the first note: I just noticed this. I assumed that the configure.log file directly under the petsc directory would be the correct one. Is there somewhere else I should be looking?\n\nIt is the right place. But I do not know why you got an incomplete configure.log. The right one might be just overwritten when you tried again",
+                          "url": "https://github.com/idaholab/moose/discussions/16711#discussioncomment-302746",
+                          "updatedAt": "2022-07-06T13:17:48Z",
+                          "publishedAt": "2021-01-22T16:09:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ajsummers"
+                          },
+                          "bodyText": "After disabling ptscotch briefly, I found that there was a problem with my C compiler. I added mpc/1.0.3 and this seemed to fix the issues as far as installing MOOSE. I tried the update_and_rebuild_petsc.sh and it worked. I was disappointed in my system's default Python 2, so I went back and tried the standard linux conda install method, and that also worked.\nI am now having similar problems with compiling my first project, but I will probably start a new thread for this. How should I designate the answer for this thread?",
+                          "url": "https://github.com/idaholab/moose/discussions/16711#discussioncomment-303525",
+                          "updatedAt": "2022-07-06T13:17:52Z",
+                          "publishedAt": "2021-01-22T21:08:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "fdkong"
+                          },
+                          "bodyText": "",
+                          "url": "https://github.com/idaholab/moose/discussions/16711#discussioncomment-303559",
+                          "updatedAt": "2022-07-06T13:19:09Z",
+                          "publishedAt": "2021-01-22T21:34:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ajsummers"
+                          },
+                          "bodyText": "I meant should I label yours as the answer even though the problem/solution ended up being different. Just so I can close it out as being \"solved\"",
+                          "url": "https://github.com/idaholab/moose/discussions/16711#discussioncomment-305405",
+                          "updatedAt": "2022-07-06T13:19:11Z",
+                          "publishedAt": "2021-01-23T22:09:28Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "It's better to re-post your answer as an answer and select it there. nbd here because the thread is so short anyway, so it's as you prefer.",
+                          "url": "https://github.com/idaholab/moose/discussions/16711#discussioncomment-305427",
+                          "updatedAt": "2022-07-06T13:19:10Z",
+                          "publishedAt": "2021-01-23T22:20:36Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "ajsummers"
+                  },
+                  "bodyText": "After running the compilation without ptscotch, errors indicated that there might be an issue with my C compiler. Particularly a reference to a 'libmpc.so' file. I loaded a module 'mpc' from the HPC, and this fixed the issue. I was then able to install moose through conda.",
+                  "url": "https://github.com/idaholab/moose/discussions/16711#discussioncomment-305539",
+                  "updatedAt": "2022-07-06T13:19:11Z",
+                  "publishedAt": "2021-01-23T23:52:12Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "TIMEOUT error when ./run_tests -j4",
+          "author": {
+            "login": "kmikityuk"
+          },
+          "bodyText": "Dear all,\nI have successfully installed conda and moose according to the instructions for Linux. My OS: Red Hat Enterprise Linux Server 7.7 (Maipo). However, when run  ./run_test -j4 all not SKIPped tests failed with similar diagnostics, e.g.:\ntime_integrators/convergence.explicit_heun/level0 .................................................... RUNNING\ntime_integrators/convergence.explicit_heun/level0: Working Directory: /data/project/general/ans/COD/MOOSE/projects/moose/test/tests/time_integrators/convergence\ntime_integrators/convergence.explicit_heun/level0: Running command: /data/project/general/ans/COD/MOOSE/projects/moose/test/moose_test-opt -i explicit_convergence.i Executioner/TimeIntegrator/type=Heun Executioner/dt=0.00390625 Outputs/file_base=heun_0 --error --error-unused --error-override --no-gdb-backtrace\ntime_integrators/convergence.explicit_heun/level0: [mpiexec@merlin-l-001.psi.ch] match_arg (utils/args/args.c:163): unrecognized argument pmi_args\ntime_integrators/convergence.explicit_heun/level0: [mpiexec@merlin-l-001.psi.ch] HYDU_parse_array (utils/args/args.c:178): argument matching returned error\ntime_integrators/convergence.explicit_heun/level0: [mpiexec@merlin-l-001.psi.ch] parse_args (ui/mpich/utils.c:1642): error parsing input array\ntime_integrators/convergence.explicit_heun/level0: [mpiexec@merlin-l-001.psi.ch] HYD_uii_mpx_get_parameters (ui/mpich/utils.c:1694): unable to parse user arguments\ntime_integrators/convergence.explicit_heun/level0: [mpiexec@merlin-l-001.psi.ch] main (ui/mpich/mpiexec.c:148): error parsing parameters\ntime_integrators/convergence.explicit_heun/level0:\ntime_integrators/convergence.explicit_heun/level0 ................................ [FINISHED] FAILED (TIMEOUT)\n\nAs recommended I tried ./run_tests -i always_ok -p 2 and it finished successfully. I have also tried to increase the timeout limit, but without success.\nAny ideas?\nBest regards,\nKonstantin",
+          "url": "https://github.com/idaholab/moose/discussions/16788",
+          "updatedAt": "2023-04-07T03:23:24Z",
+          "publishedAt": "2021-01-22T08:39:38Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hi Konstantin\nThese look like MPI errors. Maybe the mpiexec run is not from the same distribution as the mpi library used for compiling.\nWhat does 'which mpiexec' return?\nIn the moose conda environment, can you run a simple MPI hello world problem?\nBest,\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/16788#discussioncomment-302967",
+                  "updatedAt": "2023-04-07T03:23:41Z",
+                  "publishedAt": "2021-01-22T17:34:13Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "kmikityuk"
+                          },
+                          "bodyText": "Hi Guillaume,\nwhich mpiexec correctly returns ~/miniconda3/envs/moose/bin/mpiexec, but when I compiled and run mpi_hello_world code, I saw the same errors. So I checked my bash_profile and found the lines loading some modules for intel fortran that insludes openmpi. After commenting these lines, both mpi_hello_world and run_test work like a charm!\nThanks a lot for your advice!\nKonstantin",
+                          "url": "https://github.com/idaholab/moose/discussions/16788#discussioncomment-303660",
+                          "updatedAt": "2023-04-07T03:23:46Z",
+                          "publishedAt": "2021-01-22T22:17:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "That's great news, thanks for letting us know.\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/16788#discussioncomment-303703",
+                          "updatedAt": "2023-04-07T03:23:48Z",
+                          "publishedAt": "2021-01-22T22:41:18Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Ignore time step in exodiff?",
+          "author": {
+            "login": "aprilnovak"
+          },
+          "bodyText": "Hi all,\nI'm trying to create a test that makes sure a pseudo-transient simulation reaches the same physical results regardless of whether a MOOSE-wrapped app is subcycled or has a time step that matches the master app's time step. To reach the same steady state tolerance, however, requires a different number of time steps (as expected) when different subcycling approaches are used.\nFor my subcycled test, I'm reusing the gold file from the non-subcycled case. How can I ignore the time step for my Exodiff type test? I tried adding a blank TIME STEPS to a custom compare file like follows, but that didn't seem to do anything.\nTIME STEPS\n\nGLOBAL VARIABLES\n  flux\n  temperature\n\nBasically, I want this test to pass b/c I don't care about the simulation time:\ntest:conduction/cylinders.subcycle: Sideset Distribution Factors:\ntest:conduction/cylinders.subcycle:   --------- Time step 1, 2.3000000e+00 ~ 3.5750000e+01, rel diff: -9.35664e-01 (FAILED)\ntest:conduction/cylinders.subcycle: Global variables:\ntest:conduction/cylinders.subcycle: Nodal variables:\ntest:conduction/cylinders.subcycle: Element variables:\ntest:conduction/cylinders.subcycle:\ntest:conduction/cylinders.subcycle: exodiff: Files are different",
+          "url": "https://github.com/idaholab/moose/discussions/16792",
+          "updatedAt": "2023-07-11T15:21:52Z",
+          "publishedAt": "2021-01-22T20:17:18Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "loganharbour"
+                  },
+                  "bodyText": "If it's just one timestep, you can use -TM in exodiff to compare the closest timesteps.\nSee page 13 for other ideas: https://ftp.mcs.anl.gov/pub/pdetools/nightlylogs/xsdk/xsdk-configuration-tester/packages/trilinos/packages/seacas/doc/exo_util.pdf",
+                  "url": "https://github.com/idaholab/moose/discussions/16792#discussioncomment-303449",
+                  "updatedAt": "2023-07-11T15:21:52Z",
+                  "publishedAt": "2021-01-22T20:25:16Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aprilnovak"
+                          },
+                          "bodyText": "Oh neat, I didn't know there was such good documentation on the settings for that! Unless I'm doing something really wrong, I don't think that works though, because my gold file has 23 time steps, but my test runs for 35 seconds, so I think that ends up comparing the results at time step 23 (which aren't converged yet for the other test).\nI'll just copy the gold file, it's not a big deal - just was trying to be concise!",
+                          "url": "https://github.com/idaholab/moose/discussions/16792#discussioncomment-303528",
+                          "updatedAt": "2023-07-11T15:22:00Z",
+                          "publishedAt": "2021-01-22T21:14:17Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,821 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMS0wOC0xMlQxMToyMzoxMC0wNTowMM4ANYr2"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Cannot calculate  TENSOR_MECHANICS correctly",
+          "author": {
+            "login": "ScouperLH"
+          },
+          "bodyText": "Hi, I am new to MOOSE. I followed the tutorial on youtube\uff08https://www.youtube.com/watch?v=L9plLYkAbvQ&list=TLPQMDcwNzIwMjEvnbj3LWAiyQ&index=6\uff09to do a FEM calculation of the piston, and used the correct files in the tutorial, no matter whether I updated the MOOSE and Conda in advance, my MOOSE results are as shown in the picture. Before the calculation, I have modified the Makefile, opened TENSOR_MECHANICS, and recompiled.\nI want to know how to calculate it correctly?\nThank you!",
+          "url": "https://github.com/idaholab/moose/discussions/18531",
+          "updatedAt": "2022-07-27T14:12:36Z",
+          "publishedAt": "2021-08-05T08:38:55Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "ngrilli"
+                  },
+                  "bodyText": "@ScouperLH\nYou need to share the input file for help.\nIt looks like your simulation runs though.\nNicol\u00f2",
+                  "url": "https://github.com/idaholab/moose/discussions/18531#discussioncomment-1133678",
+                  "updatedAt": "2022-07-27T14:12:32Z",
+                  "publishedAt": "2021-08-05T08:51:49Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ScouperLH"
+                          },
+                          "bodyText": "thank you for your reply! My input file is as follows. I don't see the kernel file in the app after compiling. Is it because I am using the built-in TENSOR_MECH of MOOSE?\n[Mesh]\ndisplacements = 'disp_x disp_y disp_z' #Define displacements for deformed mesh\ntype = FileMesh #Read in mesh from file\nfile = piston_coarse.e\n[]\n[./Adaptivity]\nsteps = 1\n#initial_steps = 2\nmax_h_level = 3\ncycles_per_step = 1\ninitial_marker = uniform\nmarker = errorFraction\n[./Markers]\n[./uniform]\ntype = UniformMarker\nmark = refine\n[../]\n[./errorFraction]\n  type = ErrorFractionMarker\n  coarsen = 0.5\n  indicator = gradientJump\n  refine = 0.5\n[] \n\n[../]\n[./Indicators]\n[./gradientJump]\ntype = GradientJumpIndicator\nvariable = disp_y\n[]\n[]\n[../]\n[Variables]\n[./disp_x]\norder = FIRST\nfamily = LAGRANGE\n[../]\n[./disp_y]\norder = FIRST\nfamily = LAGRANGE\n[../]\n[./disp_z]\norder = FIRST\nfamily = LAGRANGE\n[../]\n[]\n[Kernels]\n[./TensorMechanics]\n#Stress divergence kernels\ndisplacements = 'disp_x disp_y disp_z'\n[../]\n[]\n[AuxVariables]\n[./von_mises]\n#Dependent variable used to visualize the Von Mises stress\norder = CONSTANT\nfamily = MONOMIAL\n[../]\n[]\n[AuxKernels]\n[./von_mises_kernel]\n#Calculates the von mises stress and assigns it to von_mises\ntype = RankTwoScalarAux\nvariable = von_mises\nrank_two_tensor = stress\nexecute_on = timestep_end\nscalar_type = VonMisesStress\n[../]\n[]\n[Functions]\n[./rampLinear]\ntype = ParsedFunction\nvalue = t*550e5\n[]\n[]\n[BCs]\n[./Pressure]\n[./load]\n#Applies the pressure\nboundary = load_surf\nfunction = rampLinear\ndisp_x = disp_x\ndisp_y = disp_y\ndisp_z = disp_z\n[../]\n[../]\n[./symmetry_x]\n#Applies symmetry on the xmin faces\ntype = DirichletBC\nvariable = disp_x\nboundary = 'xmin'\nvalue = 0.0\n[../]\n[./hold_y]\n#Anchors the bottom against deformation in the y-direction\ntype = DirichletBC\nvariable = disp_y\nboundary = 'ymin'\nvalue = 0.0\n[../]\n[./symmetry_z]\n#Applies symmetry on the zmin faces\ntype = DirichletBC\nvariable = disp_z\nboundary = 'zmin'\nvalue = 0.0\n[../]\n[]\n[Materials]\nactive = 'density_steel stress strain elasticity_tensor_steel'\n[./elasticity_tensor_steel]\n#Creates the elasticity tensor using steel parameters\nyoungs_modulus = 210e9 #Pa\npoissons_ratio = 0.3\ntype = ComputeIsotropicElasticityTensor\nblock = 1\n[../]\n[./strain]\n#Computes the strain, assuming small strains\ntype = ComputeFiniteStrain\nblock = 1\ndisplacements = 'disp_x disp_y disp_z'\n[../]\n[./stress]\n#Computes the stress, using linear elasticity\ntype = ComputeFiniteStrainElasticStress\nblock = 1\n[../]\n[./density_steel]\n#Defines the density of steel\ntype = GenericConstantMaterial\nblock = 1\nprop_names = density\nprop_values = 7850 # kg/m^3\n[../]\n[]\n[Preconditioning]\n[./SMP]\n#Creates the entire Jacobian, for the Newton solve\ntype = SMP\nfull = true\n[../]\n[]\n[Executioner]\n#We solve a steady state problem using Newton's iteration\ntype = Transient\nsolve_type = NEWTON\nnl_rel_tol = 1e-9\nl_max_its = 30\nl_tol = 1e-4\nnl_max_its = 10\npetsc_options_iname = '-pc_type -pc_hypre_type -ksp_gmres_restart'\npetsc_options_value = 'hypre boomeramg 31'\ndt = 0.1\nnum_steps = 10\n[]\n[Outputs]\nexodus = true\nperf_graph = true\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/18531#discussioncomment-1133739",
+                          "updatedAt": "2022-07-27T14:12:32Z",
+                          "publishedAt": "2021-08-05T09:04:39Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "ajacquey"
+                  },
+                  "bodyText": "You should modify your pressure BC.\nLooking at the source code of the PressureAction, you should provide the displacements as a vector displacements = 'disp_x disp_y disp_z' instead of providing the three displacement variables separately.\nYour BC should look like that:\n[./Pressure]\n  [./load]\n    #Applies the pressure\n\tboundary = load_surf\n\tfunction = rampLinear\n\tdisplacements = 'disp_x disp_y disp_z'\n  [../]",
+                  "url": "https://github.com/idaholab/moose/discussions/18531#discussioncomment-1134088",
+                  "updatedAt": "2022-07-27T14:13:10Z",
+                  "publishedAt": "2021-08-05T10:31:54Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ScouperLH"
+                          },
+                          "bodyText": "Thank you! I modified it accordingly, and it works!",
+                          "url": "https://github.com/idaholab/moose/discussions/18531#discussioncomment-1143744",
+                          "updatedAt": "2022-07-27T14:13:11Z",
+                          "publishedAt": "2021-08-08T05:33:36Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "@GregVernon this is a nice tutorial. I suggest to check it into the tensor mechanics module as an example, and enable at least syntax check so that it doesn't break in the future.",
+                  "url": "https://github.com/idaholab/moose/discussions/18531#discussioncomment-1134320",
+                  "updatedAt": "2022-07-27T14:13:16Z",
+                  "publishedAt": "2021-08-05T11:46:52Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GregVernon"
+                          },
+                          "bodyText": "Will do!",
+                          "url": "https://github.com/idaholab/moose/discussions/18531#discussioncomment-1135225",
+                          "updatedAt": "2022-07-27T14:13:16Z",
+                          "publishedAt": "2021-08-05T15:16:14Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Now that this is merged, I think it'd be great if you can somehow point viewers of that YouTube tutorial to the updated input file. I'm not a YouTube expert, but I think that's doable. Anyways, it's your call.",
+                          "url": "https://github.com/idaholab/moose/discussions/18531#discussioncomment-1202516",
+                          "updatedAt": "2022-07-27T14:13:16Z",
+                          "publishedAt": "2021-08-18T18:21:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GregVernon"
+                          },
+                          "bodyText": "Yep - I'll do that today!",
+                          "url": "https://github.com/idaholab/moose/discussions/18531#discussioncomment-1206693",
+                          "updatedAt": "2022-07-27T14:13:17Z",
+                          "publishedAt": "2021-08-19T14:06:30Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "symmertric9 fill method with in a 2D simulation",
+          "author": {
+            "login": "pharshaad"
+          },
+          "bodyText": "Hi all,\nI was wondering if I could use the symmetric9 fill method with a 2D mesh.\nThanks,\nLeon",
+          "url": "https://github.com/idaholab/moose/discussions/18620",
+          "updatedAt": "2022-06-13T08:29:21Z",
+          "publishedAt": "2021-08-17T21:46:28Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "Yes",
+                  "url": "https://github.com/idaholab/moose/discussions/18620#discussioncomment-1198181",
+                  "updatedAt": "2022-06-13T08:29:21Z",
+                  "publishedAt": "2021-08-18T03:03:10Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dschwen"
+                          },
+                          "bodyText": "To eleborate, our tensors and vectors are always 3D, no matter the mesh.",
+                          "url": "https://github.com/idaholab/moose/discussions/18620#discussioncomment-1203247",
+                          "updatedAt": "2022-06-13T08:29:26Z",
+                          "publishedAt": "2021-08-18T21:34:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "pharshaad"
+                          },
+                          "bodyText": "Got it, thanks, @hugary1995 and @dschwen.",
+                          "url": "https://github.com/idaholab/moose/discussions/18620#discussioncomment-1203520",
+                          "updatedAt": "2022-06-13T08:29:26Z",
+                          "publishedAt": "2021-08-18T23:09:18Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Question about ParsedMaterial v ParsedFunction",
+          "author": {
+            "login": "richmondodufisan"
+          },
+          "bodyText": "I want a \"material property\" that is a user defined function of time only. In my input file, under the materials block, I have the following:\n  [m_inf]\n    type = ADParsedMaterial\n    f_name = m_inf\n    function = 't + 3*t'\n    outputs = exodus\n  []\n\nHowever I get an error when I try to run this. From the documentation, my understanding is that ParsedMaterial is an \"extended\" form of ParsedFunction where you can also add variables you're solving for, (e.g displacement) into the function, is that correct? But ParsedFunction only recognizes x,y,z and t. Why then, is this not running?\nAlso, if I were to use ADParsedFunction, and created this under a \"Functions\" block, would I still be able to use it in my Material Interface?\nAlso, when retrieving this from the input file, in my material file, I have:\n_m_inf(getADMaterialPropertyByName<Real>(\"m_inf\")),\nI called it a \"Real\" since my function is real valued, is that correct? I didn't see anything in the documentation on how to consume ParsedFunction/ParsedMaterials.",
+          "url": "https://github.com/idaholab/moose/discussions/18637",
+          "updatedAt": "2021-08-18T22:04:44Z",
+          "publishedAt": "2021-08-18T21:30:42Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "dschwen"
+                  },
+                  "bodyText": "ParsedMaterial is an \"extended\" form of ParsedFunction\n\nThe two systems are independent and other than the underlying function parser do not share any code. For example there is no ADParsedFunction. You cannot use the two interchangably. One is used like any other Function, one is used like any other Material.",
+                  "url": "https://github.com/idaholab/moose/discussions/18637#discussioncomment-1203239",
+                  "updatedAt": "2021-08-18T21:36:42Z",
+                  "publishedAt": "2021-08-18T21:32:59Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "richmondodufisan"
+                          },
+                          "bodyText": "Okay, thanks. In my case I want a user-defined function of time only to be used in the Material Interface for computing a material property. Should I be using Parsed Function, then? And if no, what's the reason for the error in the block of code I pasted above? And if yes, how do I consume ParsedFunctions? Since they're not materials, would\n_m_inf(getADMaterialPropertyByName<Real>(\"m_inf\")), still be correct?",
+                          "url": "https://github.com/idaholab/moose/discussions/18637#discussioncomment-1203261",
+                          "updatedAt": "2021-08-18T21:42:49Z",
+                          "publishedAt": "2021-08-18T21:36:26Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "You can use a ParsedFunction and a GenericFunctionMaterial\nOR a ParsedMaterial\nw/ the appropriate AD pre-fixes to the materials if you want to use AD, but AD does not matter for this material if you only have a time dependence.\nThe way you retrieve this material property seems fine (for AD)",
+                          "url": "https://github.com/idaholab/moose/discussions/18637#discussioncomment-1203339",
+                          "updatedAt": "2021-08-18T21:49:30Z",
+                          "publishedAt": "2021-08-18T21:49:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dschwen"
+                          },
+                          "bodyText": "or a TimeStepMaterial...",
+                          "url": "https://github.com/idaholab/moose/discussions/18637#discussioncomment-1203391",
+                          "updatedAt": "2021-08-18T22:04:34Z",
+                          "publishedAt": "2021-08-18T22:04:34Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Problem about linking external library",
+          "author": {
+            "login": "yuezhiying6"
+          },
+          "bodyText": "Dear all,\nI am now linking a external FORTRAN library ti my code. I add the \"ADDITIONAL_LIBS += -L/path/to/my/lib -lname \" to my Makefile. However, when I use \"make\" command to compile my code, there will be an error occurs:\n/home/yzy/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/9.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: warning: libgfortran.so.3, needed by /home/yzy/projects/full_couple/lib/libcobra.so, not found (try using -rpath or -rpath-link)\n/home/yzy/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/9.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/yzy/projects/full_couple/lib/libcobra.so: undefined reference to _gfortran_st_open@GFORTRAN_1.0' /home/yzy/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/9.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/yzy/projects/full_couple/lib/libcobra.so: undefined reference to _gfortran_st_read@GFORTRAN_1.0'\n/home/yzy/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/9.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/yzy/projects/full_couple/lib/libcobra.so: undefined reference to _gfortran_transfer_real_write@GFORTRAN_1.4' /home/yzy/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/9.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/yzy/projects/full_couple/lib/libcobra.so: undefined reference to _gfortran_transfer_array@GFORTRAN_1.0'\n/home/yzy/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/9.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/yzy/projects/full_couple/lib/libcobra.so: undefined reference to _gfortran_cpu_time_8@GFORTRAN_1.0' /home/yzy/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/9.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/yzy/projects/full_couple/lib/libcobra.so: undefined reference to _gfortran_st_rewind@GFORTRAN_1.0'\n/home/yzy/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/9.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/yzy/projects/full_couple/lib/libcobra.so: undefined reference to _gfortran_st_write_done@GFORTRAN_1.0' /home/yzy/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/9.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/yzy/projects/full_couple/lib/libcobra.so: undefined reference to _gfortran_cpu_time_4@GFORTRAN_1.0'\n/home/yzy/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/9.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/yzy/projects/full_couple/lib/libcobra.so: undefined reference to _gfortran_transfer_array_write@GFORTRAN_1.4' /home/yzy/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/9.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/yzy/projects/full_couple/lib/libcobra.so: undefined reference to _gfortran_transfer_character_write@GFORTRAN_1.4'\n/home/yzy/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/9.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/yzy/projects/full_couple/lib/libcobra.so: undefined reference to _gfortran_stop_numeric_f08@GFORTRAN_1.4' /home/yzy/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/9.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/yzy/projects/full_couple/lib/libcobra.so: undefined reference to _gfortran_transfer_integer_write@GFORTRAN_1.4'\n/home/yzy/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/9.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/yzy/projects/full_couple/lib/libcobra.so: undefined reference to _gfortran_transfer_character@GFORTRAN_1.0' /home/yzy/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/9.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/yzy/projects/full_couple/lib/libcobra.so: undefined reference to _gfortran_stop_string@GFORTRAN_1.0'\n/home/yzy/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/9.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/yzy/projects/full_couple/lib/libcobra.so: undefined reference to memcpy@GLIBC_2.14' /home/yzy/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/9.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/yzy/projects/full_couple/lib/libcobra.so: undefined reference to _gfortran_transfer_real@GFORTRAN_1.0'\n/home/yzy/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/9.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/yzy/projects/full_couple/lib/libcobra.so: undefined reference to _gfortran_st_write@GFORTRAN_1.0' /home/yzy/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/9.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/yzy/projects/full_couple/lib/libcobra.so: undefined reference to _gfortran_transfer_integer@GFORTRAN_1.0'\n/home/yzy/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/9.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/yzy/projects/full_couple/lib/libcobra.so: undefined reference to `_gfortran_st_read_done@GFORTRAN_1.0'\ncollect2: error: ld returned 1 exit status\n/home/yzy/projects/moose/framework/app.mk:406: recipe for target '/home/yzy/projects/full_couple/full_couple-opt' failed\nmake: *** [/home/yzy/projects/full_couple/full_couple-opt] Error 1\nI install my MOOSE through conda. Because I am not familiar with the ubuntu system, I don't know how to link this library successfully.\nAny advice would be greatly appreciated!\nZhiying",
+          "url": "https://github.com/idaholab/moose/discussions/18605",
+          "updatedAt": "2022-06-14T20:39:26Z",
+          "publishedAt": "2021-08-14T11:52:47Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nIt looks like your compiler is not finding libgfortran, needed to use compiled fortran code.\nLet's try to locate it first, either with\nwhereis libgfortran or ldconfig -p | grep libgfortran\nIf that does not work, you'll need to download it.\n@milljm does it come with the conda install?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/18605#discussioncomment-1187738",
+                  "updatedAt": "2022-06-14T20:39:30Z",
+                  "publishedAt": "2021-08-15T23:52:18Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "Our latest environment installs libgortran 5:\n(moose) [CentOS-8][~]> conda list | grep libgfortran\nlibgfortran-ng            9.4.0                h69a702a_8    conda-forge\nlibgfortran5              9.4.0                h62347ff_8    conda-forge\n\nIf your already-built-app was built using an older Fortran compiler, it will be necessary to either:\n\nrebuild that app using the same Fortran compiler MOOSE requires (libgfortran.so.5)\nor\nremove the Conda MOOSE environment and install the necessary older Fortran compiler your app requires, and then build PETSc, libMesh, and MOOSE using this older Fortran compiler, so that everything matches.",
+                          "url": "https://github.com/idaholab/moose/discussions/18605#discussioncomment-1190243",
+                          "updatedAt": "2022-06-14T20:39:30Z",
+                          "publishedAt": "2021-08-16T14:13:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "yuezhiying6"
+                          },
+                          "bodyText": "Thanks for your reply very much, @milljm  and @GiudGiud. Your advice is of great help to me in solving the problem. I will try to recompile my code with libgfortran-5.",
+                          "url": "https://github.com/idaholab/moose/discussions/18605#discussioncomment-1190275",
+                          "updatedAt": "2022-06-14T20:39:31Z",
+                          "publishedAt": "2021-08-16T14:18:58Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Error of being not a registered object and segmentation fault",
+          "author": {
+            "login": "xchengood"
+          },
+          "bodyText": "Hi Moose expert or user,\nI am studying and trying to implement a input file example called 3d.i located in the path projects/moose/modules/tensor_mechanics/test/tests/rom_stress_update.\nFirst, I try implementation in terminal and I got the following error.\n\nThen, I try it in the peacock. The following error comes and a window pops out.\n\nBefore implementation, I already update my conda and do something about compile using 'make -j4'.\nCould anyone help me with fixing this error? Thank you.",
+          "url": "https://github.com/idaholab/moose/discussions/18602",
+          "updatedAt": "2022-07-04T08:33:48Z",
+          "publishedAt": "2021-08-13T15:26:21Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "dschwen"
+                  },
+                  "bodyText": "Run the executable with the --allow-test-objects option! The SS316 model is just a test for the ROM system.",
+                  "url": "https://github.com/idaholab/moose/discussions/18602#discussioncomment-1168887",
+                  "updatedAt": "2022-07-04T08:33:47Z",
+                  "publishedAt": "2021-08-13T15:27:56Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xchengood"
+                          },
+                          "bodyText": "--allow-test-objects\n\nThank you. It works in the terminal. But how can I implement it in peacock? It seems not right if I just put that at the end of the executable command line for peacock. I got 'unrecognized arguments'.",
+                          "url": "https://github.com/idaholab/moose/discussions/18602#discussioncomment-1168909",
+                          "updatedAt": "2022-07-04T08:34:11Z",
+                          "publishedAt": "2021-08-13T15:33:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dschwen"
+                          },
+                          "bodyText": "I suggest using an editor like Atom with a MOOSE syntax autocompletion plugin to edit input files, and run them from the terminal. It's a more powerful way to work with MOOSE. Unfortunately peacock is not working properly on the latest macOS for me, so I cannot reproduce your issue.",
+                          "url": "https://github.com/idaholab/moose/discussions/18602#discussioncomment-1168962",
+                          "updatedAt": "2022-07-04T08:34:12Z",
+                          "publishedAt": "2021-08-13T15:46:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xchengood"
+                          },
+                          "bodyText": "I suggest using an editor like Atom with a MOOSE syntax autocompletion plugin to edit input files, and run them from the terminal. It's a more powerful way to work with MOOSE. Unfortunately peacock is not working properly on the latest macOS for me, so I cannot reproduce your issue.\n\nThank you for your suggestion. I will do that.",
+                          "url": "https://github.com/idaholab/moose/discussions/18602#discussioncomment-1168974",
+                          "updatedAt": "2022-07-04T08:34:22Z",
+                          "publishedAt": "2021-08-13T15:49:27Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "You can add command line options in other options with peacock. See this page\nhttps://mooseframework.inl.gov/application_usage/peacock.html",
+                          "url": "https://github.com/idaholab/moose/discussions/18602#discussioncomment-1187782",
+                          "updatedAt": "2022-07-04T08:34:22Z",
+                          "publishedAt": "2021-08-16T00:47:48Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "EXIT CODE: 11",
+          "author": {
+            "login": "DomenicoCFD"
+          },
+          "bodyText": "Hi All,\nI am trying to resolve a 3D numerical problem on a cluster which does not differ from other for which I already got a converged solution in MOOSE. For some reasons I got the following error message:\nDoes anyone have an idea of what this could be related to?\nI look forward to hearing from you.\nRegards,\n===================================================================================\n=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES\n=   PID 9079 RUNNING AT node-vvvvv5\n=   EXIT CODE: 11\n=   CLEANING UP REMAINING PROCESSES\n=   YOU CAN IGNORE THE BELOW CLEANUP MESSAGES",
+          "url": "https://github.com/idaholab/moose/discussions/18588",
+          "updatedAt": "2022-07-05T13:15:53Z",
+          "publishedAt": "2021-08-12T10:29:06Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThis could be for a variety of reasons, actual bug / running out of memory / MPI issues.\nCould you please compile in debug mode (METHOD=dbg make -j XX) and re-run this a debugger?\nA shorthand for it:\nmpirun -n XXX gdb --ex run --ex bt --args ./your_app-dbg -i your_input_file.i\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/18588#discussioncomment-1164310",
+                  "updatedAt": "2022-07-05T13:14:50Z",
+                  "publishedAt": "2021-08-12T15:36:43Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "DomenicoCFD"
+                  },
+                  "bodyText": "Hi Gulliaume,\n\nMany thanks for your email. As I am relatively new to MOOSE, could you\nplease give me a bit more directions with regards to what you mean with\nyour command line? In fact, referring to it (see below):\n\nmpirun -n XXX gdb --ex run --ex bt ./your_app-dbg -i your_input_file.i\n\n\n   - What does XXX stand for?\n   - How should I get the ./your_app-dbg? I tried to follow the\n   instructions reported in the following link:\n\nhttps://mooseframework.inl.gov/getting_started/examples_and_tutorials/examples/ex21_debugging.html\n\nTherefore I initially tried to execute the following command in the main\napplication folder:\n\nMETHOD=dbg make -j8\n\nbut then I got the following error message:\n\nMakefile:19: /gpfs/cfms/home/username/projects/moose/framework/build.mk: No\nsuch file or directory\nMakefile:20: /gpfs/cfms/home/username/projects/moose/framework/moose.mk: No\nsuch file or directory\nMakefile:48: /gpfs/cfms/home/username/projects/moose/modules/modules.mk: No\nsuch file or directory\nMakefile:56: /gpfs/cfms/home/username/projects/moose/framework/app.mk: No\nsuch file or directory\nmake: *** No rule to make target\n`/gpfs/cfms/home/username/projects/moose/framework/app.mk'.  Stop\n\nHence, could you please clarify more about the details on the command line\nyou shared?\n\nI look forward to hearing from you.\n\nYours Sincerely,\n\nDomenico di Cugno, Ph. D.\n\u2026\nOn Thu, 12 Aug 2021 at 16:36, Guillaume Giudicelli ***@***.***> wrote:\n Hello\n\n This could be for a variety of reasons, actual bug / running out of memory\n / MPI issues.\n Could you please compile in debug mode and re-run this a debugger?\n A shorthand for it:\n mpirun -n XXX gdb --ex run --ex bt ./your_app-dbg -i your_input_file.i\n\n Guillaume\n\n \u2014\n You are receiving this because you authored the thread.\n Reply to this email directly, view it on GitHub\n <#18588 (comment)>,\n or unsubscribe\n <https://github.com/notifications/unsubscribe-auth/AVFIBH67FRRUJXD6JMQHHKLT4PTBNANCNFSM5CA2NXMA>\n .\n Triage notifications on the go with GitHub Mobile for iOS\n <https://apps.apple.com/app/apple-store/id1477376905?ct=notification-email&mt=8&pt=524675>\n or Android\n <https://play.google.com/store/apps/details?id=com.github.android&utm_campaign=notification-email>\n .\n\n\n-- \n*Domenico di Cugno* // Systems Engineer\n\n*e: ***@***.***   *t*: 0117 906 1100   *w: *\nwww.cfms.org.uk\nCFMS Services Ltd // Bristol & Bath Science Park // Dirac Crescent // Emersons\nGreen // Bristol // BS16 7FR\n\n<https://cfms.org.uk/media/384108/email-footer-darren-swift.png?width=500&height=115&mode=crop>\n<https://cfms.org.uk/media/384108/email-footer-darren-swift.png?width=500&height=115&mode=crop>\n<https://cfms.org.uk/industry-themes/smart-infrastructure/?utm_source=email&utm_medium=gmail-footer&utm_campaign=infrastructure&utm_content=landing-page.>\n<https://cfms.org.uk/industry-themes/smart-infrastructure/?utm_source=email&utm_medium=gmail-footer&utm_campaign=infrastructure&utm_content=landing-page.>\n<https://cfms.org.uk/news-events-opinions/opinions/2021/may/make-the-most-of-automation-with-open-networking/?utm_source=email&utm_medium=gmail-footer&utm_campaign=opinions&utm_content=open-networking.>\n<https://cfms.org.uk/news-events-opinions/opinions/2021/may/make-the-most-of-automation-with-open-networking/?utm_source=email&utm_medium=gmail-footer&utm_campaign=opinions&utm_content=open-networking.>\n<https://cfms.org.uk/news-events-opinions/opinions/2021/may/make-the-most-of-automation-with-open-networking/?utm_source=email&utm_medium=gmail-footer&utm_campaign=opinions&utm_content=open-networking.>",
+                  "url": "https://github.com/idaholab/moose/discussions/18588#discussioncomment-1165492",
+                  "updatedAt": "2022-07-05T13:14:50Z",
+                  "publishedAt": "2021-08-12T20:21:55Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "XX is the number of processes here.\nnote the --args I added to the command btw\nAre you getting the same errors with the regular make command ?\nWhich directory are you running this from? Are you using the conda installation, if so did you remember to activate the conda environment?\nHave you used gdb before? The page you linked is the right one to help you.",
+                          "url": "https://github.com/idaholab/moose/discussions/18588#discussioncomment-1165528",
+                          "updatedAt": "2022-07-05T13:15:03Z",
+                          "publishedAt": "2021-08-12T20:35:09Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "DomenicoCFD"
+                  },
+                  "bodyText": "Hi,\n\nMany thanks for your email and your corrections/amendments on your previous\ninstructions.\n\nI assumed I should be considering the same number of processes as that I\nwant to make the regular run. And I also guess that XX appearing into\nMETHOD ... should match the XXX that you specified into the command line\nmpirun ....\n\nAre you getting the same errors with the regular make command ? Which\ndirectory are you running this from?\nShould I perform the regular make command as: make j XX I still get the\nsame error. However, I do not understand why is this happening as I am into\nthe main application directory where the *Makefile* file exists. Unless, it\nis the matter of generating another MOOSE application specifically for the\ndebugger only?\n\nAre you using the conda installation, if so did you remember to activate\nthe conda environment?\nFor some reason internal to the business that I work for I am not sure that\nthe conda activation command is needed for the cluster environment but I\nmight be wrong on this and I would need to double check on that. In any\ncases, by running the conda activate moose the output message is: *bash:\nconda: command not found*\n\nHave you used gdb before? The page you linked is the right one to help you.\nAs I said, I am relatively new to MOOSE and so far I have never used gdb\nbefore. But to be honest, by reading the webpage about debugger it is\nunclear to me about which MOOSE application to consider for the debugger.\n\nI look forward to hearing from you.\n\nKind Regards,\n\nDomenico\n\u2026\nOn Thu, 12 Aug 2021 at 21:35, Guillaume Giudicelli ***@***.***> wrote:\n XX is the number of processes here.\n\n note the --args I added to the command btw\n\n Are you getting the same errors with the regular make command ?\n Which directory are you running this from? Are you using the conda\n installation, if so did you remember to activate the conda environment?\n\n Have you used gdb before? The page you linked is the right one to help you.\n\n \u2014\n You are receiving this because you authored the thread.\n Reply to this email directly, view it on GitHub\n <#18588 (reply in thread)>,\n or unsubscribe\n <https://github.com/notifications/unsubscribe-auth/AVFIBHYY4B6PN3HKXACAERTT4QWARANCNFSM5CA2NXMA>\n .\n Triage notifications on the go with GitHub Mobile for iOS\n <https://apps.apple.com/app/apple-store/id1477376905?ct=notification-email&mt=8&pt=524675>\n or Android\n <https://play.google.com/store/apps/details?id=com.github.android&utm_campaign=notification-email>\n .\n\n\n-- \n*Domenico di Cugno* // Systems Engineer\n\n*e: ***@***.***   *t*: 0117 906 1100   *w: *\nwww.cfms.org.uk\nCFMS Services Ltd // Bristol & Bath Science Park // Dirac Crescent // Emersons\nGreen // Bristol // BS16 7FR\n\n<https://cfms.org.uk/media/384108/email-footer-darren-swift.png?width=500&height=115&mode=crop>\n<https://cfms.org.uk/media/384108/email-footer-darren-swift.png?width=500&height=115&mode=crop>\n<https://cfms.org.uk/industry-themes/smart-infrastructure/?utm_source=email&utm_medium=gmail-footer&utm_campaign=infrastructure&utm_content=landing-page.>\n<https://cfms.org.uk/industry-themes/smart-infrastructure/?utm_source=email&utm_medium=gmail-footer&utm_campaign=infrastructure&utm_content=landing-page.>\n<https://cfms.org.uk/news-events-opinions/opinions/2021/may/make-the-most-of-automation-with-open-networking/?utm_source=email&utm_medium=gmail-footer&utm_campaign=opinions&utm_content=open-networking.>\n<https://cfms.org.uk/news-events-opinions/opinions/2021/may/make-the-most-of-automation-with-open-networking/?utm_source=email&utm_medium=gmail-footer&utm_campaign=opinions&utm_content=open-networking.>\n<https://cfms.org.uk/news-events-opinions/opinions/2021/may/make-the-most-of-automation-with-open-networking/?utm_source=email&utm_medium=gmail-footer&utm_campaign=opinions&utm_content=open-networking.>",
+                  "url": "https://github.com/idaholab/moose/discussions/18588#discussioncomment-1165746",
+                  "updatedAt": "2022-07-05T13:17:01Z",
+                  "publishedAt": "2021-08-12T21:48:02Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hey\nPlease use the quote reply feature (next to the checkmark button) if you want to quote. Will make it easier to read.\nThe XX for make and the XX for mpirun do not have to match. They will match if you want to use the same number of processes for the two separate tasks, and they tend to be both equal to the number of cores that your machine has, but they do not have to.\nOk so the error does not have to do with generating the debug executable. Since you are not using conda, and are using a computing cluster where I assume someone else installed moose for you, what you need to do is specify where the MOOSE directory is before building your application. What does echo $MOOSE_DIR return?\nOnce this is fixed, we are trying to build a new executable specifically for debugging. Not really a new application.\ngdb is not tied to moose. It's used in general for debugging. You can find a lot of help on using it just by searching online. You should be good just using the command I gave you though, once you have built the application.\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/18588#discussioncomment-1165797",
+                          "updatedAt": "2022-07-05T13:17:40Z",
+                          "publishedAt": "2021-08-12T22:08:31Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "DomenicoCFD"
+                          },
+                          "bodyText": "Hi,\nMany thanks for your clarifications. Here below are my thoughts:\n\nBy running the echo $MOOSE_DIR I do receive only an empty line as output. I guess this is because we compile a specific version of moose and so, at every job and within the bash file, we execute a module load command as follows:\n\nmodule load /path_to_module_files/moose-vxxx\nSo I guess this is what echo command should give.\n\nI can now see that it is not the case of generating a new application, but the question remain around the command I would need to generate the -gdb executable. Do I need to use the path to the moose somehow in any command line? as the METHOD= ... won't work.\n\nKind Regards,\nDomenico",
+                          "url": "https://github.com/idaholab/moose/discussions/18588#discussioncomment-1165849",
+                          "updatedAt": "2022-07-05T13:17:40Z",
+                          "publishedAt": "2021-08-12T22:33:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Ugh the formatting of the message is messed up again. I guess I ll just have to deal with it ^^\nOk if you are to recompile the executable in debug mode you need to have access to moose. So module load, then compile.\nWhen compiling, either MOOSE should be in the application/moose folder, as a submodule or MOOSE_DIR should be set.",
+                          "url": "https://github.com/idaholab/moose/discussions/18588#discussioncomment-1165880",
+                          "updatedAt": "2022-07-05T13:17:45Z",
+                          "publishedAt": "2021-08-12T22:43:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "You can specify the path in the command line if you want to, so\nMOOSE_DIR=path_to_moose METHOD=dbg make -j XX",
+                          "url": "https://github.com/idaholab/moose/discussions/18588#discussioncomment-1165882",
+                          "updatedAt": "2022-07-05T13:20:34Z",
+                          "publishedAt": "2021-08-12T22:43:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "DomenicoCFD"
+                          },
+                          "bodyText": "Hi,\nIt seems that something is now happening but still some errors as it cannot find few commands:\nhere below there is the output/error message.\n[username@hostname application]$ MOOSE_DIR=/path_to_moose/moose-210516/ METHOD=dbg make -j 24\nmake: mpicxx: Command not found\nmake: mpif90: Command not found\n/bin/sh: mpif90: command not found\nUsing HIT from /path_to_moose/framework/contrib/hit\nCompiling C++ (in dbg mode) /path_to_moose/framework/build/unity_src/src_Unity.C...\nCompiling C++ (in dbg mode) /path_to_moose/framework/build/unity_src/outputs_Unity.C...\nCompiling C++ (in dbg mode) /path_to_moose/framework/build/unity_src/outputs_png_Unity.C...\nCompiling C++ (in dbg mode) /path_to_moose/framework/build/unity_src/outputs_formatters_Unity.C...\nCompiling C++ (in dbg mode) /path_to_moose/framework/build/unity_src/controls_Unity.C...\nCompiling C++ (in dbg mode) /path_to_moose/framework/build/unity_src/reporters_Unity.C...\nCompiling C++ (in dbg mode) /path_to_moose/framework/build/unity_src/timeintegrators_Unity.C...\nCompiling C++ (in dbg mode) /path_to_moose/framework/build/unity_src/fvbcs_Unity.C...\nCompiling C++ (in dbg mode) /path_to_moose/framework/build/unity_src/meshgenerators_Unity.C...\nCompiling C++ (in dbg mode) /path_to_moose/framework/build/unity_src/relationshipmanagers_Unity.C...\nCompiling C++ (in dbg mode) /path_to_moose/framework/build/unity_src/vectorpostprocessors_Unity.C...\nCompiling C++ (in dbg mode) /path_to_moose/framework/build/unity_src/problems_Unity.C...\nCompiling C++ (in dbg mode) /path_to_moose/framework/build/unity_src/partitioner_Unity.C...\nCompiling C++ (in dbg mode) /path_to_moose/framework/build/unity_src/timesteppers_Unity.C...\nCompiling C++ (in dbg mode) /path_to_moose/framework/build/unity_src/auxkernels_Unity.C...\nCompiling C++ (in dbg mode) /path_to_moose/framework/build/unity_src/fviks_Unity.C...\nCompiling C++ (in dbg mode) /path_to_moose/framework/build/unity_src/predictors_Unity.C...\nCompiling C++ (in dbg mode) /path_to_moose/framework/build/unity_src/constraints_Unity.C...\nCompiling C++ (in dbg mode) /path_to_moose/framework/build/unity_src/transfers_Unity.C...\n/path_to_moose/libmesh/installed/contrib/bin/libtool: line 1763: mpicxx: command not found\nmake: *** [/path_to_moose/framework/build/unity_src/src_Unity.x86_64-pc-linux-gnu.dbg.lo] Error 1\nmake: *** Waiting for unfinished jobs....\n/path_to_moose/libmesh/installed/contrib/bin/libtool: line 1763: mpicxx: command not found\nmake: *** [/path_to_moose/framework/build/unity_src/outputs_Unity.x86_64-pc-linux-gnu.dbg.lo] Error 1\n/path_to_moose/libmesh/installed/contrib/bin/libtool: line 1763: mpicxx: command not found\nmake: *** [/path_to_moose/framework/build/unity_src/outputs_png_Unity.x86_64-pc-linux-gnu.dbg.lo] Error 1\n/path_to_moose/libmesh/installed/contrib/bin/libtool: line 1763: mpicxx: command not found\nmake: *** [/path_to_moose/framework/build/unity_src/outputs_formatters_Unity.x86_64-pc-linux-gnu.dbg.lo] Error 1\n/path_to_moose/libmesh/installed/contrib/bin/libtool: line 1763: mpicxx: command not found\nmake: *** [/path_to_moose/framework/build/unity_src/controls_Unity.x86_64-pc-linux-gnu.dbg.lo] Error 1\n/path_to_moose/libmesh/installed/contrib/bin/libtool: line 1763: mpicxx: command not found\nmake: *** [/path_to_moose/framework/build/unity_src/reporters_Unity.x86_64-pc-linux-gnu.dbg.lo] Error 1\n/path_to_moose/libmesh/installed/contrib/bin/libtool: line 1763: mpicxx: command not found\nmake: *** [/path_to_moose/framework/build/unity_src/timeintegrators_Unity.x86_64-pc-linux-gnu.dbg.lo] Error 1\n/path_to_moose/libmesh/installed/contrib/bin/libtool: line 1763: mpicxx: command not found\nmake: *** [/path_to_moose/framework/build/unity_src/fvbcs_Unity.x86_64-pc-linux-gnu.dbg.lo] Error 1\n/path_to_moose/libmesh/installed/contrib/bin/libtool: line 1763: mpicxx: command not found\nmake: *** [/path_to_moose/framework/build/unity_src/meshgenerators_Unity.x86_64-pc-linux-gnu.dbg.lo] Error 1\n/path_to_moose/libmesh/installed/contrib/bin/libtool: line 1763: mpicxx: command not found\nmake: *** [/path_to_moose/framework/build/unity_src/relationshipmanagers_Unity.x86_64-pc-linux-gnu.dbg.lo] Error 1\n/path_to_moose/libmesh/installed/contrib/bin/libtool: line 1763: mpicxx: command not found\nmake: *** [/path_to_moose/framework/build/unity_src/vectorpostprocessors_Unity.x86_64-pc-linux-gnu.dbg.lo] Error 1\n/path_to_moose/libmesh/installed/contrib/bin/libtool: line 1763: mpicxx: command not found\nmake: *** [/path_to_moose/framework/build/unity_src/problems_Unity.x86_64-pc-linux-gnu.dbg.lo] Error 1\n/path_to_moose/libmesh/installed/contrib/bin/libtool: line 1763: mpicxx: command not found\nmake: *** [/path_to_moose/framework/build/unity_src/partitioner_Unity.x86_64-pc-linux-gnu.dbg.lo] Error 1\n/path_to_moose/libmesh/installed/contrib/bin/libtool: line 1763: mpicxx: command not found\nmake: *** [/path_to_moose/framework/build/unity_src/timesteppers_Unity.x86_64-pc-linux-gnu.dbg.lo] Error 1\n/path_to_moose/libmesh/installed/contrib/bin/libtool: line 1763: mpicxx: command not found\nmake: *** [/path_to_moose/framework/build/unity_src/auxkernels_Unity.x86_64-pc-linux-gnu.dbg.lo] Error 1\n/path_to_moose/libmesh/installed/contrib/bin/libtool: line 1763: mpicxx: command not found\nmake: *** [/path_to_moose/framework/build/unity_src/fviks_Unity.x86_64-pc-linux-gnu.dbg.lo] Error 1\n/path_to_moose/libmesh/installed/contrib/bin/libtool: line 1763: mpicxx: command not found\nmake: *** [/path_to_moose/framework/build/unity_src/predictors_Unity.x86_64-pc-linux-gnu.dbg.lo] Error 1\n/path_to_moose/libmesh/installed/contrib/bin/libtool: line 1763: mpicxx: command not found\nmake: *** [/path_to_moose/framework/build/unity_src/constraints_Unity.x86_64-pc-linux-gnu.dbg.lo] Error 1\n/path_to_moose/libmesh/installed/contrib/bin/libtool: line 1763: mpicxx: command not found\nmake: *** [/path_to_moose/framework/build/unity_src/transfers_Unity.x86_64-pc-linux-gnu.dbg.lo] Error 1",
+                          "url": "https://github.com/idaholab/moose/discussions/18588#discussioncomment-1165901",
+                          "updatedAt": "2022-07-05T13:20:34Z",
+                          "publishedAt": "2021-08-12T22:54:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "It's not finding the mpi wrapped compilers, which will compile your application with the MPI library that you are using.\nYou need to export the CC, CXX and FC environment variables to the location of your MPI-wrapped compilers.\nIf you don't know where they are, you'll need to talk to whoever installed MOOSE for you as you need to use the same compilers as those that were used to install MOOSE.",
+                          "url": "https://github.com/idaholab/moose/discussions/18588#discussioncomment-1165910",
+                          "updatedAt": "2022-07-05T13:20:38Z",
+                          "publishedAt": "2021-08-12T22:58:43Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "DomenicoCFD"
+                          },
+                          "bodyText": "Hi,\nMany thanks for your direction! Really useful! I will speak tomorrow morning UTC time zone with whoever is/was involved into the MOOSE installation.\nI will keep you informed on how it goes eventually! But for now many thanks for your priceless support!\nKind Regards,\nDomenico",
+                          "url": "https://github.com/idaholab/moose/discussions/18588#discussioncomment-1165915",
+                          "updatedAt": "2022-07-05T13:20:37Z",
+                          "publishedAt": "2021-08-12T23:01:56Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "UMAT as Plugin",
+          "author": {
+            "login": "12arya129"
+          },
+          "bodyText": "Hello,\nI want to learn more about using UMAT (Fortran) in moose, I tried searching it on Moose website but couldn't find much. Any help?",
+          "url": "https://github.com/idaholab/moose/discussions/17165",
+          "updatedAt": "2022-06-02T14:51:53Z",
+          "publishedAt": "2021-03-01T10:35:54Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "lynnmunday"
+                  },
+                  "bodyText": "It was a part of the MOOSE solid mechanics module but the solid mechanics module was deprecated in favor of the tensor mechanics module and the umat code did not make it into tensor mechanics.  If you wanted to try reimplementing the umat code into tensor mechanics, you could start from this commit from 7/25/2012 which implemented umat in solid mechanics:  94051c7\nI think we might try to add a umat capability back into tensor mechanics this summer.",
+                  "url": "https://github.com/idaholab/moose/discussions/17165#discussioncomment-419573",
+                  "updatedAt": "2022-06-02T14:51:53Z",
+                  "publishedAt": "2021-03-01T20:32:39Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "Hi @lynnmunday is there any update on UMAT?",
+                          "url": "https://github.com/idaholab/moose/discussions/17165#discussioncomment-1166631",
+                          "updatedAt": "2022-06-02T14:52:03Z",
+                          "publishedAt": "2021-08-13T05:28:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lynnmunday"
+                          },
+                          "bodyText": "@dschwen has done a lot of umat work recently.   In May he merged this:\n#17742\nThere are also some other issues he is working on.  I think it would be ready to try and there are examples in the above pr.",
+                          "url": "https://github.com/idaholab/moose/discussions/17165#discussioncomment-1168827",
+                          "updatedAt": "2022-06-02T14:51:58Z",
+                          "publishedAt": "2021-08-13T15:14:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dschwen"
+                          },
+                          "bodyText": "Stay tuned for further improvements in that area. And let us know if you have specific UMAT requirements. We're always interested in feedback on this capability!",
+                          "url": "https://github.com/idaholab/moose/discussions/17165#discussioncomment-1168929",
+                          "updatedAt": "2022-06-02T14:51:58Z",
+                          "publishedAt": "2021-08-13T15:38:58Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Can not compile custom object",
+          "author": {
+            "login": "Mestro402"
+          },
+          "bodyText": "Hello, after I wrote DarcyPressure object in step5 of tutorial 1, I met the problem that it could not be compiled. It shows that I can't find cstdlib, whereas I myself compiled the header file containing cstdlib separately using g++. I also had this problem with the offline version of MOOSE. It seems that I didn't install MOOSE correctly. Can anyone help me please? Thanks a lot.\nThe following is the information returned by the terminal\n\n(moose) mestro@mestro-PC:~/projects/moose$ cd ..\n(moose) mestro@mestro-PC:~/projects$ cd my_first/\n(moose) mestro@mestro-PC:~/projects/my_first$ ls\na.out  build  doc  hs.c  include  lib  LICENSE  Makefile  my_first-opt  problems  README.md  run_tests  scripts  src  test  testroot  unit\n(moose) mestro@mestro-PC:~/projects/my_first$ cd include/kernels/\n(moose) mestro@mestro-PC:~/projects/my_first/include/kernels$ ls\nDarcyPressure.h\n(moose) mestro@mestro-PC:~/projects/my_first/include/kernels$ cd ../../src/kernels/\n(moose) mestro@mestro-PC:~/projects/my_first/src/kernels$ ls\nDarcyPressure.c\n(moose) mestro@mestro-PC:~/projects/my_first/src/kernels$ cd ../../\n(moose) mestro@mestro-PC:~/projects/my_first$ make -j 4\nUsing HIT from /home/mestro/projects/moose/framework/contrib/hit\nChecking if header needs updating: /home/mestro/projects/moose/framework/include/base/MooseRevision.h...\nCompiling C++ (in opt mode) /home/mestro/projects/moose/framework/build/unity_src/multiapps_Unity.C...\nCompiling C++ (in opt mode) /home/mestro/projects/moose/framework/build/unity_src/interfacekernels_Unity.C...\n......\n\nCompiling C (in opt mode) /home/mestro/projects/my_first/src/kernels/DarcyPressure.c...\nIn file included from /home/mestro/anaconda3/envs/moose/libmesh/include/libmesh/threads.h:24,\n                 from /home/mestro/projects/moose/framework/build/header_symlinks/HashMap.h:13,\n                 from /home/mestro/projects/moose/framework/build/header_symlinks/MooseUtils.h:13,\n                 from /home/mestro/projects/moose/framework/build/header_symlinks/InputParameters.h:13,\n                 from /home/mestro/projects/moose/framework/build/header_symlinks/MooseObject.h:13,\n                 from /home/mestro/projects/moose/framework/build/header_symlinks/ResidualObject.h:12,\n                 from /home/mestro/projects/moose/framework/build/header_symlinks/KernelBase.h:12,\n                 from /home/mestro/projects/moose/framework/build/header_symlinks/ADKernel.h:12,\n                 from /home/mestro/projects/moose/framework/build/header_symlinks/ADKernelGrad.h:12,\n                 from /home/mestro/projects/my_first/build/header_symlinks/DarcyPressure.h:2,\n                 from /home/mestro/projects/my_first/src/kernels/DarcyPressure.c:1:\n/home/mestro/anaconda3/envs/moose/libmesh/include/libmesh/libmesh_common.h:36:10: fatal error: cstdlib: No such file or directory\n   36 | #include <cstdlib>\n      |          ^~~~~~~~~\ncompilation terminated.\nmake: *** [/home/mestro/projects/moose/framework/build.mk:152\uff1a/home/mestro/projects/my_first/src/kernels/DarcyPressure.x86_64-conda-linux-gnu.opt.lo] \u9519\u8bef 1",
+          "url": "https://github.com/idaholab/moose/discussions/18601",
+          "updatedAt": "2022-07-23T04:12:12Z",
+          "publishedAt": "2021-08-13T11:03:58Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThe compiler thinks DarcyPressure is a C source file, because of the .c extension. Please rename it to .C (capital C) and let us know if that solves the issue.\nBest,\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/18601#discussioncomment-1168666",
+                  "updatedAt": "2022-07-23T04:12:49Z",
+                  "publishedAt": "2021-08-13T14:45:27Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Periodic BC for Discontinuous Galerkin",
+          "author": {
+            "login": "DaijunHU"
+          },
+          "bodyText": "Dear MOOSE users,\nWe are implementing the DG kernels for advection, but for the moment, the periodic BC does not work.\nAn example input file is here https://github.com/ngrilli/c_pfor_am/blob/main/test/tests/DGKernels/PosNegStraightEdge.i\nIn our view the DG kernel works only in the internal elements but for the variables on the boundaries the neighbor parts (e.g. _u_neighbor) do not work well.\nHas anyone implemented Periodic BC for some Discontinuous Galerkin applications?\nAny suggestion is very much appreciated.\nBest Regards,\nDaijun",
+          "url": "https://github.com/idaholab/moose/discussions/18580",
+          "updatedAt": "2022-06-14T23:03:51Z",
+          "publishedAt": "2021-08-11T03:06:06Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "ngrilli"
+                  },
+                  "bodyText": "We have noticed that periodic boundary conditions are activated only when the shape functions are FIRST LAGRANGE\nbut they do not work when the shape functions are CONSTANT MONOMIAL or FIRST MONOMIAL.\nDoes anybody know the reason for that?\nAnd what could be a solution to make PBC working with CONSTANT MONOMIAL?\nThank you very much in advance for your suggestions.\nNicol\u00f2",
+                  "url": "https://github.com/idaholab/moose/discussions/18580#discussioncomment-1161122",
+                  "updatedAt": "2022-06-14T23:03:59Z",
+                  "publishedAt": "2021-08-11T23:09:19Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "YaqiWang"
+                  },
+                  "bodyText": "Is CG having the strong continuity along the paired periodic boundaries? I am not sure if we can do that with DG. I think we should have something like a DG kernel to connect a paired sides. Do you get a run-time error for doing periodic boundary condition with DG? If not, the code at least should throw an error. Hope someone else can give you a better answer.",
+                  "url": "https://github.com/idaholab/moose/discussions/18580#discussioncomment-1161331",
+                  "updatedAt": "2022-06-14T23:04:01Z",
+                  "publishedAt": "2021-08-12T01:02:56Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "DaijunHU"
+                          },
+                          "bodyText": "Hi Yaqi,\nThank you so much for your reply.\nCurrently we do not have an error for doing periodic boudary condition with DG kernels, it just do not work at boudary elements but the simulations can move on.\nI think Nicol\u00f2's answer above points to a possible solution  for this, we want to check if there is PBC that can work with the shape function  CONSTANT MONOMIAL we are using for our simulation.\nThank you!\nBest regards,\nDaijun",
+                          "url": "https://github.com/idaholab/moose/discussions/18580#discussioncomment-1161687",
+                          "updatedAt": "2022-06-14T23:04:01Z",
+                          "publishedAt": "2021-08-12T03:55:34Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ngrilli"
+                          },
+                          "bodyText": "Dear @YaqiWang\nYes, I believe CG (with first order Lagrange) with PBC removes the degrees of freedom of the variable along one of the paired surfaces, therefore there is continuity in the strong sense.\nI am still not sure why this is not possible with constant monomial shape functions, it should be technically the same.\nThis does not depend specifically on the DGKernel, the same happens with CG,\nbut you never use constant monomial in that case.\nYes, as you point out, we should develop a kernel such that the variable at the neighboring element: _u_neighbor\ncan be fetched in the elements in the connected pair side.\nIs there a function in moose that can provide the neighboring element in a periodic boundary?\nThe current DGKernel is not called for the boundary faces, therefore adding periodic BC has no effect,\nthe simulation can run though, but boundary condition remains zero flux.\nNicol\u00f2",
+                          "url": "https://github.com/idaholab/moose/discussions/18580#discussioncomment-1163357",
+                          "updatedAt": "2022-06-14T23:04:02Z",
+                          "publishedAt": "2021-08-12T12:31:12Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "YaqiWang"
+                          },
+                          "bodyText": "Is there a function in moose that can provide the neighboring element in a periodic boundary?\n\nlibMesh probably has a function to allow us to find the periodic neighbor. But MOOSE probably does not have the support for properly evaluating coupled variables, material properties, etc. on the periodic neighbor. @lindsayad are these right?",
+                          "url": "https://github.com/idaholab/moose/discussions/18580#discussioncomment-1164090",
+                          "updatedAt": "2022-06-14T23:04:10Z",
+                          "publishedAt": "2021-08-12T15:00:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "Yes we have Elem::topological_neighbor for finding a periodic neighbor. @YaqiWang is right that all the plumbing in MOOSE is set up just to query and reinit finite element shape functions, variables, materials etc. for connected neighbors (neighbors accessible with elem->neighbor_ptr). It would take some changes to support periodic neighbors",
+                          "url": "https://github.com/idaholab/moose/discussions/18580#discussioncomment-1164691",
+                          "updatedAt": "2022-06-15T18:08:39Z",
+                          "publishedAt": "2021-08-12T16:51:14Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Postprocessing: Total mass and total energy calculation porous flow module",
+          "author": {
+            "login": "rksin8"
+          },
+          "bodyText": "Hi,\nI am solving a single-phase TH problem(porous_flow module)  where boundary conditions on a face are Dirichlet type for both pressure and temperature. How do I calculate the total mass and total energy for the given boundary?\nThank you,\nRanjeet",
+          "url": "https://github.com/idaholab/moose/discussions/18558",
+          "updatedAt": "2022-07-26T13:25:37Z",
+          "publishedAt": "2021-08-09T07:30:55Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "WilkAndy"
+                  },
+                  "bodyText": "The simplest situation is when you're interested in the total flow into (or out of) the entire system.  Then you can use PorousFlowFluidMass or PorousFlowHeatEnergy.\nNote that Dirichlet conditions are not recommended in PorousFlow since they frequently end up trying to withdraw fluid or heat from a region which contains none, so we try to encourage people to use one of the many PorousFlowSinks instead.\nNevertheless, Dirichlet BCs are really convenient.  So, use a PorousFlowOutflowBC to record your flux (study the save_in feature on that webpage).",
+                  "url": "https://github.com/idaholab/moose/discussions/18558#discussioncomment-1151422",
+                  "updatedAt": "2022-07-26T13:25:37Z",
+                  "publishedAt": "2021-08-09T21:48:53Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rksin8"
+                          },
+                          "bodyText": "@WilkAndy Thank you for the explanation. Calculated injected and produced mass using the Save-flux feature in these Boundary conditions.",
+                          "url": "https://github.com/idaholab/moose/discussions/18558#discussioncomment-1164546",
+                          "updatedAt": "2022-07-26T13:25:48Z",
+                          "publishedAt": "2021-08-12T16:23:10Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

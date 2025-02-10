@@ -1,0 +1,773 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMS0wNC0wNVQxNzowMDoyNy0wNTowMM4AMnYA"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Mesh adaptivity adds a huge nonlinear residual jump",
+          "author": {
+            "login": "xueyang94"
+          },
+          "bodyText": "Hi everyone,\nI am running a KKS model with the Newton solver. Normally the nonlinear residual is around 1e1. After adding a mesh adaptivity in the Executioner block however, the nonlinear residual residual at the first iteration jumps to 1e8. The adaptivity looks like below. Could anyone help to explain why this happens? Thanks in advance.\n[./Adaptivity]\ninitial_adaptivity = 1\ninterval = 1\nrefine_fraction = 0.9\ncoarsen_fraction = 0.1\nmax_h_level = 4\n[../]",
+          "url": "https://github.com/idaholab/moose/discussions/17551",
+          "updatedAt": "2022-10-18T18:44:52Z",
+          "publishedAt": "2021-04-08T21:12:50Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "simopier"
+                  },
+                  "bodyText": "Hi Xueyang,\nYou seem to have defined a maximum of 4 levels of mesh adaptivity max_h_level = 4, but allowed the initial step to include only one level initial_adaptivity = 1. Maybe your mesh is very coarse during your initial step, which leads to large residuals.\nTo test your code and make sure the transition to mesh adaptivity goes smoothly, I suggest doing it step by step from a simple input file that runs well without mesh adaptivity.\nOnce you have that, you could introduce one level of mesh adaptivity. In your mesh block, introduce a mesh that is twice as coarse (nx and ny defined as half of what you were using without mesh adaptivity for a 2D mesh) and add uniform_refine = 1. This line will uniformly refine your mesh once, thus creating the same mesh that you had in the input file without mesh adaptivity. Then, to introduce mesh adaptivity, and define your mesh adaptivity block as\n[./Adaptivity]\ninitial_adaptivity = 1\ninterval = 1\nrefine_fraction = 0.9\ncoarsen_fraction = 0.1\nmax_h_level = 1\n[../]\n\nNotice as I defined max_h_level = 1 instead of 4, since we want to introduce only one level of mesh adaptivity. If you check your mesh, some parts might be twice coarse as the uniform mesh you had without mesh adaptivity.\nLet me know if this solves your issue. If it does, you can progressively increase the number of mesh adaptivity levels by increasing initial_adaptivity and max_h_level.",
+                  "url": "https://github.com/idaholab/moose/discussions/17551#discussioncomment-601941",
+                  "updatedAt": "2022-10-18T18:44:51Z",
+                  "publishedAt": "2021-04-12T20:10:57Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to get \"temperature\", \"time\" and \"time step size\"",
+          "author": {
+            "login": "styyokuda"
+          },
+          "bodyText": "All,\nI am solving a diffusion equation with energy equation (temperature).\nI am writing a C++ class that inherits from Material. My program looks like the one below,\nwhere \"time\" is the computation time, \"del_time\" is the time step size.\nPlease let me know how to get \"temperature,\" \"time\" and \"time step size.\"\nfloat base, temp, flux, del_time, temperature;\nfloat constant_A = 10, constant_B = 100, constant_C = 1000;\nIf (time <= 0)\nbase = 0;\nif (temperature <= 100)\ntemp = constant_A * temperature;\nelse\ntemp = constant_B * temperature;\nbase = base + (temp * del_time);\nflux = constant_C / base;\nSincerely,\nThomas",
+          "url": "https://github.com/idaholab/moose/discussions/17528",
+          "updatedAt": "2023-05-02T11:36:59Z",
+          "publishedAt": "2021-04-07T15:41:15Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "aeslaughter"
+                  },
+                  "bodyText": "You would get temperature using coupling as in: https://mooseframework.inl.gov/getting_started/examples_and_tutorials/examples/ex03_coupling.html.\nThe time and timestep are available as _t and _dt, see https://mooseframework.inl.gov/docs/doxygen/moose/classMaterial.html",
+                  "url": "https://github.com/idaholab/moose/discussions/17528#discussioncomment-600617",
+                  "updatedAt": "2023-05-02T11:37:00Z",
+                  "publishedAt": "2021-04-12T15:31:54Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "[Question about order of calculation]",
+          "author": {
+            "login": "coskrrb2002"
+          },
+          "bodyText": "Dear moose users,\nI have a question about calculation steps of auxkernel and kernel.\nIn my numerical model, I am trying to use an auxkernel to calculate a value, and this value is used in kernels to find a solution for numerical model.\nBut I am not sure that auxkernel is calculated first, and it used for the calculation in kernels.\nSo simply my question :\nAuxkernel is calculated before kernel to calculate residual of variables? (1)\nAfter Kernel calculation? (2)\nSimulataneously? (3)\nCalculation steps:\n\nAuxkernel -> Kernel -> Find solution\nKernel -> Auxkernel -> Find solution\nKernel <=> Auxkernel -> Find solution\n\nBest regards",
+          "url": "https://github.com/idaholab/moose/discussions/17543",
+          "updatedAt": "2022-06-20T08:56:48Z",
+          "publishedAt": "2021-04-08T03:48:31Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "coskrrb2002"
+                  },
+                  "bodyText": "I guess I have to use UserObject... Instead of auxkernel...",
+                  "url": "https://github.com/idaholab/moose/discussions/17543#discussioncomment-582814",
+                  "updatedAt": "2022-06-20T08:56:48Z",
+                  "publishedAt": "2021-04-08T04:21:28Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "coskrrb2002"
+                          },
+                          "bodyText": "No, I got it. I am using materials, and it works!",
+                          "url": "https://github.com/idaholab/moose/discussions/17543#discussioncomment-594009",
+                          "updatedAt": "2022-06-20T08:56:48Z",
+                          "publishedAt": "2021-04-10T12:51:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ngrilli"
+                          },
+                          "bodyText": "Dear @coskrrb2002\nWhat I usually do is the following:\nIf I need a quantity to use in a kernel, I define it as a material property in a material object.\nThen the quantity can be imported in a kernel using getMaterialProperty.\nI use auxkernels to calculate auxvariables that are needed into material objects\nor to output material properties for visualisation.\nBest Regards,\nNicol\u00f2 Grilli",
+                          "url": "https://github.com/idaholab/moose/discussions/17543#discussioncomment-596129",
+                          "updatedAt": "2022-06-20T08:56:48Z",
+                          "publishedAt": "2021-04-11T12:25:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "coskrrb2002"
+                          },
+                          "bodyText": "Dear @ngrilli ,\nThank you for your advice!\nBest regards,\nNakkyu",
+                          "url": "https://github.com/idaholab/moose/discussions/17543#discussioncomment-598288",
+                          "updatedAt": "2022-06-20T08:56:48Z",
+                          "publishedAt": "2021-04-12T07:06:44Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "tutorial files [Darcy_thermo_mech] not working",
+          "author": {
+            "login": "majumdararn"
+          },
+          "bodyText": "I am new to moose.\nI tried to run the tutorial files of darcy_thermo_mech.\n\nI ran the make file.\nI ran the tests.\nI went into problems directory and tried ../darcy_thermo_mech-opt -i step1.i\nI opened the result in ParaView. As per the result, the pressure value is zero everywhere. Could anyone help me with this? Please share if I need to share more information.\n\nNote:\n\nMy peacock is also not running.\nEverything is working fine in the examples folder.\nI have not changed anything in the input file.\nI activated moose.\nEven the tutorial files for steps 1 and 2 worked for the first time.",
+          "url": "https://github.com/idaholab/moose/discussions/17544",
+          "updatedAt": "2022-07-04T08:38:09Z",
+          "publishedAt": "2021-04-08T13:52:46Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "cticenhour"
+                  },
+                  "bodyText": "You may be looking at the initial condition, which is zero for that step (the default). MOOSE allows the definition of an initial condition, even for Steady-type problems. Look for a \"Play\" symbol button at the top of your ParaView window. It should look something like this:\n\nPress that play button to advance to Timestep 1.",
+                  "url": "https://github.com/idaholab/moose/discussions/17544#discussioncomment-585127",
+                  "updatedAt": "2022-07-04T08:38:07Z",
+                  "publishedAt": "2021-04-08T14:13:12Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "majumdararn"
+                          },
+                          "bodyText": "Thank you for your solution. It worked. However, peacock still does not work. Should I raise another question for that?\nI explain the problem in any case.\nIf I want to open the result with peacock, I use the following command:\n/moose/python/peacock/peacock -r step1_out.i\nBut, it shows the following error.\nAutomatic executable search disabled\nSegmentation fault (core dumped)\nIf I want to open the input file with peacock, I use the following command:\n/moose/python/peacock/peacock -i step1.i\nIn this case, peacock opens. For the first time when I ran the simulation within peacock it ran and then when I wanted to view the result. peacock closed suddenly.\nThe command line message including error is folllowing:\nRunning command: /home/amajumda/projects_moose/moose/tutorials/darcy_thermo_mech/step01_diffusion/darcy_thermo_mech-opt Outputs/csv=true -i peacock_run_exe_tmp_step1.i\nWorking directory: /home/amajumda/projects_moose/moose/tutorials/darcy_thermo_mech/step01_diffusion/problems\nFinished: Exit code: 0\nSegmentation fault (core dumped)\nFrom the sencond time onwards, peacock opens and the simulation don't run.\nThe command line error is the following:\nFound executable: /home/amajumda/projects_moose/moose/tutorials/darcy_thermo_mech/step01_diffusion/darcy_thermo_mech-opt\nExodus filenames: ['peacock_run_exe_tmp_step1_out.e']\nSegmentation fault (core dumped)",
+                          "url": "https://github.com/idaholab/moose/discussions/17544#discussioncomment-587278",
+                          "updatedAt": "2022-07-04T08:38:06Z",
+                          "publishedAt": "2021-04-09T00:28:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cticenhour"
+                          },
+                          "bodyText": "I'm glad it worked! Please open a new discussion question for your peacock issue.",
+                          "url": "https://github.com/idaholab/moose/discussions/17544#discussioncomment-587310",
+                          "updatedAt": "2022-07-04T08:38:05Z",
+                          "publishedAt": "2021-04-09T00:50:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "majumdararn"
+                          },
+                          "bodyText": "Thanks. I opened a new issue. For future reference, if someone is trying to refer to this discussion, they can go to the following link for the peacock issue.\n#17560",
+                          "url": "https://github.com/idaholab/moose/discussions/17544#discussioncomment-588984",
+                          "updatedAt": "2023-05-11T13:44:31Z",
+                          "publishedAt": "2021-04-09T10:36:51Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Mass Balance PorousFlow",
+          "author": {
+            "login": "JonhWang55"
+          },
+          "bodyText": "Dear all,\nFirstly, a big thank to the MOOSE community for the this incredible tool. I appreciate the complete documentation, in particular PorousFlow's which is quite good.\nI'm running a medium-size simulation with PorousFlow that includes different types of BCs and sinks. It works really well (despite it took me a while to make it converge). Nonetheless, while reading my results I found an odd behavior in the mass balance. To illustrate this, I have set a simple input file. The system has a PorousFlowPiecewiseLinearSink on the left side which increases the porepressure. The simulation runs for ten seconds while the fluid flux and water balance are computed in post with NodalSum and PorousFlowFluidMass respectively. Now, I would expect that the total fluid going into the system (computed as fluid flux times timestep) would match the fluid balance. But it looks like very different results are obtained (as you may see if you run the simulation). Most likely is a units confusion but I can't figure where is it.\nhttps://drive.google.com/file/d/1quHSxTuHVNsq_um5lmEkEqWxtlONMFN1/view?usp=sharing\nThanks!\nJhon",
+          "url": "https://github.com/idaholab/moose/discussions/17530",
+          "updatedAt": "2022-07-29T01:54:14Z",
+          "publishedAt": "2021-04-07T16:06:33Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "WilkAndy"
+                  },
+                  "bodyText": "You have discovered a weakness in PorousFlowBasicTHM : it does not play well with the Sinks or PorousFlowFluidMass.  While you can reconcile everything (remember BasicTHM works with fluid volumes, not fluid masses), if you are using Sinks and wanting to look at mass balances, i strongly recommend using PorousFlowFullySaturated.  Then you don't have to think!  All you need to is change PorousFlowBasicTHM to PorousFlowFullySaturated in your input file.  Debug your model using FullySaturated, and then maybe go back to BasicTHM for production runs if you need ultimate speed.",
+                  "url": "https://github.com/idaholab/moose/discussions/17530#discussioncomment-582853",
+                  "updatedAt": "2022-07-29T01:54:27Z",
+                  "publishedAt": "2021-04-08T04:46:55Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "I should have added: if you want to continue with PorousFowBasicTHM then it's probably easiest to set\n  multiply_by_density = true\n\nin the PorousFlowBasicTHM block.  Then you don't have to do so much thinking :-).  Secondly, remember to set your fluid bulk modulus consistently throughout the input file.  SimpleFluidProperties defaults to 2E9, so in the PorousFlowConstantBiotModulus you should set\n    fluid_bulk_modulus = 2E9\n\nThese two changes will give you the result you want (with the disclaimers about constant Biot modulus that you can find discussed here ).",
+                          "url": "https://github.com/idaholab/moose/discussions/17530#discussioncomment-582874",
+                          "updatedAt": "2022-07-29T01:54:33Z",
+                          "publishedAt": "2021-04-08T04:59:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "JonhWang55"
+                          },
+                          "bodyText": "Dear Andy,\nThanks! Both, changing from PorousFlowBasicTHM to PorousFlowFullySaturated and activating multiply_by_density = true closed  the mass balance correctly.\nOverall:\n\n\nChanging PorousFlowBasicTHM works with fluid volumes and activating the flag multiply_by_density = true will change that to mass.\n\n\nPorousFlowFullySaturated works with mass fluxes, however, is not as fast as PorousFlowBasicTHM.\n\n\nThanks!",
+                          "url": "https://github.com/idaholab/moose/discussions/17530#discussioncomment-585603",
+                          "updatedAt": "2022-07-29T01:54:54Z",
+                          "publishedAt": "2021-04-08T15:55:26Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "boundary conditions in heat conduction",
+          "author": {
+            "login": "ali-mhassaan"
+          },
+          "bodyText": "Hi,\nI'm using the heat conduction module to apply a source term on my system, my questions are:\n\nWhich MOOSE boundary condition should I use to apply combined convective and radiative bcs?\nAlso, how can I apply the boundary condition on the surface where I'm applying the source term, after the source has been removed?\n\nThanks,\nHassaan",
+          "url": "https://github.com/idaholab/moose/discussions/17504",
+          "updatedAt": "2022-06-11T02:20:56Z",
+          "publishedAt": "2021-04-05T14:13:18Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "cticenhour"
+                  },
+                  "bodyText": "Because convective and radiative BCs in the heat conduction module are Integrated BCs, they have an additive effect when used together in an input file. So, for example, adding ADConvectiveHeatFluxBC and FunctionRadiativeBC to the same boundary would mean they both take effect in your simulation result.\nAs far as question (2), you may want to look into the TimePeriod control object as it allows control of when objects in the input file are active or inactive and for what timeframe in the simulation. You can find more information about the MOOSE Controls system in general at this link.",
+                  "url": "https://github.com/idaholab/moose/discussions/17504#discussioncomment-575873",
+                  "updatedAt": "2022-06-11T02:20:56Z",
+                  "publishedAt": "2021-04-06T16:36:47Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ali-mhassaan"
+                          },
+                          "bodyText": "Thank you Casey for your response.\nSince I kept getting errors when I applied two boundary conditions on the same boundary, I just edited an existing boundary condition.\nHere's what a part of the source file looks like:\nADRadConHeatFluxBC::ADRadConHeatFluxBC(const InputParameters & parameters)\n: ADIntegratedBC(parameters),\n_T_infinity(getADMaterialProperty(\"T_infinity\")),\n_htc(getADMaterialProperty(\"convective_heat_transfer_coefficient\")),\n_rhtc(getADMaterialProperty(\"radiation_heat_transfer_coefficient\"))\n{\n}\nADReal\nADRadConHeatFluxBC::computeQpResidual()\n{\nreturn -_test[_i][_qp] * ((_htc[_qp] * (_T_infinity[_qp] - _u[_qp])) + (_rhtc[_qp] * ((_T_infinity[_qp] * _T_infinity[_qp] * _T_infinity[_qp] * _T_infinity[_qp]) - (_u[_qp] * _u[_qp] * _u[_qp] * _u[_qp]))));\n}\nHere's what it looks like in the input file:\n[./left]\ntype = ADRadConHeatFluxBC\nvariable = temp\nboundary = 4\nT_infinity = 293.0\nconvective_heat_transfer_coefficient = 2.0e-5\nradiation_heat_transfer_coefficient = 2.84e-14\n[../]\nAlso, I'll look at the TimePeriod control object and post it here if I need more help.\nCheers,\nHassaan.",
+                          "url": "https://github.com/idaholab/moose/discussions/17504#discussioncomment-577921",
+                          "updatedAt": "2022-06-11T02:20:56Z",
+                          "publishedAt": "2021-04-07T04:19:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cticenhour"
+                          },
+                          "bodyText": "I'm glad you were able to code something up that worked for you, but I am curious about the issue you had. Could you post the error you received when using the two BCs at once? Also which BCs were you using?",
+                          "url": "https://github.com/idaholab/moose/discussions/17504#discussioncomment-577928",
+                          "updatedAt": "2022-06-11T02:23:27Z",
+                          "publishedAt": "2021-04-07T04:24:09Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ali-mhassaan"
+                          },
+                          "bodyText": "I'll try to recreate the error and post it here.\nCan you provide an example in which two boundary conditions have been applied to the same boundary?\nIs this how you do it?\n[./right]\ntype = FunctionRadiativeBC\nvariable = temp\nboundary = 'right'\nemissivity_function = '3/(5.670367e-8 * 4 * 300 * 300 * 300)'\n[../]\n[./right]\ntype = ADConvectiveHeatFluxBC\nvariable = temp\nboundary = 'right'\nT_infinity = 100.0\nheat_transfer_coefficient = 1\n[../]",
+                          "url": "https://github.com/idaholab/moose/discussions/17504#discussioncomment-583082",
+                          "updatedAt": "2022-06-11T02:23:27Z",
+                          "publishedAt": "2021-04-08T06:39:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cticenhour"
+                          },
+                          "bodyText": "You cannot have two BCs with the same name (./right in your example), so that would cause an error at runtime (a complaint about parameters being supplied multiple times). Change one or both of them to another name. Otherwise, the parameters for your objects look fine to me.",
+                          "url": "https://github.com/idaholab/moose/discussions/17504#discussioncomment-584909",
+                          "updatedAt": "2022-10-19T20:41:23Z",
+                          "publishedAt": "2021-04-08T13:31:07Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Upcoming Cubit-Python webinar -- including an automated MOOSE study",
+          "author": {
+            "login": "GregVernon"
+          },
+          "bodyText": "Dear MOOSE community,\nOn April 6th at 10AM MDT I'll be giving a webinar on Coreform Cubit's Python API (which is also largely applicable to SNL's Cubit).  While it is a webinar, I intend for it to be instructive to new- and intermediate-users.  The webinar will be largely centered around live demonstrations of using the Python API.  One example that may be of particular interest to the MOOSE community is one that automates a MOOSE parameter-sweep study.  While not incredibly sophisticated, I hope that it might at least be insightful for those looking to automate their MOOSE simulation workflows.\nIf interested, here's a link to register for the webinar.\nHope to see you in the webinar!\nGreg Vernon | Director of Product Management\nCoreform LLC",
+          "url": "https://github.com/idaholab/moose/discussions/17499",
+          "updatedAt": "2023-11-20T15:55:58Z",
+          "publishedAt": "2021-04-03T06:53:04Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "WilkAndy"
+                  },
+                  "bodyText": "Hi @GregVernon , that's 2am for me.  Are you planning to upload to youtube/whatever,\na",
+                  "url": "https://github.com/idaholab/moose/discussions/17499#discussioncomment-564483",
+                  "updatedAt": "2023-11-20T15:55:58Z",
+                  "publishedAt": "2021-04-03T07:10:42Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GregVernon"
+                          },
+                          "bodyText": "@WilkAndy,\nYes!  We'll be recording the webinar and uploading to YouTube shortly after the webinar.  I'll reply with a YouTube link once we've done that.",
+                          "url": "https://github.com/idaholab/moose/discussions/17499#discussioncomment-564492",
+                          "updatedAt": "2021-04-03T07:21:45Z",
+                          "publishedAt": "2021-04-03T07:21:45Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Thanks @GregVernon",
+                          "url": "https://github.com/idaholab/moose/discussions/17499#discussioncomment-564530",
+                          "updatedAt": "2024-04-28T06:41:10Z",
+                          "publishedAt": "2021-04-03T07:59:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "makeclean"
+                          },
+                          "bodyText": "@GregVernon how did the webinar go?",
+                          "url": "https://github.com/idaholab/moose/discussions/17499#discussioncomment-576711",
+                          "updatedAt": "2024-04-28T06:41:11Z",
+                          "publishedAt": "2021-04-06T19:54:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GregVernon"
+                          },
+                          "bodyText": "I think it went mostly pretty well, we'll be uploading it within the next 24 hours or so to YouTube - and example scripts to Zenodo.",
+                          "url": "https://github.com/idaholab/moose/discussions/17499#discussioncomment-578118",
+                          "updatedAt": "2024-04-28T06:41:11Z",
+                          "publishedAt": "2021-04-07T06:17:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Thanks @GregVernon",
+                          "url": "https://github.com/idaholab/moose/discussions/17499#discussioncomment-578122",
+                          "updatedAt": "2024-04-28T06:41:12Z",
+                          "publishedAt": "2021-04-07T06:18:28Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GregVernon"
+                          },
+                          "bodyText": "@WilkAndy - see my post below",
+                          "url": "https://github.com/idaholab/moose/discussions/17499#discussioncomment-582265",
+                          "updatedAt": "2024-04-28T06:41:12Z",
+                          "publishedAt": "2021-04-07T23:26:04Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GregVernon"
+                  },
+                  "bodyText": "Dear MOOSE Community,\nPlease see the recording of the webinar on YouTube: https://www.youtube.com/watch?v=2TCPPO8z5VA\nI've also uploaded the example files (including the MOOSE study) to Zenodo: http://doi.org/10.5281/zenodo.4671051\nI hope you found/find this webinar insightful, if not helpful!\nHappy MOOSE-ing!\nGreg",
+                  "url": "https://github.com/idaholab/moose/discussions/17499#discussioncomment-582264",
+                  "updatedAt": "2024-04-28T06:41:12Z",
+                  "publishedAt": "2021-04-07T23:25:46Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "GPERF_DIR: cannot compile in debug mode",
+          "author": {
+            "login": "WilkAndy"
+          },
+          "bodyText": "I get:\nprojects/moose/modules/geochemistry/unit/> METHOD=dbg make     \n/Users/wil04q/projects/moose/framework/build.mk:50: *** It does not make sense to profile with the dbg method due to assertions. Please unset GPERF_DIR.  Stop.\n\nIs this desirable?   I compile in debug mode by default during development, don't you?",
+          "url": "https://github.com/idaholab/moose/discussions/17515",
+          "updatedAt": "2022-06-17T16:07:11Z",
+          "publishedAt": "2021-04-06T00:33:39Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "I think most of us use devel now. It's a lot faster",
+                  "url": "https://github.com/idaholab/moose/discussions/17515#discussioncomment-572498",
+                  "updatedAt": "2022-06-17T16:07:11Z",
+                  "publishedAt": "2021-04-06T00:42:35Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "OK, i'll move to that too.",
+                          "url": "https://github.com/idaholab/moose/discussions/17515#discussioncomment-572625",
+                          "updatedAt": "2022-06-17T16:07:11Z",
+                          "publishedAt": "2021-04-06T01:36:05Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "This doesn't work either, since i get:\nprojects/moose/modules/geochemistry/> METHOD=devel make -j 2                    \n/Users/wil04q/projects/moose/framework/build.mk:50: *** It does not make sense to profile with the devel method due to assertions. Please unset GPERF_DIR.  Stop.",
+                          "url": "https://github.com/idaholab/moose/discussions/17515#discussioncomment-572846",
+                          "updatedAt": "2022-06-17T16:07:11Z",
+                          "publishedAt": "2021-04-06T03:09:34Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Ah should have known you'd get that still, asserts are still there in devel.\nYou'll need a 'prof' build to profile it",
+                          "url": "https://github.com/idaholab/moose/discussions/17515#discussioncomment-573000",
+                          "updatedAt": "2022-06-17T16:07:11Z",
+                          "publishedAt": "2021-04-06T04:32:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "i don't want to profile it.  i want to debug the code - hence use of METHOD=dbg",
+                          "url": "https://github.com/idaholab/moose/discussions/17515#discussioncomment-573042",
+                          "updatedAt": "2022-06-17T16:07:24Z",
+                          "publishedAt": "2021-04-06T04:56:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Can you unset GPERF_DIR? It thinks you want to profile it because this environment variable is set",
+                          "url": "https://github.com/idaholab/moose/discussions/17515#discussioncomment-573060",
+                          "updatedAt": "2022-06-17T16:07:24Z",
+                          "publishedAt": "2021-04-06T05:06:15Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Yea, i can and that works fine.  But why has MOOSE set that env var automatically?",
+                          "url": "https://github.com/idaholab/moose/discussions/17515#discussioncomment-573105",
+                          "updatedAt": "2022-06-17T16:07:24Z",
+                          "publishedAt": "2021-04-06T05:35:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "YaqiWang"
+                          },
+                          "bodyText": "If MOOSE sets GPERF_DIR automatically, we need to turn that error to a warning. We assumed that users set this environment variable explicitly thus they know what they are trying to do. But I doubt MOOSE sets that though. Maybe double check your bash profile?",
+                          "url": "https://github.com/idaholab/moose/discussions/17515#discussioncomment-573337",
+                          "updatedAt": "2022-06-17T16:07:24Z",
+                          "publishedAt": "2021-04-06T06:44:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "OK, here it is...\n/Users/wil04q/> cat .zshrc\nalias emacs=\"/Applications/Emacs.app/Contents/MacOS/Emacs\"\nPROMPT='%n@%m: %d/> '\n\nexport VTKINCLUDE_DIR=/opt/moose/VTK-8.2.0/clang-9.0.0/include/vtk-8.2\nexport VTKLIB_DIR=/opt/moose/VTK-8.2.0/clang-9.0.0/lib\nexport LD_LIBRARY_PATH=/opt/moose/VTK-8.2.0/clang-9.0.0/lib:$LD_LIBRARY_PATH\nexport PYTHONPATH=$PYTHONPATH:/opt/moose/VTK-8.2.0/lib/python3.7/site-packages\n# use ./scripts/update_and_rebuild_libmesh.sh --enable-vtk\n\n#MOOSE_ENVIRONMENT\n# Uncomment to enable autojump:\n# export MOOSE_JUMP=true\n\n# Uncomment to enable pretty prompt:\n# export MOOSE_PROMPT=true\n\n# Source MOOSE profile\nif [ -f /opt/moose/environments/moose_profile ]; then\n        . /opt/moose/environments/moose_profile\n\n        # Make the moose compiler stack available.\n        # Note: if you have any additional package managers installed\n        # (Homebrew, Macports, Fink, etc) know that you must perform\n        # the following command _after_ the source commands for the\n        # afore mentioned package managers.\n        module load moose-dev-clang\nfi\n#ENDMOOSE_ENVIRONMENT\n\nexport PATH=\"/Applications/CMake.app/Contents/bin\":\"$PATH\"\n\nI believe i haven't made any changes to the moose environment.\n/Users/wil04q/> env | grep GP\nGPERF_DIR=/opt/moose/gperftools-2.7\n\nThe GPERF_DIR is set by the moose-dev-clang module, which loads the gperftools-2.7 module:\n/Users/wil04q/> module list  \nCurrently Loaded Modulefiles:\n 1) moose/.gcc-9.2.0                                6) moose-tools            \n 2) moose/.clang-9.0.0                              7) moose/.gperftools-2.7  \n 3) moose/.mpich-3.3_clang-9.0.0                    8) miniconda              \n 4) moose/.petsc-3.11.4_mpich-3.3_clang-9.0.0-opt   9) moose-dev-clang",
+                          "url": "https://github.com/idaholab/moose/discussions/17515#discussioncomment-574013",
+                          "updatedAt": "2022-06-17T16:07:24Z",
+                          "publishedAt": "2021-04-06T09:36:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I'm unfamiliar with modules on Mac. Are these the same as the HPC modules? Who created these?",
+                          "url": "https://github.com/idaholab/moose/discussions/17515#discussioncomment-575331",
+                          "updatedAt": "2022-06-17T16:07:27Z",
+                          "publishedAt": "2021-04-06T14:54:04Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cticenhour"
+                          },
+                          "bodyText": "@GiudGiud That is the old moose environment package. Note the \"source moose profile\" comment in the .zshrc excerpt.",
+                          "url": "https://github.com/idaholab/moose/discussions/17515#discussioncomment-575370",
+                          "updatedAt": "2022-06-17T16:07:27Z",
+                          "publishedAt": "2021-04-06T15:01:09Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "WilkAndy"
+                  },
+                  "bodyText": "Small problem with \"devel\":\nLinking Library /Users/wil04q/projects/moose/framework/contrib/pcre/libpcre-devel.la...\nld: library not found for -lmesh_devel\nclang-9: error: linker command failed with exit code 1 (use -v to see invocation)\nmake: *** [/Users/wil04q/projects/moose/framework/contrib/pcre/libpcre-devel.la] Error 1\nmake: *** Waiting for unfinished jobs....\n\nIs this library supposed to be automatically built, or do we need to modify a makefile/whatever somewhere?",
+                  "url": "https://github.com/idaholab/moose/discussions/17515#discussioncomment-572678",
+                  "updatedAt": "2022-06-17T16:07:16Z",
+                  "publishedAt": "2021-04-06T02:00:18Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "It should be automatic. clobberall then try again?",
+                          "url": "https://github.com/idaholab/moose/discussions/17515#discussioncomment-572699",
+                          "updatedAt": "2022-06-17T16:07:18Z",
+                          "publishedAt": "2021-04-06T02:11:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "This did not work (produced the same error as above)\nprojects/moose/modules/geochemistry/> METHOD=devel make clobberall\nprojects/moose/modules/geochemistry/> METHOD=devel make",
+                          "url": "https://github.com/idaholab/moose/discussions/17515#discussioncomment-572830",
+                          "updatedAt": "2022-06-17T16:07:18Z",
+                          "publishedAt": "2021-04-06T03:05:00Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "manjaro moose conda conflicts",
+          "author": {
+            "login": "zhanghg1983"
+          },
+          "bodyText": "Hi,guys,I am a new moose and conda user,\nand my OS is manjaro ,\nall I want to is to install moose in my OS ,successfully\nbut I almost mess up after many times try.\nthe error was like:\nunsatisfiableError: The following specifications were found to be incompatible with each other:\nOutput in format: Requested package -> Available versions\nThanks for any help\nmooseerror.txt\nmooseerror1.txt",
+          "url": "https://github.com/idaholab/moose/discussions/16650",
+          "updatedAt": "2022-10-21T11:52:05Z",
+          "publishedAt": "2021-01-09T00:08:56Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "milljm"
+                  },
+                  "bodyText": "I think you need to include the conda-forge channel (add an additional --channel conda-forge to your command). Hard to say though. Conflict resolution and displaying the conflict, is a rough go for Conda (in my honest opinion).\nAlso, I highly suggest you not employ the use of sudo when using conda. It should not be necessary, unless you are attempting to administer a multi-user machine, wishing to make the Conda packages you are about to install, available to everyone on the machine.\nVery rarely have I seen this requirement. Most folks enjoy installing their own instance of Conda to their home directories. Making them the owner (without needing sudo).",
+                  "url": "https://github.com/idaholab/moose/discussions/16650#discussioncomment-270446",
+                  "updatedAt": "2022-10-21T11:52:09Z",
+                  "publishedAt": "2021-01-09T00:54:00Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "zhanghg1983"
+                          },
+                          "bodyText": "Hi,milljm, Thank you very much for the help. So sorry for  replying so lately. after receving your suggestions. I tried another several times,but still failed.\nToday,I went through some blogs about conda, and someone said delete the ~/.condarc may work.\nI tried and it works, still don't know why. hopefully It will offer some help for the ones with simliar problems.",
+                          "url": "https://github.com/idaholab/moose/discussions/16650#discussioncomment-573884",
+                          "updatedAt": "2022-10-21T11:52:27Z",
+                          "publishedAt": "2021-04-06T09:12:08Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How can I prevent divergence with adaptive timesteps?",
+          "author": {
+            "login": "ke7kto"
+          },
+          "bodyText": "I'm working on adding an adaptive timestep to my simulation, but I'm getting convergence issues. I then tried applying adaptive timesteppers to example 8, which causes the executable to error out because of divergence at any step size.\nI've tried AB2PredictorCorrector and DT2 for the adaptive timesteps, and both end with errors. Is there some sort of a tutorial on appropriate settings for these timesteppers, and what solvers/preconditioners work well with them? Or on common pitfalls that should be avoided?\nex08_adaptive.i.txt\nex08ab2.i.txt",
+          "url": "https://github.com/idaholab/moose/discussions/17508",
+          "updatedAt": "2023-03-02T08:36:23Z",
+          "publishedAt": "2021-04-05T16:59:15Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "ke7kto"
+                  },
+                  "bodyText": "Seems like the parameter nl_abs_tol was helpful to put in the Executioner block, as mentioned here. With this set to an arbitrary value, I do have convergence.",
+                  "url": "https://github.com/idaholab/moose/discussions/17508#discussioncomment-571421",
+                  "updatedAt": "2023-03-02T08:36:25Z",
+                  "publishedAt": "2021-04-05T18:30:13Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Hopefully not too arbitrary, heheheh",
+                          "url": "https://github.com/idaholab/moose/discussions/17508#discussioncomment-572136",
+                          "updatedAt": "2023-03-02T08:36:25Z",
+                          "publishedAt": "2021-04-05T22:00:27Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

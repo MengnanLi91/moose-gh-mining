@@ -1,0 +1,813 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyNC0xMi0xNlQwNzozMDozMC0wNjowMM4Achpz"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "strange perturbations in steady state time derivative solution",
+          "author": {
+            "login": "swonner"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nI am investigating the following simple system equations:\n${dX_V\\over dt} = K_0$\n${dX_I\\over dt} = K_0$\nThese terms are a small part of a more complex system I am trying to inevitably solve. I attached this system at the bottom of this post for reference.\nWhen I solve the above system and plot the concentration profile across my mesh, I have noticed that there are strange perturbations near the sides of the mesh. These perturbations seem to begin right at the first timestep and remain over time. The concentration does increase as a function of K0 over time, however this profile is puzzling because the expected result was for the concentrations (XV and XI) to be constant across the entire mesh. See the attached line scan picture for the first timestep, and input file below.\nCould someone please advise how I might correct this behavior?\nline scan across the mesh at time step 1\n\nInput File\n[Mesh] \n    [./gen]\n        type = GeneratedMeshGenerator\n        dim = 2\n        nx = 50\n        ny = 50\n        xmax = 50 # nm\n        ymax = 50 # nm\n    [../]\n[]\n\n[Variables] \n    [./XV]\n        order = FIRST\n        family = LAGRANGE\n    [../]\n    [./XI]\n        order = FIRST\n        family = LAGRANGE\n    [../]  \n[]\n\n[ICs]\n    [./XV_ic]\n        type = ConstantIC\n        variable = XV\n        value = 1e-15 \n    [../]\n    [./XI_ic]\n        type = ConstantIC\n        variable = XI\n        value = 1e-15\n    [../]\n[]\n\n[Kernels]\n    #################### Main Variable: XV ####################\n    ## (\ud835\udf15\ud835\udc4b\ud835\udc49)/\ud835\udf15\ud835\udc61 - \ud835\udc3e0 = 0\n   \n    [./timeXV] #(\ud835\udf15\ud835\udc4b\ud835\udc49)/\ud835\udf15\ud835\udc61\n        type = ADTimeDerivative\n        variable = XV\n    [../]\n    [./defectgenV] #- \ud835\udc3e0\n        type = ADMatBodyForce\n        variable = XV\n        material_property = K0 \n    [../]\n\n    #################### Main Variable: XI ####################\n    ## (\ud835\udf15\ud835\udc4b\ud835\udc3c)/\ud835\udf15\ud835\udc61 -  \ud835\udc3e0  = 0\n\n    [./timeXI] #(\ud835\udf15\ud835\udc4b\ud835\udc3c)/\ud835\udf15\ud835\udc61\n        type = ADTimeDerivative\n        variable = XI\n    [../]\n    [./defectgenI] #- \ud835\udc3e0\n        type = ADMatBodyForce\n        variable = XI\n        material_property = K0 \n    [../]\n\n[]\n\n\n[Materials]\n\n    [./SettingGeneralConstants]\n        type = ADGenericConstantMaterial\n        prop_names = 'K0'\n        prop_values = '1.00e-05\u2019\n    [../]\n       \n[]\n\n\n[Preconditioning]\n    [my_prec]\n      type = SMP\n      full = true\n    []\n[]   \n\n\n[Executioner]\n  type = Transient\n  solve_type = NEWTON\n  l_max_its = 20 \n  l_tol = 1e-12 \n  nl_max_its = 15 \n  nl_rel_tol = 1e-12 \n  nl_abs_tol = 1e-12 \n  end_time = 10  \n  \n  petsc_options_iname = '-pc_type -pc_hypre_type'\n  petsc_options_value = ' hypre    boomeramg'\n\n  [./TimeStepper]\n    type = IterationAdaptiveDT\n    dt = 1  # The default timestep size between solves\n    cutback_factor = 0.5 \n    growth_factor = 1.2 \n    optimal_iterations = 7 \n  [../]\n[]\n\n\n[Outputs]\n    file_base = model\n    [./exodus]\n        type = Exodus\n        print_linear_residuals = true\n    [../]\n[]\n\n[Debug]\n    show_var_residual_norms = true\n[]\n\n\nThe more complex system I would like to eventually solve\nThis system relies on \u2207X. Therefore, it is important that I remove the strange perturbations in concentration that is incorrectly being introduced above so that I can achieve a correct spatially resolved solution for this system.",
+          "url": "https://github.com/idaholab/moose/discussions/29560",
+          "updatedAt": "2024-12-18T01:20:08Z",
+          "publishedAt": "2024-12-17T07:22:15Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nCan you rescale the plot?\nIt looks to me like this is just numerical precision error of a constant solution. It would be good to see the amplitude of these oscillations to decide if they are relevant",
+                  "url": "https://github.com/idaholab/moose/discussions/29560#discussioncomment-11592647",
+                  "updatedAt": "2024-12-17T12:26:44Z",
+                  "publishedAt": "2024-12-17T12:26:43Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "swonner"
+                          },
+                          "bodyText": "Hi GiudGiud, thank you for looking into my question!\nI have replotted and scaled the plot.",
+                          "url": "https://github.com/idaholab/moose/discussions/29560#discussioncomment-11597011",
+                          "updatedAt": "2024-12-17T18:30:32Z",
+                          "publishedAt": "2024-12-17T18:30:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Ok these oscillations are likely irrelevant and nothing to worry about. They are to the order of 1e-16 or numerical precision (double precision by default in moose)",
+                          "url": "https://github.com/idaholab/moose/discussions/29560#discussioncomment-11597159",
+                          "updatedAt": "2024-12-17T18:45:35Z",
+                          "publishedAt": "2024-12-17T18:45:34Z",
+                          "isAnswer": true
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "swonner"
+                          },
+                          "bodyText": "Thank you!",
+                          "url": "https://github.com/idaholab/moose/discussions/29560#discussioncomment-11599612",
+                          "updatedAt": "2024-12-18T01:20:08Z",
+                          "publishedAt": "2024-12-18T01:20:07Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Difference in the pinning pressure results. MOOSE Vs. Analytical solutions",
+          "author": {
+            "login": "ashishdhole"
+          },
+          "bodyText": "Hello,\nI am working on pinning pressure model following the paper (10.1088/0965-0393/20/6/065008)\nwhere they have expressed the pinning pressure in the evolution equation as second term in the following equation\n\nNow I am working on this kernel for some time and I finally have a kernel that debugger shows \"no error!\"\nSo I tried to compare with the analytical model\nHere is the result without any pinning pressure\n\nAnd here is the result for a pinning pressure of 0p01\n\nmy residual part looks like this\nReal\nAdvanceFrictionPressure::computeQpResidual()\n{\n\n  std::vector<Real> other_ops(_op_num);\n  other_ops = assignOtherOps();\n\n  Real SumEtaj = 0.0;\n  Real SumEtaj_G = 0.0;\n  for (unsigned int i = 0; i < _op_num; ++i)\n  {\n    SumEtaj += (*_vals[i])[_qp] * (*_vals[i])[_qp];\n    SumEtaj_G += (*_vals[i])[_qp];\n  }\n\n  Real g = _g[_qp];\n  Real SumOPGj = 0.0;\n  Real SumOPj = 0.0;\n\n  for (unsigned int i = 0; i < _op_num; ++i)\n  {\n    SumOPj += other_ops[i] * other_ops[i];\n    SumOPGj += other_ops[i];\n  }\n\n  Real total = (_test[_i][_qp] * _mu[_qp] *\n                (_u[_qp] * _u[_qp] * _u[_qp] - _u[_qp] + 3 * _u[_qp] * SumEtaj)) +\n               (_grad_u[_qp] * _kappa[_qp] * _grad_test[_i][_qp]);\n\n  Real friction = _test[_i][_qp] * 3 * g * _u[_qp] * SumEtaj_G;\n\n  Real k = 10000;\n  Real sgn = std::tanh(k * total);\n  if (total > 0)\n    sgn = 1;\n  if (total < 0)\n    sgn = -1;\n  if (total == 0)\n    sgn = 0;\n  Real sign = (total > 0) - (total < 0);\n\n  Real abs_total = 100 * std::abs(total);\n  Real abs_friction = 100 * std::abs(friction);\n\n  Real a = (abs_total - abs_friction);\n  Real smooth_condition = 1.0 / (1.0 + std::exp(-k * (a)));\n\n\n  Real term1 = smooth_condition * (total - sgn * friction);\n  Real L = _L[_qp];\n\n  return L * (term1);\n}\n\nIS there something I am missing in the kernel. Because it seems the pinning pressure is much less significant in FEM model (MOOSE) as compared to analytical or even FDM model.\nLooking forward to hearing from you.\nThank you\nAshish",
+          "url": "https://github.com/idaholab/moose/discussions/29290",
+          "updatedAt": "2024-12-17T17:59:35Z",
+          "publishedAt": "2024-12-04T22:17:34Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "hello\nis the spatial mesh converged?",
+                  "url": "https://github.com/idaholab/moose/discussions/29290#discussioncomment-11466609",
+                  "updatedAt": "2024-12-04T22:20:40Z",
+                  "publishedAt": "2024-12-04T22:20:39Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ashishdhole"
+                          },
+                          "bodyText": "Yes I used adaptive meshing. With refine value of 0.3",
+                          "url": "https://github.com/idaholab/moose/discussions/29290#discussioncomment-11466632",
+                          "updatedAt": "2024-12-04T22:24:49Z",
+                          "publishedAt": "2024-12-04T22:24:48Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "try a level of uniform refinement to make sure it's converged\n(adding -r 1)",
+                          "url": "https://github.com/idaholab/moose/discussions/29290#discussioncomment-11466662",
+                          "updatedAt": "2024-12-04T22:28:58Z",
+                          "publishedAt": "2024-12-04T22:28:57Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ashishdhole"
+                          },
+                          "bodyText": "I understand the uniform refinement\n[Mesh]\n    type = GeneratedMesh\n    dim = 2 # Problem dimension\n    nx = 100 # Number of elements in the x-direction\n    ny = 100 # Number of elements in the y-direction\n    xmax = 100 # maximum x-coordinate of the mesh\n    ymax = 100 # maximum y-coordinate of the mesh\n    elem_type = QUAD4\n    uniform_refine = 3 # Initial uniform refinement of the mesh\n    parallel_type = DISTRIBUTED\n[]\n\nBut I don't get\n\"(adding -r 1)\"\nWhere I have to add? I am sorry for the stupid question.",
+                          "url": "https://github.com/idaholab/moose/discussions/29290#discussioncomment-11466787",
+                          "updatedAt": "2024-12-04T22:44:03Z",
+                          "publishedAt": "2024-12-04T22:44:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "-r 1 on the command line is the same as Mesh/uniform_refine=1",
+                          "url": "https://github.com/idaholab/moose/discussions/29290#discussioncomment-11467014",
+                          "updatedAt": "2024-12-04T23:27:27Z",
+                          "publishedAt": "2024-12-04T23:27:26Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ashishdhole"
+                          },
+                          "bodyText": "I think the mesh refinement is very fine.\n\nIs it possible that we need to include some scaling factor to the MOOSE kernel as compared with the theoretical formulations. And how common is that?\nbecause with the grain radius of 30, the driving pressure, Pd is\nPd = \u03c3/R ,\n\u03c3 is the interface energy (1.3333 in the present case).\nSo If I apply equal amount of pinning pressure, Pz,\n(Pd - Pz=0, no Driving pressure for grain boundary movement), the grain should not shrink\nhere is what i am getting when I compared MOOSE results with Analytical model\n\nI also checked with the FDM model and same evolution equation, the effect of pinning pressure is quite significant for the same values and comparable with the analytical model.",
+                          "url": "https://github.com/idaholab/moose/discussions/29290#discussioncomment-11467358",
+                          "updatedAt": "2024-12-05T00:34:44Z",
+                          "publishedAt": "2024-12-05T00:33:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "so FDM agrees better on that shrinking case?\nIn terms of time integration, what are you using? Are the results resilient to using a different time integrator?\n@amjokisaari @dschwen who would be a good contact to discuss this problem?",
+                          "url": "https://github.com/idaholab/moose/discussions/29290#discussioncomment-11476141",
+                          "updatedAt": "2024-12-05T17:28:49Z",
+                          "publishedAt": "2024-12-05T17:28:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ashishdhole"
+                          },
+                          "bodyText": "Yes, FDM shows more accurate results as compared with Analytical solutions (tested in MICRESS and home made code).\nI am using\n#dt = 1 #for constant time step\n[TimeStepper] #for adaptive time steps\n    type = IterationAdaptiveDT\n    cutback_factor = 0.5\n    dt = 0.1\n    growth_factor = 1.2\n    optimal_iterations = 12\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/29290#discussioncomment-11476526",
+                          "updatedAt": "2024-12-05T18:10:56Z",
+                          "publishedAt": "2024-12-05T18:10:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "this is the time stepper not the time integrator.\nif you did not specify a time integrator you are using 1st order implicit euler. you can try BDF2 to see if results improve.\nTime integration accuracy might matter as well if you are not just looking for the steady state solution",
+                          "url": "https://github.com/idaholab/moose/discussions/29290#discussioncomment-11476644",
+                          "updatedAt": "2024-12-05T18:23:17Z",
+                          "publishedAt": "2024-12-05T18:23:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ashishdhole"
+                          },
+                          "bodyText": "yes I am using BDF2\n[Executioner]\n    type = Transient\n    scheme = bdf2\n    solve_type = PJFNK #Preconditioned JFNK (default)\n    petsc_options_iname = '-pc_type -pc_hypre_type -pc_hypre_boomeramg_strong_threshold -pc_hypre_boomeramg_agg_nl -pc_hypre_boomeramg_agg_num_paths  -pc_hypre_boomeramg_max_levels  -pc_hypre_boomeramg_coarsen_type  -pc_hypre_boomeramg_interp_type  -pc_hypre_boomeramg_P_max  -pc_hypre_boomeramg_truncfactor'\n    petsc_options_value = 'hypre boomeramg  0.7 4 5 25 HMIS ext+i 2 0.3'\n    steady_state_detection = true\n    steady_state_start_time = 0\n    steady_state_tolerance = 1e-8\n    automatic_scaling = true\n    compute_scaling_once = false\n    use_pre_SMO_residual = false\n    l_tol = 1.0e-3\n    l_abs_tol = 1e-3\n    l_max_its = 30\n    nl_abs_tol = 1e-3\n    nl_max_its = 30\n    nl_rel_tol = 1.0e-3\n    start_time = 0.0",
+                          "url": "https://github.com/idaholab/moose/discussions/29290#discussioncomment-11476707",
+                          "updatedAt": "2024-12-05T18:31:35Z",
+                          "publishedAt": "2024-12-05T18:31:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "this is really loose\n    nl_abs_tol = 1e-3\n    nl_max_its = 30\n    nl_rel_tol = 1.0e-3\n\nyou need to tighten those criteria, the simulation results are not converged",
+                          "url": "https://github.com/idaholab/moose/discussions/29290#discussioncomment-11476778",
+                          "updatedAt": "2024-12-05T18:40:09Z",
+                          "publishedAt": "2024-12-05T18:40:09Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to find where the material derivative is defined",
+          "author": {
+            "login": "YXY101676"
+          },
+          "bodyText": "Dears\nIn the following code, many material derivatives such as _dLdop and _dLdarg[i] are called. I cannot find definition of declarePropertyDerivative in GBEvolution or  GBEvolutionbase.\nregisterMooseObject(\"PhaseFieldApp\", ACInterface);\nInputParameters\nACInterface::validParams()\n{\n  InputParameters params = JvarMapKernelInterface<Kernel>::validParams();\n  params.addClassDescription(\"Gradient energy Allen-Cahn Kernel\");\n  params.addParam<MaterialPropertyName>(\"mob_name\", \"L\", \"The mobility used with the kernel\");\n  params.addParam<MaterialPropertyName>(\"kappa_name\", \"kappa_op\", \"The kappa used with the kernel\");\n  params.addParam<bool>(\"variable_L\",\n                        true,\n                        \"The mobility is a function of any MOOSE variable (if \"\n                        \"this is set to false L must be constant over the \"\n                        \"entire domain!)\");\n  return params;\n}\n\nACInterface::ACInterface(const InputParameters & parameters)\n  : DerivativeMaterialInterface<JvarMapKernelInterface<Kernel>>(parameters),\n    _L(getMaterialProperty<Real>(\"mob_name\")),\n    _kappa(getMaterialProperty<Real>(\"kappa_name\")),\n    _variable_L(getParam<bool>(\"variable_L\")),\n    _dLdop(getMaterialPropertyDerivative<Real>(\"mob_name\", _var.name())),\n    _d2Ldop2(getMaterialPropertyDerivative<Real>(\"mob_name\", _var.name(), _var.name())),\n    _dkappadop(getMaterialPropertyDerivative<Real>(\"kappa_name\", _var.name())),\n\n_dLdarg[i] = &getMaterialPropertyDerivative<Real>(\"mob_name\", i);\n\nGBEvolution  is the main computational item in materials.",
+          "url": "https://github.com/idaholab/moose/discussions/29553",
+          "updatedAt": "2024-12-17T16:16:41Z",
+          "publishedAt": "2024-12-16T05:22:06Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThe declarePropertyDerivative are part of the DerivativeMaterialInterface base class.\nIt is a template for making these properties, that we instantiate here with the JvarMapKernelInterface<Kernel> class (itself a template instantiation)\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/29553#discussioncomment-11585176",
+                  "updatedAt": "2024-12-16T19:27:38Z",
+                  "publishedAt": "2024-12-16T19:27:38Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "YXY101676"
+                          },
+                          "bodyText": "I know that the DerivativeMaterialInterface base class is the source of declarePropertyDerivative, but what I want to know is where _dLdop is instantiated in which file.  Similar to\n_D_elastic_tensor[op_index] = &declarePropertyDerivative(_elasticity_tensor_name, coupledName(\"v\", op_index));\nAnd I can't find the JvarMapKernelInterface class file.",
+                          "url": "https://github.com/idaholab/moose/discussions/29553#discussioncomment-11587744",
+                          "updatedAt": "2024-12-17T02:07:13Z",
+                          "publishedAt": "2024-12-17T02:07:12Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "And I can't find the JvarMapKernelInterface class file.\n\nit's in a header as well, JvarMapInterface.h\n\nwhere _dLdop is instantiated in which file\n\nyou can use grep to find that. See ACBulk.h or ACInterface.C",
+                          "url": "https://github.com/idaholab/moose/discussions/29553#discussioncomment-11587769",
+                          "updatedAt": "2024-12-17T02:11:00Z",
+                          "publishedAt": "2024-12-17T02:10:59Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "YXY101676"
+                          },
+                          "bodyText": "I can only find the relevant calls for _dLdop(getMaterialPropertyDerivative(\"mob_name\", _var())) in ACBulk.h, but I cannot find the relevant content for _dLdop(declareMaterialPropertyDerivative(\"mob\", _var.name())).The same situation occurs in ACInterface.C.",
+                          "url": "https://github.com/idaholab/moose/discussions/29553#discussioncomment-11587897",
+                          "updatedAt": "2024-12-17T02:33:45Z",
+                          "publishedAt": "2024-12-17T02:33:44Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "YXY101676"
+                          },
+                          "bodyText": "All related material calculations are in GBEvolution.C, and I couldn't find any.",
+                          "url": "https://github.com/idaholab/moose/discussions/29553#discussioncomment-11587920",
+                          "updatedAt": "2024-12-17T02:36:27Z",
+                          "publishedAt": "2024-12-17T02:36:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "if you find a simulation in the repository that uses this property, use Debug/show_material_props=true to see which Material declares it",
+                          "url": "https://github.com/idaholab/moose/discussions/29553#discussioncomment-11587930",
+                          "updatedAt": "2024-12-17T02:38:27Z",
+                          "publishedAt": "2024-12-17T02:38:27Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "YXY101676"
+                          },
+                          "bodyText": "The kernel ACinterface exists, but the material property _dLdop is not displayed. What's the situation?",
+                          "url": "https://github.com/idaholab/moose/discussions/29553#discussioncomment-11588105",
+                          "updatedAt": "2024-12-17T03:12:39Z",
+                          "publishedAt": "2024-12-17T03:12:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "dLdop is most likely created by the material creating L",
+                          "url": "https://github.com/idaholab/moose/discussions/29553#discussioncomment-11595479",
+                          "updatedAt": "2024-12-17T16:16:42Z",
+                          "publishedAt": "2024-12-17T16:16:41Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to set up a non-uniform boundary condition?",
+          "author": {
+            "login": "waaizhaq"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nHello,\nI have a rectangular mesh where I set the bottom boundary to a NeumannBC of value 0, representing the ground, the right and top walls to a DirichletBC of value 296.15 Kelvin, representing the ambient air, and currently I have the left wall set to a DirichletBC of value 505.15 Kelvin. However, I want to change that to where only the lower half of the wall is set to the 505.15 Kelvin, and the upper half is another insulated boundary, or NeumannBC of value 0.",
+          "url": "https://github.com/idaholab/moose/discussions/29552",
+          "updatedAt": "2024-12-17T13:09:28Z",
+          "publishedAt": "2024-12-16T04:35:51Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "snowbugxs"
+                  },
+                  "bodyText": "I think you may need a section on the domain, then you get two left walls, lower one and upper one. Set different BCs to them.",
+                  "url": "https://github.com/idaholab/moose/discussions/29552#discussioncomment-11582039",
+                  "updatedAt": "2024-12-16T14:40:27Z",
+                  "publishedAt": "2024-12-16T14:40:26Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "waaizhaq"
+                          },
+                          "bodyText": "Do you know an example that I can look at? I was trying to find something on the MOOSE framework but couldn't find what I was looking for.",
+                          "url": "https://github.com/idaholab/moose/discussions/29552#discussioncomment-11583178",
+                          "updatedAt": "2024-12-16T16:24:08Z",
+                          "publishedAt": "2024-12-16T16:24:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nUse this generator to split the sideset in two. Then use one boundary condition on one part and another on the other part\nhttps://mooseframework.inl.gov/source/meshgenerators/ParsedGenerateSideset.html",
+                          "url": "https://github.com/idaholab/moose/discussions/29552#discussioncomment-11583522",
+                          "updatedAt": "2024-12-16T16:53:29Z",
+                          "publishedAt": "2024-12-16T16:53:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "snowbugxs"
+                          },
+                          "bodyText": "Can we do it outside moose, e.g, using Gmsh to split the domains?",
+                          "url": "https://github.com/idaholab/moose/discussions/29552#discussioncomment-11592928",
+                          "updatedAt": "2024-12-17T12:49:07Z",
+                          "publishedAt": "2024-12-17T12:49:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Yes. You can take any mesh generation step in meshing software outside of moose",
+                          "url": "https://github.com/idaholab/moose/discussions/29552#discussioncomment-11593198",
+                          "updatedAt": "2024-12-17T13:09:28Z",
+                          "publishedAt": "2024-12-17T13:09:28Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "I cant find the implementation of SplitCHWRes in the source code",
+          "author": {
+            "login": "snowbugxs"
+          },
+          "bodyText": "For the split C-H equation, SplitCHWRes is designed to calculate the term of (M\u2207u,\u2207\u03c8).\nI find the implementation of this class is missing in the souce file, located at   /moose/modules/phase_field/src/kernels/SplitCHWRes.C.\nAlso, it's unusual the implementation of the base class SplitCHWResBase is not in the .C file but in the .h file.",
+          "url": "https://github.com/idaholab/moose/discussions/29546",
+          "updatedAt": "2024-12-17T00:58:17Z",
+          "publishedAt": "2024-12-15T11:02:55Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThe implementation of the template is in the header because that's what is commonly done in C++ when you want to define a template that others may instantiate with types you did not foresee could be used in the template.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/29546#discussioncomment-11572398",
+                  "updatedAt": "2024-12-15T14:53:39Z",
+                  "publishedAt": "2024-12-15T14:53:38Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "snowbugxs"
+                          },
+                          "bodyText": "Thanks. Sorry for I may cause a misunderstanding here.\nBoth files SplitCHWRes.C and SplitCHWRes.h don't include the implementation of how to calculate residuals.\nPlease check the two files.",
+                          "url": "https://github.com/idaholab/moose/discussions/29546#discussioncomment-11581955",
+                          "updatedAt": "2024-12-16T14:33:32Z",
+                          "publishedAt": "2024-12-16T14:33:31Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "it is implemented in SplitCHWResBase.h",
+                          "url": "https://github.com/idaholab/moose/discussions/29546#discussioncomment-11585020",
+                          "updatedAt": "2024-12-16T19:06:54Z",
+                          "publishedAt": "2024-12-16T19:06:54Z",
+                          "isAnswer": true
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "snowbugxs"
+                          },
+                          "bodyText": "Get it. Derived class inherits the methods defined in Base class.",
+                          "url": "https://github.com/idaholab/moose/discussions/29546#discussioncomment-11587347",
+                          "updatedAt": "2024-12-17T00:58:04Z",
+                          "publishedAt": "2024-12-17T00:58:04Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "symbol lookup error after Update",
+          "author": {
+            "login": "Flolaffel"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nHello,\nI just updated MOOSE and when I try to run my simulations I now get:\n./simp-opt: symbol lookup error: /home/.local/ruef/miniforge/envs/moose/lib/libmpifort.so.12: undefined symbol: PMPIX_Start_progress_thread\nas the only output. I tried reinstalling moose which didn't work. What to do?",
+          "url": "https://github.com/idaholab/moose/discussions/29554",
+          "updatedAt": "2024-12-16T19:28:47Z",
+          "publishedAt": "2024-12-16T09:16:20Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "Flolaffel"
+                  },
+                  "bodyText": "It just started working. Unfortunately I don't know what the issue was.",
+                  "url": "https://github.com/idaholab/moose/discussions/29554#discussioncomment-11579543",
+                  "updatedAt": "2024-12-16T10:36:07Z",
+                  "publishedAt": "2024-12-16T10:36:06Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "probably a left-over compiled object, that eventually got cleaned with a make clobberall or a git clean",
+                          "url": "https://github.com/idaholab/moose/discussions/29554#discussioncomment-11585186",
+                          "updatedAt": "2024-12-16T19:28:47Z",
+                          "publishedAt": "2024-12-16T19:28:47Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Sintering neck calculation",
+          "author": {
+            "login": "HPL001"
+          },
+          "bodyText": "Dear moose community,\nhello. I am doing the sintering calculation between two particles, I want to output the change curve of the sintering neck in the post-processing, how should I operate?",
+          "url": "https://github.com/idaholab/moose/discussions/29542",
+          "updatedAt": "2024-12-16T19:28:10Z",
+          "publishedAt": "2024-12-14T13:51:28Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Closing as a duplicate",
+                  "url": "https://github.com/idaholab/moose/discussions/29542#discussioncomment-11585180",
+                  "updatedAt": "2024-12-16T19:28:11Z",
+                  "publishedAt": "2024-12-16T19:28:10Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Simplification or mistake",
+          "author": {
+            "login": "YXY101676"
+          },
+          "bodyText": "Hello,\nThe following code defines a function that generates a vector containing the values of order parameters. According to the original formula, this function should sum the squares all order parameters except for the one corresponding to the current kernel. However, based on my understanding, the function is summing the squares of all order parameters:\nstd::vector<Real>\nACGrGrPoly::assignOtherOps()\n{\n  std::vector<Real> other_ops(_op_num);\n  for (unsigned int i = 0; i < _op_num; ++i)\n    other_ops[i] = (*_vals[i])[_qp];\n\n  return other_ops;\n}\n\n other_ops = assignOtherOps();\n\n  // Sum all other order parameters\n  Real SumOPj = 0.0;\n  for (unsigned int i = 0; i < _op_num; ++i)\n    SumOPj += other_ops[i] * other_ops[i];\n\nI want to know if this usage is a simplification or an error.\nyxy",
+          "url": "https://github.com/idaholab/moose/discussions/29551",
+          "updatedAt": "2024-12-16T19:24:26Z",
+          "publishedAt": "2024-12-16T03:15:25Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThe one for the kernel is not parts of _vals. So it does not get stored in other_ops\nsee the base class\nACGrGrBase::validParams()\n{\n  InputParameters params = ACBulk<Real>::validParams();\n  params.addRequiredCoupledVar(\"v\",\n                               \"Array of coupled order parameter names for other order parameters\");\n\n\nACGrGrBase::ACGrGrBase(const InputParameters & parameters)\n  : ACBulk<Real>(parameters),\n    _op_num(coupledComponents(\"v\")),\n    _vals(coupledValues(\"v\")),\n\nThen in the SumOPj (really sumOPj_squared), it also does not feature",
+                  "url": "https://github.com/idaholab/moose/discussions/29551#discussioncomment-11585144",
+                  "updatedAt": "2024-12-16T19:24:27Z",
+                  "publishedAt": "2024-12-16T19:24:26Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Sintering neck calculation",
+          "author": {
+            "login": "HPL001"
+          },
+          "bodyText": "Dear moose community,\nhello. I am doing the sintering calculation between two particles, I want to output the change curve of the sintering neck in the post-processing, how should I operate?do I need to use NodalVariableValue or something?",
+          "url": "https://github.com/idaholab/moose/discussions/29555",
+          "updatedAt": "2024-12-16T19:08:10Z",
+          "publishedAt": "2024-12-16T10:12:15Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "hello\nIn the postprocessing? So you want to modify the mesh then or just compute a new value for an existing quantity?\nNodalVariableValue lets you output a value. If you want to use this value into a new postprocessor, you can use the ParsedPostprocessor",
+                  "url": "https://github.com/idaholab/moose/discussions/29555#discussioncomment-11585032",
+                  "updatedAt": "2024-12-16T19:08:10Z",
+                  "publishedAt": "2024-12-16T19:08:10Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Different physics solved in different \"growing/merging\" domains",
+          "author": {
+            "login": "keassyguang"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nHi everyone,\nI am dealing with a photopolymerization based printing process simulation to predict the distortions of the printed part. As shown below, a capital letter \"H\" is selected as the print part, three physics are considered, namely the chemical, thermal, and structural. Is it possible to solve different physics in different domains? For example, chemical is solved in regions 2 and 3; thermal is solved in regions 1, 2, and 3; structural is solved in regions 2 and 3. There could be potential couplings between different physics. The main concerns are as follow:\n\nThe moving/merging domains\nThe moving/growing node sets\n\nFor the first, the number of domains could change over time. Domains could be merged into one or more. Is it possible to use MOOSE's built-in mesh generator to achieve this, or to use a third party software to pre-define all the blocks? For these three physics, the blocks that variables to be solved is changing during the simulation due to the geometry. In addition, the variables may only be solved within the last 50 or 100 layers, while the variables for the previous layers are treated as constant.\nFor the second one, I need use a lot of node sets to define the boundary conditions or initializations for the chemical and structural physics, and these node sets could change over time.\nAny possible solutions, problems, challenges related to the implementation are welcome. Many thanks.",
+          "url": "https://github.com/idaholab/moose/discussions/29066",
+          "updatedAt": "2024-12-16T13:30:30Z",
+          "publishedAt": "2024-11-13T16:40:30Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\n\ns it possible to solve different physics in different domains\n\nCertainly. You just use block restriction on each variable.\n\nFor the first, the number of domains could change over time. Domains could be merged into one or more. Is it possible to use MOOSE's built-in mesh generator to achieve this, or to use a third party software to pre-define all the blocks?\n\nThe easiest way so far to do this has been to have  every element you need, already in the mesh, just assigned to an inactive block. Then when the equations are supposed to be solved on these elements, you change their subdomain to one of the active blocks.\nNote that you can pre-declare blocks that do not exist on the mesh currnetly but will later in the simulation in the Mesh block",
+                  "url": "https://github.com/idaholab/moose/discussions/29066#discussioncomment-11245616",
+                  "updatedAt": "2024-11-13T19:55:51Z",
+                  "publishedAt": "2024-11-13T19:55:50Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "keassyguang"
+                          },
+                          "bodyText": "The easiest way so far to do this has been to have every element you need, already in the mesh, just assigned to an inactive block. Then when the equations are supposed to be solved on these elements, you change their subdomain to one of the active blocks.\n\nThank you very much. I can understand this concept and I hope it can work, but I am really confused about how to implement it.\nDo we have any relevant examples? Currently I only know how to use GeneratedMeshGenerator to create blocks and activate elements using the CoupledVarThresholdElementSubdomainModifier method. It would be great if you could kindly show me more details.",
+                          "url": "https://github.com/idaholab/moose/discussions/29066#discussioncomment-11252458",
+                          "updatedAt": "2024-11-14T10:16:24Z",
+                          "publishedAt": "2024-11-14T10:16:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "You can find examples of modifying the subdomains of elements in\ntest/tests/meshmodifiers/element_subdomain_modifier",
+                          "url": "https://github.com/idaholab/moose/discussions/29066#discussioncomment-11255652",
+                          "updatedAt": "2024-11-14T15:02:02Z",
+                          "publishedAt": "2024-11-14T15:02:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "keassyguang"
+                          },
+                          "bodyText": "Thanks a lot so far. I have gone through all the examples in the element_subdomain_modifier folder and read the documentation for the meshmodifiers section. Based on my understanding, it seems that the TimedSubdomainModifier is suitable for the desired functionality.\nAssuming we pre-declare three blocks for these three physics, in order to \"move\" specified elements (blocks) to the desired blocks for given points in time, it seems that I need to create a block for each element. When facing with a large scale model, it could be thousands and millions of elements, which means there should be thousands and millions of blocks defined by the Mesh section in the input file? (if we set each element as an individual block)\nAnother concern is the moving boundary. I need the top surface of the latest layer to define the boundary condition for the thermal physics, while how to create such a moving boundary? This boundary line (2D case) or face (3D case) could be made up of thousands and hundreds element pairs.",
+                          "url": "https://github.com/idaholab/moose/discussions/29066#discussioncomment-11272262",
+                          "updatedAt": "2024-11-15T18:44:46Z",
+                          "publishedAt": "2024-11-15T18:44:45Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Are elements moving from one domain to the other one by one?\nCan you not group them in subdomains for them to change together?\nIf not, then you need to code a new MeshModifier that has these capabilities.",
+                          "url": "https://github.com/idaholab/moose/discussions/29066#discussioncomment-11272367",
+                          "updatedAt": "2024-11-15T18:57:52Z",
+                          "publishedAt": "2024-11-15T18:57:52Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "keassyguang"
+                          },
+                          "bodyText": "Are elements moving from one domain to the other one by one?\nCan you not group them in subdomains for them to change together?\n\nNo, I don't need to move elements from one domain to the other one by one. I wish elements could be activated one layer at a time for specific times. I think there are two strategies:\n\nUsing the [TimedSubdomainModifier]: For each layer, group elements into three subdomains according to their color and define the times, blocks from and blocks move to in an input .csv file\nUsing the [CoupledVarThresholdElementSubdomainModifier]: Group all elements into three subdomains according to their color and activate them together with coupled variable\n\nFor both these methods I need to group elements into subdomains in advance, do we have any object to achieve this?",
+                          "url": "https://github.com/idaholab/moose/discussions/29066#discussioncomment-11275898",
+                          "updatedAt": "2024-11-16T05:46:47Z",
+                          "publishedAt": "2024-11-16T05:46:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nThe grouping of elements into subdomains is done at the mesh generation stage.\nYou can use the ParsedGenerateSubdomain for this purpose, that's one of the most flexible ways to assign subdomains.\nhttps://mooseframework.inl.gov/source/meshgenerators/ParsedSubdomainMeshGenerator.html\nUnless you are trying to convert all elements from one subdomain to another in a single operation, I dont think the TimedSubdomainModifier is for you.\nIf you want to use that one, you will need to pre-define a different subdomain for each layer.",
+                          "url": "https://github.com/idaholab/moose/discussions/29066#discussioncomment-11277283",
+                          "updatedAt": "2024-11-16T12:45:10Z",
+                          "publishedAt": "2024-11-16T12:35:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "keassyguang"
+                          },
+                          "bodyText": "Thank you very much. I tried to use the SubdomainPerElementGenerator for a simple 2D case (just as the picture above [Layer 5]). I created 6 blocks (two in a pair), three moving boundaries and three mesh modifiers with CoupledVarThresholdElementSubdomainModifier and it works fine. However, SubdomainPerElementGenerator may not be suitable for a large model and I don't know how to deal with the 3D case with SubdomainPerElementGenerator.\n\nUnless you are trying to convert all elements from one subdomain to another in a single operation, I dont think the TimedSubdomainModifier is for you.\nIf you want to use that one, you will need to pre-define a different subdomain for each layer.\n\nI agree with you. In fact, I need to pre-define blocks regardless of which mesh modifier method I choose. The problem now is that the geometry of the part could be quite complicated, which means I need to use a lot of expressions to describe the three regions (outside region, boundary region, and inside region) of the part. I want to find a simple way to pre-define these blocks.",
+                          "url": "https://github.com/idaholab/moose/discussions/29066#discussioncomment-11277485",
+                          "updatedAt": "2024-11-16T13:17:21Z",
+                          "publishedAt": "2024-11-16T13:17:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "https://mooseframework.inl.gov/moose/source/meshgenerators/SubdomainPerElementGenerator.html is indeed not the right way for a large model. This is mostly for small cases\nDo you need to predefine layers to make sure the elements from layer n+1 change subdomains before elements from layer n?\nBecause if you don't, and if you already have subdomains defined for the actual regions of the mesh, you can use the coupledVarThresholdLM subdomain modifier and then rely on the variable value and change the subdomain on the per element basis, instead of relying on predefined layers",
+                          "url": "https://github.com/idaholab/moose/discussions/29066#discussioncomment-11278023",
+                          "updatedAt": "2024-11-16T14:55:30Z",
+                          "publishedAt": "2024-11-16T14:55:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "keassyguang"
+                          },
+                          "bodyText": "Do you need to predefine layers to make sure the elements from layer n+1 change subdomains before elements from layer n?\n\nI didn't quite get that but I don't think I need it.\nAs shown in the below figure, I would create 6 blocks.\nblock 1: all gray regions below the red line\nblock 2: all green regions below the red line\nblock 3: all yellow regions below the red line\nblock 4: all gray regions above the red line\nblock 5: all green regions above the red line\nblock 6: all yellow regions above the red line\nmoving boundary 1: SideSetsBetweenSubdomainsGenerator, primary: block 1, paired:block 4\nmoving boundary 2: SideSetsBetweenSubdomainsGenerator, primary: block 2, paired:block 5\nmoving boundary 3: SideSetsBetweenSubdomainsGenerator, primary: block 3, paired:block 6\nThen the CoupledVarThresholdElementSubdomainModifier is applied to these three pairs of blocks to change the elements' domain.\n\n\nand if you already have subdomains defined for the actual regions of the mesh\n\nFor the mesh preparation stage, to assign elements to blocks 1-6, for this simple geometry case, I can use the ParsedSubdomainMeshGenerator with several expressions to do it. I would say this could be a big challenge to do if the geometry is complicated and the model is large. Are there any simple methods to assign elements to the correct blocks? Like how to assign the gray regions above the red line to block 4 in a complicated geometry (especially in the 3D case) with a smart way?",
+                          "url": "https://github.com/idaholab/moose/discussions/29066#discussioncomment-11278690",
+                          "updatedAt": "2024-11-16T16:47:26Z",
+                          "publishedAt": "2024-11-16T16:42:33Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Having equations for the regions is already an efficient way. If you have plenty of equations for each region, then you can make a new mesh generator which can take all your specifications.\nAssigning subdomains in moose is not the common way to do this though. Ideally when you are meshing the system in your meshing tool, you are assigning the subdomains which often map to different parts / materials of the system",
+                          "url": "https://github.com/idaholab/moose/discussions/29066#discussioncomment-11279566",
+                          "updatedAt": "2024-11-16T19:36:31Z",
+                          "publishedAt": "2024-11-16T19:36:30Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

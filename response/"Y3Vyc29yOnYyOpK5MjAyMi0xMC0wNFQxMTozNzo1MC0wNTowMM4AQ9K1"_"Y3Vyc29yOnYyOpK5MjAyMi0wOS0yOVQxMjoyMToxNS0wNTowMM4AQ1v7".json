@@ -1,0 +1,884 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMi0wOS0yOVQxMjoyMToxNS0wNTowMM4AQ1v7"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "How MasterAPP transfers displacement information to SubAPP",
+          "author": {
+            "login": "js-jixu"
+          },
+          "bodyText": "Hi, experts.\nThere is an initial mesh file, a MasterApp input file and a SubApp input file. First, MaterApp uses the initial mesh file to calculate, and calculates disp_x/y/z. Then I hope that when SubApp calculates it can use the displaced mesh calculated by MasterApp.\nI am worried that my expression might not be very clear, so I would like to give a concrete example. MasterApp will calculate disp_x/y/z and SubApp will calculate temperature distribution. The displacement of the mesh affects the temperature distribution, so I want to calculate the temperature distribution on the latest displacement mesh. The temperature distribution also causes mesh displacement through thermal expansion:\n\nI thought of two ways. The first is to use the latest output file of the MasterApp as the mesh file of the SubApp. SubApp needs to use the latest file every time, can this be done?\nThe second method is to set auxiliary variables of disp_x/y/z in SubApp. MasterApp passes disp_x/y/z information to SubApp in Transfers. Then SubApp applies the disp_x/y/z information to the initial mesh file, and SubApp can also use the displaced mesh. The difficulty with this approach is how to apply the disp_x/y/z information to the initial mesh file. Does using use_displaced_mesh=true in SubApp do the trick?",
+          "url": "https://github.com/idaholab/moose/discussions/22285",
+          "updatedAt": "2022-10-04T03:36:32Z",
+          "publishedAt": "2022-10-03T15:50:03Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "friedmud"
+                  },
+                  "bodyText": "Your \"second method\" is the right one.  In MOOSE disp_x/y/z are field variables, just like any other variable.  Therefore they can be transferred just like any other variable.\nIn the sub-app, all you need to do is add disp_x,y,z as Auxiliary variables and set displacements = 'disp_x disp_y disp_z' in the mesh block.  You can see the documentation for the displacements option under Mesh Displacements here: https://mooseframework.inl.gov/syntax/Mesh/index.html\nNote: if you are using one of the fancier Actions to setup your solid mechanics problem in the master... it's effectively doing this step for you (adding the variables and setting those variables as the variables to use for displacements).\nAlso note: that MOOSE doesn't care whether the displacement field is a nonlinear variable you solve for - or an Auxiliary variable.  This is actually really handy since it makes it easy to define functional forms of the displacements (or make them constants).",
+                  "url": "https://github.com/idaholab/moose/discussions/22285#discussioncomment-3789858",
+                  "updatedAt": "2022-10-03T18:33:00Z",
+                  "publishedAt": "2022-10-03T18:32:59Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "js-jixu"
+                          },
+                          "bodyText": "Thank you, Derke. I've sucessfully applied your suggestion to my input file and it works well.",
+                          "url": "https://github.com/idaholab/moose/discussions/22285#discussioncomment-3792458",
+                          "updatedAt": "2022-10-04T03:36:33Z",
+                          "publishedAt": "2022-10-04T03:36:32Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Derivative size too big?",
+          "author": {
+            "login": "czadeh"
+          },
+          "bodyText": "Hi,\nThis is related to my previous post: #22033\nWhile I am able to run an input file with the new material property I created, coupling it with other variables and physics requires a larger derivative size. I keep getting the error telling me to increase the derivative size. I kept increasing it because I have not yet found a size that lets me run my input file. Derivative size of 800 did not work, so I doubled it to 1600 and ran into this error when compiling my project.\nIn file included from /home/cameron/mambaforge3/envs/moose/libmesh/include/Eigen/Core:164,\n                 from /home/cameron/mambaforge3/envs/moose/libmesh/include/libmesh/dense_vector.h:31,\n                 from /home/cameron/projects/moose/framework/build/header_symlinks/MooseTypes.h:28,\n                 from /home/cameron/projects/moose/framework/build/header_symlinks/RankTwoTensor.h:13,\n                 from /home/cameron/projects/moose/framework/build/header_symlinks/RankTwoTensorImplementation.h:10,\n                 from /home/cameron/projects/moose/framework/src/utils/RankTwoTensor.C:11:\n/home/cameron/mambaforge3/envs/moose/libmesh/include/Eigen/src/Core/DenseStorage.h: In instantiation of 'void Eigen::internal::check_static_allocation_size() [with T = MetaPhysicL::DualNumber<double, MetaPhysicL::SemiDynamicSparseNumberArray<double, long unsigned int, MetaPhysicL::NWrapper<1600> >, true>; int Size = 9]':\n/home/cameron/mambaforge3/envs/moose/libmesh/include/Eigen/src/Core/DenseStorage.h:51:41:   required from 'Eigen::internal::plain_array<T, Size, MatrixOrArrayOptions, Alignment>::plain_array() [with T = MetaPhysicL::DualNumber<double, MetaPhysicL::SemiDynamicSparseNumberArray<double, long unsigned int, MetaPhysicL::NWrapper<1600> >, true>; int Size = 9; int MatrixOrArrayOptions = 0; int Alignment = 0]'\n/home/cameron/mambaforge3/envs/moose/libmesh/include/Eigen/src/Core/DenseStorage.h:211:38:   required from 'Eigen::DenseStorage<T, Size, _Rows, _Cols, _Options>::DenseStorage() [with T = MetaPhysicL::DualNumber<double, MetaPhysicL::SemiDynamicSparseNumberArray<double, long unsigned int, MetaPhysicL::NWrapper<1600> >, true>; int Size = 9; int _Rows = 3; int _Cols = 3; int _Options = 0]'\n/home/cameron/mambaforge3/envs/moose/libmesh/include/Eigen/src/Core/PlainObjectBase.h:476:55:   required from 'Eigen::PlainObjectBase<Derived>::PlainObjectBase() [with Derived = Eigen::Matrix<MetaPhysicL::DualNumber<double, MetaPhysicL::SemiDynamicSparseNumberArray<double, long unsigned int, MetaPhysicL::NWrapper<1600> >, true>, 3, 3>]'\n/home/cameron/mambaforge3/envs/moose/libmesh/include/Eigen/src/Core/Matrix.h:259:21:   required from 'Eigen::Matrix<_Scalar, _Rows, _Cols, _Options, _MaxRows, _MaxCols>::Matrix() [with _Scalar = MetaPhysicL::DualNumber<double, MetaPhysicL::SemiDynamicSparseNumberArray<double, long unsigned int, MetaPhysicL::NWrapper<1600> >, true>; int _Rows = 3; int _Cols = 3; int _Options = 0; int _MaxRows = 3; int _MaxCols = 3]'\n/home/cameron/projects/moose/framework/build/header_symlinks/RankTwoTensorImplementation.h:891:17:   required from here\n/home/cameron/mambaforge3/envs/moose/libmesh/include/Eigen/src/Core/DenseStorage.h:33:40: error: static assertion failed: OBJECT_ALLOCATED_ON_STACK_IS_TOO_BIG\n   33 |   EIGEN_STATIC_ASSERT(Size * sizeof(T) <= EIGEN_STACK_ALLOCATION_LIMIT, OBJECT_ALLOCATED_ON_STACK_IS_TOO_BIG);\n/home/cameron/mambaforge3/envs/moose/libmesh/include/Eigen/src/Core/DenseStorage.h:33:3: note: in expansion of macro 'EIGEN_STATIC_ASSERT'\n   33 |   EIGEN_STATIC_ASSERT(Size * sizeof(T) <= EIGEN_STACK_ALLOCATION_LIMIT, OBJECT_ALLOCATED_ON_STACK_IS_TOO_BIG);\n      |   ^~~~~~~~~~~~~~~~~~~\nmake: *** [/home/cameron/projects/moose/framework/build.mk:144: /home/cameron/projects/moose/framework/src/utils/RankTwoTensor.x86_64-conda-linux-gnu.opt.lo] Error 1\nmake: *** Waiting for unfinished jobs....\n\nIs 1600 not possible? Is this number absurdly high?\nIs there any way to reduce the derivative size requirement? Could this be caused by suboptimal code, and are there any tips to optimize?\nThanks,\nCameron",
+          "url": "https://github.com/idaholab/moose/discussions/22287",
+          "updatedAt": "2022-10-03T22:02:55Z",
+          "publishedAt": "2022-10-03T20:46:33Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "You run out of stack space, 1600 is indeed too big.\nYou should not need that much.\nI m thinking you are hitting the previous error (the one telling you to resize bigger) not because you are running out of derivative size, but because you are outside the range of differentiability or definition of an AD function (think sqrt(x) with x<=0)",
+                  "url": "https://github.com/idaholab/moose/discussions/22287#discussioncomment-3790773",
+                  "updatedAt": "2022-10-03T22:14:19Z",
+                  "publishedAt": "2022-10-03T20:51:12Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "This error is pretty clear: eigen has a stack size limit and you are exceeding that limit. We put in that static check so that it fails at compile time not runtime.\nYou hit this error NOT because your derivative size is too small, but opposite -- your derivative size is too large.",
+                          "url": "https://github.com/idaholab/moose/discussions/22287#discussioncomment-3791146",
+                          "updatedAt": "2022-10-03T22:02:56Z",
+                          "publishedAt": "2022-10-03T22:02:55Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Multiple Variables and Solvers",
+          "author": {
+            "login": "czadeh"
+          },
+          "bodyText": "Hi,\nI am working on a simulation where I have multiple variables.\nThe first variable is best solved by PJFNK. It is temperature in a heat transfer problem.\nThe second can be solved explicitly with Euler's method. The equation is a first order ODE coupled to temperature.\nHowever, in my current implementation I solve it with PJFNK which is overkill for this task. It may be more appropriate to solve this as a material property or aux variable but I am not sure if that is technically possible or what the tradeoff is.\nThe third could be solved with Newton's method. The equation is a first order ODE coupled to temperature.\nI have not implemented it yet or decided if it should be a variable, aux variable, or material property.\nMy main question is: is there a way to use different solvers in the same simulation (i.e., PJFNK, Euler's method, and Newton's method)?\nAlternatively, is it advantageous to implement variables 2 and 3 as aux variables or material properties? Would it be possible to solve ODEs in this case?\nThank you,\nCameron",
+          "url": "https://github.com/idaholab/moose/discussions/21918",
+          "updatedAt": "2022-10-03T21:35:28Z",
+          "publishedAt": "2022-08-22T22:58:53Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYou may use NodalKernels to write ODEs in MOOSE.\nThe easiest approach to have these varied solve methods would be to use the MultiApps system and have each solve in a different application.\nVariable 2 and 3 may be auxvariables or material properties if you can write down the entire solve in a single auxkernel / material. if you need to use the main nonlinear solve for it, then that wont work.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21918#discussioncomment-3451737",
+                  "updatedAt": "2022-08-22T23:39:15Z",
+                  "publishedAt": "2022-08-22T23:39:14Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "czadeh"
+                          },
+                          "bodyText": "I'm looking into the NodalKernels system but there is not much documentation about it so it seems more difficult.\nThe MultiApp system could be the best solution. Could I make it so that the main app and each of the MultiApps cover the same domain but just solve independently and exchange information?\nThe last option of writing the entire solve in the kernel seems possible but unnecessarily difficult when the MultiApp system can be used.\nThanks",
+                          "url": "https://github.com/idaholab/moose/discussions/21918#discussioncomment-3459954",
+                          "updatedAt": "2022-08-23T20:06:33Z",
+                          "publishedAt": "2022-08-23T20:06:33Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "czadeh"
+                          },
+                          "bodyText": "Also, if I wish to use mesh adaptivity in the main app, then will it cause problems when exchanging information between the main app and sub apps?",
+                          "url": "https://github.com/idaholab/moose/discussions/21918#discussioncomment-3459960",
+                          "updatedAt": "2022-08-23T20:07:45Z",
+                          "publishedAt": "2022-08-23T20:07:44Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Documentation is poor but this is the way. please have a look at examples in the test folder.\nEven within the MultiApps system you will want to use NodalKrnels for the ODEs\nYes you can have the different apps cover the same domain. It will make things easy to transfer between apps actually\nno mesh adaptivity should be naturally handled. You just wont be able to use some classes of transfers",
+                          "url": "https://github.com/idaholab/moose/discussions/21918#discussioncomment-3460237",
+                          "updatedAt": "2022-08-23T20:58:44Z",
+                          "publishedAt": "2022-08-23T20:58:43Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "czadeh"
+                          },
+                          "bodyText": "I have set up a MultiApp: main app with temperature, sub-app with my second variable. Initial testing checks out.\nNow I need to convert my Kernel for the second variable into a NodalKernel. I have my Kernel return the residual of the variable involving the time derivative so I had it inherit from ADTimeDerivative.h.\nCan I use a similar approach for the NodalKernel? i.e., have it inherit from TimeDerivativeNodalKernel.h and run Real TimeDerivativeNodalKernel::computeQpResidual() in the source file to return the residual.\nThis also ties into my last question: do I need to include the computeQpJacobian() method as well in my NodalKernel.C because it was there in TimeDerivativeNodalKernel.C?\nI want to solve using an explicit method like the ones in the timeintegrators system, so I do not need to solve the Jacobian, right?\nThanks,\nCameron",
+                          "url": "https://github.com/idaholab/moose/discussions/21918#discussioncomment-3519284",
+                          "updatedAt": "2022-08-31T15:57:18Z",
+                          "publishedAt": "2022-08-31T15:57:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "for fully explicit time stepping you should be able to not implement the Jacobian. The 'solve' on every time step becomes very simple, no nonlinear solve anymore",
+                          "url": "https://github.com/idaholab/moose/discussions/21918#discussioncomment-3519632",
+                          "updatedAt": "2022-08-31T16:33:36Z",
+                          "publishedAt": "2022-08-31T16:33:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "but if you want to do implicit later on, you must be careful to make sure everything is implemented, not just inherited from the base class. This could be a hard one to debug if you loose track of it.\nI would include the method and add a warning in there.",
+                          "url": "https://github.com/idaholab/moose/discussions/21918#discussioncomment-3519645",
+                          "updatedAt": "2022-08-31T16:34:36Z",
+                          "publishedAt": "2022-08-31T16:34:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "czadeh"
+                          },
+                          "bodyText": "I just made my first attempt at the NodalKernel for the second variable (var2). My problem now is that\n\nThe residual for var2 in the NodalKernel must be a Real type because I need to use Real computeQpResidual()\nvar2 is coupled to temperature which is an ADVariableValue\nIn my previously existing Kernel for var2, I was using ADReal precomputeQpResidual()\n\nSince temperature is passed through the transfer system and ends up as an AuxVariable in the sub-app for var2, is it an ADVariableValue at that point still? If not, what is the data type? If I can treat it as a Real that would solve this problem.",
+                          "url": "https://github.com/idaholab/moose/discussions/21918#discussioncomment-3529699",
+                          "updatedAt": "2022-09-01T18:40:36Z",
+                          "publishedAt": "2022-09-01T18:40:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "AuxVariables are not AD. So it's a regular variable at this point.\nIf it's retrieved as an AD variable for any reason, you can always do .value() to get the Real out of the ADReal.",
+                          "url": "https://github.com/idaholab/moose/discussions/21918#discussioncomment-3530088",
+                          "updatedAt": "2022-09-01T19:39:42Z",
+                          "publishedAt": "2022-09-01T19:39:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "czadeh"
+                          },
+                          "bodyText": "Thank you, I got my NodalKernel to compile. I set up my new MultiApp system with it, updating the main-app to run the new sub-app and changing the sub-app to use the NodalKernel and the Executioner to use the TimeIntegrator system with ActuallyExplicitEuler. When I run it, it converges for time step 0 and time step 1, but after that I get a ton of these printf(\"Jacobian warning\") messages in the terminal and it does not converge. I put that print statement inside of the computeQpJacobian() method along with return 0;\nI am surprised to see those messages because I would think that ActuallyExplicitEuler would not call that method, but now I am confused.\nThe final error is\n*** ERROR ***\nThe following error occurred in the object \"TimeStepper\", of type \"ConstantDT\".\n\nSolve failed and timestep already at or below dtmin, cannot continue!",
+                          "url": "https://github.com/idaholab/moose/discussions/21918#discussioncomment-3530680",
+                          "updatedAt": "2022-09-01T21:09:06Z",
+                          "publishedAt": "2022-09-01T21:09:05Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I'm confused too.\n@friedmud @joshuahansel what are we missing here? Why is the Jacobian used for explicit time-stepping?",
+                          "url": "https://github.com/idaholab/moose/discussions/21918#discussioncomment-3530702",
+                          "updatedAt": "2022-09-01T21:12:45Z",
+                          "publishedAt": "2022-09-01T21:12:44Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "joshuahansel"
+                  },
+                  "bodyText": "Just curious, it seems like your question is motivated by the idea that solving everything in a single system with a single solver is \"overkill\" (and I suppose, not as efficient). Have you tried this already, and you're not satisfied with the performance?\nTo use different solvers, you'll need to use the MultiApp system as @GiudGiud suggested, but as you may realize, it does come at the cost of the full coupling of your 3 variables (you'll need to either loosely couple or tightly couple through Picard iterations). The question of which is ultimately the most efficient approach will depend on your system and size, and I don't have enough experience to say what the most efficient approach is, but it's a consideration to make.",
+                  "url": "https://github.com/idaholab/moose/discussions/21918#discussioncomment-3537252",
+                  "updatedAt": "2022-09-02T14:51:08Z",
+                  "publishedAt": "2022-09-02T14:50:12Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "czadeh"
+                          },
+                          "bodyText": "You raise a very good point. I have compared them and seen some modest improvement in speed. My most recent test was with a MultiApp:\n\n1 variable in the main\n1 variable in the sub\n10 x 10 x 10 nodes\n100 time steps\n3 material properties\nUsing my ADTimeDerivative Kernel for the variable in the sub app\n\nAnd the difference was one was solved with PJFNK in the sub app while the other was solved with ActuallyExplicitEuler in the sub app.\nI saw a time of 21.40 s for PJFNK and 17.52 s for ActuallyExplicitEuler. The global truncation error was around 3% for Euler's method compared to PJFNK after 100 iterations.\nSolving with everything in one app under the same conditions with PJFNK took 22.51 s (compared to 21.40 s for just splitting it into a MultiApp) and there was a negligible difference in results.\nOnce all the systems are in place, I plan to scale up the number of nodes and timesteps to what is required for my problem and maybe the performance difference will matter more.\nMaybe you are right that it may not be worth giving up full coupling for a ~20% improvement in performance.",
+                          "url": "https://github.com/idaholab/moose/discussions/21918#discussioncomment-3538069",
+                          "updatedAt": "2022-09-02T15:33:29Z",
+                          "publishedAt": "2022-09-02T15:33:28Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "A question about the template class MooseVariableInterface",
+          "author": {
+            "login": "TJT-post95"
+          },
+          "bodyText": "MooseVariableInterface.h is included and inherited in the Kernel class. MooseVariableInterface is a template class, and the code is written in two files. However, from my understanding, this approach usually does not work properly. Because for the template class, maybe all the code should be written in the MooseVariableInterface.h, or MooseVariableInterface.C is supposed to be included. So, I'm curious if MOOSE does any additional setup?\nThank you!",
+          "url": "https://github.com/idaholab/moose/discussions/22278",
+          "updatedAt": "2022-10-03T20:44:42Z",
+          "publishedAt": "2022-10-02T13:38:56Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nWe explicitly instantiate every template in the source file for that template.\nIt's not the most portable option, as someone compiling a new app with a new instantiation needed would need to modify MOOSE, but that can be an advantage too. It works for many of our templates because we know what we support and this is helpful in disallowing what we do not support.\nFor example for MooseVariableInterface,\ntemplate class MooseVariableInterface<Real>;\ntemplate class MooseVariableInterface<RealVectorValue>;\ntemplate class MooseVariableInterface<RealEigenVector>;\n\nwe know we would not support MooseVariableInterface<Matrix>; without a lot of work elsewhere in the framework to handle the matrices, even though that particular template would compile just fine.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22278#discussioncomment-3781839",
+                  "updatedAt": "2022-10-02T15:00:58Z",
+                  "publishedAt": "2022-10-02T14:46:04Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "TJT-post95"
+                  },
+                  "bodyText": "Got! Thank you!",
+                  "url": "https://github.com/idaholab/moose/discussions/22278#discussioncomment-3781903",
+                  "updatedAt": "2022-10-02T15:08:19Z",
+                  "publishedAt": "2022-10-02T15:08:18Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Application failed with 'EXIT CODE: 9' when modeling TensorMechanics coupled HeatConduction",
+          "author": {
+            "login": "RECHOA"
+          },
+          "bodyText": "Hello everyone,\nI tried to calcute a thermal-mechanical case with a large mesh file on a high performance server(HPS). However, it failed and show 'EXIT CODE: 9'. The running log is shown below:\n\n\ufffd[36m\n*** Info ***\nTensorMechanics Action: selecting 'total small strain' formulation. Use `incremental = true` to select 'incremental small strain' instead.\ufffd[39m\nSetting Up\n  Setting Up Options.....                                                                [\ufffd[33m 37.05 s\ufffd[39m] [\ufffd[33m  127 MB\ufffd[39m]\nStill Setting Up.....\n  Finished Setting Mesh                                                                  [\ufffd[33m  2.94 s\ufffd[39m] [\ufffd[33m  269 MB\ufffd[39m]\n\n\ufffd[36m\n*** Info ***\nNeither the `reference_residual_variables` nor `reference_vector` parameter is specified for `ReferenceResidualProblem`, which means that no reference quantites are set. Because of this, the standard technique of comparing the norm of the full residual vector with its initial value will be used.\ufffd[39m\n\n\ufffd[33m\n*** Warning, This code is deprecated and will be removed in future versions:\nThe parameter component is deprecated.\nThis parameter is no longer necessary\ufffd[39m\n\nStill Setting Up............\n  Initializing\n    Initializing Equation Systems.                                                       [\ufffd[33m 12.16 s\ufffd[39m] [\ufffd[33m  196 MB\ufffd[39m]\n    Initializing Displaced Equation System                                               [\ufffd[33m 11.12 s\ufffd[39m] [\ufffd[33m  145 MB\ufffd[39m]\n  Finished Initializing                                                                  [\ufffd[33m 29.19 s\ufffd[39m] [\ufffd[33m  365 MB\ufffd[39m]\nFinished Setting Up                                                                      [\ufffd[33m175.29 s\ufffd[39m] [\ufffd[33m 1787 MB\ufffd[39m]\n\nFramework Information:\nMOOSE Version:           git commit ccf25ce on 2022-07-13\nLibMesh Version:         \nPETSc Version:           3.16.5\nSLEPc Version:           3.16.2\nCurrent Time:            Mon Sep 26 17:20:20 2022\nExecutable Timestamp:    Thu Sep  1 20:54:32 2022\n\nParallelism:\n  Num Processors:          60\n  Num Threads:             1\n\nMesh: \n  Parallel Type:           replicated\n  Mesh Dimension:          3\n  Spatial Dimension:       3\n  Nodes:                   \n    Total:                 514252\n    Local:                 9025\n    Min/Max/Avg:           8003/9025/8570\n  Elems:                   \n    Total:                 1285005\n    Local:                 21951\n    Min/Max/Avg:           20823/22051/21416\n  Num Subdomains:          1048\n  Num Partitions:          60\n  Partitioner:             metis\n\nNonlinear System:\n  Num DOFs:                2057008\n  Num Local DOFs:          36100\n  Variables:               { \"temp\" \"disp_x\" \"disp_y\" \"disp_z\" } \n  Finite Element Types:    \"LAGRANGE\" \n  Approximation Orders:    \"FIRST\" \n\nAuxiliary System:\n  Num DOFs:                23644342\n  Num Local DOFs:          404143\n  Variables:               { \"fast_neutron_fluence\" \"baf\" \"strain_xx\" \"strain_yy\" \"strain_zz\" ... \"stress_zz\" \n                             \"hoop_stress_bees\" \"hoop_strain_bees\" \"radial_strain_bees\" \"thermal_conductivity\" \n                             } \"rad_disp\" { \"vonmises\" \"maxPrincipal_stress\" \"creep_strain\" \"thermal_strain\" \n                             \"swell_strain\" \"Weibull_failure_probability\" } \n  Finite Element Types:    \"MONOMIAL\" \"LAGRANGE\" \"MONOMIAL\" \n  Approximation Orders:    \"CONSTANT\" \"FIRST\" \"CONSTANT\" \n\nExecution Information:\n  Executioner:             Transient\n  TimeStepper:             FunctionDT\n  Solver Mode:             Preconditioned JFNK\n  MOOSE Preconditioner:    SMP\n\n\ufffd[31mLEGACY MODES ENABLED:\ufffd[39m\n This application uses the legacy material output option: material properties are output only on TIMESTEP_END, not INITIAL. To remove this message, set 'use_legacy_material_output' to false in this application. If there are gold output files that contain material property output for which output occurs on INITIAL, then these will generate diffs due to zero values being stored, and these tests should be re-golded.\n\ufffd[39m\n\n\n===================================================================================\n=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES\n=   PID 23723 RUNNING AT gc1316\n=   EXIT CODE: 9\n=   CLEANING UP REMAINING PROCESSES\n=   YOU CAN IGNORE THE BELOW CLEANUP MESSAGES\n===================================================================================\nYOUR APPLICATION TERMINATED WITH THE EXIT STRING: Killed (signal 9)\nThis typically refers to a problem with your application.\nPlease see the FAQ page for debugging suggestions\n\n\nI looked up previous MOOSE discussions on similar problem, it seems to be due to a lack of memory. But my problem didn't be solved by simply increasing the number of processor (for example, from 30 to 60). The code running command like this:\nmpiexec -n 60 ./*opt -i input.i\n\nMaybe my setting of Executioner is not suitable. Here is the Executioner:\n[Executioner]\n    type = Transient\n    petsc_options_iname = '-ksp_gmres_restart -pc_type -pc_hypre_type -pc_hypre_boomeramg_max_iter'\n    petsc_options_value = '201                hypre    boomeramg      4'\n    line_search = 'none'\n    solve_type = 'PJFNK'\n    nl_rel_tol = 1.0e-3 \n    nl_abs_tol = 1.0e-6\n    nl_max_its = 15\n    l_tol = 1e-3\n    l_max_its = 50\n    start_time = 0.0\n    end_time = 7e7 \n    dtmin = 0.01 \n    dtmax = 1.0e6\n     [./TimeStepper]\n       type = FunctionDT\n       function = dts\n       min_dt = 1.0\n     [../]\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/22196",
+          "updatedAt": "2022-09-30T16:38:17Z",
+          "publishedAt": "2022-09-26T10:23:42Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "EXIT CODE 9 is more often than not running out of memory.\nSomething killed the job, it could be someone doing it manually, it could be that you ran out of memory",
+                  "url": "https://github.com/idaholab/moose/discussions/22196#discussioncomment-3736154",
+                  "updatedAt": "2022-09-26T17:13:29Z",
+                  "publishedAt": "2022-09-26T17:13:28Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "RECHOA"
+                          },
+                          "bodyText": "Thanks for your reply. I am asking the HPC administrator to increase my memory, and i will try to run my case again.",
+                          "url": "https://github.com/idaholab/moose/discussions/22196#discussioncomment-3736233",
+                          "updatedAt": "2022-09-26T17:20:27Z",
+                          "publishedAt": "2022-09-26T17:20:26Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "RECHOA"
+                          },
+                          "bodyText": "When increasing the memory, the  error 'EXIT CODE: 9'  disappeared.",
+                          "url": "https://github.com/idaholab/moose/discussions/22196#discussioncomment-3773587",
+                          "updatedAt": "2022-09-30T15:51:52Z",
+                          "publishedAt": "2022-09-30T15:51:51Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "RECHOA"
+                          },
+                          "bodyText": "@GiudGiud Thanks for your advice.",
+                          "url": "https://github.com/idaholab/moose/discussions/22196#discussioncomment-3773900",
+                          "updatedAt": "2022-09-30T16:38:18Z",
+                          "publishedAt": "2022-09-30T16:38:17Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Implementing a trivial Creep Model",
+          "author": {
+            "login": "batodon"
+          },
+          "bodyText": "Hello\nCan anyone help me with this basic Creep model? I\u2019m essentially deriving from the RadialReturnCreepStressUpdateBase class and overriding the \u201ccomputeResidualInternal\u201d and \u201cComputeDerivative\u201d virtual functions. I did everything right, but my simulation returns zero values for the creep_strain. Thank you.\n\n\ncreep.zip",
+          "url": "https://github.com/idaholab/moose/discussions/22131",
+          "updatedAt": "2022-10-03T20:50:37Z",
+          "publishedAt": "2022-09-18T03:17:10Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "RECHOA"
+                  },
+                  "bodyText": "In your source file, the etaMax is  related to scalar \uff1a\n\nconst ScalarType stress_delta = effective_trial_stress - (_three_shear_modulus * scalar);\nconst ScalarType etaMax = _etaM0 * std::exp(_mvM * stress_delta);\n\nbut in computeDerivative , when calculating the creep_rate_derivative, you didn't consider the derivation of etaMax with respect to scalar  :\n\nconst GenericReal<is_ad> creep_rate_derivative =\n-(std::sqrt(2/3)) *   1/(2etaMax) _three_shear_modulus;",
+                  "url": "https://github.com/idaholab/moose/discussions/22131#discussioncomment-3773817",
+                  "updatedAt": "2022-09-30T16:24:38Z",
+                  "publishedAt": "2022-09-30T16:24:38Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to make fluid boundaries change as solid boundaries change",
+          "author": {
+            "login": "js-jixu"
+          },
+          "bodyText": "Hi, experts.\nI'm using MOOSE to do thermal-mechanical-flow coupling. The middle is the solid internal heat source, and the two sides are the fluid. My fluid inner wall and solid outer wall share one boundary when modeling. Ideally, as the solid expands with temperature, the solid region deforms and the fluid region deforms with it:\n\nBut there are some problems in the simulation. Please see the image below. It appears that when the solid expands radially, the fluid region is not \"compressed\" radially. Rather, the expanded solid area covers a portion of the fluid area. I mean the flow channel is not actually narrowed because of the expansion of the solid:\n\nHow to make the boundary of a block change with the boundary of another block in MOOSE? In other words, how do I make the fluid region compress as the solid expands in MOOSE?",
+          "url": "https://github.com/idaholab/moose/discussions/22192",
+          "updatedAt": "2022-09-30T14:40:30Z",
+          "publishedAt": "2022-09-25T15:34:16Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYou also do not want to explicitly model the fluid structure interaction right?\nYou only want to impose the displacement from the solid to the fluid flow geometry.\nThis should only be a matter of transferring the displacement variables, then setting use_displaced_mesh = true in the fluid simulation\n@lindsayad do we have an example for FE-NS of working with the displaced mesh\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22192#discussioncomment-3728108",
+                  "updatedAt": "2022-09-25T16:05:47Z",
+                  "publishedAt": "2022-09-25T16:05:46Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "js-jixu"
+                          },
+                          "bodyText": "Yeah, I don't need to think about fluid-structure interaction. And I just want to impose the displacement from the solid to the fluid flow geometry.\nAs I did in another discussion, I didn't set disp_x and disp_y for the fluid region in this simulation. But I has added use_displaced_mesh=true in all blocks. Do I need to add disp_x and disp_y parameters to the fluid area as well?",
+                          "url": "https://github.com/idaholab/moose/discussions/22192#discussioncomment-3729714",
+                          "updatedAt": "2022-09-26T00:54:08Z",
+                          "publishedAt": "2022-09-26T00:53:34Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "js-jixu"
+                          },
+                          "bodyText": "I've added disp_x and disp_y for fluid region. This is TensorMechanics, BCs and Materials blocks of thermal-mechanical coupling simulation:\n[Modules/TensorMechanics/Master]\n  displacements = 'disp_x disp_y'\n  add_variables = true\n  strain = FINITE\n  material_output_order = FIRST\n  generate_output = 'vonmises_stress stress_xx stress_yy stress_zz strain_xx strain_yy strain_zz' \n  [solid]\n    block = 'solid'\n    temperature = Ts\n    displacements = 'disp_x disp_y'\n    automatic_eigenstrain_names = true\n  []\n  [fluid]\n    block = 'fluid'\n    temperature = Tf\n    displacements = 'disp_x disp_y'\n    automatic_eigenstrain_names = true\n  []\n[]\n\n[BCs]\n  [./pin1_y]\n    type = DirichletBC\n    variable = disp_y\n    boundary = 'pin1'\n    value = 0\n    use_displaced_mesh = true\n  [../]\n  [./pin1_x]\n    type = DirichletBC\n    variable = disp_x\n    boundary = 'pin1'\n    value = 0\n    use_displaced_mesh = true\n  [../]\n  [./top_and_bottom_y]\n    type = DirichletBC\n    variable = disp_y\n    boundary = 'solid_bottom solid_top fluid_bottom fluid_top'\n    value = 0\n    use_displaced_mesh = true\n  [../]\n  [./left_and_right_x]\n    type = DirichletBC\n    variable = disp_x\n    boundary = 'fluid_wall'\n    value = 0\n    use_displaced_mesh = true\n  [../]\n[]\n\n[Materials]\n  [elasticity_solid]\n    type = ComputeIsotropicElasticityTensor\n    youngs_modulus = 2e7\n    poissons_ratio = 0.32\n    block = 'solid'\n    use_displaced_mesh = true\n  []\n  [elasticity_fluid]\n    type = ComputeIsotropicElasticityTensor\n    youngs_modulus = 1e6\n    poissons_ratio = 0.016\n    block = 'fluid'\n    use_displaced_mesh = true\n  []\n  [thermal_expansion_solid]\n    type = ComputeThermalExpansionEigenstrain\n    temperature = Ts\n    thermal_expansion_coeff = 4e-4\n    stress_free_temperature = 273\n    eigenstrain_name = thermal_expansion\n    block = 'solid'\n    use_displaced_mesh = true\n  []\n  [stress_solid]\n    type = ComputeFiniteStrainElasticStress\n    block = 'solid'\n  []\n  [thermal_expansion_fluid]\n    type = ComputeThermalExpansionEigenstrain\n    temperature = Tf\n    thermal_expansion_coeff = 5e-6\n    stress_free_temperature = 273\n    eigenstrain_name = thermal_expansion\n    block = 'fluid'\n    use_displaced_mesh = true\n  []\n  [stress_fluid]\n    type = ComputeFiniteStrainElasticStress\n    block = 'fluid'\n  []\n[]\n\nThe modified input file can be converged in this way. and the inner wall of the fluid contracts as the outer wall of the solid expands. But is the above approach reasonable? Obviously, fluids do not have Young's modulus and Poisson's ratio. Should I set very small values for Young's modulus and Poisson's ratio in the fluid region? For example youngs_modulus = 1 and poissons_ratio = 0.",
+                          "url": "https://github.com/idaholab/moose/discussions/22192#discussioncomment-3730265",
+                          "updatedAt": "2022-09-26T03:09:14Z",
+                          "publishedAt": "2022-09-26T03:09:14Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "yes we do not want to be setting these values. You just need disp_x/y on the boundary to be taken into account. Inside the fluid domain, disp_xy should be an auxiliary variable if possible (in a MultiApp setup, should work), and if not, then it should be a nonlinear variable with a NullKernel for the equation",
+                          "url": "https://github.com/idaholab/moose/discussions/22192#discussioncomment-3730472",
+                          "updatedAt": "2022-09-26T04:12:55Z",
+                          "publishedAt": "2022-09-26T04:12:54Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "js-jixu"
+                          },
+                          "bodyText": "Okay, I'll try these methods and give feedback.",
+                          "url": "https://github.com/idaholab/moose/discussions/22192#discussioncomment-3730483",
+                          "updatedAt": "2022-09-26T04:16:14Z",
+                          "publishedAt": "2022-09-26T04:16:14Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "js-jixu"
+                          },
+                          "bodyText": "I took your second suggestion of giving a NullKernel to dixp_x/y in the fluid area in Kernels block:\n[Variables]\n  [./disp_x]\n    family = LAGRANGE\n    order = FIRST\n    block = 'solid fluid'\n  [../]\n  [./disp_y]\n    family = LAGRANGE\n    order = FIRST\n    block = 'solid fluid'\n  [../]\n[]\n\n[Kernels]\n  [./disp_x_null]\n    type = NullKernel\n    variable = disp_x\n    block = fluid\n  [../]\n  [./disp_y_null]\n    type = NullKernel\n    variable = disp_y\n    block = fluid\n  [../]\n[]\n\n[Modules/TensorMechanics/Master]\n  displacements = 'disp_x disp_y'\n  strain = FINITE\n  material_output_order = FIRST\n  generate_output = 'vonmises_stress stress_xx stress_yy stress_zz strain_xx strain_yy strain_zz' \n  [solid]\n    block = 'solid'\n    temperature = Ts\n    displacements = 'disp_x disp_y'\n    automatic_eigenstrain_names = true\n  []\n[]\n\n[BCs]\n  [./pin1_y]\n    type = DirichletBC\n    variable = disp_y\n    boundary = 'pin1'\n    value = 0\n    use_displaced_mesh = true\n  [../]\n  [./pin1_x]\n    type = DirichletBC\n    variable = disp_x\n    boundary = 'pin1'\n    value = 0\n\tuse_displaced_mesh = true\n  [../]\n  [./top_and_bottom_y]\n    type = DirichletBC\n    variable = disp_y\n    boundary = 'solid_bottom solid_top'\n    value = 0\n    use_displaced_mesh = true\n  [../]\n[]\n\n[Materials]\n  [elasticity_solid]\n    type = ComputeIsotropicElasticityTensor\n    youngs_modulus = 2e7\n    poissons_ratio = 0.32\n    block = 'solid'\n    use_displaced_mesh = true\n  []\n  [thermal_expansion_solid]\n    type = ComputeThermalExpansionEigenstrain\n    temperature = Ts\n    thermal_expansion_coeff = 4e-4\n    stress_free_temperature = 593\n    eigenstrain_name = thermal_expansion\n    block = 'solid'\n    use_displaced_mesh = true\n  []\n  [stress_solid]\n    type = ComputeFiniteStrainElasticStress\n    block = 'solid'\n  []\n[]\n\nBut the same problem happened. Only the boundary of the solid region changes, the boundary of the fluid region does not change with the change of the boundary of the solid region. The first picture is only solid region and the second picture is only fluid region:\n  \nThe expanded portion of the solid area covers a portion of the fluid area, rather than compressing the fluid area. Do you think I need to put some constraints on the interface of fluid and solid (in fact they share one boundary)?\nBy the way, when I used your second method, it can be calculated in parallel and the problem in #22187 doesn't appear",
+                          "url": "https://github.com/idaholab/moose/discussions/22192#discussioncomment-3733154",
+                          "updatedAt": "2022-09-26T11:38:00Z",
+                          "publishedAt": "2022-09-26T11:32:34Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "yes we do not want to be setting these values. You just need disp_x/y on the boundary to be taken into account. Inside the fluid domain, disp_xy should be an auxiliary variable if possible (in a MultiApp setup, should work), and if not, then it should be a nonlinear variable with a NullKernel for the equation\n\nI don't think so. You'll need something to advect the fluid mesh. If you only have displacements on the boundary, the fluid mesh will be largely incompatible and most likely you get negative Jacobians on elements next to the boundary. In the literature, people typically solve a dummy (incompressible) elasticity problem or treat the fluid mesh as connected springs.",
+                          "url": "https://github.com/idaholab/moose/discussions/22192#discussioncomment-3733838",
+                          "updatedAt": "2022-09-26T13:01:02Z",
+                          "publishedAt": "2022-09-26T13:01:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Only the boundary of the solid region changes, the boundary of the fluid region does not change with the change of the boundary of the solid region.\n\nSee my comment above, this is exactly what you get by ignoring the Eulerian movement.",
+                          "url": "https://github.com/idaholab/moose/discussions/22192#discussioncomment-3733855",
+                          "updatedAt": "2022-09-26T13:02:46Z",
+                          "publishedAt": "2022-09-26T13:02:45Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "You'll also need to use the ALE description of the fluid problem if you want to incorporate the Lagrangian movement of the solid at the fluid-structure interface, which, unfortunately, isn't as simple as setting use_displaced_mesh = true in the kernels.",
+                          "url": "https://github.com/idaholab/moose/discussions/22192#discussioncomment-3734732",
+                          "updatedAt": "2022-09-26T14:32:48Z",
+                          "publishedAt": "2022-09-26T14:31:51Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "js-jixu"
+                          },
+                          "bodyText": "This one sounds a bit difficult and complicated. I thought at first that I would simply set use_displaced_mesh=true. Is there any relevant case in the MOOSE tutorials (I guess there should be none).",
+                          "url": "https://github.com/idaholab/moose/discussions/22192#discussioncomment-3734792",
+                          "updatedAt": "2022-09-26T14:37:24Z",
+                          "publishedAt": "2022-09-26T14:37:24Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Is there any relevant case in the MOOSE tutorials (I guess there should be none).\n\nThat's a question for @GiudGiud and @lindsayad I believe.\nBut before looking into that, you really want to double check if your solid expands all that much. I mean typically the deformation due to thermal expansion is pretty small -- small enough so that you can make the approximation of stationary fluid mesh.",
+                          "url": "https://github.com/idaholab/moose/discussions/22192#discussioncomment-3735871",
+                          "updatedAt": "2022-09-26T16:31:50Z",
+                          "publishedAt": "2022-09-26T16:31:50Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "[PorousFlow] ICs, BCs, and EOS for single-phase unsaturated flow",
+          "author": {
+            "login": "garciapintado"
+          },
+          "bodyText": "Hi, I am re-opening here a topic from previous thread [#21038], which is still not totally solved. The last time I wrote, @WilkAndy [who previously also helped me; solved discussion #20139] was going on holidays and tagged @cpgr for this, who was helping me then. @cpgr helped me to get better tabulated EOS for water, but in the end he could not find the time to approach the real problem I\u2019m facing [which I understand, as the input file is pretty long], and he is likely on vacation now, as I can\u2019t see any activity from him in the last weeks?\nI need to conduct single-phase hydrothermal simulations of ocean basins [with geochemistry], which are mostly under the ocean but partially [the sides of the domain] subaerial. So, the shallow part of the subaerial domain [the part above sea level] will be unsaturated, and the rest of the domain saturated. Examples input files and expanded description of the real application are in [#21038], which is the first goal to solve, but here I\u2019ve done now a simpler setup which still serves to illustrate the basic problem.\nSo, I am trying to do a ThermoHydraulic [i.e. no solid mechanics] simulation of hydrothermal activity under the ocean, and I confess that I am still confused about how to properly setup the porepressure ICs & BCs and their relation wit the EOS:\n1]  In the online documentation for Mass density, it indicates that the sum of saturations equals 1, but I guess this is not the case for unsaturated flow, right? That is the saturation for a single-phase partially-unsaturated flow can go below 1, and there is no other phase to make this sum go up to one. Or am I missing something?\n2] This is a big scale model, and I am not modelling perched aquifers nor anything special in the subaerial part, which means that everything is considered an unconfined situation in a globally connected porous block. So, for the porepressure BCs I am indicating as reference a constant barometric pressure [one atmosphere] for the subaerial parts and one atmosphere plus the ocean for the submarine part [ocean is at y=0 here]. But I wonder if this is right. In my mind, this is clashing with the negative pressures that develop in the unsaturated part, as one atmosphere environmental pressure is in direct contact with highly negative pressures at the top subaerial part. Please could you indicate if this constant 1 atmosphere porepressure reference for the subaerial part makes sense for unsaturated conditions?  The unsaturated porepressure (of the relevant) phase at the boundary of the porous matrix are not equal to the external fluid pressure like this.\n3] Or does the above mean that to model everything as unconfined connected porous block does not make sense at all?\n4] If I understand it right, it is directly the porepressure the pressure that is considered for the fluid EOS, while for the unsaturated part the porepressure goes negative [and I have elevations of ~1 km above sea level, which lead to high negative porepressure values]. Does it make sense that these negative porepressures are used for the EOS? This implies that I need to extrapolate the tabulation toward highly negative pressure values, which seems to make the convergence very difficult. Would not make sense to truncate to 0 [or 1 atm] the negative porepressure values that are passed to the EOS?\nThe attached input file runs with a \u201csimple fluid\u201d, but using the tabulated EOS [which I have until 10 Pa, and can\u2019t see how lower that that is reasonable] gives straightaway the error:\n\u201cPressure -34511.9 is outside the range of tabulated pressure (10, 4.41e+08).\u201d\n5] Only in the case that this global unconfined simulation makes sense. How would one set adequate ICs for the porepressure to overcome the early lack of convergence by initial shocks?\n6] Regarding the documentation of PorousFlow1PhaseP, it says \u201cThis Material is used for the fully saturated single-phase situation where the porepressure is the primary variable\u201d. Is this a documentation error? I can\u2019t understand how it can be used for a fully-saturated situation, when it is used to compute saturation. Or I should not use this material for unsaturated conditions?\nAll in all, this setup does not converge and I am not finding how to solve it. Any suggestion on alternative setups to make this work would be great.\nAs an alternative to set everything as a connected porousblock, I\u2019ve tried to set up the parts above sea level as a non-PorousFlow block [one of the tests in #21038] as for our purposes it would be enough to have only thermal conduction in the areas above sea level, but this has not converged for me, creating shock temperature and porepressures at the interface between the bottom of the non-PorousFlow block and the \u201cconfined\u201d porous flow part  underneath [although I could be doing something wrong]\nI am pasting an image of the \u201csimple\u201d case I am trying to resolve now, and an input file. A link to the input mesh and input file is at:\nhttps://github.com/garciapintado/MOOSE_porous_flow_stuff/central_valley_one_phase_tri6\nThis simple domain is:\n\nand the input file [also in github] is:\n# run as:\n# porousflow-opt -i archaea01.i --mesh-only\n#\n# mpiexec -np 6 porousflow-opt -i archaea01.i \n#                                          \n#\u00a0simple synthetic setup of hydrothermal circulation model with central valley topography\n# unsaturated TH simulation\n# step 01 simply attempts to brings the model to equilibrium with a standard geothermal gradient \n#\n# domain: xlim = [-12000,12000] m\n#         ylim = [-14000,1000] m with central valley reaching y=-1000m at the center\n# ocean at y=0   \n\n[Mesh]\n  construct_side_list_from_node_list=true\n  [gen]\n    type = FileMeshGenerator\n    file = mesh_000000_exomerge.e\n    # use_for_exodus_restart = true # needed to be able to read the ICs from the file [see below]\n  []\n\n  #  [make3D]\n  #  type = MeshExtruderGenerator # mind the FancyExtruderGenerator\n  #  extrusion_vector = '0 0 5000' # only works in this direction\n  #  num_layers = 10               \n  #  bottom_sideset = 'front'\n  #  top_sideset = 'rear'\n  #  input = gen\n  #[]\n[]\n\n[GlobalParams]\n  PorousFlowDictator = dictator\n  gravity = '0 -9.81 0'\n[]\n\n[UserObjects]\n  [dictator]\n    type = PorousFlowDictator\n    porous_flow_vars = 'porepressure temperature'\n    number_fluid_phases = 1\n    number_fluid_components = 1\n  []\n  [pc]                                      # // Add the capillary pressure UserObject\n    type = PorousFlowCapillaryPressureVG\n    alpha = 1E-6\n    m = 0.6\n  []\n  [pp_KT_advectiveflux_onecomp_userobj]  # // add Advective Flux calculator UserObjects\n    type = PorousFlowAdvectiveFluxCalculatorUnsaturated\n    phase = 0\n    flux_limiter_type = VanLeer\n    multiply_by_density = true # default. Implies the advective flux is multiplied by density, so it is a mass flux\n  []\n  [heat_KT_advectiveflux_userobj]\n    type = PorousFlowAdvectiveFluxCalculatorUnsaturatedHeat\n    flux_limiter_type = VanLeer\n    multiply_by_density = true # default. Implies the advective flux is multiplied by density, so it is a heat flux\n  []\n[]\n\n[Variables]\n  [porepressure]\n    family = LAGRANGE\n    order = SECOND\n  []\n   [temperature]            # [K] parsed initial condition in the ICs below\n    family = LAGRANGE\n    order = SECOND\n    scaling = 1E-08\n  []\n[]\n\n[AuxVariables]\n  [darcy_vel_x]\n    family = MONOMIAL\n    order = CONSTANT\n  []\n  [darcy_vel_y]\n    family = MONOMIAL\n    order = CONSTANT\n  []\n  [mass_flux_top_sink]\n    family = LAGRANGE\n    order = SECOND\n  []\n  [mass_flux_top_submarine_source]\n    family = LAGRANGE\n    order = SECOND\n  []\n  [mass_flux_top_subaerial_source]\n    family = LAGRANGE\n    order = SECOND\n  []\n  [heat_flux_adv_top_sink]\n    family = LAGRANGE\n    order = SECOND\n  []\n   [heat_flux_adv_top_submarine_source]\n    family = LAGRANGE\n    order = SECOND\n  []\n   [heat_flux_adv_top_subaerial_source]\n    family = LAGRANGE\n    order = SECOND\n  []\n  [heat_flux_dif_top]\n    family = LAGRANGE\n    order = SECOND\n  []\n  [ptop_auxvar]\n    family = LAGRANGE\n    order = SECOND\n  []\n  [perm_auxvar]\n    family = MONOMIAL      # Uhm! did not I see that MONOMIAL makes the model more stable?\n    order = CONSTANT\n  []\n  [sat_auxvar]\n    family = MONOMIAL\n    order = CONSTANT\n  [] \n[]\n\n[AuxKernels]\n  [darcy_vel_x_kernel]\n    type = PorousFlowDarcyVelocityComponent\n    component = x\n    variable = darcy_vel_x\n    fluid_phase = 0                             # OPTIONAL for single-phase\n    execute_on = TIMESTEP_END\n  []\n  [darcy_vel_y_kernel]\n    type = PorousFlowDarcyVelocityComponent\n    component = y\n    variable = darcy_vel_y\n    fluid_phase = 0                             # OPTIONAL for single-phase\n    execute_on = TIMESTEP_END\n  []\n  [saturation_kernel]\n    type = PorousFlowPropertyAux\n    variable = sat_auxvar\n    property = saturation\n  []\n[]\n\n[Kernels] # as added by the action [PorousFlowFullySaturated]\n  [pp_time_derivative]                         # one kernel for each fluid component\n    type = PorousFlowMassTimeDerivative        # these kernels lump the fluid-component mass to the nodes to ensure superior numerical stabilization\n    variable = porepressure\n    fluid_component = 0 \n  []\n  #[pp_advectiveflux_kernel]  # if (_stabilization == StabilizationEnum::Full)\n  #  type = PorousFlowAdvectiveFlux # full upwinded advective flux of the fluid component\n  #  block = 'mantle lcrust ucrust sediment unsat'\n  #  variable = porepressure\n  #[]\n  [pp_KT_advectiveflux_kernel] # if (_stabilization == StabilizationEnum::KT)\n    type = PorousFlowFluxLimitedTVDAdvection    # one kernel for each fluid component\n    advective_flux_calculator = pp_KT_advectiveflux_onecomp_userobj  # PorousFlowAdvectiveFluxCalculator UserObjectName\n    variable = porepressure\n  []\n  # Heat equation\n  [heat_time_derivative]\n    type = PorousFlowEnergyTimeDerivative      # this kernel lumps the heat energy-density to the nodes to ensure superior numerical stabilization\n    variable = temperature\n  []\n  #[heat_advectiveflux_kernel] # if (_stabilization == StabilizationEnum::Full)\n  #  type = PorousFlowHeatAdvection\n  #  block = 'mantle lcrust ucrust sediment unsat'\n  #  variable = temperature\n  #[]\n  [heat_KT_advectiveflux_kernel] # if (_stabilization == StabilizationEnum::KT)\n    type = PorousFlowFluxLimitedTVDAdvection\n    variable = temperature\n    advective_flux_calculator = heat_KT_advectiveflux_userobj         # PorousFlowAdvectiveFluxCalculator UserObjectName\n  []\n  [heat_conduction]\n    type = PorousFlowHeatConduction            # weak form of $-\\div (\\lambda \\grad T)$\n    variable = temperature\n  []\n[]\n\n[Functions]\n  [temperature00] # temperature ICs\n    type = ParsedFunction\n    value = '273.15 + 5 + (150-5)*exp(-3*(y-ybot)/rate)'             # 150\u00baC at the bottom and exponential decay toward the surface\n    vars = 'ybot   rate'\n    vals = '-15000 6000'\n  []\n  [porepressure00]\n    type = ParsedFunction\n    value = 'if(y > sea_level, atm, atm + 9.81*(-y + sea_level)*1000)'    # top corners [y=1000m] at atmospheric pressure\n    vars = 'sea_level atm'\n    vals = '0.0 101335'\n  []\n  [permeability00]\n    type = ParsedFunction \n    value = 'if(y > sea_level, 1e-20, vmin + (vmax-vmin) * exp(-((x-xc)/xsd)^2))'\n    vars = 'sea_level xc  vmin    vmax    xsd'\n    vals = '0.0      0.0  1.0E-17 1.0E-14 5000'\n  []\n[]\n\n[ICs]                                          \n  [porepressure_IC]\n    type = FunctionIC\n    variable = porepressure                    # [Pa]\n    function = porepressure00                  # (-y+1000) => atmospheric pressure at the top corners <- (PHY.yseq = [-11., 1]*km)\n  []\n  [temperature_IC]\n    type = FunctionIC\n    variable = temperature\n    function = temperature00\n  []\n  [ptop_auxvar_IC]\n    type = FunctionIC\n    variable = ptop_auxvar\n    function = porepressure00\n  []\n  [perm_auxvar_IC]\n    type = FunctionIC\n    variable = perm_auxvar\n    function = permeability00\n  []\n[]\n\n[BCs]\n  [Ptop_sink]\n    type = PorousFlowPiecewiseLinearSink  # \n    variable = porepressure\n    boundary = top\n    PT_shift = ptop_auxvar                 # [Pa] reference environmental pressure: 1 atm + 3000 m water column\n    pt_vals = '0 1e9'\n    multipliers = '0 1e9'\n    use_mobility = true\n    use_relperm = true\n    flux_function = 100                      # -> 100m\n    fluid_phase = 0\n    save_in = mass_flux_top_sink\n  []\n  [Ptop_submarine_source]\n    type = PorousFlowPiecewiseLinearSink\n    variable = porepressure\n    boundary = top_submarine\n    PT_shift = ptop_auxvar\n    pt_vals = '-1e9 0'\n    multipliers = '-1e9 0'\n    use_mobility = true\n    use_relperm = false\n    flux_function = 100\n    fluid_phase = 0\n    save_in = mass_flux_top_submarine_source\n  []\n  [Ptop_subaerial_source]\n    type = PorousFlowPiecewiseLinearSink\n    variable = porepressure\n    boundary = top_subaerial\n    PT_shift = ptop_auxvar\n    pt_vals = '-1e9 0'\n    multipliers = '-1e9 0'\n    use_mobility = true\n    use_relperm = false\n    flux_function = 0.001                   # to be calibrated: should allow for emptying of porespace\n    fluid_phase = 0\n    save_in = mass_flux_top_subaerial_source\n  []\n  [Ttop_adv_sink] # advective heat flux = enthalpy * darcy Flux\n    type = PorousFlowPiecewiseLinearSink         # this is a NodalBC\n    variable = temperature\n    PT_shift = ptop_auxvar\n    boundary = top\n    pt_vals = '0 1e9'\n    multipliers = '0 1e9'\n    use_mobility = true\n    use_enthalpy = true\n    use_relperm = true\n    flux_function = 100 \n    fluid_phase = 0\n    save_in = heat_flux_adv_top_sink\n  []\n  [Ttop_adv_submarine_source] # advective heat flux = enthalpy * darcy Flux\n    type = PorousFlowPiecewiseLinearSink         # this is a NodalBC\n    variable = temperature\n    PT_shift = ptop_auxvar\n    boundary = top_submarine\n    pt_vals = '-1e9 0'\n    multipliers = '-1e9 0'\n    use_mobility = true\n    use_enthalpy = true\n    use_relperm = false\n    flux_function = 100\n    fluid_phase = 0\n    save_in = heat_flux_adv_top_submarine_source\n  []\n  [Ttop_adv_subaerial_source] # advective heat flux = enthalpy * darcy Flux\n    type = PorousFlowPiecewiseLinearSink         # this is a NodalBC\n    variable = temperature\n    PT_shift = ptop_auxvar\n    boundary = top_subaerial\n    pt_vals = '-1e9 0'\n    multipliers = '-1e9 0'\n    use_mobility = true\n    use_enthalpy = true\n    use_relperm = false\n    flux_function = 0.001 \n    fluid_phase = 0\n    save_in = heat_flux_adv_top_subaerial_source\n  []\n  \n   [Ttop_diff] # diffusive heat flux = - lambda * grad_T\n    type = PorousFlowPiecewiseLinearSink          # this is a NodalBC\n    variable = temperature\n    PT_shift = 278.15                             # [K]    5\u00baC\n    boundary = top\n    pt_vals     = '-1000 0 1000'                  # x coordinates defining g\n    multipliers = '-10000 0 1000'                 # y coordinates defining g\n    use_thermal_conductivity = true \n    flux_function = 0.01\n    save_in = heat_flux_dif_top \n   []\n  [Tbot]\n    type = FunctionDirichletBC \n    variable = temperature\n    boundary = bottom\n    function = temperature00\n  []\n[]\n\n[Modules]\n  [FluidProperties]\n    [the_simple_fluid]\n      type = SimpleFluidProperties\n      bulk_modulus = 2E9\n      viscosity = 1.0E-3\n      density0 = 1000.0\n    []\n    [true_water97]\n      type = Water97FluidProperties    # IAPWS-IF97\n    []\n    [tabulated_water95]                # tabulation is the only way to make this effective\n      type = TabulatedFluidProperties  # the range 273.15 K <= T <= 1073.15 K for p <= 100 MPa should be OK [e.g. 800\u00baC at 10 km depth]\n      # interpolated_properties = 'density enthalpy internal_energy viscosity k cp cv entropy'\n      fp = true_water97\n      fluid_property_file = water_IAPWS95.csv\n    []\n  []\n[]\n\n[Materials]\n  [saturation_calculator]\n    type = PorousFlow1PhaseP\n    porepressure = porepressure\n    capillary_pressure = pc\n  []\n  [temperature_material]\n    type = PorousFlowTemperature            # at_nodes=false by default\n    temperature = temperature\n  []\n  [massfrac] # although it is trivially 1.0 for this single-phase water-only problem                               \n    type = PorousFlowMassFraction           # at_nodes=false by default\n  []\n   [fluid_eos]\n    type = PorousFlowSingleComponentFluid      # see documentation for this material regarding the choice of units\n    fp = the_simple_fluid                     # this Material is at_nodes=false by default\n    #fp = tabulated_water95\n    phase = 0\n  []\n  [effective_fluid_pressure]                   # create effective fluid pressure [requested by PorousFlowPorosity even it has not mechanical coupling]\n    type = PorousFlowEffectiveFluidPressure\n  []\n  # materials not explicitly added by the Action PorousFlowUnsaturated:\n  [porosity]\n    type = PorousFlowPorosityConst\n    porosity = 0.1\n  []\n  [permeability] # has to range from 14-14 in the center to 1e-17 towards the sides\n    type = PorousFlowPermeabilityTensorFromVar\n    perm = perm_auxvar\n  []\n   [internal_energy]                      # 'at_nodes=True' by default | internal_energy [J.K-1.m-3] = density*specific_heat_capacity\n    type = PorousFlowMatrixInternalEnergy #\u00a0this Material calculated the internal energy of solid rock grains\n    density = 3000.0                      # [kg.m-3] density of rock grains\n    specific_heat_capacity = 1000.0       # [J.kg-1.K-1] specific heat capacity of rock grains\n  []\n  [lambda]                                           # 'at_nodes=False' by default\n    type = PorousFlowThermalConductivityFromPorosity # rock-fluid combined thermal conductivity by weighted sum of rock and fluid conductivities\n    lambda_f = '0.56 0 0 0 0.56 0 0 0 0.56'\n    lambda_s = '1.5 0 0 0 1.5 0 0 0 3.3'\n  []\n  [relperm] # required by PorousFlowDarcyVelocityComponent AuxKernels\n    type = PorousFlowRelativePermeabilityCorey       # atNodes=false by default\n     n = 3           # Corey exponent of the phase\n    s_res = 0.1     #\u00a0residual saturation of the phase\n    sum_s_res = 0.1 # [>= s_res]\n    phase = 0\n  []\n[]\n[Preconditioning]\n  active = smp_lu_mumps\n  [smp_lu_mumps]\n    type = SMP\n    full = true\n    petsc_options_iname = '-pc_type -pc_factor_mat_solver_package'\n    petsc_options_value = ' lu       mumps'\n  []\n[]\n\n[Executioner]\n  type = Transient\n  solve_type = Newton\n  # start_time = 0             # [s] 0 year | env['time_vals'].max() from archaea03_exodus.e\n  #end_time = 50                # [s] 1000 year [i.e. run for another 4000 kyr]\n  end_time = 315576000000     # [s] 10000 yr - one timestep of our mechanical model\n  dtmax = 1e9                  # [s] ~31.7 year. advaced parameter. Maximum timestep size in an adaptive run. Default to 1E30   \n  nl_max_its = 25              # solver parameter. Max Nonlinear Iterations. Default to 50\n  l_max_its = 500              # solver parameter. Max Linear Iterations. Default to 10000\n  nl_abs_tol = 1.1E-06         # solver parameter. Nonlinear absolute tolerance. Default to 1E-50\n  nl_rel_tol = 1E-08           # solver parameter. Nonlinear Relative Tolerance. Default to 1E-08 \n  scheme = 'implicit-euler'    # the default TimeIntegrator [also known as backwards Euler method]\n  # fixed_point_algorithm = 'picard' # the fixed point algorithm to converge the sequence of problems\n  # line_search = 'default'\n  [TimeStepper]                #\u00a0TimeStepper subsystem [block always nested within the Executioner block]\n    type = IterationAdaptiveDT # adjust the timestep based on the number of iterations\n    optimal_iterations = 6     # target number of nonlinear iterations [from 6 to 10 this does not seem to affect convergence]\n    dt = 1                     # ~[27 h]\n    growth_factor = 2\n    cutback_factor = 0.5\n  []\n[]\n\n[VectorPostprocessors]         # sample along a vector of coordinates [a transect]\n  [temp_vtransect_x0]\n    type = LineValueSampler\n    start_point = '0 -15000 0'\n    end_point =   '0 -2000  0'\n    num_points = 500\n    sort_by = y\n    variable = temperature\n  []\n  [temp_vtransect_left]\n    type = LineValueSampler\n    start_point = '-39000 -15000 0'\n    end_point =   '-39000   980  0'\n    num_points = 500\n    sort_by = y\n    variable = porepressure\n  []\n[]\n\n[Outputs]\n  [checkpoint]\n    type = Checkpoint\n    num_files = 4\n    interval = 5\n  []\n  [exodus]\n    type = Exodus\n    output_material_properties = true\n    interval = 1                          # a bit more than once per year for the initial dt\n    append_date = false                   # datetime of creation of output file\n  []\n  [csv]\n    type = CSV # output for postprocessors, vector postprocessors, and scalar variables\n    time_data = true\n  []\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/21700",
+          "updatedAt": "2022-09-30T09:48:43Z",
+          "publishedAt": "2022-07-27T08:54:17Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "garciapintado"
+                  },
+                  "bodyText": "The pasted input file looks terrible, seems better to get the one in the github link indicated above.",
+                  "url": "https://github.com/idaholab/moose/discussions/21700#discussioncomment-3259114",
+                  "updatedAt": "2022-07-27T09:08:43Z",
+                  "publishedAt": "2022-07-27T09:08:42Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "WilkAndy"
+                  },
+                  "bodyText": "Hi @garciapintado , let me try to answer some of your questions...\n(1) You are correct about the saturations not summing to 1 in this special case (probably we should add a caveat in the doco).   Single-phase unsaturated flow is the only case where the saturations do not have to sum to 1.  In single-phase unsaturated flow, there is just one saturation, which is the water saturation in your case.  The \"other phase\", which is air in your case, is not modelled explicitly (ie, it never enters your input file) has saturation = 1 - water_saturation.  The reason you don't have to model it is that it is assumed to have zero viscosity and (magically) appear whenever you need it to, presumably from some infinite reservoir, which is the atmosphere in your case.  That is a pretty good assumption in the unconfined aquifer situation.\n(2) You are absolutely correct about the 1 atm air pressure.  That is correct in real life, to a very good approximation.  HOWEVER, single-phase unsaturated flow assumes that atmospheric pressure is at 0 pascals (this is just a convention, probably for historical reasons - it's quite convenient since you know positive pressure means fully saturated, while negative pressure means unsaturated).  So, the water pressure in unsaturated zones is negative (because of capillarity - you can find various articles on the internet re capillarity).  So your atm should be zero.  Your Ptop_sink BC then reads: \"if porepressure is positive at the topography, that is, the topography is fully saturated, then let water seep out at rate given by flux_function\".  This is standard: you are removing groundwater and it flows away as surface water.  Often, however, an evapotranspiration-like form is used (some examples are mentioned at https://mooseframework.inl.gov/modules/porous_flow/boundaries.html ) which is motivated by physical ET as well as providing superior convergence (because it is smooth, instead of the piecewise function you currently use).  I believe your Ptop_submarine_source should act as a source AND a sink, because groundwater can flow to and from the ocean, so i believe pt_vals and multipliers should be -1E9 1E9.  I believe that your Ptop_subaerial_source is not needed.  If you want to model rainfall, just use a uniform source with PorousFlowSink.  You should probably do this, because it's physically correct, and it will prevent grossly negative porepressures.\n(3) It makes sense.  I've done it many times.\n(4) You water properties at all P<0 should be equal to those at P=0.\n(5) Setting ICs is not easy when you have complicated topography, crazy zones of ET, rainfall, rivers, etc, some of which you have.  I usually set P = max(0, 10000 * y), then run for some long time to get a reasonable steady-state, save the result, then (using that save result) run an actual steady-state simulation and save that result, and use the final result in my actual simulation.  That's a real pain, i know, but with complicated situations it's impossible to know what the steady-state actually looks like, and it's often important to get correct steadystate in order to calibrate vs piezometers, flow gauges, baseflow measurements, and other observations.\n(6) That's a documentation error.  I really thought we'd fixed that, thank you for noticing it.  PorousFlow1PhaseP can be used for unsaturated flow (and saturated flow - it just computes saturation=1).\nBy the way, i doubt you need TVD stabilization here, and you could employ the PorousFlowUnsaturated Action to simplify your input file.  You might find comments at https://mooseframework.inl.gov/modules/porous_flow/groundwater_models.html useful.",
+                  "url": "https://github.com/idaholab/moose/discussions/21700#discussioncomment-3264632",
+                  "updatedAt": "2022-07-27T21:07:57Z",
+                  "publishedAt": "2022-07-27T21:07:56Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "garciapintado"
+                          },
+                          "bodyText": "Hi @WilkAndy\nMany thanks!\nOn (2). I am confused about . \u201cI believe your\u00a0Ptop_submarine_source\u00a0should act as a source AND a sink, because groundwater can flow to and from the ocean, so i believe\u00a0pt_vals\u00a0and\u00a0multipliers\u00a0should be\u00a0-1E9 1E9\u201d, the reason\nI divided into the top boundaries between sources and sinks, is because from the documentation I understood that \u201cuse_relperm\u201d should be set to to true in sinks and to false in source. Isn\u2019t this right? If not, maybe this is contributing to the convergence problems?\nOn (4). OK! Thanks. I\u2019\u2019ll do that. Still, it puzzles me why this is is not equivalent to truncate to zero all the pressures in PorousFlowSingleComponentFluid that are passed to  the EOS. Obviously is not the same as I tried this yesterday to simplify the EOS tabulation [I\u2019ve included in the git folder mentioned above], and it makes the convergence stuck from the start\u2026 this goes beyond my understanding :-)\nOn (5) Yes, the input file I\u2019ve sent attempts to approach a steady state :-) The real transient simulation comes later on, then I start heating the bottom center of the domain to initiate hydrothermal activity. So, the thing is that I am even not managing to get the steady state.\nI\u2019ll follow your indications and will come back\u2026\nJavier",
+                          "url": "https://github.com/idaholab/moose/discussions/21700#discussioncomment-3266912",
+                          "updatedAt": "2022-07-28T06:06:44Z",
+                          "publishedAt": "2022-07-28T06:06:43Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "garciapintado"
+                          },
+                          "bodyText": "Just a note: On (4), the reason by which I tried to simply truncated the low pressure values ( to 1 Pa) directly in  PorousFlowSingleComponentFluid is because CoolProp [the way I am getting the tabulated EOS for water, as recommended by @cpgr; see https://github.com/garciapintado/MOOSE_porous_flow_stuff/tree/main/water95] does not allow for values lower than 1 Pascal. So, I though this truncation would work, but it doesn't. So I'll do as you say and just extrapolate the table toward negative pressures with 0-slope.",
+                          "url": "https://github.com/idaholab/moose/discussions/21700#discussioncomment-3267082",
+                          "updatedAt": "2022-07-28T06:42:07Z",
+                          "publishedAt": "2022-07-28T06:42:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Re (2): yes, generally the use_relperm idea that you stated is what you want to do.   If you do that you probably want the same flux_function, by the way.  However, in this case you may as well make a single BC as i suggested, because under the ocean you're operating in the fully-saturated region, so relative permeability = 1.  It'll save a tiny bit of computational expense, and will make your input file a bit tidier.",
+                          "url": "https://github.com/idaholab/moose/discussions/21700#discussioncomment-3267994",
+                          "updatedAt": "2022-07-28T09:04:32Z",
+                          "publishedAt": "2022-07-28T09:04:31Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "garciapintado"
+                          },
+                          "bodyText": "Hi @WilkAndy,\nI\u2019ve tried to follow your indications, but still the negative porepressure do not get on well with the [tabulated] EOS. With a simple fluid there is no problem; it is the combination of unsaturated conditions in the top of the domain and the EOS that seems to prevent the convergence.\nAfter your indications, I\u2019ve modified the BCs so that now:\n\ntop submarine boundary: advection for mass and heat are now a sink+source PorousFlowPiecewiseLinearSink with continuous slope for the g(.) functions [if I understand it right, to use a halfGaussian would not help further now, as this is already smooth: g(.) has a constant slope over the expected pressure range]\ntop subaerial boundary: advection for mass and heat has now a source PorousFlowSink. Yes, the idea is to simulate a continuous rainfall-evapotranspiration input.\ntop all domain: conduction has sink+source PorousFlowPiecewiseLinearSink, whose derivate is not continuous at pt_vals=0.\natm=0 now\n\nI\u2019ve played with some parameters [the rainfall-evapotranspiration flux; permeability in the shallow subaerial. The input is perhaps a\nbit better than the previous test [the development of the unsaturated area seems more stable for the simple fluid in the long term].\nI\u2019ve loaded now to GitHub the new tests:\n\n\narchaea01d.i :  converges well for simple fluid. Does not converge with tabulated EOS [via CoolProp; python script and file \u201cwater_IAPWS.csv\u201d], nor tabulated+extrapolated to negative pressure with 0-slope EOS [R script and \u201cwater_IAPWS_extrap.csv\u201d], nor with the [likely naive] modified PorousFlowSingleComponentFluidTruncated.\n\n\narchaea02d.i: attempt to continue the archaea01d.i run [after 10000 year to allow it for reaching an ~equilibrium with the simple fluid], but with any of the 3 above EOS options. Again, none works.  It works, though, with the simple fluid.\n\n\nIn all cases, I\u2019ve tried with both KT advection and full unwinding. The tabulated EOS water_IAPWS.csv did work  in fully saturated tests [see first plot in discussion #21038 where @cpgr helped me]\nI\u2019d find it hard to believe that MOOSE-PorousFlow would struggle with this single-phase problem. There must be something wrong in my input files that remains elusive to me and is driving me nuts. Please. would it be possible for you to try to run these tests to see if they work for you?\nFiles are at https://github.com/garciapintado/MOOSE_porous_flow_stuff\n\nMOOSE input at folder: central_valley_one_phase_tri6\nEOS tabulation script and results at folder: water95\n\n\u2014\nBTW: unrelated. I think there is is one typo in the docs. In https://mooseframework.inl.gov/modules/porous_flow/boundaries.html\nAfter Eq.(1), should not it say \u201cJ.m$^{-2}$.s$^{-1}$ for heat\u201d?",
+                          "url": "https://github.com/idaholab/moose/discussions/21700#discussioncomment-3285739",
+                          "updatedAt": "2022-07-30T07:02:58Z",
+                          "publishedAt": "2022-07-30T07:02:57Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Unfortunately i couldn't run your archaea01.d because the exodus file couldn't be read by my computer, sigh (failure to read mesh files seems to be annoyingly common - probably because of different versions of reader/writer version, different binary versions).  If you can instruct me how to generate it, or write a different version, i can try to run your simulation.\n\nremove the order = second stuff.  Probably it won't make a difference, but it's worth checking.\ni'm a bit worried about your PorousFlowSingleComponentFluidTruncated.  I believe it will assume the derivative calculations assume a linear extrapolation, and i'm not sure you've done that.  Possibly this is unimportant, since you don't seem to use PorousFlowSingleComponentFluidTruncated.\nI'm a bit worried about your R-script.  Are you assuming zero slope for P small?  If so, then MOOSE may experience crappy convergence.  The problem might be that if density, viscosity, etc, don't depend on porepressure, then MOOSE can (kind of) choose any porepressure at all - there isn't a unique solution.  (I write \"kind of\" because there are other constraints on porepressure, but perhaps you understand?)  It would be better to follow the \"SimpleProperties\" approach, where density varies a little with porepressure (perhaps exp(P/bulk_modulus), depending on how low P goes, because you don't want unphysically unrealistic density), pressure-independent viscosity, pressure-independent internal energy, etc.\nThanks for noticing the typo.",
+                          "url": "https://github.com/idaholab/moose/discussions/21700#discussioncomment-3293157",
+                          "updatedAt": "2022-07-31T23:26:12Z",
+                          "publishedAt": "2022-07-31T23:26:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cpgr"
+                          },
+                          "bodyText": "I wonder if it is the interpolation of fluid properties causing these issues. Looking at the density over your range of pressure and temperatures, there is a region where there are really steep gradients that might not be easily interpolated, and making it hard for Newton's method to converge.\n\nOf course, this isn't an issue using SimpleFluidProperties, but unfortunately it isn't easy to cover this extreme variation in density, and you won't get convection if the density change isn't large enough as you have already observed! SimpleFluidProperties gives something like\n\nIt might be worthwhile digging around the literature to see if there is a simple formula for water properties used in these sorts of models.",
+                          "url": "https://github.com/idaholab/moose/discussions/21700#discussioncomment-3293170",
+                          "updatedAt": "2022-07-31T23:39:50Z",
+                          "publishedAt": "2022-07-31T23:39:50Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Hey, @cpgr, it is a pain to plot those things for negative porepressure too?  Eg, [-10MPa, 10MPa] ?",
+                          "url": "https://github.com/idaholab/moose/discussions/21700#discussioncomment-3293256",
+                          "updatedAt": "2022-08-01T00:28:26Z",
+                          "publishedAt": "2022-08-01T00:28:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cpgr"
+                          },
+                          "bodyText": "I can't for the first one as it uses the IAPWS EOS so won't work for negative pressure.",
+                          "url": "https://github.com/idaholab/moose/discussions/21700#discussioncomment-3293796",
+                          "updatedAt": "2022-08-01T03:18:56Z",
+                          "publishedAt": "2022-08-01T03:18:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "garciapintado"
+                          },
+                          "bodyText": "Hi, coincidentally, I just started my summer holidays and have been two days on the road. I\u00b4ll look for my script to prepare the Exodus input file.",
+                          "url": "https://github.com/idaholab/moose/discussions/21700#discussioncomment-3314921",
+                          "updatedAt": "2022-08-03T09:51:57Z",
+                          "publishedAt": "2022-08-03T09:51:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "garciapintado"
+                          },
+                          "bodyText": "Hi @WilkAndy and @cpgr,\nSorry for responding so slow. I am on vacation abroad with only a few hours per day internet access in a public library, and have had to install some stuff [matlab, SEACAS\u2026] in a laptop.\nI\u2019ve pushed into the repository the file mesh_000000.mat, containing the exported MATLAB mesh, and a script I prepared matlabMesh2Exodus.py to export it into an ExodusII file, as input to MOOSE. The python script depends on the SEACAS library [in the case you don\u2019t have it installed, only the Exodus library with manual editing of the path to netcdf in the cmake-exodus file is needed], which I found in the web [I am unaware about alternatives for exporting a mesh from Matlab to Exodus]. It can be run as:\n$python3 matlabMesh2Exodus.py mesh_000000.mat 1\nThis will generate mesh_000000_exomerge.e. Hope that with this you can run the test, and it is not too bothering.\nAbout fluid properties, yes definitely the standard simpleFluidProperties object does not develop the convection [as we have seen in earlier -fully saturated- tests].  Previously, I also did tests for linear vs second order triangular elements, and I saw that with FIRST order elements, some [fully saturated] simulations were able to converge, while they failed for the SECOND order elements; normally after been able to run some time steps.\nSo, about the EOS for negative pressure, if I\u2019ve understood it right, your advice [@WilkAndy] is to do a 0-slope extrapolation for viscosity, internal energy, enthalpy\u2026], and an exp(P/K) extrapolation towards negative pressure for density [please, correct me otherwise]. With that, I\u2019ve done so by extrapolating from the CoolProp generated tables. This [plus the plot below] can be reproduced by running the sequence of files in the water95 folder:\n$python3 water95.py\n$Rscript extrapolate_EOS.R\n$python3 plot_IAPWS.py\nAlong the way, a doubt that has arisen to me is about your indication that PorousFlow uses 0 as atmospheric pressure. If so, then somewhere in PorousFlow is one atmosphere added to the pore pressure for the calculation of the fluid properties? I am wondering because I just noticed yesterday that CoolProp density values for 1 Pa that I was considering [before the extrapolation by the R script] are very low:\n'pressure' 'temperature' 'density'\n1      273.17 7.931927e-06    # from CoolProp\n100000      273.17 9.998438e+02    # from CoolProp [~1 atm]\n1000000      273.17 1.000301e+03    # from CoolProp\n\u2026\nPerhaps this was a source of problem [and even more if PorousFlow considers 0 as atmospheric pressure and the one atmosphere is not added when the tabulated EOS are obtained?]. I've also seen that a sharp jump in density is created by CoolProp for P values lower than 1e6 Pa and low temperatures. Thus, to decrease the severity in the Newton problem you mention [@cpgr], I have regenerated the tabulated EOS by using CoolProp only up to a minimum 1e6 Pa, and then extrapolating [by extrapolate_EOS.R]. For example, at 273.17 K, this now results in:\n'pressure','temperature','density\u2019\n-34900000     273.17  982.948118   # R script: extrapolated by exp(P/K)\n\u2026\n-14000000     273.17  992.826911   # R script: extrapolated by exp(P/K)\n-9000000      273.17  995.312083   # R script: extrapolated by exp(P/K)\n-4000000      273.17  997.803476   # R script: extrapolated by exp(P/K)\n1000000      273.17 1000.301106   # from CoolProp\n\u2026\nThis leads to the plot:\n\nI don't know how much physical sense this makes, but at least no extremely low density values appear and the strongest gradients are prevented.\nI've also included an archaea01d_tri3.i input file, removing the SECOND order stuff.\nUnfortunately the installation of MOOSE is failing in my laptop [at mamba install moose-tools moose-libmesh], and I haven't been able to run by now the tests again with this new water_IAPWS95_extrap.csv file.",
+                          "url": "https://github.com/idaholab/moose/discussions/21700#discussioncomment-3335299",
+                          "updatedAt": "2022-08-05T16:28:13Z",
+                          "publishedAt": "2022-08-05T16:28:12Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Implementing standardized off-diagonal Jacobian scalar assembly methods for IntegratedBC",
+          "author": {
+            "login": "ttruster"
+          },
+          "bodyText": "As mentioned in my other thread here #22020, I am working on implemented formulations for interface methods that require couplings to scalar variables. One currently published method is for weakly imposing periodic boundary conditions through surface integrals on opposing sides of the unit cell / RVE / microstructure; you can use either penalty, Nitsche, or Lagrange multiplier (mortar) approaches for this. This can provide benefit versus the HomogenizationConstraintScalarKernel MOOSE system because the DOF coupling is only on the external surfaces rather than every quadrature point through the material model. In the case of PCG iterative solver, solutions can be obtained WITHOUT preconditioning in a <1000 iterations for a 45,000 DOF system Jacobian.\nAfter scouring the framework source, I have found that most objects besides the Kernel do not have implementations of the off-diagonal coupling with scalar variables (which is the holder for the macroscale, volume-averaged quantity). More importantly, the assembly tagging system for scalar variables is missing. For existing objects like ScalarLagrangeMultiplier, the assembly is handled in a non-standard way.\nSo it seems like now is a great time to develop some standards for computing and assembling the scalar contributions, while allowing a developer to still derive off of higher base classes and avoid these standards if their problem doesn't fit the usual mold.\nSince each of the IntegratedBC, (Mortar)Constraint, InterfaceKernel, and DGKernel are in need of such Jacobian and assembly implementations, I'm volunteering to tackle them in that order, since I can formulate diffusion equation analogs for the first 3 of the 4.\nTo finalize the objectives of the developments, I don't know if that discussion should happen within an issue or through this forum discussion. So I'll just post 4 thoughts to start a dialog to finalize on the interface used for treating these scalar variables with other variables:\n\nI've also noticed objects besides Kernel and DGKernel are missing pre-calculate method calls to allow the override of the ResidualObject method prior to the quadrature loop. Technically most classes can override the lower level quadrature and add it back, but the mortar constraint does a 'final' override which prevents this (why?). So I'll add those along the way.\nI need help understanding how the assembly sequence works (prepare, tagging, adding, caching, accumulating)\nI propose that the off-diagonal Jacobian scalar methods always provide two quadrature loops which call methods with a name like \"computeQpOffDiagJacobianVariableScalar\" and \"computeQpOffDiagJacobianScalarVariable\" to handle both of the directions of the coupling (regular variable to scalar variable and scalar variable to regular variable). Generally, these two couplings are not equal (equal for ScalarLagrangeMultiplier, not for HomogenizedTotalLagrangianStressDivergence). Handling these contributions in each regular variable object class (Kernel, \u2026) avoids having to make a bunch of different loops within sub-classes of ScalarKernel.\nLet user objects handle the integral of the residual and on-diagonal Jacobian contributions of the scalar variable, as in HomogenizationConstraintIntegral. Providing template user objects for each regular variable object class along with one scalar kernel that references the residual/Jacobian would seem like a \"friendly\" system for new developers to contribute to\n\nThoughts???",
+          "url": "https://github.com/idaholab/moose/discussions/22091",
+          "updatedAt": "2022-09-29T17:28:15Z",
+          "publishedAt": "2022-09-14T15:13:33Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@lindsayad could you please answer Pr Truster's questions\nI think I can learn from this too",
+                  "url": "https://github.com/idaholab/moose/discussions/22091#discussioncomment-3764725",
+                  "updatedAt": "2022-09-29T16:57:50Z",
+                  "publishedAt": "2022-09-29T16:57:49Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "ok seems everyone is chatting there already\n#22174\n#22020",
+                          "url": "https://github.com/idaholab/moose/discussions/22091#discussioncomment-3764734",
+                          "updatedAt": "2022-09-29T16:58:59Z",
+                          "publishedAt": "2022-09-29T16:58:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "yea let's consolidate discussion in #22174 and the PR addressing it, #22246",
+                          "url": "https://github.com/idaholab/moose/discussions/22091#discussioncomment-3764762",
+                          "updatedAt": "2022-09-29T17:02:30Z",
+                          "publishedAt": "2022-09-29T17:02:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "ok closing this then.",
+                          "url": "https://github.com/idaholab/moose/discussions/22091#discussioncomment-3765062",
+                          "updatedAt": "2022-09-29T17:28:14Z",
+                          "publishedAt": "2022-09-29T17:28:13Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Split mesh with Multiapp",
+          "author": {
+            "login": "vefanuri"
+          },
+          "bodyText": "Hi,\nI understand that MOOSE has the ability to pre-split a mesh if the whole mesh is too big to fit into memory. I was wondering if this capability could also be available in coupled calculations with Multiapps when the main app and subapp use different meshes and the subapp mesh need to be split.  For example, in a coupled neutronics+ thermal simulation, the main app Griffin uses a coarse nodal mesh and calls subapp Bison which has a large refined mesh. The --use-split option when running this case would try to look for a split Griffin mesh but not for Bison.\nThanks",
+          "url": "https://github.com/idaholab/moose/discussions/22173",
+          "updatedAt": "2022-10-03T21:02:39Z",
+          "publishedAt": "2022-09-22T18:01:25Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nWe do have this capability.\nI've never used it in a MultiApp, but it's definitely possible, you will just have to set up the FileMeshGenerator to load the split mesh.\nI wrote some documentation page for doing this (for the main app, but should apply anyway)\nhttps://mooseframework.inl.gov/source/meshgenerators/FileMeshGenerator.html\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22173#discussioncomment-3726277",
+                  "updatedAt": "2022-09-25T07:13:26Z",
+                  "publishedAt": "2022-09-25T07:13:25Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "A few details:\nthe split will have to be generated for the number of ranks used by the subapp. This can differ from the main app ones if there are more than one subapp. You can force it with the MultiApp parameter too\nsince distributed meshes have to be used consistently between main app and subapp, you will need the main app to run distributed mesh as well. This can limit your options on the main app, some objects dont work on distributed meshes",
+                          "url": "https://github.com/idaholab/moose/discussions/22173#discussioncomment-3764941",
+                          "updatedAt": "2022-09-29T17:21:16Z",
+                          "publishedAt": "2022-09-29T17:21:15Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,604 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMi0wNC0yNlQxMDo1NTo1OC0wNTowMM4APZQa"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "accumulateTaggedlocalMatrix function in kernel",
+          "author": {
+            "login": "xiaojbing"
+          },
+          "bodyText": "I want to inherit kernel.C and I want to know what is the function of accumulateTaggedlocalMatrix in kernel. The subclass must use this funcion or not?\naccumulateTaggedlocalMatrix in kernel.C:",
+          "url": "https://github.com/idaholab/moose/discussions/20890",
+          "updatedAt": "2022-08-08T02:41:03Z",
+          "publishedAt": "2022-04-27T11:54:34Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "loganharbour"
+                  },
+                  "bodyText": "In general you should not override Kernel::computeResidual() or Kernel::computeJacobian(). You should override things like Kernel::computeQp<>().\naccumulateTaggedLocalMatrix() must be called. It is what fills the local Jacobian into the global Jacobian based on what tags are set to be filled.",
+                  "url": "https://github.com/idaholab/moose/discussions/20890#discussioncomment-2646643",
+                  "updatedAt": "2022-08-08T02:41:03Z",
+                  "publishedAt": "2022-04-27T13:18:58Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xiaojbing"
+                          },
+                          "bodyText": "In general you should not override Kernel::computeResidual() or Kernel::computeJacobian(). You should override things like Kernel::computeQp<>().\naccumulateTaggedLocalMatrix() must be called. It is what fills the local Jacobian into the global Jacobian based on what tags are set to be filled.\n\nThank you very much. I get it. But my code is not compute a variable's residuals or jacobian matrix\uff0cbut a flux consisting of several variables. So there will be one or two more loops in these two functions: computeResidual() and computeJacobian(). Is a simple overloading possible for this case? If it is what you mean, is it necessary to implement the loop I want in computeQp<>()",
+                          "url": "https://github.com/idaholab/moose/discussions/20890#discussioncomment-2646909",
+                          "updatedAt": "2022-08-08T02:41:04Z",
+                          "publishedAt": "2022-04-27T13:53:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "ok so you are making a custom kernel that is computing the contribution to the residual and jacobian for several variables?\nThen you should override computeResidual, computeJacobian. But huge disclaimer that you are hacking MOOSE at this point. You will have to re-implement some of the stuff we made.\nYou should still follow the structure that we have: computeResidual calls computeQpResidual at each quadrature point and multiplies that contribution by the quadrature weight, volume, coord (for RZ) etc\naccumulateTaggedLocalMatrix() transfers the contribution from the local thread to the global array. It does the work to avoid the race condition between threads etc.",
+                          "url": "https://github.com/idaholab/moose/discussions/20890#discussioncomment-2648003",
+                          "updatedAt": "2022-08-08T02:41:04Z",
+                          "publishedAt": "2022-04-27T15:57:54Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xiaojbing"
+                          },
+                          "bodyText": "I followed the structure of MOOSE to build this custom kernel, but the results are not reasonable. If these two functions are overloaded, are there other files that need to be modified?\nbaseclass:\nvoid\nDGKernel::computeElemNeighJacobian(Moose::DGJacobianType type)\n{\n  const VariableTestValue & test_space =\n      (type == Moose::ElementElement || type == Moose::ElementNeighbor) ? _test : _test_neighbor;\n  const VariableTestValue & loc_phi =\n      (type == Moose::ElementElement || type == Moose::NeighborElement) ? _phi : _phi_neighbor;\n\n  if (type == Moose::ElementElement)\n    prepareMatrixTag(_assembly, _var.number(), _var.number());\n  else\n    prepareMatrixTagNeighbor(_assembly, _var.number(), _var.number(), type);\n\n  for (_qp = 0; _qp < _qrule->n_points(); _qp++)\n    for (_i = 0; _i < test_space.size(); _i++)\n      for (_j = 0; _j < loc_phi.size(); _j++)\n        _local_ke(_i, _j) += _JxW[_qp] * _coord[_qp] * computeQpJacobian(type);\n\n  accumulateTaggedLocalMatrix();\n\n  if (_has_diag_save_in && (type == Moose::ElementElement || type == Moose::NeighborNeighbor))\n  {\n    unsigned int rows = _local_ke.m();\n    DenseVector<Number> diag(rows);\n    for (unsigned int i = 0; i < rows; i++)\n      diag(i) = _local_ke(i, i);\n\n    Threads::spin_mutex::scoped_lock lock(_jacoby_vars_mutex);\n    for (const auto & var : _diag_save_in)\n    {\n      if (type == Moose::ElementElement)\n        var->sys().solution().add_vector(diag, var->dofIndices());\n      else\n        var->sys().solution().add_vector(diag, var->dofIndicesNeighbor());\n    }\n  }\n}\n\nsubclass:\nvoid MultiDGKernel::computeElemNeighJacobian(Moose::DGJacobianType type)\n{\n  const VariableTestValue & test_space = (type == Moose::ElementElement || type == Moose::ElementNeighbor) ? _test : _test_neighbor;\n  const VariableTestValue & loc_phi = (type == Moose::ElementElement || type == Moose::NeighborElement) ? _phi : _phi_neighbor;\n  if (type == Moose::ElementElement)\n    prepareMatrixTag(_assembly, _var.number(), _var.number());\n  else\n    prepareMatrixTagNeighbor(_assembly, _var.number(), _var.number(), type);\n\n  for (_qp = 0; _qp<_qrule->n_points(); _qp++)\n  {\n precalculateJacobian();\n for (unsigned int p = 0; p < _n_equation; ++p)\n  for (unsigned int q = 0; q < _n_equation; ++q)\n  {\n   DenseMatrix<Number> & Kxx = type == Moose::ElementElement ?  \n                                                            _assembly.jacobianBlock(p, q) : _assembly.jacobianBlockNeighbor(type, p, q);\n   \n   for (_i=0; _i<test_space.size(); _i++)\n    for (_j=0; _j<loc_phi.size(); _j++)\n     Kxx(_i, _j) += _JxW[_qp]*_coord[_qp]*computeQpJacobian(type, p, q);\n  }\n  }\n\n  accumulateTaggedLocalMatrix();\n  if (_has_diag_save_in && (type == Moose::ElementElement || type == Moose::NeighborNeighbor))\n  {\n    unsigned int rows = _local_ke.m();\n    DenseVector<Number> diag(rows);\n    for (unsigned int i = 0; i < rows; i++)\n      diag(i) = _local_ke(i, i);\n    Threads::spin_mutex::scoped_lock lock(_jacoby_vars_mutex);\n    for (const auto & var : _diag_save_in)\n    {\n      if (type == Moose::ElementElement)\n        var->sys().solution().add_vector(diag, var->dofIndices());\n      else\n        var->sys().solution().add_vector(diag, var->dofIndicesNeighbor());\n    }\n  }\n}",
+                          "url": "https://github.com/idaholab/moose/discussions/20890#discussioncomment-2653694",
+                          "updatedAt": "2022-08-08T02:41:05Z",
+                          "publishedAt": "2022-04-28T10:39:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "loganharbour"
+                          },
+                          "bodyText": "I think we need more information on this statement: \"I followed the structure of MOOSE to build this custom kernel, but the results are not reasonable.\"\nRe-implementing all of the methods you are modifying above is not an easy task, and support for it is not something that we would typically offer on Discussions.",
+                          "url": "https://github.com/idaholab/moose/discussions/20890#discussioncomment-2654725",
+                          "updatedAt": "2022-09-28T04:02:16Z",
+                          "publishedAt": "2022-04-28T13:22:07Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "new MOOSE/libMesh not building",
+          "author": {
+            "login": "mangerij"
+          },
+          "bodyText": "Hi, I have a number of errors printing after I just used conda update --all (today along with git fetch/pull). My idaholab conda packages are:\nmoose-libmesh             2022.03.02              build_0    idaholab\nmoose-libmesh-vtk         9.1.0                   build_4    idaholab\nmoose-mpich               3.4.2                   build_3    idaholab\nmoose-petsc               3.15.1                  build_7    idaholab\nmoose-tools               2022.01.25       py39hc64a412_0    idaholab\n\nThe errors are:\n\n/home/LIST/mangeri/projects/moose/framework/build/header_symlinks/MooseFunctor.h:822:1: error: no declaration matches 'typename Moose::FunctorBase<T>::GradientType Moose::FunctorBase<T>::gradient(const Moose::ElemFromFaceArg&, unsigned int) const'\n  822 | FunctorBase<T>::gradient(const ElemFromFaceArg & elem_from_face, const unsigned int state) const\n\n/home/LIST/mangeri/projects/moose/framework/build/header_symlinks/MooseFunctor.h:1084:16: error: no type named 'GradientType' in 'class Moose::FunctorBase<MetaPhysicL::DualNumber<double, MetaPhysicL::SemiDynamicSparseNumberArray<double, long unsigned int, MetaPhysicL::NWrapper<53> >, true> >'\n 1084 |   GradientType evaluateGradient(const ElemSideQpArg & qp, unsigned int state = 0) const override\n\nEDIT: I tried make cleanall and make clobberall\nYesterday, I had no problems building MOOSE on a cluster - something wrong with the conda distro on my end?",
+          "url": "https://github.com/idaholab/moose/discussions/20900",
+          "updatedAt": "2022-06-28T09:03:30Z",
+          "publishedAt": "2022-04-28T11:51:51Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "loganharbour"
+                  },
+                  "bodyText": "Follow the instructions in #20187 (reply in thread) for starting fresh.\nSome dependencies that you have installed are causing the moose packages to not update.",
+                  "url": "https://github.com/idaholab/moose/discussions/20900#discussioncomment-2654665",
+                  "updatedAt": "2022-06-28T09:03:44Z",
+                  "publishedAt": "2022-04-28T13:13:26Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "[Multiapps][Transfer variables]",
+          "author": {
+            "login": "coskrrb2002"
+          },
+          "bodyText": "Dear users,\nI want to find a way to pass some variables between two apps.\nSuch as,\nApp1: Variable 1 solved -> transfer -> App2: Initial condition of Variable 1 -> Solve Variable 1 in app2 -> transfer -> App1: Initial conditions. -> ... -> until converge.\nIs there any way to do this method?\nI am looking up the multiapps and transfers.\nHowever, I don't know how to define the solution of Variable1 to intial condition of app2.",
+          "url": "https://github.com/idaholab/moose/discussions/20888",
+          "updatedAt": "2022-06-05T05:31:53Z",
+          "publishedAt": "2022-04-27T11:13:39Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "coskrrb2002"
+                  },
+                  "bodyText": "I just found the multivariable_copy in the multiapps, and it works for transient as well.",
+                  "url": "https://github.com/idaholab/moose/discussions/20888#discussioncomment-2645918",
+                  "updatedAt": "2022-06-05T05:31:59Z",
+                  "publishedAt": "2022-04-27T11:29:08Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThe transfers work for both steady and transient solves.\nWhat you are doing though may not always converge in the definition we use. You need both apps to have the same solution, otherwise what you transfer as an initial condition to app1, so the solution to app2, will have a non zero residual in the app1 solve, and the code will interpret this as the fixed point iteration not converging.\nIf you are expecting both app1 and app2 to converge to the same solution for Variable1 then this is ok.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20888#discussioncomment-2650056",
+                  "updatedAt": "2022-06-05T05:32:02Z",
+                  "publishedAt": "2022-04-27T20:46:56Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "coskrrb2002"
+                          },
+                          "bodyText": "Thank you for your advice,\nI expect the same solution for Variable1.\nCheers",
+                          "url": "https://github.com/idaholab/moose/discussions/20888#discussioncomment-2654344",
+                          "updatedAt": "2022-06-05T05:32:03Z",
+                          "publishedAt": "2022-04-28T12:29:30Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Can file as the ICs?",
+          "author": {
+            "login": "KangChenRui"
+          },
+          "bodyText": "Can I use a file as an initial condition in MOOSE?",
+          "url": "https://github.com/idaholab/moose/discussions/20883",
+          "updatedAt": "2022-08-11T06:08:45Z",
+          "publishedAt": "2022-04-27T03:04:59Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "hello\nwhat kind of file? CSV? exodus?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20883#discussioncomment-2643808",
+                  "updatedAt": "2022-08-11T06:08:45Z",
+                  "publishedAt": "2022-04-27T05:38:04Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "KangChenRui"
+                          },
+                          "bodyText": "Hi, Guillaume\nAny files supported by moose will do, I don't know how to use them as there is no such example for the ICs module.\nCan you show an example in the input file?\nThanks for your reply!\nChen Rui",
+                          "url": "https://github.com/idaholab/moose/discussions/20883#discussioncomment-2644089",
+                          "updatedAt": "2022-08-11T06:08:51Z",
+                          "publishedAt": "2022-04-27T06:42:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "There's a couple options for loading from CSV. I m working on a doc page\nFor data to interpolate on the mesh:\nhttps://mooseframework.inl.gov/source/functions/PiecewiseMultilinear.html\nhttps://mooseframework.inl.gov/source/functions/PiecewiseMulticonstant.html\nFor data to load directly on nodes/elements/blocks:\nhttps://mooseframework.inl.gov/source/functions/PiecewiseConstantFromCSV.html\ncombined with\nhttps://mooseframework.inl.gov/source/userobject/PropertyReadFile.html\nThere are input files attached to the documentation.",
+                          "url": "https://github.com/idaholab/moose/discussions/20883#discussioncomment-2647350",
+                          "updatedAt": "2022-08-11T06:08:51Z",
+                          "publishedAt": "2022-04-27T14:48:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "KangChenRui"
+                          },
+                          "bodyText": "Thank you very much for your guidance.\nI will study it.\nChen Rui",
+                          "url": "https://github.com/idaholab/moose/discussions/20883#discussioncomment-2651132",
+                          "updatedAt": "2022-08-11T06:08:51Z",
+                          "publishedAt": "2022-04-28T01:48:47Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "INSFVNoSlipWallBC between subdomains",
+          "author": {
+            "login": "j-bowhay"
+          },
+          "bodyText": "Hi\nI am trying to model fluid flow through two concentric pipes (one pipe inside of another). To do this I have split my mesh into two subdomain and I am trying to apply a no slip BC between the two subdomains as per the diagram bellow.\n\nHowever when I run the model the bc between the two subdomains doesn't appear to be applied as I am only getting one boundary layer developing.\n\nI have also tried without using separate subdomains but the same issue still persists.\nThanks in advance for any thoughts on how to achieve this.\nJake\n\nInput File\n\n# 2d siumulation of a water through a pipe.\n\nmu=1e-3\nrho=997.0\nRe_inner=1000.0\npipe_length=1\ninner_radius=0.1\nouter_radius=0.1\nu_inner_inlet=${fparse (mu * Re_inner)/(2 * inner_radius * rho)}\nadvected_interp_method='average'\nvelocity_interp_method='average'\n\n[GlobalParams]\n  rhie_chow_user_object = 'rc'\n[]\n\n[UserObjects]\n  [rc]\n    type = INSFVRhieChowInterpolator\n    u = u\n    v = v\n    pressure = pressure\n    block = '0 1'\n  []\n[]\n\n[Mesh]\n  [gen]\n    type = GeneratedMeshGenerator\n    dim = 2\n    xmin = 0\n    xmax = ${pipe_length}\n    ymin = 0\n    ymax = ${fparse inner_radius + outer_radius}\n    nx = 100\n    ny = 150\n  []\n  [id_outer]\n    type = ParsedSubdomainMeshGenerator\n    input = gen\n    combinatorial_geometry = 'y > ${inner_radius}'\n    block_id = 1\n  []\n  [delete_sideset]\n    type = BoundaryDeletionGenerator\n    input = id_outer\n    boundary_names = 'left right top bottom'\n  []\n  [name_outer_top]\n    type = ParsedGenerateSideset\n    input = delete_sideset\n    combinatorial_geometry = 'y = ${fparse inner_radius + outer_radius}'\n    replace = true\n    new_sideset_name = 'outer_top'\n  []\n  [name_outer_left]\n    type = ParsedGenerateSideset\n    input = name_outer_top\n    combinatorial_geometry = 'y > ${inner_radius} & x = 0'\n    replace = true\n    new_sideset_name = 'outer_left'\n  []\n  [name_outer_right]\n    type = ParsedGenerateSideset\n    input = name_outer_left\n    combinatorial_geometry = 'y > ${inner_radius} & x = ${pipe_length}'\n    replace = true\n    new_sideset_name = 'outer_right'\n  []\n  [middle_interface]\n    type = SideSetsBetweenSubdomainsGenerator\n    input = name_outer_right\n    primary_block = '0'\n    paired_block = '1'\n    new_boundary = 'middle_interface'\n  []\n  [name_inner_bottom]\n    type = ParsedGenerateSideset\n    input = middle_interface\n    combinatorial_geometry = 'y = 0'\n    replace = true\n    new_sideset_name = 'inner_bottom'\n  []\n  [name_inner_left]\n    type = ParsedGenerateSideset\n    input = name_inner_bottom\n    combinatorial_geometry = 'y < ${inner_radius} & x = 0'\n    replace = true\n    new_sideset_name = 'inner_left'\n  []\n  [name_inner_right]\n    type = ParsedGenerateSideset\n    input = name_inner_left\n    combinatorial_geometry = 'y < ${inner_radius} & x = ${pipe_length}'\n    replace = true\n    new_sideset_name = 'inner_right'\n  []\n[]\n\n[Problem]\n  fv_bcs_integrity_check = true\n  coord_type = 'RZ'\n  rz_coord_axis = x\n[]\n\n[Variables]\n  [u]\n    type = INSFVVelocityVariable\n    initial_condition = ${u_inner_inlet}\n    block = '0 1'\n  []\n  [v]\n    type = INSFVVelocityVariable\n    initial_condition = 1e-15\n    block = '0 1'\n  []\n  [pressure]\n    type = INSFVPressureVariable\n    block = '0 1'\n  []\n[]\n\n[FVKernels]\n  [mass]\n    type = INSFVMassAdvection\n    variable = pressure\n    advected_interp_method = 'average'#${advected_interp_method}\n    velocity_interp_method = 'average'#${velocity_interp_method}\n    rho = ${rho}\n    block = '0 1'\n  []\n\n  [u_advection]\n    type = INSFVMomentumAdvection\n    variable = u\n    advected_interp_method = 'average'#${advected_interp_method}\n    velocity_interp_method = 'average'#${velocity_interp_method}\n    rho = ${rho}\n    momentum_component = 'x'\n    block = '0 1'\n  []\n  [u_viscosity]\n    type = INSFVMomentumDiffusion\n    variable = u\n    mu = ${mu}\n    momentum_component = 'x'\n    block = '0 1'\n  []\n  [u_pressure]\n    type = INSFVMomentumPressure\n    variable = u\n    momentum_component = 'x'\n    pressure = pressure\n    block = '0 1'\n  []\n\n  [v_advection]\n    type = INSFVMomentumAdvection\n    variable = v\n    advected_interp_method = 'average'#${advected_interp_method}\n    velocity_interp_method = 'average'#${velocity_interp_method}\n    rho = ${rho}\n    momentum_component = 'y'\n    block = '0 1'\n  []\n  [v_viscosity]\n    type = INSFVMomentumDiffusion\n    variable = v\n    mu = ${mu}\n    momentum_component = 'y'\n    block = '0 1'\n  []\n  [v_pressure]\n    type = INSFVMomentumPressure\n    variable = v\n    momentum_component = 'y'\n    pressure = pressure\n    block = '0 1'\n  []\n[]\n\n[FVBCs]\n  [outer-inlet-u]\n    type = INSFVInletVelocityBC\n    boundary = 'outer_left'\n    variable = u\n    function = ${u_inner_inlet}\n  []\n  [outer-inlet-v]\n    type = INSFVInletVelocityBC\n    boundary = 'outer_left'\n    variable = v\n    function = 0\n  []\n  [outer-top-no-slip-wall-u]\n    type = INSFVNoSlipWallBC\n    boundary = 'outer_top'\n    variable = u\n    function = 0\n  []\n  [outer-top-no-slip-wall-v]\n    type = INSFVNoSlipWallBC\n    boundary = 'outer_top'\n    variable = v\n    function = 0\n  []\n  [outer-outlet-p]\n    type = INSFVOutletPressureBC\n    boundary = 'outer_right'\n    variable = pressure\n    function = 1e-15\n  []\n  [no-slip-middle-u]\n    type = INSFVNoSlipWallBC\n    boundary = 'middle_interface'\n    variable = u\n    function = 0\n  []\n  [no-slip-middle-v]\n    type = INSFVNoSlipWallBC\n    boundary = 'middle_interface'\n    variable = v\n    function = 0\n  [] \n  [inner-inlet-u]\n    type = INSFVInletVelocityBC\n    boundary = 'inner_left'\n    variable = u\n    function = ${u_inner_inlet}\n  []\n  [inner-inlet-v]\n    type = INSFVInletVelocityBC\n    boundary = 'inner_left'\n    variable = v\n    function = 0\n  []\n  [inner-outlet-p]\n    type = INSFVOutletPressureBC\n    boundary = 'inner_right'\n    variable = pressure\n    function = 1e-15\n  []\n  [axis-u]\n    type = INSFVSymmetryVelocityBC\n    boundary = 'inner_bottom'\n    variable = u\n    u = u\n    v = v\n    mu = ${mu}\n    momentum_component = x\n  []\n  [axis-v]\n    type = INSFVSymmetryVelocityBC\n    boundary = 'inner_bottom'\n    variable = v\n    u = u\n    v = v\n    mu = ${mu}\n    momentum_component = y\n  []\n  [axis-p]\n    type = INSFVSymmetryPressureBC\n    boundary = 'inner_bottom'\n    variable = pressure\n  []\n[]\n\n[Executioner]\n  type = Steady\n  solve_type = 'NEWTON'\n  petsc_options_iname = '-pc_type -ksp_gmres_restart -sub_pc_type -sub_pc_factor_shift_type'\n  petsc_options_value = 'asm      100                lu           NONZERO'\n  line_search = 'none'\n  nl_max_its = 50       \n  l_max_its = 50\n  nl_rel_tol = 1e-12\n  automatic_scaling = true\n[]\n\n[Outputs]\n  exodus = true\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/20885",
+          "updatedAt": "2022-06-16T13:04:34Z",
+          "publishedAt": "2022-04-27T09:45:53Z",
+          "category": {
+            "name": "Q&A Modules: Navier-Stokes"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nWe do not support boundary conditions inside the flow domains. You will have to either:\n\ncut the domain by deleting an element or generating two separate meshes (you can keep them in the same solve using the CombinerGenerator\nhttps://mooseframework.inl.gov/source/meshgenerators/CombinerGenerator.html\nuse different flow variables (u,v,P) in both blocks.\nuse my branch where I'm working on interface kernels and a boundaries_to_avoid parameter to restrict the execution of kernels on some sidesets. But I havent figured out everything out for this yet, and it's being done for restricting flow with some sort of diode behavior, not for adding a wall (though it's very similar)\nhttps://github.com/giudgiud/moose/tree/PR_wall_flow_diode\n\nbtw average velocity and advected quantity interpolation are unstable for fluid flow, so you may want to use Rhie Chow for velocity and first order upwind or try our newly merged second order schemes for the advected quantity.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20885#discussioncomment-2650094",
+                  "updatedAt": "2022-06-16T13:05:03Z",
+                  "publishedAt": "2022-04-27T20:53:50Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "j-bowhay"
+                          },
+                          "bodyText": "Thank you for the helpful response",
+                          "url": "https://github.com/idaholab/moose/discussions/20885#discussioncomment-2650218",
+                          "updatedAt": "2022-06-16T13:05:04Z",
+                          "publishedAt": "2022-04-27T21:21:07Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "An issue about C++ grammer in moose",
+          "author": {
+            "login": "xiaojbing"
+          },
+          "bodyText": "I add code in my application to solve CFD problems. And I find that different conditional  statement will cause different residual and results in the following code. This code is to compute Jacobi Matrix and inherits DGkernel. The difference of conditional statement is just at orange area. But this should not cause difference,right?\nconditional  statement 1:\n\nresidual and results:\n\n\nconditional  statement 2:\n\nresidual and results:",
+          "url": "https://github.com/idaholab/moose/discussions/20889",
+          "updatedAt": "2022-09-06T14:22:02Z",
+          "publishedAt": "2022-04-27T11:42:11Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "cpgr"
+                  },
+                  "bodyText": "Without looking at the code at all, I suspect that you just haven't converged as either your relative tolerance  is too loose, or your absolute tolerance is too high. The residual has only dropped by one order of magnitude. Maybe check that first?",
+                  "url": "https://github.com/idaholab/moose/discussions/20889#discussioncomment-2646087",
+                  "updatedAt": "2022-09-06T14:22:14Z",
+                  "publishedAt": "2022-04-27T11:56:38Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xiaojbing"
+                          },
+                          "bodyText": "Without looking at the code at all, I suspect that you just haven't converged as either your relative tolerance is too loose, or your absolute tolerance is too high. The residual has only dropped by one order of magnitude. Maybe check that first?\n\nThank you. This code inherit from kernel.C. But the different type conditional statement should not affect residual,right.",
+                          "url": "https://github.com/idaholab/moose/discussions/20889#discussioncomment-2646123",
+                          "updatedAt": "2022-09-06T14:22:15Z",
+                          "publishedAt": "2022-04-27T12:02:53Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cpgr"
+                          },
+                          "bodyText": "No idea! I'll leave that to one of the MOOSE team.",
+                          "url": "https://github.com/idaholab/moose/discussions/20889#discussioncomment-2646145",
+                          "updatedAt": "2022-09-06T14:22:15Z",
+                          "publishedAt": "2022-04-27T12:07:15Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "loganharbour"
+                  },
+                  "bodyText": "First - please refrain from posting screenshots of text. It can be difficult to read and is also difficult for other users when searching questions in the discussions in the future.\nSecond - I would strongly suggest that you do not try to re-implement basic DG capability. In general, you should override computeQpResidual(Moose::DGResidualType type) and computeQpJacobian(Moose::DGJacobianType type). Lower level code like this is subject to change.\nNow... in terms of the rest of your confusion. This is expected. When you first assign Kxx in either case, you're setting to to either the block Jacobian or the neighbor block Jacobian. In what follows (your conditional statements), you are not reassigning Kxx but  you are instead calling the equals operator, thus you are setting the Jacobian that you had previously defined. That is:\nDenseMatrix<Number> & Kxx = _assembly.jacobianBlockNeighbor(type, p, q);\n// Sets the neighbor Jacobian = to the non-neighbor jacobian\nif (type == Moose::ElementElement)\n    Kxx = _assembly.jacobianBlock(p, q);\n// Sets the neighbor Jacobian = to the neighbor Jacobian\nelse\n    Kxx = _assembly.jacobianBlockNeighbor(type, p, q);\nYou are not re-assigning Kxx. You are literally setting Kxx equal to some other matrix.",
+                  "url": "https://github.com/idaholab/moose/discussions/20889#discussioncomment-2646632",
+                  "updatedAt": "2022-09-06T14:22:15Z",
+                  "publishedAt": "2022-04-27T13:16:44Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "[Geochemistry module][Coupling of transportation and reactions]",
+          "author": {
+            "login": "coskrrb2002"
+          },
+          "bodyText": "Dear users,\nI would like to use geochemistry module for coupling of transportation and chemical reactions.\nAs far as I know, there are three ways to couple the transportation and chemical reactions.\n\nFully coupling\nSolve transportation -> Solve chemical reactions.\nItration of Solve transporation -> Solve chemical reactions\n\nAmong these three types, which method is used in the Geochemistry module?\nCheers,\nQ",
+          "url": "https://github.com/idaholab/moose/discussions/20871",
+          "updatedAt": "2022-06-20T08:56:38Z",
+          "publishedAt": "2022-04-26T10:48:38Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "WilkAndy"
+                  },
+                  "bodyText": "The answer is (2) and (3).   You might find the quite detailed documentation found at https://mooseframework.inl.gov/modules/geochemistry/index.html useful.",
+                  "url": "https://github.com/idaholab/moose/discussions/20871#discussioncomment-2638267",
+                  "updatedAt": "2022-06-20T08:56:36Z",
+                  "publishedAt": "2022-04-26T11:24:29Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "coskrrb2002"
+                          },
+                          "bodyText": "Thank you for your answer! Its great helpful for me~! Cheers",
+                          "url": "https://github.com/idaholab/moose/discussions/20871#discussioncomment-2643572",
+                          "updatedAt": "2022-06-20T08:56:37Z",
+                          "publishedAt": "2022-04-27T04:43:12Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Vector Valued Variables in MultApp",
+          "author": {
+            "login": "TLWise"
+          },
+          "bodyText": "I am looking to use multi-app to pull velocity (vector) data from a transient Naiver Stokes solution into a separate app that imposes the values of the transient solution on to a steady state domain. For instance if I'm using the transient values for the initial conditions for a steady state solutions. Can this be accomplished by use of an existing kernel, aux kernel, or anything? In my case the two mesh domains share the same dimensions and mesh densities.",
+          "url": "https://github.com/idaholab/moose/discussions/20858",
+          "updatedAt": "2022-06-05T08:53:32Z",
+          "publishedAt": "2022-04-24T20:33:51Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThis is Navier Stokes finite element or finite volume ?\nIf they use the same mesh you can use the MultiAppCopyTrasnfer on the components of the velocity.\nhttps://mooseframework.inl.gov/source/transfers/MultiAppCopyTransfer.html\nIn FE, you can use this https://mooseframework.inl.gov/source/auxkernels/VectorVariableComponentAux.html to retrieve velocity components.\nThen you can initialize the velocity component by component.\nIn FV it's simple, transfer directly to the right variable velocity component.\nIn FE you ll have to create a new object, a BuildVectorVariableAux, similar to this\nhttps://mooseframework.inl.gov/source/auxkernels/BuildArrayVariableAux.html\nLet us know if you need help with this\nAn example of a VectorAuxkernel is this one:\nhttps://github.com/idaholab/moose/blob/next/framework/src/auxkernels/VectorFunctionAux.C\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20858#discussioncomment-2625732",
+                  "updatedAt": "2022-06-05T08:53:33Z",
+                  "publishedAt": "2022-04-24T20:46:55Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "TLWise"
+                          },
+                          "bodyText": "Thank you for the reply. I am using FE. I will review the referenced links you provided, and reach out to you for additional guidance if I run into further roadblocks to my understanding.",
+                          "url": "https://github.com/idaholab/moose/discussions/20858#discussioncomment-2625744",
+                          "updatedAt": "2022-06-05T08:53:44Z",
+                          "publishedAt": "2022-04-24T20:50:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "TLWise"
+                          },
+                          "bodyText": "I executed  MultiAppCopyTransfer on of the sample problems that uses MultiAppCopyTransfer, I also attempted to use it in a code that I developed. I keep getting the same error \"Unable to locate object\" each time. Is it possible that I will need to do and update and remake prior to being able to run this particular command?",
+                          "url": "https://github.com/idaholab/moose/discussions/20858#discussioncomment-2635368",
+                          "updatedAt": "2022-06-05T08:53:48Z",
+                          "publishedAt": "2022-04-26T02:46:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "What are you trying to copy? The vector variable or the variable components?",
+                          "url": "https://github.com/idaholab/moose/discussions/20858#discussioncomment-2635785",
+                          "updatedAt": "2022-06-05T08:53:48Z",
+                          "publishedAt": "2022-04-26T04:41:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "TLWise"
+                          },
+                          "bodyText": "I was able to get MultiAppCopyTransfer to work properly when I used the components of a the vector or a scalar variable like Temperature. I must have been attempting to use velocity initially. Thanks",
+                          "url": "https://github.com/idaholab/moose/discussions/20858#discussioncomment-2643363",
+                          "updatedAt": "2022-06-12T05:02:19Z",
+                          "publishedAt": "2022-04-27T03:35:16Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Dendrite Solidification code for binary alloy",
+          "author": {
+            "login": "arpawar"
+          },
+          "bodyText": "I am  interested in solving dendrite solidification problem for binary alloys.  I am having trouble implementing code for dendritic growth of binary alloys. Can you please help me out with some reference code for the same? Any resources will be of great help. Thank you very much!",
+          "url": "https://github.com/idaholab/moose/discussions/17689",
+          "updatedAt": "2022-06-09T07:39:25Z",
+          "publishedAt": "2021-04-27T14:53:33Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "jiangwen84"
+                  },
+                  "bodyText": "@SudiptaBiswas Could you help with this?",
+                  "url": "https://github.com/idaholab/moose/discussions/17689#discussioncomment-670404",
+                  "updatedAt": "2022-06-09T07:39:25Z",
+                  "publishedAt": "2021-04-28T14:52:42Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "SudiptaBiswas"
+                          },
+                          "bodyText": "You can find some of the solidification examples here,\nhttps://github.com/idaholab/moose/tree/next/modules/phase_field/examples/anisotropic_interfaces\nThe examples that use the grand-potential-based model will be relevant for binary alloys.",
+                          "url": "https://github.com/idaholab/moose/discussions/17689#discussioncomment-701392",
+                          "updatedAt": "2022-06-09T07:39:25Z",
+                          "publishedAt": "2021-05-05T21:05:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "KangChenRui"
+                          },
+                          "bodyText": "You can find some of the solidification examples here, https://github.com/idaholab/moose/tree/next/modules/phase_field/examples/anisotropic_interfaces\nThe examples that use the grand-potential-based model will be relevant for binary alloys.\n\nHi\uff0cfriends\nI have a question.\nHow to use two order parameters with the kenerl ACInterfaceKobayashi1,ACInterfaceKobayashi2 and InterfaceOrientationMaterial.\nLike op = eta1, op = eta2",
+                          "url": "https://github.com/idaholab/moose/discussions/17689#discussioncomment-2642917",
+                          "updatedAt": "2022-06-09T07:39:27Z",
+                          "publishedAt": "2022-04-27T01:28:06Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Limiting Boundary Condition",
+          "author": {
+            "login": "RobMacka"
+          },
+          "bodyText": "Hi MOOSE users,\nI'm wondering what is the most sensible way to implement the following condition at the boundaries?\n\nBest Regards,\nRobert",
+          "url": "https://github.com/idaholab/moose/discussions/20873",
+          "updatedAt": "2022-05-15T20:46:22Z",
+          "publishedAt": "2022-04-26T15:37:49Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nDepends on the equation.\nDo you have an analytical form that you could integrate such that phi(x=some_number) = some_value (for Dirichlet, similar for Neumann) is equivalent to this limit condition ?\nYou could also just make a really big mesh and put that calculation on a computing cluster.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20873#discussioncomment-2640330",
+                  "updatedAt": "2022-04-26T15:55:57Z",
+                  "publishedAt": "2022-04-26T15:55:57Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

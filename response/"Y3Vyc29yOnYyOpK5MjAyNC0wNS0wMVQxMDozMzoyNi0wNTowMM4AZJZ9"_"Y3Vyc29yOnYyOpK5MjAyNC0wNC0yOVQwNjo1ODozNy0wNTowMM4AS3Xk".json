@@ -1,0 +1,918 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyNC0wNC0yOVQwNjo1ODozNy0wNTowMM4AS3Xk"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "StochasticTools; report input/sampled values sent to sub-app",
+          "author": {
+            "login": "jvwilliams23"
+          },
+          "bodyText": "Hi,\nI am using StochasticTools module for a monte carlo run as part of a UQ workflow. Using the StochasticReporter returns the final QoIs in the json file, but I am wondering if it is possible to also save the input parameters from the sampler which are sent to the sub-app to produce each QoI?\nFor example, the reporter and transfer\n[Reporters]\n  [storage]\n    type = StochasticReporter\n    parallel_type = ROOT\n  []\n[]\n\n[Transfers]\n  [sub]\n    type = SamplerParameterTransfer\n    to_multi_app = sub\n    sampler = train_sampler_a\n    parameters = 'Functions/slope_tc/value'\n    check_multiapp_execute_on = false\n  []\n  [data]\n    type = SamplerReporterTransfer\n    from_multi_app = sub\n    sampler = train_sampler_a\n    stochastic_reporter = storage\n    from_reporter = 'temp_xmin_wall/value'\n  []\n[]\n\nyields the following output:\n    \"time_steps\": [\n        {\n            \"storage\": {\n                \"data:converged\": [\n                    true,\n                    true,\n                    true,\n                    true,\n                    true,\n                    true,\n                    true,\n                    true,\n                    true,\n                    true\n                ],\n                \"data:temp_xmin_wall:value\": [\n                    327.21460091191886,\n                    327.22095318699365,\n                    327.2186406333933,\n                    327.2131752782587,\n                    327.2159796106987,\n                    327.2169546408685,\n                    327.2155865311054,\n                    327.2214386771292,\n                    327.21889294080415,\n                    327.2142013147521\n                ]\n            },\n            \"time\": 1.0,\n            \"time_step\": 1\n        }\n    ]\n\nand would like to have an extra dict entry for each property in [Distributions].\nBest wishes\nJosh",
+          "url": "https://github.com/idaholab/moose/discussions/27523",
+          "updatedAt": "2024-05-01T15:06:07Z",
+          "publishedAt": "2024-05-01T14:16:25Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@grmnptr @somu15\nI don't see an option but it seems a good idea to me",
+                  "url": "https://github.com/idaholab/moose/discussions/27523#discussioncomment-9285730",
+                  "updatedAt": "2024-05-01T14:22:05Z",
+                  "publishedAt": "2024-05-01T14:21:31Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "somu15"
+                  },
+                  "bodyText": "You may use SamplerData VPP. See moose/modules/stochastic_tools/test/tests/samplers/monte_carlo/monte_carlo_weibull.i as an example.",
+                  "url": "https://github.com/idaholab/moose/discussions/27523#discussioncomment-9285760",
+                  "updatedAt": "2024-05-01T14:24:25Z",
+                  "publishedAt": "2024-05-01T14:24:25Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jvwilliams23"
+                          },
+                          "bodyText": "Got it, thanks!\nFYI, this did not add anything to the json file. But when I set csv = true in [Outputs], I get a csv file with the sampler data and another with the StochasticReporter output, which I prefer.",
+                          "url": "https://github.com/idaholab/moose/discussions/27523#discussioncomment-9285834",
+                          "updatedAt": "2024-05-01T14:32:35Z",
+                          "publishedAt": "2024-05-01T14:32:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "For others,\nI think there s an option in outputs to convert VPP output to reporter output, to use json",
+                          "url": "https://github.com/idaholab/moose/discussions/27523#discussioncomment-9285854",
+                          "updatedAt": "2024-05-01T14:34:12Z",
+                          "publishedAt": "2024-05-01T14:34:11Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "somu15"
+                  },
+                  "bodyText": "Yes, only reporter objects output to json. Try if https://mooseframework.inl.gov/source/reporters/StochasticMatrix.html works.",
+                  "url": "https://github.com/idaholab/moose/discussions/27523#discussioncomment-9285864",
+                  "updatedAt": "2024-05-01T14:34:53Z",
+                  "publishedAt": "2024-05-01T14:34:52Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Reactive transport couplings Errors",
+          "author": {
+            "login": "robo-boluo"
+          },
+          "bodyText": "Dear MOOSE Community,\nI've been working with the transport reactive model located in the folder '/moose/modules/combined/examples/geochem-porous_flow' and have developed my own models, porous_flow.i and aquifer_chemistry.i.\nTo couple these models, I utilized 'MultiApps'. However, I encountered a 'parallel-communicated exception' error once the simulation reached t > 100,000s.\n\nYou can access the models via the following links:\nGoogle drive: (https://drive.google.com/drive/folders/1NrCVzYxLryaYVuvoumjBkrbedpDhcKFY?usp=sharing)\nGithub:(https://github.com/robo-boluo/Module_test.git)\nI would greatly appreciate any guidance or assistance with this issue.\nRobo",
+          "url": "https://github.com/idaholab/moose/discussions/27518",
+          "updatedAt": "2024-05-05T18:28:19Z",
+          "publishedAt": "2024-05-01T04:53:22Z",
+          "category": {
+            "name": "Q&A Modules: Porous Flow"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nIt is odd that a failed solve ended the calculation. We now rely on exceptions so that a failed solve triggers a second attempt with a smaller time step.\nYou can perform this manually with a checkpoint. You create a checkpoint in your first simulation, and restart from it with a smaller time step.\nhttps://mooseframework.inl.gov/source/outputs/Checkpoint.html\nhttps://mooseframework.inl.gov/application_usage/restart_recover.html\nWhile I see that the nested geochemistry solve time step was properly reduced to try to find convergence, I think the time step of the main-app & multiapp iteration can be reduced as well.\n@rpodgorney @1runer\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/27518#discussioncomment-9284741",
+                  "updatedAt": "2024-05-01T12:28:05Z",
+                  "publishedAt": "2024-05-01T12:28:04Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Enforcing initial velocity of beam",
+          "author": {
+            "login": "felixcrazzolara"
+          },
+          "bodyText": "As a first step to a more complex simulation, I'd like to do a transient simulation of an Euler-Bernoulli beam with the beam having a nonzero initial velocity. I saw this question here #26111 and followed the advice of maxnezdyur. I tried TIMESTEP_END and LINEAR as the execute_on option for NewmarkVelAux. Following the first example here, I set the initial condition as\n[ICs]\n  [vel_y_ic]\n    type = FunctionIC\n    variable = vel_y\n    function = vel_y_ic_fun\n    block = 0\n  []\n[]\n\n[Functions]\n  [vel_y_ic_fun]\n    type = ParsedFunction\n    expression = '0.01*x'\n  []\n[]\n\nI used the following post processor code to debug the problem\n[Postprocessors]\n  [disp_x]\n    type = PointValue\n    point = '1.6 0.0 0.0'\n    variable = disp_x\n  []\n  [disp_y]\n    type = PointValue\n    point = '1.6 0.0 0.0'\n    variable = disp_y\n  []\n  [vel_y_1b]\n    type = PointValue\n    point = '0.0 0.0 0.0'\n    variable = vel_y\n    execute_on = TIMESTEP_BEGIN\n  []\n  [vel_y_2b]\n    type = PointValue\n    point = '0.8 0.0 0.0'\n    variable = vel_y\n    execute_on = TIMESTEP_BEGIN\n  []\n  [vel_y_3b]\n    type = PointValue\n    point = '1.6 0.0 0.0'\n    variable = vel_y\n    execute_on = TIMESTEP_BEGIN\n  []\n  [vel_y_1e]\n    type = PointValue\n    point = '0.0 0.0 0.0'\n    variable = vel_y\n    execute_on = TIMESTEP_END\n  []\n  [vel_y_2e]\n    type = PointValue\n    point = '0.8 0.0 0.0'\n    variable = vel_y\n    execute_on = TIMESTEP_END\n  []\n  [vel_y_3e]\n    type = PointValue\n    point = '1.6 0.0 0.0'\n    variable = vel_y\n    execute_on = TIMESTEP_END\n  []\n  [accel_y]\n    type = PointValue\n    point = '1.6 0.0 0.0'\n    variable = accel_y\n  []\n[]\n\nthe output is\nPostprocessor Values:\n+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+\n| time           | accel_y        | disp_x         | disp_y         | vel_y_1b       | vel_y_1e       | vel_y_2b       | vel_y_2e       | vel_y_3b       | vel_y_3e       |\n+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+\n|   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |\n|   1.000000e-02 |  -6.400000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   8.000000e-03 |  -8.000000e-03 |   1.600000e-02 |  -1.600000e-02 |\n|   2.000000e-02 |   1.280000e+01 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |  -8.000000e-03 |   8.000000e-03 |  -1.600000e-02 |   1.600000e-02 |\n|   3.000000e-02 |  -1.920000e+01 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   8.000000e-03 |  -8.000000e-03 |   1.600000e-02 |  -1.600000e-02 |\n+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+----------------+\n\nIt can be seen that the initial condition for vel_y is actually only appied for the beginning of the 2nd timestep, the one starting at t=0.01s. Why is that? How can I fix it?\nMany thanks,\nFelix",
+          "url": "https://github.com/idaholab/moose/discussions/27521",
+          "updatedAt": "2024-05-01T10:53:27Z",
+          "publishedAt": "2024-05-01T07:06:47Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "felixcrazzolara"
+                  },
+                  "bodyText": "Ok, what I just managed to understand is that the way I set up the problem, it cannot work. By computing the velocities and the accelerations using NewmarkVelAux and NewmarkAccelAux, it always uses the previous displacements, velocities and accelerations and the new displacements to compute the new velocities and accelerations. Importantly, the new displacements are computed independently. Hence, the information about the initial velocities, that I supplied, never enters the computation of the displacements. The computation of the velocities and displacements is purely driven by the computation of the displacements. There is no coupling between them.",
+                  "url": "https://github.com/idaholab/moose/discussions/27521#discussioncomment-9283481",
+                  "updatedAt": "2024-05-01T09:14:11Z",
+                  "publishedAt": "2024-05-01T09:13:20Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "felixcrazzolara"
+                          },
+                          "bodyText": "Ok, I found this explanation here about the dynamics for solid mechanics. I added InertialForceBeam to my model and while there still seem to be some issues, my beam is oscillating :)",
+                          "url": "https://github.com/idaholab/moose/discussions/27521#discussioncomment-9284085",
+                          "updatedAt": "2024-05-01T10:53:24Z",
+                          "publishedAt": "2024-05-01T10:53:24Z",
+                          "isAnswer": true
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Inquiry Regarding Automated Termination of Simulation Based on Runtime Threshold",
+          "author": {
+            "login": "PengWei97"
+          },
+          "bodyText": "Dear Moose Forum Members,\nI hope this message finds you well. I am currently seeking assistance regarding the automatic termination of simulations when the runtime exceeds a specified threshold.\nI have been utilizing PerfGraphData to acquire runtime information and subsequently employing Terminator to set termination conditions in my input file, as demonstrated below:\n[UserObjects]\n  [./term]\n    type = Terminator\n    expression = 'run_time > 600'\n  [../]\n[]\n[Postprocessors]\n...\n  [./run_time]\n    type = PerfGraphData\n    section_name = \"Root\"\n    data_type = total\n  [../]\n...\n[./]\nHowever, I have encountered an issue where Terminator and PerfGraphData only execute at the beginning or end of a timestep, rather than terminating the simulation once the overall runtime exceeds a certain threshold. Therefore, my inquiry is whether there exists a method or condition to automatically terminate the simulation when it reaches a specified runtime threshold, such as after 10 minutes of computation.\nThe reason behind my quest for this functionality is that in the simulations I have created, the output continuously displays \"Computing Residual,\" as illustrated below:\nTime Step 8, time = 0.108816, dt = 0.020736\n\nGrain Tracker Status:\nGrains active index 0: 1 -> 1\nGrains active index 1: 1 -> 1\n\nFinished inside of GrainTracker\n\n    Computing Residual............................................................................................................................................\n\nHowever, attempts to terminate the program using ctrl + c or killall have been unsuccessful in generating *.prof files. On the contrary, the automatic termination of the simulation has successfully generated *.prof files.\nI would greatly appreciate any insights or suggestions on how to achieve automated termination based on a runtime threshold.\nThank you for your time and assistance.\nBest regards,\nWei",
+          "url": "https://github.com/idaholab/moose/discussions/27468",
+          "updatedAt": "2024-05-01T10:01:17Z",
+          "publishedAt": "2024-04-25T14:51:32Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThe default execution schedule for these objects is at the end of every time step\nYou ll want to specify execute_on of LINEAR to have them execute much more often. Then they can stop the simulation at any linear iteration (when computing the residual in reality)\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/27468#discussioncomment-9230954",
+                  "updatedAt": "2024-04-26T00:44:15Z",
+                  "publishedAt": "2024-04-26T00:44:14Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "PengWei97"
+                          },
+                          "bodyText": "Hi @GiudGiud,\nNow I followed your suggestion of doing it during the linear step, but it still doesn't work, as it turns out that our challenge is that when the simulation gets stuck at \"Compute Residuals............\", we can't do the linear step ends.\nTo solve this problem, I think it is crucial to ensure that the program gracefully catches the interrupt signal and performs the necessary cleanup and save operations before exiting. However, this seems to involve modifying the main() function.\nI will keep you updated on any developments. If you have any insights I'd be grateful for your input.\nSincerely,\nWei",
+                          "url": "https://github.com/idaholab/moose/discussions/27468#discussioncomment-9231402",
+                          "updatedAt": "2024-04-26T02:06:23Z",
+                          "publishedAt": "2024-04-26T02:06:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "The interrupt signal is gracefully caught already, it s just that the Terminator is only emitting it when it is executed\nAnd seemingly it does not get executed. Or not yet.",
+                          "url": "https://github.com/idaholab/moose/discussions/27468#discussioncomment-9231457",
+                          "updatedAt": "2024-04-26T02:15:22Z",
+                          "publishedAt": "2024-04-26T02:15:21Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "PengWei97"
+                          },
+                          "bodyText": "Yes, the Terminator is only executed when it evaluates the expression = 'run_time > 600', so the Terminator cannot be called when the simulation gets stuck at 'Compute Residuals............'.\nTherefore, can the simulation program perform the necessary cleanup and save operations before exiting when Ctrl+C is executed?\nBy the way, if I set execute_on=CUSTOM, can I customize the behavior of the terminator to trigger when the real-time running time of the simulation reaches a certain threshold?",
+                          "url": "https://github.com/idaholab/moose/discussions/27468#discussioncomment-9231512",
+                          "updatedAt": "2024-04-26T03:14:57Z",
+                          "publishedAt": "2024-04-26T02:25:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "execute_on=CUSTOM will still require a place somewhere in the code where you will put _problem.execute(EXEC_CUSTOM). So unless you know a good place within computeResidual (but I expect it's taking long because the mesh is large and simply computeQpResidual on every kernel is taking a lot of time?), it won't work\n\nTherefore, can the simulation program perform the necessary cleanup and save operations before exiting when Ctrl+C is executed?\n\nNo we don't have code to catch SIGINT or SIGSTP in moose. So we would not properly stop the simulation.\nHowever I dont know that you need this to profile? Did you try? Maybe you can profile even without a clean program termination",
+                          "url": "https://github.com/idaholab/moose/discussions/27468#discussioncomment-9238764",
+                          "updatedAt": "2024-04-26T15:24:31Z",
+                          "publishedAt": "2024-04-26T15:24:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "PengWei97"
+                          },
+                          "bodyText": "Hi @GiudGiud,\nThank you for your efforts. This problem has been solved by setting signal_received to accept the Ctrl + C signal and the execute mooseError. The simulation can then perform the operation of saving the performance report file.\nSincerely,\nWei",
+                          "url": "https://github.com/idaholab/moose/discussions/27468#discussioncomment-9283781",
+                          "updatedAt": "2024-05-01T10:01:14Z",
+                          "publishedAt": "2024-05-01T10:01:14Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Advancing state ........",
+          "author": {
+            "login": "Rahim-Habibi"
+          },
+          "bodyText": "Dear all,\nI am modeling thermo-hydro-mechanical response of a faulted geothermal reservoir. At the beginning , i  let the model to reach qausi static equilibrium but after one time step, \"Advancing state \" shows up and it is going on without stopping.\nhere is the terminal log:\n\nBuilding SemiLocalElemMap.                                                           [ 13.64 s] [  821 MB]\n\nFinished Performing Initial Setup                                                      [ 38.62 s] [  821 MB]\nTime Step 0, time = -172800\nPostprocessor Values:\n+----------------+----------------+----------------+----------------+-------------------+\n| time           | dt             | flood_count    | max_dP         | max_stress_excess |\n+----------------+----------------+----------------+----------------+-------------------+\n|  -1.728000e+05 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |      0.000000e+00 |\n+----------------+----------------+----------------+----------------+-------------------+\nTime Step 1, time = -86400, dt = 86400\nComputing Initial Residual\n  Finished Computing Residual                                                        [  5.63 s] [  867 MB]\nFinished Computing Initial Residual                                                  [  5.63 s] [  867 MB]\n\nPerforming automatic scaling calculation\nFinished Computing Residual                                                          [  5.64 s] [  868 MB]\n\n0 Nonlinear |R| = 6.969293e+01\nComputing Jacobian                                                                   [  7.05 s] [  876 MB]\nFinished Computing Residual                                                          [  5.65 s] [ 1097 MB]\n1 Nonlinear |R| = 2.770463e-01\nComputing Jacobian                                                                   [  7.03 s] [ 1098 MB]\nFinished Computing Residual                                                          [  5.64 s] [ 1098 MB]\n2 Nonlinear |R| = 4.924099e-03\nComputing Jacobian                                                                   [  7.03 s] [ 1098 MB]\nFinished Computing Residual                                                          [  5.64 s] [ 1098 MB]\n3 Nonlinear |R| = 9.083398e-05\nComputing Jacobian                                                                   [  7.03 s] [ 1098 MB]\nFinished Computing Residual                                                          [  5.64 s] [ 1099 MB]\n4 Nonlinear |R| = 1.944313e-06\nFinished Solving                                                                       [104.50 s] [  906 MB]\nSolve Converged!\nOutlier Variable Residual Norms:\ndisp_z: 1.426742e-06\nPostprocessor Values:\n+----------------+----------------+----------------+----------------+-------------------+\n| time           | dt             | flood_count    | max_dP         | max_stress_excess |\n+----------------+----------------+----------------+----------------+-------------------+\n|  -1.728000e+05 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |      0.000000e+00 |\n|  -8.640000e+04 |   8.640000e+04 |   1.000000e+00 |   1.886381e+03 |     -5.240521e+06 |\n+----------------+----------------+----------------+----------------+-------------------+\nAdvancing State.........................................................................................\nThanks in advance for your help,\nRahim",
+          "url": "https://github.com/idaholab/moose/discussions/27500",
+          "updatedAt": "2024-05-01T10:18:57Z",
+          "publishedAt": "2024-04-29T15:08:24Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "milljm"
+                  },
+                  "bodyText": "If possible, please refrain from posting pictures of text. It prevents others from searching for things like \"Advancing State\" and landing on posts which may be solved.\nNotePosting Guidlines",
+                  "url": "https://github.com/idaholab/moose/discussions/27500#discussioncomment-9264408",
+                  "updatedAt": "2024-04-29T15:23:25Z",
+                  "publishedAt": "2024-04-29T15:21:24Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Rahim-Habibi"
+                          },
+                          "bodyText": "Thanks, I just editted.\n@GiudGiud what could be the problem? it seems the issue is related to advancing the state of the FE problem by copying old solutions, shifting material properties and updating stateful material properties for the next time step etc, right? but why it stucks there? what could be the reason?\nThanks,\nRahim",
+                          "url": "https://github.com/idaholab/moose/discussions/27500#discussioncomment-9264818",
+                          "updatedAt": "2024-04-29T21:16:40Z",
+                          "publishedAt": "2024-04-29T15:50:03Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "Rahim-Habibi"
+                  },
+                  "bodyText": "it seems that it was stucking in this loop in \"FEProblemBase.C\".\n 6121 FEProblemBase::advanceState()\n6122 {\n6123   TIME_SECTION(\"advanceState\", 5, \"Advancing State\");\n6124\n6125   for (auto & nl : _nl)\n6126     nl->copyOldSolutions();\n6127   _aux->copyOldSolutions();\ni thought probably it is being stucked  in transfer the data between the time steps for auxvariable, so i removed some auxvaraibles now it runs successfully.",
+                  "url": "https://github.com/idaholab/moose/discussions/27500#discussioncomment-9274677",
+                  "updatedAt": "2024-04-30T12:08:01Z",
+                  "publishedAt": "2024-04-30T12:07:58Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "how many aux variables did you have?",
+                          "url": "https://github.com/idaholab/moose/discussions/27500#discussioncomment-9274807",
+                          "updatedAt": "2024-04-30T12:23:16Z",
+                          "publishedAt": "2024-04-30T12:23:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Rahim-Habibi"
+                          },
+                          "bodyText": "@GiudGiud\nI had 17, then i removed 4 of them.",
+                          "url": "https://github.com/idaholab/moose/discussions/27500#discussioncomment-9274889",
+                          "updatedAt": "2024-04-30T12:32:21Z",
+                          "publishedAt": "2024-04-30T12:32:21Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Density-based topology optimization with MOOSE",
+          "author": {
+            "login": "Flolaffel"
+          },
+          "bodyText": "Hello,\nI'm currently working on topology optimization and am looking for open-source codes (educational/research) to study and possibly extend in the future. Is there currently a known implementation of a density-based topology optimization algorithm using MOOSE?\nThanks in advance.",
+          "url": "https://github.com/idaholab/moose/discussions/25508",
+          "updatedAt": "2024-04-30T11:32:44Z",
+          "publishedAt": "2023-09-19T09:27:50Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@maxnezdyur @zachmprince @lynnmunday",
+                  "url": "https://github.com/idaholab/moose/discussions/25508#discussioncomment-7045285",
+                  "updatedAt": "2023-09-19T11:47:06Z",
+                  "publishedAt": "2023-09-19T11:47:05Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "maxnezdyur"
+                          },
+                          "bodyText": "There is a PR that will be pushed to MOOSE soon. It is a density-based method that has both a convolution and a PDE based sensitivity filter. It uses the OC method to keep the volume constraint. Currently, it just minimizes compliance.",
+                          "url": "https://github.com/idaholab/moose/discussions/25508#discussioncomment-7045401",
+                          "updatedAt": "2023-09-19T11:59:21Z",
+                          "publishedAt": "2023-09-19T11:59:20Z",
+                          "isAnswer": true
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Flolaffel"
+                          },
+                          "bodyText": "Sounds very interesting. Will definitely keep an eye on that.\nAre you using SIMP?",
+                          "url": "https://github.com/idaholab/moose/discussions/25508#discussioncomment-7046977",
+                          "updatedAt": "2023-09-19T14:13:45Z",
+                          "publishedAt": "2023-09-19T14:13:45Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "maxnezdyur"
+                          },
+                          "bodyText": "Yes.",
+                          "url": "https://github.com/idaholab/moose/discussions/25508#discussioncomment-7047030",
+                          "updatedAt": "2023-09-19T14:18:16Z",
+                          "publishedAt": "2023-09-19T14:18:15Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Flolaffel"
+                          },
+                          "bodyText": "Just saw your TopOp fork. Very excited for the update! When do you expect to push to master?",
+                          "url": "https://github.com/idaholab/moose/discussions/25508#discussioncomment-7055686",
+                          "updatedAt": "2023-09-20T08:33:36Z",
+                          "publishedAt": "2023-09-20T08:33:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "maxnezdyur"
+                          },
+                          "bodyText": "In a week or so, I have to change few things and add more documentation.",
+                          "url": "https://github.com/idaholab/moose/discussions/25508#discussioncomment-7057325",
+                          "updatedAt": "2023-09-20T11:05:44Z",
+                          "publishedAt": "2023-09-20T11:05:43Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "kurtenkera"
+                          },
+                          "bodyText": "Hi @maxnezdyur @Flolaffel - I am new to topology optimisation (TO), but I have a project where I have to perform TO using MOOSE. Where can I find the TopOp implementation in MOOSE that was discussed above?\nAlso, do you guys have any recommended learning resources for someone who is new to TO? I find a lot of sources are very deep and technical, but are there any nice broad introductions to TO that I can visit before diving into the rigorous details?",
+                          "url": "https://github.com/idaholab/moose/discussions/25508#discussioncomment-9020561",
+                          "updatedAt": "2024-04-05T11:36:50Z",
+                          "publishedAt": "2024-04-05T11:36:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Flolaffel"
+                          },
+                          "bodyText": "Hi, you can find some example inputs under moose/modules/combined/examples/optimization. Most basic example is the 2d_mbb.\nI think good resources to start are:\nBendsoe & Sigmund (2003) - Topology Optimization - Theory, Methods and Applications\nSigmund (2001) - A 99 line topology optimization code written in Matlab\nAndreassen (2011) - Efficient topology optimization in MATLAB using 88 lines of code\nUnderstanding these MATLAB codes will help a lot. You can also work through the MOOSE code of SensitivityFilter and DensityUpdate which do basically the same thing as the MATLAB codes.",
+                          "url": "https://github.com/idaholab/moose/discussions/25508#discussioncomment-9020742",
+                          "updatedAt": "2024-04-05T11:56:58Z",
+                          "publishedAt": "2024-04-05T11:56:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "kurtenkera"
+                          },
+                          "bodyText": "Hi @Flolaffel - thanks for your helpful response. I have just run the 2d_mbb example in moose/modules/combined/examples/optimization. The resulting optimized topology can be seen below:\n\nI have a question: How did you learn to make sense of this topology optimization (TO) implementation in MOOSE? I cannot find any tutorials on TO in MOOSE, so I can't see exactly how things have been implemented, other than by inspecting the format of 2d_mbb.i (see below). For example, I can see that this is a SIMP implementation, purely from the presence of expression = '${Emin} + (mat_den ^ ${power}) * (${E0}-${Emin})'. But how is the volume constraint applied for example? Furthermore, how are sensitivities calculated and used? How is the strain energy density function computed (the function being minimized)?\nI feel like if there were a tutorial somewhere, explaining where these important steps are executed, this would clear things up for me. Also, perhaps if I were an expert on TO, I might be able to answer these questions myself - but as I am still learning, I'm finding it quite difficult to understand!\nvol_frac = 0.5\nE0 = 1\nEmin = 1e-8\npower = 2\n[GlobalParams]\n  displacements = 'disp_x disp_y'\n[]\n\n[Mesh]\n  [MeshGenerator]\n    type = GeneratedMeshGenerator\n    dim = 2\n    nx = 150\n    ny = 50\n    xmin = 0\n    xmax = 30\n    ymin = 0\n    ymax = 10\n  []\n  [node]\n    type = ExtraNodesetGenerator\n    input = MeshGenerator\n    new_boundary = pull\n    nodes = 0\n  []\n  [push]\n    type = ExtraNodesetGenerator\n    input = node\n    new_boundary = push\n    coord = '30 10 0'\n  []\n\n[]\n\n[AuxVariables]\n\n  [Emin]\n    family = MONOMIAL\n    order = CONSTANT\n    initial_condition = ${Emin}\n  []\n  [power]\n    family = MONOMIAL\n    order = CONSTANT\n    initial_condition = ${power}\n  []\n  [E0]\n    family = MONOMIAL\n    order = CONSTANT\n    initial_condition = ${E0}\n  []\n  [Dc]\n    family = MONOMIAL\n    order = CONSTANT\n    initial_condition = -1.0\n  []\n  [mat_den]\n    family = MONOMIAL\n    order = CONSTANT\n    initial_condition = ${vol_frac}\n  []\n[]\n\n[Modules/TensorMechanics/Master]\n  [all]\n    strain = SMALL\n    add_variables = true\n    incremental = false\n  []\n[]\n\n[BCs]\n  [no_x]\n    type = DirichletBC\n    variable = disp_y\n    boundary = pull\n    value = 0.0\n  []\n  [no_y]\n    type = DirichletBC\n    variable = disp_x\n    boundary = right\n    value = 0.0\n  []\n\n[]\n[NodalKernels]\n  [pull]\n    type = NodalGravity\n    variable = disp_y\n    boundary = push\n    gravity_value = -1\n    mass = 1\n  []\n[]\n[Materials]\n  [elasticity_tensor]\n    type = ComputeVariableIsotropicElasticityTensor\n    youngs_modulus = E_phys\n    poissons_ratio = poissons_ratio\n    args = 'Emin mat_den power E0'\n  []\n  [E_phys]\n    type = DerivativeParsedMaterial\n    # Emin + (density^penal) * (E0 - Emin)\n    expression = '${Emin} + (mat_den ^ ${power}) * (${E0}-${Emin})'\n    coupled_variables = 'mat_den'\n    property_name = E_phys\n  []\n  [poissons_ratio]\n    type = GenericConstantMaterial\n    prop_names = poissons_ratio\n    prop_values = 0.3\n  []\n  [stress]\n    type = ComputeLinearElasticStress\n  []\n  [dc]\n    type = ComplianceSensitivity\n    design_density = mat_den\n    youngs_modulus = E_phys\n    incremental = false\n  []\n[]\n\n[Preconditioning]\n  [smp]\n    type = SMP\n    full = true\n  []\n[]\n[UserObjects]\n  [rad_avg]\n    type = RadialAverage\n    radius = 1.2\n    weights = linear\n    prop_name = sensitivity\n    execute_on = TIMESTEP_END\n    force_preaux = true\n  []\n  [update]\n    type = DensityUpdate\n    density_sensitivity = Dc\n    design_density = mat_den\n    volume_fraction = ${vol_frac}\n    execute_on = TIMESTEP_BEGIN\n  []\n  [calc_sense]\n    type = SensitivityFilter\n    density_sensitivity = Dc\n    design_density = mat_den\n    filter_UO = rad_avg\n    execute_on = TIMESTEP_END\n    force_postaux = true\n  []\n[]\n\n[Executioner]\n  type = Transient\n  solve_type = NEWTON\n  petsc_options_iname = '-pc_type -pc_factor_mat_solver_package'\n  petsc_options_value = 'lu superlu_dist'\n  nl_abs_tol = 1e-8\n  dt = 1.0\n  num_steps = 70\n[]\n\n[Outputs]\n  [out]\n    type = Exodus\n    execute_on = 'TIMESTEP_END'\n  []\n  print_linear_residuals = false\n[]\n\n[Postprocessors]\n  [total_vol]\n    type = ElementIntegralVariablePostprocessor\n    variable = mat_den\n    execute_on = 'INITIAL TIMESTEP_END'\n  []\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/25508#discussioncomment-9091520",
+                          "updatedAt": "2024-04-12T05:45:30Z",
+                          "publishedAt": "2024-04-12T05:38:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Flolaffel"
+                          },
+                          "bodyText": "The MOOSE tutorial on the SIMP implementation can be found here.\nRegarding your picture, you have to uncheck the \"Apply Displacements\" box in paraview to get a good look at the actual solution of the problem. Otherwise it's so heavily distorted, you can't really make sense of it.\nIf you really want to understand the underlying mechanisms, just reading the input file you attached won't be sufficient. You'll have to read the actual source code of the used classes.\n\nThe volume constraint is enforced in the Optimality Criteria method implemented in DensityUpdate.C\nThe compliance sensitivity (our objective function sensitivity) is computed in ComplianceSensitivity.C\nThe strain energy (density) is computed in StrainEnergyDensity.C which ComplianceSensitivity.C inherits from\n\nTo see and understand the actual formulas for computation, I'd recommend you check out the literature I recommended in my last answer.",
+                          "url": "https://github.com/idaholab/moose/discussions/25508#discussioncomment-9093549",
+                          "updatedAt": "2024-04-12T09:13:28Z",
+                          "publishedAt": "2024-04-12T09:13:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "kurtenkera"
+                          },
+                          "bodyText": "Thankyou @Flolaffel and @lynnmunday - this has helped enormously!\nBy the way, do you know if a general method exists to convert an Exodus (.e) or VTK (.vtu) file of a topology-optimized component in MOOSE into a Gmsh (.msh) file or STL file? Basically, I'm trying to simulate my topology optimized component in a dynamical simulator, and to do this I need to convert the topology optimized component into a .msh file or .stl file. Furthermore, if I wanted to 3D print the resulting component, I would need to convert to an STL file? I tried outputting the 2D MBB example first as a .vtk file in MOOSE, and then converting to a .msh file using Meshio in Python. Below is the .vtk file of the optimized component in Paraview:\n\nBelow is the resulting .msh file in Gmsh (created by converting the .vtk file to a .msh file w/ Meshio). As you can see, the .msh file is just the original rectangular domain, whereas I need it to exclude all of the void regions? Would I need to somehow create code that converts all element density values to 0 or 1, and then exclude all nodes in the mesh that are associated with void regions in the rectangular domain, before converting to an STL or MSH file type?",
+                          "url": "https://github.com/idaholab/moose/discussions/25508#discussioncomment-9123237",
+                          "updatedAt": "2024-04-15T22:42:00Z",
+                          "publishedAt": "2024-04-15T22:03:47Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "lynnmunday"
+                  },
+                  "bodyText": "@maxnezdyur also structured the code similar to what is in this reference which is good tutorial on simp:\nOle Sigmund. A 99 line topology optimization code written in matlab. Structural and multidisciplinary optimization, 21:120\u2013127, 2001.\nIn the moose implementation of simp, each transient step is an optimization iteration.  In the input file you'll see Execute_on timestep_begin or end and that is how we control the optimization steps within an iteration but @Flolaffel is right, you'll need to look at the source code to figure it out how SIMP is implemented.",
+                  "url": "https://github.com/idaholab/moose/discussions/25508#discussioncomment-9098487",
+                  "updatedAt": "2024-04-12T17:01:19Z",
+                  "publishedAt": "2024-04-12T17:01:18Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "kurtenkera"
+                  },
+                  "bodyText": "Hi @GiudGiud @Flolaffel @GregVernon @maxnezdyur @lynnmunday. I am trying to generate a Python script that can automate the following Paraview file conversion/smoothing pipeline (using Paraview version 5.11.2):\n(1) Read Exodus/VTK file (e.g., 3d_mbb_out.e) into Paraview,\n(2) Apply Cell Data to Point Data filter,\n(3) Apply Iso Volume filter, with lower bound = 0.95 and upper bound = 2 (something above 1),\n(4) Apply Extract Surface filter and save as an STL (ASCII) file (e.g., 3dmbb.stl).\nI've generated a Python script by simply opening Paraview, and going into Tools >> Start Trace, and then executing the steps above, and then clicking Tools >> Stop Trace once I'm finished. This generates a Python script which should in theory be capable of executing the above steps automatically, without needing to manually open the Paraview GUI. However, when I attempt to do this with the file 3d_mbb_out.e (i.e. the outputted file when running TopOpt on 3d_mbb.i located here), my resulting Python script is incapable of saving a smoothed STL file called 3dmbb.stl. The script I generated is seen below:\n# trace generated using paraview version 5.11.2\n#import paraview\n#paraview.compatibility.major = 5\n#paraview.compatibility.minor = 11\n\n#### import the simple module from the paraview\nfrom paraview.simple import *\n#### disable automatic camera reset on 'Show'\nparaview.simple._DisableFirstRenderCameraReset()\n\n# create a new 'IOSS Reader'\na3d_mbb_oute = IOSSReader(registrationName='3d_mbb_out.e', FileName=['/home/enk001/Documents/PHD/PHD-Code/projects-MOOSE/moose/modules/combined/examples/optimization/3d_mbb_out.e'])\na3d_mbb_oute.ElementBlocks = ['block_0']\na3d_mbb_oute.NodeBlockFields = ['Dc', 'disp', 'mat_den_nodal', 'sensitivity']\na3d_mbb_oute.ElementBlockFields = ['Dc_elem', 'E0', 'Emin', 'mat_den', 'power']\na3d_mbb_oute.NodeSets = ['back', 'bottom', 'right', 'top', 'left', 'front', 'hold_y', 'push']\na3d_mbb_oute.SideSets = ['back', 'bottom', 'right', 'top', 'left', 'front']\n\n# get animation scene\nanimationScene1 = GetAnimationScene()\n\n# get the time-keeper\ntimeKeeper1 = GetTimeKeeper()\n\n# get active view\nrenderView1 = GetActiveViewOrCreate('RenderView')\n\n# get display properties\na3d_mbb_outeDisplay = GetDisplayProperties(a3d_mbb_oute, view=renderView1)\n\n# get color transfer function/color map for 'vtkBlockColors'\nvtkBlockColorsLUT = GetColorTransferFunction('vtkBlockColors')\n\n# get opacity transfer function/opacity map for 'vtkBlockColors'\nvtkBlockColorsPWF = GetOpacityTransferFunction('vtkBlockColors')\n\n# get 2D transfer function for 'vtkBlockColors'\nvtkBlockColorsTF2D = GetTransferFunction2D('vtkBlockColors')\n\n# update animation scene based on data timesteps\nanimationScene1.UpdateAnimationUsingDataTimeSteps()\n\n# Properties modified on a3d_mbb_oute\na3d_mbb_oute.ElementBlockFields = ['Dc_elem', 'E0', 'Emin', 'mat_den']\n\n# update the view to ensure updated data information\nrenderView1.Update()\n\n# Properties modified on a3d_mbb_oute\na3d_mbb_oute.ElementBlockFields = ['Dc_elem', 'E0', 'mat_den']\n\n# update the view to ensure updated data information\nrenderView1.Update()\n\n# Properties modified on a3d_mbb_oute\na3d_mbb_oute.ElementBlockFields = ['Dc_elem', 'mat_den']\n\n# update the view to ensure updated data information\nrenderView1.Update()\n\n# Properties modified on a3d_mbb_oute\na3d_mbb_oute.ElementBlockFields = ['mat_den']\n\n# update the view to ensure updated data information\nrenderView1.Update()\n\n# Properties modified on a3d_mbb_oute\na3d_mbb_oute.NodeBlockFields = ['Dc', 'disp', 'mat_den_nodal']\n\n# update the view to ensure updated data information\nrenderView1.Update()\n\n# Properties modified on a3d_mbb_oute\na3d_mbb_oute.NodeBlockFields = ['Dc', 'disp']\n\n# update the view to ensure updated data information\nrenderView1.Update()\n\n# Properties modified on a3d_mbb_oute\na3d_mbb_oute.NodeBlockFields = ['Dc']\n\n# update the view to ensure updated data information\nrenderView1.Update()\n\n# Properties modified on a3d_mbb_oute\na3d_mbb_oute.NodeBlockFields = []\n\n# update the view to ensure updated data information\nrenderView1.Update()\n\n# Properties modified on a3d_mbb_oute\na3d_mbb_oute.ApplyDisplacements = 0\n\n# update the view to ensure updated data information\nrenderView1.Update()\n\n# set scalar coloring\nColorBy(a3d_mbb_outeDisplay, ('CELLS', 'mat_den'))\n\n# Hide the scalar bar for this color map if no visible data is colored by it.\nHideScalarBarIfNotNeeded(vtkBlockColorsLUT, renderView1)\n\n# rescale color and/or opacity maps used to include current data range\na3d_mbb_outeDisplay.RescaleTransferFunctionToDataRange(True, False)\n\n# show color bar/color legend\na3d_mbb_outeDisplay.SetScalarBarVisibility(renderView1, True)\n\n# get color transfer function/color map for 'mat_den'\nmat_denLUT = GetColorTransferFunction('mat_den')\n\n# get opacity transfer function/opacity map for 'mat_den'\nmat_denPWF = GetOpacityTransferFunction('mat_den')\n\n# get 2D transfer function for 'mat_den'\nmat_denTF2D = GetTransferFunction2D('mat_den')\n\n# create a new 'Cell Data to Point Data'\ncellDatatoPointData1 = CellDatatoPointData(registrationName='CellDatatoPointData1', Input=a3d_mbb_oute)\ncellDatatoPointData1.CellDataArraytoprocess = ['element_side', 'ids', 'mat_den', 'object_id']\n\n# show data in view\ncellDatatoPointData1Display = Show(cellDatatoPointData1, renderView1, 'UnstructuredGridRepresentation')\n\n# trace defaults for the display properties.\ncellDatatoPointData1Display.Representation = 'Surface'\ncellDatatoPointData1Display.ColorArrayName = [None, '']\ncellDatatoPointData1Display.SelectTCoordArray = 'None'\ncellDatatoPointData1Display.SelectNormalArray = 'None'\ncellDatatoPointData1Display.SelectTangentArray = 'None'\ncellDatatoPointData1Display.OSPRayScaleArray = 'element_side'\ncellDatatoPointData1Display.OSPRayScaleFunction = 'PiecewiseFunction'\ncellDatatoPointData1Display.SelectOrientationVectors = 'None'\ncellDatatoPointData1Display.ScaleFactor = 3.0\ncellDatatoPointData1Display.SelectScaleArray = 'None'\ncellDatatoPointData1Display.GlyphType = 'Arrow'\ncellDatatoPointData1Display.GlyphTableIndexArray = 'None'\ncellDatatoPointData1Display.GaussianRadius = 0.15\ncellDatatoPointData1Display.SetScaleArray = ['POINTS', 'element_side']\ncellDatatoPointData1Display.ScaleTransferFunction = 'PiecewiseFunction'\ncellDatatoPointData1Display.OpacityArray = ['POINTS', 'element_side']\ncellDatatoPointData1Display.OpacityTransferFunction = 'PiecewiseFunction'\ncellDatatoPointData1Display.DataAxesGrid = 'GridAxesRepresentation'\ncellDatatoPointData1Display.PolarAxes = 'PolarAxesRepresentation'\ncellDatatoPointData1Display.ScalarOpacityUnitDistance = 1.008114241552259\ncellDatatoPointData1Display.OpacityArrayName = ['POINTS', 'element_side']\ncellDatatoPointData1Display.SelectInputVectors = [None, '']\ncellDatatoPointData1Display.WriteLog = ''\n\n# init the 'PiecewiseFunction' selected for 'ScaleTransferFunction'\ncellDatatoPointData1Display.ScaleTransferFunction.Points = [1.0, 0.0, 0.5, 0.0, 24000.0, 1.0, 0.5, 0.0]\n\n# init the 'PiecewiseFunction' selected for 'OpacityTransferFunction'\ncellDatatoPointData1Display.OpacityTransferFunction.Points = [1.0, 0.0, 0.5, 0.0, 24000.0, 1.0, 0.5, 0.0]\n\n# hide data in view\nHide(a3d_mbb_oute, renderView1)\n\n# update the view to ensure updated data information\nrenderView1.Update()\n\n# set scalar coloring\nColorBy(cellDatatoPointData1Display, ('FIELD', 'vtkBlockColors'))\n\n# show color bar/color legend\ncellDatatoPointData1Display.SetScalarBarVisibility(renderView1, True)\n\n# set scalar coloring\nColorBy(cellDatatoPointData1Display, ('POINTS', 'mat_den'))\n\n# Hide the scalar bar for this color map if no visible data is colored by it.\nHideScalarBarIfNotNeeded(vtkBlockColorsLUT, renderView1)\n\n# rescale color and/or opacity maps used to include current data range\ncellDatatoPointData1Display.RescaleTransferFunctionToDataRange(True, False)\n\n# show color bar/color legend\ncellDatatoPointData1Display.SetScalarBarVisibility(renderView1, True)\n\n# create a new 'Iso Volume'\nisoVolume1 = IsoVolume(registrationName='IsoVolume1', Input=cellDatatoPointData1)\nisoVolume1.InputScalars = ['POINTS', 'mat_den']\nisoVolume1.ThresholdRange = [8.614340690391311e-09, 1.0]\n\n# show data in view\nisoVolume1Display = Show(isoVolume1, renderView1, 'UnstructuredGridRepresentation')\n\n# trace defaults for the display properties.\nisoVolume1Display.Representation = 'Surface'\nisoVolume1Display.ColorArrayName = ['POINTS', 'mat_den']\nisoVolume1Display.LookupTable = mat_denLUT\nisoVolume1Display.SelectTCoordArray = 'None'\nisoVolume1Display.SelectNormalArray = 'None'\nisoVolume1Display.SelectTangentArray = 'None'\nisoVolume1Display.OSPRayScaleArray = 'mat_den'\nisoVolume1Display.OSPRayScaleFunction = 'PiecewiseFunction'\nisoVolume1Display.SelectOrientationVectors = 'None'\nisoVolume1Display.ScaleFactor = 3.0\nisoVolume1Display.SelectScaleArray = 'mat_den'\nisoVolume1Display.GlyphType = 'Arrow'\nisoVolume1Display.GlyphTableIndexArray = 'mat_den'\nisoVolume1Display.GaussianRadius = 0.15\nisoVolume1Display.SetScaleArray = ['POINTS', 'mat_den']\nisoVolume1Display.ScaleTransferFunction = 'PiecewiseFunction'\nisoVolume1Display.OpacityArray = ['POINTS', 'mat_den']\nisoVolume1Display.OpacityTransferFunction = 'PiecewiseFunction'\nisoVolume1Display.DataAxesGrid = 'GridAxesRepresentation'\nisoVolume1Display.PolarAxes = 'PolarAxesRepresentation'\nisoVolume1Display.ScalarOpacityFunction = mat_denPWF\nisoVolume1Display.ScalarOpacityUnitDistance = 1.1167665609818371\nisoVolume1Display.OpacityArrayName = ['POINTS', 'mat_den']\nisoVolume1Display.SelectInputVectors = [None, '']\nisoVolume1Display.WriteLog = ''\n\n# init the 'PiecewiseFunction' selected for 'ScaleTransferFunction'\nisoVolume1Display.ScaleTransferFunction.Points = [8.614340690391311e-09, 0.0, 0.5, 0.0, 1.0, 1.0, 0.5, 0.0]\n\n# init the 'PiecewiseFunction' selected for 'OpacityTransferFunction'\nisoVolume1Display.OpacityTransferFunction.Points = [8.614340690391311e-09, 0.0, 0.5, 0.0, 1.0, 1.0, 0.5, 0.0]\n\n# hide data in view\nHide(cellDatatoPointData1, renderView1)\n\n# show color bar/color legend\nisoVolume1Display.SetScalarBarVisibility(renderView1, True)\n\n# update the view to ensure updated data information\nrenderView1.Update()\n\n# Properties modified on isoVolume1\nisoVolume1.ThresholdRange = [8.614340690391311e-09, 2.0]\n\n# update the view to ensure updated data information\nrenderView1.Update()\n\n# Properties modified on isoVolume1\nisoVolume1.ThresholdRange = [0.95, 2.0]\n\n# update the view to ensure updated data information\nrenderView1.Update()\n\n# create a new 'Extract Surface'\nextractSurface1 = ExtractSurface(registrationName='ExtractSurface1', Input=isoVolume1)\n\n# show data in view\nextractSurface1Display = Show(extractSurface1, renderView1, 'GeometryRepresentation')\n\n# trace defaults for the display properties.\nextractSurface1Display.Representation = 'Surface'\nextractSurface1Display.ColorArrayName = ['POINTS', 'mat_den']\nextractSurface1Display.LookupTable = mat_denLUT\nextractSurface1Display.SelectTCoordArray = 'None'\nextractSurface1Display.SelectNormalArray = 'None'\nextractSurface1Display.SelectTangentArray = 'None'\nextractSurface1Display.OSPRayScaleArray = 'mat_den'\nextractSurface1Display.OSPRayScaleFunction = 'PiecewiseFunction'\nextractSurface1Display.SelectOrientationVectors = 'None'\nextractSurface1Display.ScaleFactor = 3.0\nextractSurface1Display.SelectScaleArray = 'mat_den'\nextractSurface1Display.GlyphType = 'Arrow'\nextractSurface1Display.GlyphTableIndexArray = 'mat_den'\nextractSurface1Display.GaussianRadius = 0.15\nextractSurface1Display.SetScaleArray = ['POINTS', 'mat_den']\nextractSurface1Display.ScaleTransferFunction = 'PiecewiseFunction'\nextractSurface1Display.OpacityArray = ['POINTS', 'mat_den']\nextractSurface1Display.OpacityTransferFunction = 'PiecewiseFunction'\nextractSurface1Display.DataAxesGrid = 'GridAxesRepresentation'\nextractSurface1Display.PolarAxes = 'PolarAxesRepresentation'\nextractSurface1Display.SelectInputVectors = [None, '']\nextractSurface1Display.WriteLog = ''\n\n# init the 'PiecewiseFunction' selected for 'ScaleTransferFunction'\nextractSurface1Display.ScaleTransferFunction.Points = [0.95, 0.0, 0.5, 0.0, 1.0, 1.0, 0.5, 0.0]\n\n# init the 'PiecewiseFunction' selected for 'OpacityTransferFunction'\nextractSurface1Display.OpacityTransferFunction.Points = [0.95, 0.0, 0.5, 0.0, 1.0, 1.0, 0.5, 0.0]\n\n# hide data in view\nHide(isoVolume1, renderView1)\n\n# show color bar/color legend\nextractSurface1Display.SetScalarBarVisibility(renderView1, True)\n\n# update the view to ensure updated data information\nrenderView1.Update()\n\n# save data\nSaveData('/home/enk001/Documents/PHD/PHD-Code/projects-MOOSE/moose/modules/combined/examples/optimization/3dmbb.stl', proxy=extractSurface1, PointDataArrays=['mat_den'],\n    FieldDataArrays=['Information Records', 'QA Records', 'total_vol'],\n    FileType='Ascii')\n\nWhen I run this script, I get the following output/error messages:\n(   1.336s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5b79bdc0): no input scalars.\n\n(   1.336s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5b79bdc0): no input scalars.\n\n(   1.336s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5b79bdc0): no input scalars.\n\n(   1.336s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5b79bdc0): no input scalars.\n\n(   1.336s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5b79bdc0): no input scalars.\n\n(   1.336s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5b79bdc0): no input scalars.\n\n(   1.336s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5b79bdc0): no input scalars.\n\n(   1.336s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5b79bdc0): no input scalars.\n\n(   1.336s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5b79bdc0): no input scalars.\n\n(   1.336s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5b79bdc0): no input scalars.\n\n(   1.336s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5b79bdc0): no input scalars.\n\n(   1.336s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5b79bdc0): no input scalars.\n\n(   1.336s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5b79bdc0): no input scalars.\n\n(   1.336s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5b79bdc0): no input scalars.\n\n(   1.430s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5c4732f0): no input scalars.\n\n(   1.430s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5c4732f0): no input scalars.\n\n(   1.430s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5c4732f0): no input scalars.\n\n(   1.430s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5c4732f0): no input scalars.\n\n(   1.430s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5c4732f0): no input scalars.\n\n(   1.430s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5c4732f0): no input scalars.\n\n(   1.430s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5c4732f0): no input scalars.\n\n(   1.430s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5c4732f0): no input scalars.\n\n(   1.430s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5c4732f0): no input scalars.\n\n(   1.430s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5c4732f0): no input scalars.\n\n(   1.430s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5c4732f0): no input scalars.\n\n(   1.430s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5c4732f0): no input scalars.\n\n(   1.430s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5c4732f0): no input scalars.\n\n(   1.430s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5c4732f0): no input scalars.\n\n(   1.441s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5c47bb40): no input scalars.\n\n(   1.441s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5c47bb40): no input scalars.\n\n(   1.441s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5c47bb40): no input scalars.\n\n(   1.441s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5c47bb40): no input scalars.\n\n(   1.441s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5c47bb40): no input scalars.\n\n(   1.441s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5c47bb40): no input scalars.\n\n(   1.441s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5c47bb40): no input scalars.\n\n(   1.441s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5c47bb40): no input scalars.\n\n(   1.441s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5c47bb40): no input scalars.\n\n(   1.441s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5c47bb40): no input scalars.\n\n(   1.441s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5c47bb40): no input scalars.\n\n(   1.441s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5c47bb40): no input scalars.\n\n(   1.441s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5c47bb40): no input scalars.\n\n(   1.441s) [paraview        ]vtkTableBasedClipDataSe:214    ERR| vtkPVClipDataSet (0x571e5c47bb40): no input scalars.\n\nHas anyone been able to generate a Python script of the file conversion/smoothing pipeline that successfully writes a smoothed STL file (ASCII)? To be clear, when I execute the above file conversion pipeline in the Paraview GUI, I get the above error messages, but an STL file is still written successfully despite the error messages. However, using my Python script, I cannot write a smoothed STL file.",
+                  "url": "https://github.com/idaholab/moose/discussions/25508#discussioncomment-9182069",
+                  "updatedAt": "2024-04-21T23:09:13Z",
+                  "publishedAt": "2024-04-21T23:06:00Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GregVernon"
+                          },
+                          "bodyText": "You may try asking over on the ParaView Discourse",
+                          "url": "https://github.com/idaholab/moose/discussions/25508#discussioncomment-9190366",
+                          "updatedAt": "2024-04-22T15:11:55Z",
+                          "publishedAt": "2024-04-22T15:11:54Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lynnmunday"
+                          },
+                          "bodyText": "I don't know how to do this but keep me updated.  It would be useful.",
+                          "url": "https://github.com/idaholab/moose/discussions/25508#discussioncomment-9190547",
+                          "updatedAt": "2024-04-22T15:24:05Z",
+                          "publishedAt": "2024-04-22T15:24:05Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "kurtenkera"
+                  },
+                  "bodyText": "Hi all, I am currently in the process of trying to run 2d_mbb.i, but I want to run it with this GMSH mesh file 2d_rectangle.msh attached in this zip folder (2d_rectangle.zip). Note that this is just a .msh file of the same rectangular domain as in 2d_mbb.i.\nHowever, I'm struggling to do this as I am having trouble understanding what the boundary conditions are in 2d_mbb.i? I have seen 'visualisations' of the boundary conditions in images like the one below, but in all honesty I don't know how to convert these visualisations into mathematical equations of the Dirichlet and Neumann BCs such as $u_x = 0$ for $x = 0, y \\in [0,10]$? What are the explicit BCs expressed as equations for the 2D and 3D MBB examples?\n\nHere is my attempt at interpreting the BCs for the 2D MBB example, based on the 2d_mbb.i input file. From this section of the input file:\n[Mesh]\n  [MeshGenerator]\n    type = GeneratedMeshGenerator\n    dim = 2\n    nx = 150\n    ny = 50\n    xmin = 0\n    xmax = 30\n    ymin = 0\n    ymax = 10\n  []\n  [node]\n    type = ExtraNodesetGenerator\n    input = MeshGenerator\n    new_boundary = pull\n    nodes = 0\n  []\n  [push]\n    type = ExtraNodesetGenerator\n    input = node\n    new_boundary = push\n    coord = '30 10 0'\n  []\n\n[]\n\nIs it true that the boundary named pull represents the bottom line of the rectangle (i.e. the bottom line characterised by $x \\in [0,30], y = 0$)? The reason I think pull represents the bottom line is because we have nodes = 0 in the [node] block, and the 0 tag represents the bottom boundary when using GeneratedMeshGenerator in 2D? Furthermore, I think the boundary push is the upper right corner of the rectangular domain, where a body force of -1N is applied in the y-direction? It appears that this downward body force is applied in the NodalKernels block below:\n[BCs]\n  [no_x]\n    type = DirichletBC\n    variable = disp_y\n    boundary = pull\n    value = 0.0\n  []\n  [no_y]\n    type = DirichletBC\n    variable = disp_x\n    boundary = right\n    value = 0.0\n  []\n\n[]\n[NodalKernels]\n  [pull]\n    type = NodalGravity\n    variable = disp_y\n    boundary = push\n    gravity_value = -1\n    mass = 1\n  []\n[]\n\nFinally, in the no_x block above, it appears that we are enforcing $u_y = 0$ along  $x \\in [0,30], y = 0$ (i.e. the pull boundary)? And in the no_y block, is it true that we are enforcing $u_x = 0$ along $y \\in [0,10], x = 30$ (i.e. the right boundary)?\nPlease let me know if my interpretation of the BCs is correct or incorrect.",
+                  "url": "https://github.com/idaholab/moose/discussions/25508#discussioncomment-9260592",
+                  "updatedAt": "2024-04-29T11:05:21Z",
+                  "publishedAt": "2024-04-29T09:28:41Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Is it true that the boundary named pull represents the bottom line of the rectangle (i.e. the bottom line characterised by\n)?\n\nno these nodesets are only a single node. You are using the node ids to select them\nUsing Paraview you can visualize these nodesets.\nYou can use the other generators to generate nodesets, and sidesets (and nodesets from sidesets)\nsomething like \"a line\" or \"a plane at the bottom / on the left\" is easy to specify from the normal or from a parsed expression based on the coordinates",
+                          "url": "https://github.com/idaholab/moose/discussions/25508#discussioncomment-9263638",
+                          "updatedAt": "2024-04-29T14:30:37Z",
+                          "publishedAt": "2024-04-29T14:30:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Finally, in the no_x block above, it appears that we are enforcing. ...\n\nI think pull is only a single node on which we are pulling.",
+                          "url": "https://github.com/idaholab/moose/discussions/25508#discussioncomment-9263727",
+                          "updatedAt": "2024-04-29T14:37:45Z",
+                          "publishedAt": "2024-04-29T14:37:44Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lynnmunday"
+                          },
+                          "bodyText": "This model doesn't match exactly with the picture.  This model uses half symmetry with the symmetry plane where disp_x=0 is set on the \"right\" nodeset.  The roller displacement boundary condition where disp_y=0 is set on the single node in the \"pull\" nodeset on the bottom left corner of the model.  We didn't use very good names in this example for nodesets or the nodal kernel block.  This input file is similar to the one we made for the \"hanger\" example where a force is applied to the \"pull\" node.",
+                          "url": "https://github.com/idaholab/moose/discussions/25508#discussioncomment-9265694",
+                          "updatedAt": "2024-04-29T16:51:31Z",
+                          "publishedAt": "2024-04-29T16:51:31Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "kurtenkera"
+                          },
+                          "bodyText": "Thanks for the replies guys that has helped with my understanding tremendously.\nAs for 3d_mbb.i, I can see that the roller boundary condition is applied at the two nodes (0,0,0) and (0,0,10) in a similar manner to the 2d example. Likewise, the push downward force is applied in a similar manner. The main difference appears to be the inclusion of the ADRobinBC boundary condition (see below):\n[BCs]\n  [no_x]\n    type = DirichletBC\n    variable = disp_y\n    boundary = hold_y\n    value = 0.0\n  []\n  [no_y]\n    type = DirichletBC\n    variable = disp_x\n    boundary = right\n    value = 0.0\n  []\n  [boundary_penalty]\n    type = ADRobinBC\n    variable = Dc\n    boundary = 'left top front back'\n    coefficient = 10\n  []\n  [boundary_penalty_right]\n    type = ADRobinBC\n    variable = Dc\n    boundary = 'right'\n    coefficient = 10\n  []\n[]\n\nI understand the mathematical definition of the ADRobinBC provided below, but I don't know (1) what it represents physically and (2) why it wasn't included in the 2d_mbb.i example?\n\nMoreover, (3) why does the line enable_objects = 'BCs::boundary_penalty_right' appear in the input file, but there is no analogous line enable_objects = 'BCs::boundary_penalty' for the left, top, front and back faces? Finally, (4) why does the bottom face not have an ADRobinBC condition applied to it but all other faces do?\n[Controls]\n  [first_period]\n    type = TimePeriod\n    start_time = 0.0\n    end_time = 10\n    enable_objects = 'BCs::boundary_penalty_right'\n    execute_on = 'initial timestep_begin'\n  []\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/25508#discussioncomment-9269963",
+                          "updatedAt": "2024-04-30T04:02:27Z",
+                          "publishedAt": "2024-04-30T04:02:26Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "maxnezdyur"
+                          },
+                          "bodyText": "The RobinBC is for the filter. It allows us to penalize having excessive material on the boundary which happens with the radial filter. This is for the PDE filter. I believe we have a tutorial that talks about this a bit. It is user preference on which faces one would like to prevent excessive material on. Here is a link to a paper that gives more information: https://doi.org/10.1007/s00158-020-02556-w",
+                          "url": "https://github.com/idaholab/moose/discussions/25508#discussioncomment-9274335",
+                          "updatedAt": "2024-04-30T11:32:44Z",
+                          "publishedAt": "2024-04-30T11:32:44Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Question about symmetric boundary condition setting of thermal stress calculation of a 1/8 rotational symmetric model",
+          "author": {
+            "login": "WayneX-Wong"
+          },
+          "bodyText": "Hello MOOSE experts:\nI simulated a 1/8 rotational symmetric solid mechanical problem, but ran into following question:\nPrecondition:\nI've simulated a thermal conduction problem using this symmetric model, and got temperature distribution, which I was about to use for thermal stress calculation\nMy setting:\nI set zero normal-displacement on  both symmetric surfaces like:\n$$\\vec{n}\\bullet\\vec{disp}=0\\ \\ \\Rightarrow\\ \\ n_x{disp}_x+n_y{disp}_y=0$$\nAnd I used MatchValueBC for realizing this:\n\nResult:\nThere seems still normal displacement on symmetric surface:\n\nWhere white block is original model, and wireframe is displaced geometry, two green lines stands for original symmetric surface.\nAnd I've plotted displacement of symmetry surface:\n\nWhere Result is\n$$n_x{disp}_x+n_y{disp}_y$$\nand doesn't equal to 0.\nQuestion\nIt seems my symmetric boundary condition didn't work. What might be the reason for this?\nOr if there's other way to set this kind of symmetric boundary condition?\nThanks! (Sorry I can only provide relative photos rather than relative input files, cause I ran this example on a LAN computer)",
+          "url": "https://github.com/idaholab/moose/discussions/27498",
+          "updatedAt": "2024-04-30T01:57:34Z",
+          "publishedAt": "2024-04-28T12:11:04Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nIf you are not using parallel processing you can use the Functor system (the functor APIs on a variable) to tie the values on the top surface to the values on the bottom one.\nYou can use an ElemPointArg and specify the point analytically to go from one surface to the other\nYou can keep trying on constrainting the displacement on a single surface by writing a penalty version of this BC\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/27498#discussioncomment-9252001",
+                  "updatedAt": "2024-04-28T12:37:07Z",
+                  "publishedAt": "2024-04-28T12:37:06Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WayneX-Wong"
+                          },
+                          "bodyText": "Hello Guillaume, thanks for reply, while it's hard for me to fully understand your suggestion, I might need to learn Functor system better.\nBut I still wonder what's wrong with my settings by using MatchValueBC, could you help me point out the problem?",
+                          "url": "https://github.com/idaholab/moose/discussions/27498#discussioncomment-9252488",
+                          "updatedAt": "2024-04-28T14:31:54Z",
+                          "publishedAt": "2024-04-28T14:30:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I dont know.\nDid you double check those two coefficients?\nDo you get a converged result on every time step? What does the simulation log look like?",
+                          "url": "https://github.com/idaholab/moose/discussions/27498#discussioncomment-9253274",
+                          "updatedAt": "2024-04-28T16:07:20Z",
+                          "publishedAt": "2024-04-28T16:07:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WayneX-Wong"
+                          },
+                          "bodyText": "I check those coefficients, and the calculation did converge with relative tolerance below than1e-10.\nBesides I refine the mesh but same strange result.",
+                          "url": "https://github.com/idaholab/moose/discussions/27498#discussioncomment-9257191",
+                          "updatedAt": "2024-04-29T02:47:26Z",
+                          "publishedAt": "2024-04-29T02:47:26Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "are rel_fuel1 / 2 both exactly on the outer surface? sometimes the mesher will place nodes inside the volume in a nodeset\nhave you tried using approaches from the solid mechanics module? I m thinking they have more custom techniques for this\nhttps://mooseframework.inl.gov/source/bcs/PenaltyInclinedNoDisplacementBC.html",
+                          "url": "https://github.com/idaholab/moose/discussions/27498#discussioncomment-9263700",
+                          "updatedAt": "2024-04-29T14:35:23Z",
+                          "publishedAt": "2024-04-29T14:35:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WayneX-Wong"
+                          },
+                          "bodyText": "I will try to find more relevant from Solid Mechanics module.\nThanks again for your suggestions!",
+                          "url": "https://github.com/idaholab/moose/discussions/27498#discussioncomment-9269207",
+                          "updatedAt": "2024-04-30T01:57:34Z",
+                          "publishedAt": "2024-04-30T01:57:34Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Phase field and Crystal plasticity",
+          "author": {
+            "login": "haqfariha"
+          },
+          "bodyText": "Hello Experts,\nI am currently trying to impose a crystal plasticity model in a two-phase problem. There is one example file-kks_mechanics_VTS.i which calculates elastic stresses for each phases using base_name input parameter.\nThe materials I am using, require crystal plasticity, and also the ComputeMultipleCrystalPlasticity stress has this base_name option. Could anyone help me with writing the code using base_name for the multiphase problem or help me find an example from MOOSE of how to use that?",
+          "url": "https://github.com/idaholab/moose/discussions/27504",
+          "updatedAt": "2024-04-30T21:06:42Z",
+          "publishedAt": "2024-04-29T20:48:43Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": []
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Is there a Porous Flow Master Action System",
+          "author": {
+            "login": "jmeier"
+          },
+          "bodyText": "Dear Community,\nIs there something like the \"Tensor Mechanics Master Action System\" (link) for porous flow?\nThanks for your help.",
+          "url": "https://github.com/idaholab/moose/discussions/27499",
+          "updatedAt": "2024-04-30T05:40:43Z",
+          "publishedAt": "2024-04-29T14:22:28Z",
+          "category": {
+            "name": "Q&A Modules: Porous Flow"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "hello\nI think there's this\nhttps://mooseframework.inl.gov/source/actions/PoroMechanicsAction.html\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/27499#discussioncomment-9263598",
+                  "updatedAt": "2024-04-29T14:28:07Z",
+                  "publishedAt": "2024-04-29T14:28:06Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jmeier"
+                          },
+                          "bodyText": "Dear @GiudGiud,\nThanks for the quick answer. Unfortunately, the docu on PoroMechanicsAction is still under construction and I fail to find an example where this action is used within [Physics]. Preferably in combination with [SolidMechanics/QuasiStatic]. I only find a \"PoroMechanics\"-Action used inside a kernel here.\nDo you know if there is such an example available?\n[Physics]\n  [SolidMechanics/QuasiStatic]\n    [./all]\n      add_variables = true\n      ...\n    []\n  []\n  [PoroMechanics]\n      ?????\n  []\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/27499#discussioncomment-9264492",
+                          "updatedAt": "2024-04-29T15:25:54Z",
+                          "publishedAt": "2024-04-29T15:25:54Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "The [Physics] syntax is currently being rolled out.\nWe have not gotten to PoroMechanics. In fact, Poromechanics being nested under Kernels rather than Modules/PorousFlow makes me think it hasn't been transitioned to the previously preferred syntax either. So you wont find an example with the [Physics] syntax for a while",
+                          "url": "https://github.com/idaholab/moose/discussions/27499#discussioncomment-9264561",
+                          "updatedAt": "2024-04-29T15:31:18Z",
+                          "publishedAt": "2024-04-29T15:31:18Z",
+                          "isAnswer": true
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Simulating excavation or construction in time",
+          "author": {
+            "login": "nlosacco"
+          },
+          "bodyText": "Dear all,\nin the analysis of geotechnical problems, often I have to simulate an excavation or construction process. Due to non linearity, either processes need to be spread over a number of analysis increments.\nA typical approach to the excavation problem involves:\n\nremoving elements and constraint the nodes at the new boundary (or apply nodal forces at the new boundary so that equilibrium is not altered)\nincrementally reduce the reaction forces at the boundary to zero.\n\nFor construction:\n\nactivate new elements\nincrementally change the material stiffness and gravity of the new elements from zero to the final value\n\nI've found that elements can be removed or added to the analysis domain through e.g.:\nCoupledVarThresholdElementSubdomainModifier\nbut is there any predefined way to do this \"slowly\" over a certain number of steps?\nBest,",
+          "url": "https://github.com/idaholab/moose/discussions/23677",
+          "updatedAt": "2024-04-29T11:58:37Z",
+          "publishedAt": "2023-03-09T14:05:33Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nWhile the process of changing an element from a subdomain to another is abrupt (as soon as the threshhold is passed), you can create BCs/material properties that depend continuously on the threshold or another variable to ramp the other quantities slower.\nI would use something like max(0, variable - threshold value) / (max_variable_value -  threshold value) as a multiplier\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/23677#discussioncomment-5255693",
+                  "updatedAt": "2023-03-09T15:15:59Z",
+                  "publishedAt": "2023-03-09T15:15:58Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "PEI0214"
+                  },
+                  "bodyText": "Hello, can you tell me the use 'CoupledVarThresholdElementSubdomainModifier' can simulate filling process? If possible, could you please provide more detailed instructions? It would be nice to have an example. Thank you for your help.",
+                  "url": "https://github.com/idaholab/moose/discussions/23677#discussioncomment-9034616",
+                  "updatedAt": "2024-04-07T09:00:55Z",
+                  "publishedAt": "2024-04-07T09:00:55Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nyou premesh the volume that will be filled, and you change its subdomain as the filling happens from an inactive subdomain (a subdomain with no equations) to an active one.\ni think there are other posts with examples. There should be an app that has been developed to do this. @1runer do you know if that\u2019s true?",
+                          "url": "https://github.com/idaholab/moose/discussions/23677#discussioncomment-9037856",
+                          "updatedAt": "2024-04-07T19:09:59Z",
+                          "publishedAt": "2024-04-07T19:09:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "PEI0214"
+                          },
+                          "bodyText": "Thank you for your reply. I want to zero the displacement calculated in the first step and then proceed to the next calculation, is there any good way to do it?",
+                          "url": "https://github.com/idaholab/moose/discussions/23677#discussioncomment-9222581",
+                          "updatedAt": "2024-04-25T08:50:53Z",
+                          "publishedAt": "2024-04-25T08:50:53Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nYou can only clear a variable using either a new simulation in which you do not restart that variable\nOr you use a multiapp and set up a transfer that sends 0 values to that variable\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/23677#discussioncomment-9230987",
+                          "updatedAt": "2024-04-26T00:51:56Z",
+                          "publishedAt": "2024-04-26T00:51:56Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "PEI0214"
+                          },
+                          "bodyText": "Hello, Can I remove deformations only in part of the location? For example, the grid is divided into blocks 1 and 2, and the calculation continues after the deformation of block 2 is removed.",
+                          "url": "https://github.com/idaholab/moose/discussions/23677#discussioncomment-9261887",
+                          "updatedAt": "2024-04-29T11:58:37Z",
+                          "publishedAt": "2024-04-29T11:58:37Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

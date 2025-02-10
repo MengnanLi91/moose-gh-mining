@@ -1,0 +1,821 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMi0xMS0yMlQwNjoxOTowNi0wNjowMM4AReme"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Coupling phase field to mechanics",
+          "author": {
+            "login": "sslim8537"
+          },
+          "bodyText": "Dear all,\nI am new to Moose and just starting with the basic examples in the tutorials. After learning the basics, I will try to solve my problem, which is to simulate a multiphase field evolution coupled to the mechanics. From what I have read in the documentation, I think that the Moose framework is exactly what I need. However, before I invest a lot of time, I want to double check whether Moose is suitable for this task or not. I am wondering if Moose will allow for calculations:\n- on the three dimensional spherical domain,\n- of multiple-phase fields,\n- of coupled diffusion and phase boundary movement in the multi-phase field,\n- of coupling between phase field and mechanics (phase-field and stress field),\n- of concentration dependent diffusion coefficients\nThank you very much for your kind replies.",
+          "url": "https://github.com/idaholab/moose/discussions/22791",
+          "updatedAt": "2022-11-28T14:23:53Z",
+          "publishedAt": "2022-11-25T07:40:26Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nMOOSE can do 1D, 2D, 3D XYZ, 2D RZ and 1D spherical. So a 3D spherical domain would work as long as it s represented in XYZ\nMultiple phases is supported\nPhase boundaries can move\nCoupling between phase field and mechanics has been done. I believe you will find examples in MOOSE of this\nDiffusion coefficients depending on concentration/local variables is fully supported\nThe phase field docs are here btw\nhttps://mooseframework.inl.gov/modules/phase_field/index.html\n@laagesen for checking what I say\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22791#discussioncomment-4240323",
+                  "updatedAt": "2022-11-25T23:23:04Z",
+                  "publishedAt": "2022-11-25T23:23:03Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "laagesen"
+                          },
+                          "bodyText": "Yes agreed on all of this! The only thing I would add is that there are several models for multiple order parameters or multiple phase fields in the literature. We have the most support for the model described in\nhttps://journals.aps.org/pre/abstract/10.1103/PhysRevE.98.023309\nAnd are currently revising documentation to give a more thorough description of how what's in the input files relates to the paper. This is a multi-order parameter model. There are other models that are generally referred to as multi-phase field models, the distinction being that those models enforce that the sum of all the phase-fields must equal 1 everywhere. There are pros and cons to the different approaches, which is a bit beyond the scope here, but the multi-phase model can also be implemented in MOOSE, we just don't have input files with examples in the repository.",
+                          "url": "https://github.com/idaholab/moose/discussions/22791#discussioncomment-4253959",
+                          "updatedAt": "2022-11-28T14:23:53Z",
+                          "publishedAt": "2022-11-28T14:23:52Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Convergence issue in phase-field (KKS model)",
+          "author": {
+            "login": "GuoChi-Li"
+          },
+          "bodyText": "Hello MOOSE developers,\nI want to simulate a KKS solidification model in MOOSE using the phase-field model, so I find a paper for this purpose. The paper's title is 'Phase-field simulation of structure evolution at high growth velocities during directional solidification of Ti55Al45 alloys', and the DOI is https://doi.org/10.1016/j.intermet.2004.07.018. I think it is an excellent paper to start because it combines the CALPHAD (CALculation of PHAse Diagrams) data into a phase field method. However, I have encountered a convergence issue. The output message was 'Nonlinear solve did not converge due to DIVERGED_FNORM_NAN iterations 0.' I am not sure why this happened.\nThese are my input file and output file.\nkks_model_setup_Ti_Al.log\noutput_LU.log\nI also try different solver conditions, such as LU, BoomerAMG, and ASM with the PETSc conditions in the input file.\nAnd the second question is that the paper implements $[(1-c)W_A+cW_B ]*g(\\phi)$ as shown in the first term in equation 4. I think the different W is not supported in moose. Correct me if I am wrong. Is there any chance I can implement this? Thank you for your time.\nSincerely,\nGuo-Chi",
+          "url": "https://github.com/idaholab/moose/discussions/22386",
+          "updatedAt": "2023-01-03T23:52:10Z",
+          "publishedAt": "2022-10-13T08:42:00Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThe solver does not solve any time step, it sees a NaN and cant proceed.\nThe culprit is likely one of these parsed expressions:\n      function = '(c*GAl_L+(1-c)*GTi_L+R*T*(c*log(c)+(1-c)*log(1-c))+c*(1-c)*(G0_L+G1_L*(1-2*c)))/Vm'\n\nif c becomes negative or null or above 1, this will generate a NaN. I would recommend either:\n\nadding bounds in the function to avoid nans at all times (max(0, min(c, 1)) for example\nusing the bounds system on c\nhttps://mooseframework.inl.gov/source/auxkernels/ConstantBoundsAux.html\n\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22386#discussioncomment-3933555",
+                  "updatedAt": "2022-10-21T13:04:13Z",
+                  "publishedAt": "2022-10-21T13:04:12Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Update on this:\nI've tried --trap-fpe and running in Debug mode but I cant get the solver to catch what is causing the NaN.",
+                          "url": "https://github.com/idaholab/moose/discussions/22386#discussioncomment-3934569",
+                          "updatedAt": "2022-10-21T14:57:41Z",
+                          "publishedAt": "2022-10-21T14:57:40Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GuoChi-Li"
+                          },
+                          "bodyText": "Hi GiudGiud,\nThank for your time and your explanation. I am not sure how to add bounds in the function, but I have tried using the \u2018bounds system\u2019 on c. However, it still gets NaN. I also tried adding the bounds system on c, cl, cs, but this didn\u2019t work.\nI have two questions for the bounds system. (1)What is the function of the \u2018 bounds_dummy\u2019? Is this just a AuxVariables for the bounds systems or it has other physical meaning? (2) After I added the bounds system, MOOSE told me I should use \u2018a variational inequalities solver.\u2019 Does the \u2018LU\u2019 or the other solver (such as BoomerAMG or ASM ) support this type of problem?\nSincerely,\nGuo-Chi",
+                          "url": "https://github.com/idaholab/moose/discussions/22386#discussioncomment-3934832",
+                          "updatedAt": "2022-10-21T15:27:07Z",
+                          "publishedAt": "2022-10-21T15:27:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "bounds_dummy, as its name suggests, is a dummy variable helping the system figure out which dofs the constraint applies to.\nPopular petsc VI solvers are VNEWTONRSLS and VINEWTONSSLS. If you don't use a VI snes solver, then the bounds will be ignored. AFAIK, all linear preconditioners, e.g. lu, asm, amg, are compatible with snes VI solvers.",
+                          "url": "https://github.com/idaholab/moose/discussions/22386#discussioncomment-3936697",
+                          "updatedAt": "2022-10-21T19:32:41Z",
+                          "publishedAt": "2022-10-21T19:32:40Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GuoChi-Li"
+                          },
+                          "bodyText": "Hi hugary1995,\nThank you for your explanations. I have added\n[Bounds]\n  [./c_upper_bound]\n    type = ConstantBoundsAux\n    variable = bounds_dummy\n    bounded_variable = c\n    bound_type = upper\n    bound_value = 1\n  [../]\n\n  [./c_lower_bound]\n    type = ConstantBoundsAux\n    variable = bounds_dummy\n    bounded_variable = c\n    bound_type = lower\n    bound_value = 0\n  [../]\n[]\n\nand I have also tried LU with vinewtonssls, LU with vinewtonrsls in my code. The codes are shown as below.\n# LU with vinewtonssls\n  petsc_options_iname = '-pc_type -snes_type    -snes_vi_monitor'\n  petsc_options_value = 'lu       vinewtonssls  true'\n\n# LU with vinewtonrsls\n  petsc_options_iname = '-pc_type -snes_type    -snes_vi_monitor'\n  petsc_options_value = 'lu       vinewtonrsls  true'\n\nHowever, I still got NaN in MOOSE.",
+                          "url": "https://github.com/idaholab/moose/discussions/22386#discussioncomment-3942236",
+                          "updatedAt": "2022-10-23T03:18:50Z",
+                          "publishedAt": "2022-10-23T03:18:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nThe NaNs must be coming from somewhere else then.\nWith LU that can happen with 0s on the diagonals.\nCan you use a pc_factor_shift of NONZERO in your preconditioner? (goes in the petsc options)\nAnother thing would be to drastically reduce the system size to a few elements and print the matrix to check it with ksp_view_mat\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/22386#discussioncomment-3944469",
+                          "updatedAt": "2022-10-23T15:59:40Z",
+                          "publishedAt": "2022-10-23T15:57:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GuoChi-Li"
+                          },
+                          "bodyText": "Hello GiudGiud,\nBased on your advice, I have tried these two changes.\n(1) I have removed the petsc_options_iname, petsc_options_value in the Executioner section, and changed the Preconditioning section as follows\n[Preconditioning]\n  [./full]\n    type = SMP\n    full = true\n    petsc_options_iname = '-pc_type -snes_type    -snes_vi_monitor  -pc_factor_shift_type'\n    petsc_options_value = 'lu       vinewtonssls  true              NONZERO'\n  [../]\n[]\n\nI still got NaNs.\nI also added -pc_factor_shift_amount 1e-9 in the petsc options, but this does not help.\n(2) I have reduced the mesh from 900 * 1000 to 10*10 (also modified the initial condition slightly) and changed the Preconditioning by adding the -ksp_view_mat binary as the petsc document mentioned. (https://petsc.org/release/docs/manualpages/KSP/KSPSolve/)\n[Preconditioning]\n  [./full]\n    type = SMP\n    full = true\n    petsc_options_iname = '-pc_type -snes_type    -snes_vi_monitor  -pc_factor_shift_type -pc_factor_shift_amount -ksp_view_mat'\n    petsc_options_value = 'lu       vinewtonssls  true              NONZERO               1e-9                    binary'\n  [../]\n[]\n\nI got two files named binaryoutput and binaryoutput.info. But there is nothing in these files. Not sure if I am doing this correctly or not. I have also added -ksp_view_mat binary in the original input file (900 * 1000 mesh), but I still got the empty binaryoutput and binaryoutput.info.\nGuo-Chi",
+                          "url": "https://github.com/idaholab/moose/discussions/22386#discussioncomment-3947459",
+                          "updatedAt": "2022-10-24T05:46:56Z",
+                          "publishedAt": "2022-10-24T05:43:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "If you export it in binary you ll need to find a reader to look at the matrix. I think matlab can do it",
+                          "url": "https://github.com/idaholab/moose/discussions/22386#discussioncomment-3951877",
+                          "updatedAt": "2022-10-24T14:44:22Z",
+                          "publishedAt": "2022-10-24T14:44:21Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GuoChi-Li"
+                          },
+                          "bodyText": "Can I export the file into other formats? (I only see binary on the website.) The file size is 0 bytes, so I don't think I did it correctly. Here are the two files. I have added .txt in the file end to make files acceptable by GitHub.\nbinaryoutput.info.txt\nbinaryoutput.txt",
+                          "url": "https://github.com/idaholab/moose/discussions/22386#discussioncomment-3952032",
+                          "updatedAt": "2022-10-24T14:59:23Z",
+                          "publishedAt": "2022-10-24T14:59:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I think if you pass it in petsc_options directly you get text",
+                          "url": "https://github.com/idaholab/moose/discussions/22386#discussioncomment-3952074",
+                          "updatedAt": "2022-10-24T15:02:20Z",
+                          "publishedAt": "2022-10-24T15:02:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GuoChi-Li"
+                          },
+                          "bodyText": "I used Matlab to open the file with fread or fopen, but it is empty. I am unsure what you mean by 'pass it in petsc_options directly.' If I don't provide the same length of arguments in both petsc_options_iname and petsc_options_value, moose will get an error. Also, I have tried -ksp_view_mat text, but it is not supported in petsc.",
+                          "url": "https://github.com/idaholab/moose/discussions/22386#discussioncomment-3955952",
+                          "updatedAt": "2022-10-25T01:18:02Z",
+                          "publishedAt": "2022-10-25T01:18:01Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How do I know which units to change",
+          "author": {
+            "login": "fervaldies"
+          },
+          "bodyText": "I am currently working in MOOSE and I am trying to run a model that is in millimiters. The model in the exo file is 200x100x16mm and I would like to know which parameters I have to change to mm as well and which ones not. The parameters that I have are heat transfer coeff,  and emissivity function. The most confusing one is the emissivity function, where I do not know if I should change the units of the htc only or also the boltzmann variable. And also, is the heat transfer coefficient the same in the ADConvectiveHeatFluxBC and ADFunctionRadiativeBC? Could I use both at the same time in the same surface? Thank you in advance.",
+          "url": "https://github.com/idaholab/moose/discussions/22786",
+          "updatedAt": "2023-01-03T23:07:27Z",
+          "publishedAt": "2022-11-24T03:34:43Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nheat transfer coef is W/m2 right? If so then it needs to be in W/mm2\nemissivity is usually unitless so you would not have to change that one. But if it involves the htc then it's likely you ll need to change it.\nMy advice would be to transform your mesh to be in meters, then you can use the SI unit everywhere.\nThis is very easy using the TransformGenerator, with a scaling transformation\nhttps://mooseframework.inl.gov/source/meshgenerators/TransformGenerator.html\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22786#discussioncomment-4228963",
+                  "updatedAt": "2022-11-24T16:50:15Z",
+                  "publishedAt": "2022-11-24T16:50:14Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "cannot pull docker container sha256 error on f1f00ef4e9ed layer",
+          "author": {
+            "login": "TeaCult"
+          },
+          "bodyText": "Bug Description\nI cannot run or pull container strage error occurs :\ndocker run -ti idaholab/moose:latest /bin/bash -c 'cd test; ./run_tests'\nUnable to find image 'idaholab/moose:latest' locally\nlatest: Pulling from idaholab/moose\neaead16dc43b: Pull complete\n4f4fb700ef54: Pull complete\n4a19a462196d: Pull complete\n68809389b6a7: Pull complete\n9bcd8b69b17e: Pull complete\nf29b50332647: Pull complete\nb67fa59dd2d9: Pull complete\n3bf93d7f56e4: Pull complete\nf1f00ef4e9ed: Extracting [==================================================>]  1.588kB/1.588kB\n783d9607c2be: Download complete\n30af6333143c: Download complete\nc7d674dc8468: Download complete\n22494a5ceeed: Download complete\na9e2d0f1c181: Download complete\n7a1756df8f03: Download complete\n072d860238cd: Download complete\n19290591cfbb: Download complete\n4c2d687235a3: Download complete\ndocker: failed to register layer: rename /var/lib/docker/image/btrfs/layerdb/tmp/write-set-2670145948 /var/lib/docker/image/btrfs/layerdb/sha256/3cbfecd5b748c8e7a47ca492d03f26007fe50dc5a5cec360928685d6d074c8b7: file exists.\nSee 'docker run --help'.\nSteps to Reproduce\ndocker run -ti idaholab/moose:latest /bin/bash -c 'cd test; ./run_tests'\nImpact\ncannot use moose in docker container\nMy configuration:\nI am on a rtx 3060 passed through vm which has lxd containers. In one of lxd image called fem I have docker containers:\nREPOSITORY             TAG       IMAGE ID       CREATED         SIZE\ndolfinx/lab            stable    bab989bbd385   2 months ago    3.92GB\ndealii/dealii          latest    3921e1752cbb   4 months ago    6.28GB\nuwsbel/projectchrono   latest    38eb2b51feee   10 months ago   7.98GB\nand petsce precice calculix and elmerfem built from sources. Everything works except moose because I cant pull it.\nAll my base system VM and lxd containers have kernel 6.0.7-arch1\nBase OS [vfio-kvm [ lxc [ docker [ !mose_image] ] ] ]",
+          "url": "https://github.com/idaholab/moose/discussions/22788",
+          "updatedAt": "2023-01-03T23:09:26Z",
+          "publishedAt": "2022-11-18T09:32:20Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "TeaCult"
+                  },
+                  "bodyText": "rebooted 3 time and now all works. I really have no idea whats happening , lots of free disk space , storage pool space ram and cpu resources are available. Check sha256 :\nls /var/lib/docker/image/btrfs/layerdb/sha256/3cbfecd5b748c8e7a47ca492d03f26007fe50dc5a5cec360928685d6d074c8b7\ncache-id  diff\tparent\tsize  tar-split.json.gz\n\nCleaning cache also didnt work.\nStrangely after 3 reboots , everything is normal:\ndocker pull idaholab/moose:latest \nlatest: Pulling from idaholab/moose\neaead16dc43b: Pull complete \n4f4fb700ef54: Pull complete \n8198d4bd982d: Pull complete \n27f4ad5165da: Pull complete \nfbd732637927: Pull complete \n75844ee65ec2: Pull complete \nc6e9c5625073: Pull complete \n9724f9c73dd7: Pull complete \nea7ed87a478a: Pull complete \n1bb1f22ca993: Pull complete \n1ca59dfea254: Pull complete \n858a9e363486: Pull complete \n5f9aedc8ada4: Pull complete \n51fb2c57dcdc: Pull complete \n247f4d4cc6bb: Pull complete \n662520e63b9e: Pull complete \ndc359c013330: Pull complete \n48b4b0faf25c: Pull complete \nDigest: sha256:65b83ed0e07c1f5de2be415b03eb25d887514261a30865a64e281534389e4a3c\nStatus: Downloaded newer image for idaholab/moose:latest\ndocker.io/idaholab/moose:latest",
+                  "url": "https://github.com/idaholab/moose/discussions/22788#discussioncomment-4227172",
+                  "updatedAt": "2022-11-24T14:44:13Z",
+                  "publishedAt": "2022-11-18T13:51:21Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "loganharbour"
+                  },
+                  "bodyText": "I've actually had this issue before - luckily it's all on docker and not on us :-)\nIf you search for that error string, you can see lots of complaints about docker cache getting screwed up in time. I usually get away with doing a prune and then removing the offending cache file, but it seems like you've got it working for now.",
+                  "url": "https://github.com/idaholab/moose/discussions/22788#discussioncomment-4227194",
+                  "updatedAt": "2022-11-24T14:46:36Z",
+                  "publishedAt": "2022-11-24T14:46:35Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Animation in Paraview is too quick",
+          "author": {
+            "login": "jamesclooney365"
+          },
+          "bodyText": "Dear MOOSE Developers,\nI have generated the exodus file for Porousflow tutorial11 but having an issue with how it plays in Paraview. The file plays okay but very fast compared to the very slow simulation/animation that is described on the moose webpage. I tried using the real-time mode and changing the iteration time length, but it didn\u2019t work. Here is my file: Any help or guidance? Thanks.",
+          "url": "https://github.com/idaholab/moose/discussions/22781",
+          "updatedAt": "2023-01-03T23:07:09Z",
+          "publishedAt": "2022-11-23T06:53:15Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYou may run more time steps to have a slower video, or you can change the animation parameter of Paraview\nhttps://discourse.paraview.org/t/how-to-change-frame-rate/3623 (this is what you tried, but it should work)\nThe file did not get attached to the post btw\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22781#discussioncomment-4215330",
+                  "updatedAt": "2022-11-23T11:21:42Z",
+                  "publishedAt": "2022-11-23T11:21:42Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jamesclooney365"
+                          },
+                          "bodyText": "It worked! thanks!",
+                          "url": "https://github.com/idaholab/moose/discussions/22781#discussioncomment-4222440",
+                          "updatedAt": "2022-11-24T05:41:22Z",
+                          "publishedAt": "2022-11-24T05:41:21Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Smagorinsky model: grad_u or strain rate tensor?",
+          "author": {
+            "login": "Eilloo"
+          },
+          "bodyText": "Hello all,\nI've been looking into the existing INSADSmagorinskyEddyViscosity kernel, with a view to try implementing Van Driest damping in the future.\nI'm no expert in turbulence modelling and LES, and am having trouble understanding the term which is added to the momentum equation for this kernel. In the documentation, I believe this Reynolds stress term is:\n$\\nabla\\cdot\\left ( -\\nu_{SGS}\\rho\\nabla\\overrightarrow{u} \\right )$\nFrom my own reading, I would expect the sub-grid scale viscosity to be multiplied by the strain rate tensor, rather than grad_u. Generally speaking, I was under the impression that shear stress in a newtonian fluid is proportional to the strain rate, which in 3D is not necessarily the same as the velocity gradient.\nI have also encountered a derivation for Reynolds stresses which leads to the following:\n$\\tau_{SGS} = 2\\rho\\nu_{SGS}(S_{ij}-\\frac{1}{3}\\frac{\\partial u_{k}}{\\partial x_{k}}\\delta_{ij}) - \\frac{2}{3}\\rho k_{SGS}\\delta_{ij}$\nWhere $\\delta_{ij}$ is Kronecker delta. I gather the additional terms on the RHS, besides the strain rate tensor, are correcting for some error which would otherwise be associated with this approach. How $\\nu_{SGS}$ is determined differs depending on which turbulence model is being implemented. For the Smagorinsky model, we would define the sub-grid scale viscosity as in the documentation, and substitute into this equation to find the Reynolds stress term.\nI'm hoping someone can help reconcile these different approaches: Viscosity_SGS * grad_u, Viscosity_SGS * StrainRateTensor, and the last equation with the error correction terms, and help me understand why the form given in the documentation is used.\nThanks!",
+          "url": "https://github.com/idaholab/moose/discussions/22733",
+          "updatedAt": "2023-01-03T23:09:48Z",
+          "publishedAt": "2022-11-17T12:02:13Z",
+          "category": {
+            "name": "Q&A Modules: Navier-Stokes"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "Eilloo"
+                  },
+                  "bodyText": "@gridley, I wonder if you can help with this? Having thought about it some more, I'm thinking that all these additional terms are related to changes in volume and therefore disappear for the incompressible case. I would be grateful if you can confirm whether my understanding is correct or if there's something else going on which I have missed!",
+                  "url": "https://github.com/idaholab/moose/discussions/22733#discussioncomment-4204522",
+                  "updatedAt": "2022-11-22T12:08:41Z",
+                  "publishedAt": "2022-11-22T11:28:42Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "gridley"
+                          },
+                          "bodyText": "Hey, so, this was just a little experiment for a class project that I included in a PR as a starting point for others. It is completely unvalidated, because I found MOOSE to be too slow for running 3D LES just given the lack of ability to do efficient preconditioning for this type of system. I had based the formulation off of what was given in this paper:\nBouffanais, Roland, Michel O. Deville, and Emmanuel Leriche. \u201cLarge-Eddy Simulation of the Flow in a Lid-Driven Cubical Cavity.\u201d Physics of Fluids 19, no. 5 (May 1, 2007): 055108. https://doi.org/10.1063/1.2723153.\nAnd yeah, my attention was only being paid to incompressible flows at the time. In that paper, you can see that the eddy viscosity is indeed just summed with the normal viscosity. Also, you have to mind that what's implemented in the kernel is the weak form, so gradient multiplied by the test function gradient corresponds to a laplacian in the strong form PDE.",
+                          "url": "https://github.com/idaholab/moose/discussions/22733#discussioncomment-4207955",
+                          "updatedAt": "2022-11-22T16:08:33Z",
+                          "publishedAt": "2022-11-22T16:08:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "What is implemented in the INSADSmagorinskyEddyViscosity is equation 4 of the paper Gavin linked to.\nThe normal viscosity can be added with an INSADMomentumViscous kernel.\nThe Reynolds stresses are simplified in the incompressible Smagorinsky model",
+                          "url": "https://github.com/idaholab/moose/discussions/22733#discussioncomment-4208122",
+                          "updatedAt": "2022-11-22T16:42:36Z",
+                          "publishedAt": "2022-11-22T16:22:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "gridley"
+                          },
+                          "bodyText": "Thanks @GiudGiud !",
+                          "url": "https://github.com/idaholab/moose/discussions/22733#discussioncomment-4208215",
+                          "updatedAt": "2022-11-22T16:32:43Z",
+                          "publishedAt": "2022-11-22T16:32:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Eilloo"
+                          },
+                          "bodyText": "Ok, so to make sure I'm understanding this correctly:\nWhilst the Smagorinsky model uses the concept of turbulent viscosity, it does not use the equation for $\\tau_{SGS}$ in my post above.\nRather, when equation 4 in the cited paper for $\\nu_{SGS}$ is derived, this is done in such a way that $\\nu_{SGS}$ can simply be added to the usual viscosity in the Navier-Stokes momentum equations, and hence model the effect of sub-grid scale turbulent stresses.\n@gridley, regarding MOOSE running 3D LES slowly - is this specifically for LES simulations, or is this a general comment about the Navier-Stokes module? Possibly unrelated if the issues are to do with preconditioning rather than mesh resolution requirements, but I've been mulling over how to an appropriate grid size, given the absence of a k-epsilon or k-omega model to estimate the integral length scale.\nThanks both for your help in clarifying what's currently implemented - hopefully this will enable me to properly include some damping functions for the existing kernel.",
+                          "url": "https://github.com/idaholab/moose/discussions/22733#discussioncomment-4217047",
+                          "updatedAt": "2022-11-23T14:30:18Z",
+                          "publishedAt": "2022-11-23T14:30:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@Eilloo are you interested in using finite volume NS instead of FE?\nWe have a K-epsilon turbulence model there. It's not merged yet, it's in this PR\n#22228\nScalable performance on NS simulations can only be achieved with field splits so far. We are in the process of deploying:\n\na fix for vector variables field splits (was 3D LES using vector variables?) #22643\nsome working field splits for NSFV #22405\n\nBeyond field split preconditioning of the fully coupled problem, we are also deploying segregated solution schemes (as opposed to fully coupled) in a single application #22699",
+                          "url": "https://github.com/idaholab/moose/discussions/22733#discussioncomment-4217123",
+                          "updatedAt": "2022-11-23T14:38:52Z",
+                          "publishedAt": "2022-11-23T14:38:51Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Eilloo"
+                          },
+                          "bodyText": "I'm trying to stay in FE as the plan is to look at fluid-structure interactions, and therefore make use of the FSI module in MOOSE. From my scouring around the documentation and forums, I gather coupling between finite element and finite volume, as well as mesh morphing in finite volume, are both difficult problems to get around?\nThis is one of my motivations to try developing the existing turbulence model in FE to get some more accurate results at higher Reynolds numbers.\nThat said, it's great to hear that k-epsilon is on its way in FVNS, as I am also exploring some finite volume bits in the background.\nRegarding performance scaling, that's good to know. Most of my simulations thus far have been relatively simple 2D cases, but I will experiment with field splits as these become more complex and start taking longer to run.",
+                          "url": "https://github.com/idaholab/moose/discussions/22733#discussioncomment-4218138",
+                          "updatedAt": "2022-11-23T16:18:01Z",
+                          "publishedAt": "2022-11-23T16:18:00Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "VPP that prints QP values of AuxVariables and coordinates?",
+          "author": {
+            "login": "jessecarterMOOSE"
+          },
+          "bodyText": "I'd like to get text output from a MOOSE run that shows my AuxVariable values at all quadrature points along with the coordinates. Could be for all times or each time step in a separate file or whatever. I don't see any VectorPostprocessors that do this, but MaterialVectorPostprocessor is close if I make a ParsedMaterial from my AuxVariable, but a) it is only for specified elements and b) does not print the coordinates. Could that VPP be modified to do this or is there a better way? Through Paraview perhaps?",
+          "url": "https://github.com/idaholab/moose/discussions/22779",
+          "updatedAt": "2022-12-10T07:24:50Z",
+          "publishedAt": "2022-11-23T02:05:41Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "jessecarterMOOSE"
+                  },
+                  "bodyText": "Oh I forgot about Sampler1DReal. Why is that in the Thermal Hydraulics module?",
+                  "url": "https://github.com/idaholab/moose/discussions/22779#discussioncomment-4212129",
+                  "updatedAt": "2022-11-23T03:17:21Z",
+                  "publishedAt": "2022-11-23T03:17:20Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jessecarterMOOSE"
+                          },
+                          "bodyText": "See #22100",
+                          "url": "https://github.com/idaholab/moose/discussions/22779#discussioncomment-4212138",
+                          "updatedAt": "2022-11-23T03:20:28Z",
+                          "publishedAt": "2022-11-23T03:20:27Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "no idea.\nAnother sampler for variables is the ElementValueSampler, but that does not Qps just centroids",
+                          "url": "https://github.com/idaholab/moose/discussions/22779#discussioncomment-4212206",
+                          "updatedAt": "2022-11-23T03:41:46Z",
+                          "publishedAt": "2022-11-23T03:41:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jessecarterMOOSE"
+                          },
+                          "bodyText": "Would it be easy to add to or inherit from ElementValueSampler to have it work at quadrature points?",
+                          "url": "https://github.com/idaholab/moose/discussions/22779#discussioncomment-4216035",
+                          "updatedAt": "2022-11-23T12:57:12Z",
+                          "publishedAt": "2022-11-23T12:57:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I d expect it to be easier from the MaterialVPP but ElementValueSampler could also be an option",
+                          "url": "https://github.com/idaholab/moose/discussions/22779#discussioncomment-4216470",
+                          "updatedAt": "2022-11-23T13:33:56Z",
+                          "publishedAt": "2022-11-23T13:33:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jessecarterMOOSE"
+                          },
+                          "bodyText": "ElementValueSampler seems closer since it already prints coordinates and runs on all elements. Would it be difficult to add a qp loop in there? I'm not sure how that Sampler class works.",
+                          "url": "https://github.com/idaholab/moose/discussions/22779#discussioncomment-4216608",
+                          "updatedAt": "2022-11-23T13:49:27Z",
+                          "publishedAt": "2022-11-23T13:49:27Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Tensor Mechanics Master Action Outputs not compatible with the new system.",
+          "author": {
+            "login": "Edward-Eth"
+          },
+          "bodyText": "I recently discovered that some tensor mechanics generate outputs arguments in the master action block do not work when used with the new system for tensor mechanics.\nFor example, vonmises_stress does not work, as it is hard coded to calculate the vonmises value using the global tensor 'stress'. However, when using the new system, stresses are stored in the global tensor 'cauchy_stress'. This means to extract vonmises stresses you must use a rank two aux kernel.\nThis is not a huge issue, but it would be good if the master action could intelligently switch between looking for stress and cauchy stress depending on the system in use.",
+          "url": "https://github.com/idaholab/moose/discussions/22765",
+          "updatedAt": "2022-11-23T09:48:43Z",
+          "publishedAt": "2022-11-21T13:25:12Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@bwspenc who else should we tag to get some feedback / opinions on this",
+                  "url": "https://github.com/idaholab/moose/discussions/22765#discussioncomment-4199796",
+                  "updatedAt": "2022-11-21T22:59:05Z",
+                  "publishedAt": "2022-11-21T22:59:04Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "This issue does exist and should be fixed.",
+                          "url": "https://github.com/idaholab/moose/discussions/22765#discussioncomment-4199841",
+                          "updatedAt": "2022-11-21T23:10:05Z",
+                          "publishedAt": "2022-11-21T23:10:04Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "bwspenc"
+                          },
+                          "bodyText": "@reverendbedford @dschwen",
+                          "url": "https://github.com/idaholab/moose/discussions/22765#discussioncomment-4200401",
+                          "updatedAt": "2022-11-22T01:12:34Z",
+                          "publishedAt": "2022-11-22T01:12:33Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "bwspenc"
+                  },
+                  "bodyText": "Yeah, this is an issue. We have long had a convention that the property named stress was the Cauchy stress. The developers of the new system were explicit in their naming of the stress because there were multiple types of stress computed. A few options:\n\nChange the name of cauchy_stress to stress in the new system\nChange the name of stress to cauchy_stress in the old system\nHave both the new and old system compute properties called cauchy_stress and stress\n\nI think option 1 would be the easiest, but maybe that's not the best route, because there's certainly something to be said for being explicit in the naming. I think this is my favorite, though.\nOption 2 would cause huge amounts of breakage. Also, we have to think about how far to carry the convention of explicitly spelling out the stress type. Would we call it vonmises_cauchy_stress, for instance?\nOption 3 would require extra compute resources and would potentially be confusing.\nI'm interested in what others think.",
+                  "url": "https://github.com/idaholab/moose/discussions/22765#discussioncomment-4200439",
+                  "updatedAt": "2022-11-22T01:21:56Z",
+                  "publishedAt": "2022-11-22T01:21:56Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "reverendbedford"
+                          },
+                          "bodyText": "I think it has to be option 1, unless we can think of something else entirely.",
+                          "url": "https://github.com/idaholab/moose/discussions/22765#discussioncomment-4200882",
+                          "updatedAt": "2022-11-22T02:49:13Z",
+                          "publishedAt": "2022-11-22T02:49:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Rest of MOOSE is aiming to be more explicit and less vague in their names. Having things named vaguely or imprecisely hurts the next generation of users and developers as they have to learn the imprecision, often through a mistake and its consequences",
+                          "url": "https://github.com/idaholab/moose/discussions/22765#discussioncomment-4207847",
+                          "updatedAt": "2022-11-22T16:00:25Z",
+                          "publishedAt": "2022-11-22T16:00:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "bwspenc"
+                          },
+                          "bodyText": "@GiudGiud I totally appreciate the desire to define things precisely. It's always a challenge finding the right balance between that and usability. I'm not sure what the right answer is here. We need to think through the full consequences of whatever path we choose.",
+                          "url": "https://github.com/idaholab/moose/discussions/22765#discussioncomment-4208295",
+                          "updatedAt": "2022-11-22T16:44:53Z",
+                          "publishedAt": "2022-11-22T16:44:53Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "How about defining a new parameter in the TM action called \"output_stress_measure\" or something like that which defaults to \"stress\" if new_system = false, and to \"cauchy_stress\" if new_system = true.",
+                          "url": "https://github.com/idaholab/moose/discussions/22765#discussioncomment-4208536",
+                          "updatedAt": "2022-11-22T17:10:13Z",
+                          "publishedAt": "2022-11-22T17:10:12Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "bwspenc"
+                          },
+                          "bodyText": "@hugary1995 I like that idea -- something along the lines of that could be a good solution.",
+                          "url": "https://github.com/idaholab/moose/discussions/22765#discussioncomment-4208647",
+                          "updatedAt": "2022-11-22T17:23:23Z",
+                          "publishedAt": "2022-11-22T17:23:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Okay, that sounds like the end of the bike shedding time. I can handle this when I get a chance if no one beats me to it. #22776",
+                          "url": "https://github.com/idaholab/moose/discussions/22765#discussioncomment-4209606",
+                          "updatedAt": "2022-11-22T19:02:50Z",
+                          "publishedAt": "2022-11-22T19:02:50Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Edward-Eth"
+                          },
+                          "bodyText": "Marking this as solved pending a fix being implemented, thanks for the quick response \ud83d\udc4d",
+                          "url": "https://github.com/idaholab/moose/discussions/22765#discussioncomment-4214186",
+                          "updatedAt": "2022-11-23T09:48:43Z",
+                          "publishedAt": "2022-11-23T09:48:42Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "LibMesh Update 2022.10.05",
+          "author": {
+            "login": "cticenhour"
+          },
+          "bodyText": "A new libMesh has made its way to the MOOSE master branch. For those using the conda packages, please perform\nmamba update --all\n\nin your MOOSE conda environment. The appropriate moose-libmesh package version should be 2022.10.05. For those using the libMesh submodule, please run in the moose/scripts directory\n./update_and_rebuild_libmesh.sh\n\nafter updating your copy of MOOSE.",
+          "url": "https://github.com/idaholab/moose/discussions/22321",
+          "updatedAt": "2022-11-22T16:00:01Z",
+          "publishedAt": "2022-10-06T17:27:51Z",
+          "category": {
+            "name": "News"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "EdSheltonUKAEA"
+                  },
+                  "bodyText": "Thank you for posting this information here.\nI tried to do my regular MOOSE update yesterday, which failed.  I knew from previous experience that this is often because of an update to libmesh.  So I tried my usual method to update that which is:\nmamba update moose-libmesh=2022.10.05\nBut MOOSE now doesn't seem to run or update at all.  It seems to be broken.\nWhen I enter \"mamba update --all\", I get the following:\nTraceback (most recent call last): File \"/home/eshelton/mambaforge3/bin/mamba\", line 11, in <module> sys.exit(main()) File \"/home/eshelton/mambaforge3/lib/python3.9/site-packages/mamba/mamba.py\", line 914, in main from conda.common.compat import ensure_text_type, init_std_stream_encoding ImportError: cannot import name 'init_std_stream_encoding' from 'conda.common.compat' (/home/eshelton/mambaforge3/lib/python3.9/site-packages/conda/common/compat.py)\nCan you advise what I need to do to recover MOOSE with the latest version of libmesh?",
+                  "url": "https://github.com/idaholab/moose/discussions/22321#discussioncomment-4083986",
+                  "updatedAt": "2022-11-08T08:08:02Z",
+                  "publishedAt": "2022-11-08T08:08:02Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "It looks like mamba is having issues.\nI d remove the moose environment, remove mamba, then reinstall from scratch\nhttps://mooseframework.inl.gov/getting_started/installation/conda.html",
+                          "url": "https://github.com/idaholab/moose/discussions/22321#discussioncomment-4086649",
+                          "updatedAt": "2022-11-08T13:14:50Z",
+                          "publishedAt": "2022-11-08T13:14:50Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "EdSheltonUKAEA"
+                          },
+                          "bodyText": "All seems to be reinstalled and running again now.  Many thanks for your help.",
+                          "url": "https://github.com/idaholab/moose/discussions/22321#discussioncomment-4095358",
+                          "updatedAt": "2022-11-09T10:01:39Z",
+                          "publishedAt": "2022-11-09T10:01:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "nwozniak70"
+                          },
+                          "bodyText": "I know I'm a little late but I had this issue last month and for me the reason was that mamba was out of date with conda because running conda update --all within the MOOSE environment doesn't update mamba, so my mamba version was way outdated compared to everything else and it stopped working. The suggested fix was to just update mamba in the base environment, which is not mentioned in the MOOSE install/update instructions or troubleshooting page, but it worked perfectly and I didn't have to reinstall anything. Figured this might help someone else in the future.",
+                          "url": "https://github.com/idaholab/moose/discussions/22321#discussioncomment-4207843",
+                          "updatedAt": "2022-11-22T16:00:01Z",
+                          "publishedAt": "2022-11-22T16:00:01Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "unable to use CartesianMeshGenerator",
+          "author": {
+            "login": "pierre-jeanne"
+          },
+          "bodyText": "Hello,\nI've just started learning MOOSE, so my question may be silly.\nI have created an application to run the mug example (ex01) and it ran without a problem.\nI used the same application to run the following lines (from https://mooseframework.inl.gov/source/meshgenerators/CartesianMeshGenerator.html:)\n[Mesh]\n  [./cmg]\n    type = CartesianMeshGenerator\n    dim = 3\n    dx = '1.5 2.4 0.1'\n    dy = '1.3 0.9'\n    dz = '0.4 0.5 0.6 0.7'\n    ix = '2 1 1'\n    iy = '2 3'\n    iz = '1 1 1 1'\n    subdomain_id = '0 1 1\n                    2 2 2\n\n                    3 4 4\n                    5 5 5\n\n                    0 1 1\n                    2 2 2\n\n                    3 4 4\n                    5 5 5\n                    '\n  [../]\n[]\n\nIt doesn't work. here is the message error:\n\n\n*** ERROR ***\n/mnt/c/users/pjean/MOOSE_INSTAL_FILES/02-mesh_generation/cmg_try.i contains Windows(DOS) line endings which are not supported.\n\nStack frames: 10\n0: libMesh::print_trace(std::ostream&)\n1: moose::internal::mooseErrorRaw(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >)\n2: void mooseError<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&&)\n3: MooseUtils::checkFileReadable(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, bool, bool, bool)\n4: Parser::parse(std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > const&)\n5: MooseApp::setupOptions()\n6: MooseApp::run()\n7: main\n8: __libc_start_main\n9: ../cat/cat-opt(+0x23ef) [0x556f5e5873ef]\napplication called MPI_Abort(MPI_COMM_WORLD, 1) - process 0\n[unset]: write_line error; fd=-1 buf=:cmd=abort exitcode=1\n:\nsystem msg for write_line failure : Bad file descriptor\n\nDoes anybody know why it is not working?\nThanks!\nP.",
+          "url": "https://github.com/idaholab/moose/discussions/22758",
+          "updatedAt": "2022-11-22T15:11:14Z",
+          "publishedAt": "2022-11-19T10:41:06Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThe issue is due to some extra characters that windows inserts into files and the MOOSE parser doesnt support.\nYou may use dos2unix to remove these characters, or any advanced IDE will also have an option to remove them.\nWhere did you edit the file? on a windows text editor then running them from WSL?\nThe syntax for the cartesianMeshGenerator seems correct otherwise.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22758#discussioncomment-4184468",
+                  "updatedAt": "2022-11-19T14:56:21Z",
+                  "publishedAt": "2022-11-19T14:56:21Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "pierre-jeanne"
+                          },
+                          "bodyText": "Hi Guillaume,\nthank you for your answer. I used dos2unix and it worked :)!\nCheers,\nPierre",
+                          "url": "https://github.com/idaholab/moose/discussions/22758#discussioncomment-4204901",
+                          "updatedAt": "2022-11-22T12:19:06Z",
+                          "publishedAt": "2022-11-22T12:19:06Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

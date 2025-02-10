@@ -1,0 +1,816 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMS0xMi0xNlQxNjowNDoyMy0wNjowMM4AARKs"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Can the calculated results in Postprocessors modular be used for calculations in materials modular?",
+          "author": {
+            "login": "PengWei97"
+          },
+          "bodyText": "Dear MOOSE experts,\nFor the same purpose in the problem #19648, here is a plan B that can be used.  So, I would like to ask whether the average value calculated in the Postprocessors module can be used to calculate a certain MaterialProperty  variable in the materials module.\nAny suggestions or recommendations to fix the problem would be greatly appreciated.\nThank you\nWei",
+          "url": "https://github.com/idaholab/moose/discussions/19650",
+          "updatedAt": "2022-06-13T12:08:29Z",
+          "publishedAt": "2021-12-16T02:30:12Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nyes you can use postprocessors when computing material properties.\njust save a reference to the postprocessor value with getPostprocessorValueByName(pp_name) with pp_name obtained from the input parameters.\nHowever, please be mindful that if you are using AD, postprocessors will not transfer the derivative information to your material property.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/19650#discussioncomment-1824132",
+                  "updatedAt": "2022-06-13T12:08:40Z",
+                  "publishedAt": "2021-12-16T15:05:45Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "PengWei97"
+                          },
+                          "bodyText": "Ok, Thank you for your very kind reply.\nI got it. Is it possible to couple variable (such as, gr#, the order parameter in phase field) in ElementAverageMaterialProperty, and then define the average value as,\n\nsum_value += material_property[_qp] * gr0 *gr0;\narea += element_area * gr0 *gr0;\naverage_value = sum_value /area ;\n\nThis is what I want to try next, if it can be coupled. What I really need to be weighted and average is only a material parameter in each grain, #19648.",
+                          "url": "https://github.com/idaholab/moose/discussions/19650#discussioncomment-1831647",
+                          "updatedAt": "2022-06-13T12:08:42Z",
+                          "publishedAt": "2021-12-17T05:21:45Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Yes, you can couple variables in objects derived from ElementUserobjects. But notice that you'll need to sum the material property and area separately in the execute() method, and compute the average in the getValue() method.",
+                          "url": "https://github.com/idaholab/moose/discussions/19650#discussioncomment-1831922",
+                          "updatedAt": "2022-06-13T12:08:41Z",
+                          "publishedAt": "2021-12-17T05:54:52Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "PengWei97"
+                          },
+                          "bodyText": "Ok, I know. I think that if the operation of performing the average value is executed in the Userobjects block or an postprocessing block, it does not seem to be a wise choice to execute it in the material module.\nBest Wishes\nWei",
+                          "url": "https://github.com/idaholab/moose/discussions/19650#discussioncomment-1850281",
+                          "updatedAt": "2022-06-13T12:08:43Z",
+                          "publishedAt": "2021-12-21T01:00:34Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Anisotropic Diffusivity using Euler Angles",
+          "author": {
+            "login": "avtarsinghh1991"
+          },
+          "bodyText": "Hello\nI want to rotate the Anisotropic diffusivity tensor as per the crystallographic orientation of grains using Euler angles. In addition to that, I want to read the Euler angles from the file. So far I can able to simulate anisotropic diffusion by writing the kernels. Can you please help to find a way to rotate the anisotropic diffusivity tensor as per the grain orientation using Euler angles read from the file?\nKernel files and input files are as below:\nINPUT FILE\n[Mesh]\n  type = GeneratedMesh # Can generate simple lines, rectangles and rectangular prisms\n  dim = 2 # Dimension of the mesh\n  nx = 20 # Number of elements in the x direction\n  ny = 20 # Number of elements in the y direction\n  xmax = 1.0 # Length of test chamber\n  ymax = 1.0 # Test chamber radius\n[]\n\n[Variables]\n  [diffused]\n  []\n[]\n\n\n\n[Kernels]\n  [diffusion]\n    type = Concentration # Zero-gravity, divergence-free form of Darcys law\n    variable = diffused # Operate on the \"concentration\" variable from above\n    diffusivity = '7.08e-5 0 0\n                  0    0     0\n                  0    0     0'\n  [../]\n\n  [./euler]\n    type = DiffusionTimeDerivative\n    variable = diffused\n  [../]\n[]\n\n\n[BCs]\n\n [./flux_bc]\n    type = CoupledNeumannBC\n    variable = diffused\n    boundary = left\n    Flux_val = -0.0001\n     \n  [../]\n\n  [outlet]\n    type = ADDirichletBC\n    variable = diffused\n    boundary = right\n    value = 0  \n  []\n[]\n\n[Executioner]\n  type = Transient # Steady state problem\n  solve_type = NEWTON # Perform a Newton solve\n  num_steps = 250 # Run for 75 time steps, solving the system each step.\n  dt = 1 # each time step will have duration \"1\"\n  petsc_options_iname = '-pc_type -pc_hypre_type' # PETSc option pairs with values below\n  petsc_options_value = ' hypre    boomeramg'\n[]\n\n[Outputs]\n  execute_on = 'initial timestep_end'\n  interval = 10\n  exodus = true\n[]\n\n\n\n\n\nKERNELS\n\nConcentration.h\n\n#pragma once\n#include \"ADKernel.h\"\n\nclass Concentration : public ADKernel\n{\npublic:\n  static InputParameters validParams();\n\n  Concentration(const InputParameters & parameters);\n\nprotected:\n  /// ADKernel objects must override precomputeQpResidual\n  virtual ADReal computeQpResidual() override;\n\n  /// References to be set from input file\n  const RealTensorValue & _diffusivity;\n};\n\n\n\n\nConcentration.C\n\n#include \"Concentration.h\"\n\nregisterMooseObject(\"BabblerApp\", Concentration);\n\nInputParameters\nConcentration::validParams()\n{\n  InputParameters params = ADKernel::validParams();\n  params.addClassDescription(\"Compute the concentration term for Fickian diffusion ($c$) equation: \"\n                             \"$-\\\\nabla \\\\cdot \\\\frac{\\\\mathbf{K}}{\\\\mu} \\\\nabla p = 0$\");\n\n  params.addRequiredParam<RealTensorValue>(\"diffusivity\", \"The permeability ($\\\\mathrm{K}$) of the fluid.\");\n\n  return params;\n}\n\nConcentration::Concentration(const InputParameters & parameters)\n  : ADKernel(parameters),\n    _diffusivity(getParam<RealTensorValue>(\"diffusivity\"))\n{\n}\n\nADReal\nConcentration::computeQpResidual()\n{\n  return (_diffusivity) * _grad_test[_i][_qp] * _grad_u[_qp];\n}\n\nThanks in advance. If possible please suggest some examples as well.",
+          "url": "https://github.com/idaholab/moose/discussions/19613",
+          "updatedAt": "2022-06-02T15:05:08Z",
+          "publishedAt": "2021-12-13T03:14:28Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nNot sure about examples, I ll let experts on these systems weigh in.\nI think if you need to rotate the diffusivity tensor based on the local grain orientation, that will have to be done in the MaterialProperty.\nMaterial properties, such as _diffusivity here, are re-computed every time a new element is being considered.\nPS there are existing utilities for rotating tensors if that can save you time\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/19613#discussioncomment-1798898",
+                  "updatedAt": "2022-06-02T15:05:17Z",
+                  "publishedAt": "2021-12-13T15:11:50Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "avtarsinghh1991"
+                          },
+                          "bodyText": "Thanks. Yes, I need to rotate it as per the orientation angle. D' = Q^T D Q, where Q is the orientation matrix. But I have a question about how to implement it in the above kernels. And I want to read the euler angles from the file.\nThere is one object called RotationTensor in the MOOSE but I cant able to figure out how to use that to rotate the diffusivity.",
+                          "url": "https://github.com/idaholab/moose/discussions/19613#discussioncomment-1799235",
+                          "updatedAt": "2022-06-02T15:05:19Z",
+                          "publishedAt": "2021-12-13T15:42:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I think the code to rotate tensor might be in utils/RankXXXTensor.h\nI think it may be more natural to do the rotation in the computeQpProperties of the material rather than the kernel.\nIt's likely to work in the kernel too, just that if you have another object or another kernel that will depend on this, then you could forget to do the rotation there.\nReading Euler angles from a file is done by an EulerAngleFileReader\nhttps://mooseframework.inl.gov/source/userobjects/EulerAngleFileReader.html\nwhich is then provided to other objects like for example a GrainTrackerElasticity\nhttps://mooseframework.inl.gov/moose/source/postprocessors/GrainTrackerElasticity.html\nYou can have a look at the latter's object s code to see how Euler angles are being passed\nhttps://github.com/idaholab/moose/blob/06bc1f73f0d4dfb3d01ce9ba77d6bb97346e07eb/modules/phase_field/src/postprocessors/GrainTrackerElasticity.C\nlooks like it s just getEulerAngles called on the reader with the grain id as the parameter.\nThe header (or the doxygen) for the EulerAngleFileReader will have all the options.",
+                          "url": "https://github.com/idaholab/moose/discussions/19613#discussioncomment-1800132",
+                          "updatedAt": "2022-06-02T15:05:19Z",
+                          "publishedAt": "2021-12-13T17:45:27Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "avtarsinghh1991"
+                          },
+                          "bodyText": "Thank you. As per your suggestion, I am trying to rotate the diffusivity using computeQpProperties of the material.\nI am taking \"ComputeElasticityTensorCP.h\" and \"ComputeElasticityTensorCP.C\" as reference case.\nhttps://mooseframework.inl.gov/docs/doxygen/modules/ComputeElasticityTensorCP_8h_source.html\nhttps://mooseframework.inl.gov/docs/doxygen/modules/ComputeElasticityTensorCP_8C_source.html\nHowever, when I am implementing the same, I am getting the following error\nerror: 'MooseADWrapper<libMesh::TensorValue, false>' {aka 'class libMesh::TensorValue'} has no member named 'rotate'  _Diff_Tensor[_qp] = _Diff_Matrix[_qp].rotate(_crysrot[_qp]);\nAnisoDiffusivity.h is as below:::\n#pragma once\n\n#include \"Material.h\"\n#include \"ElementPropertyReadFile.h\"\n#include \"RankTwoTensor.h\"\n#include \"RotationTensor.h\"\n\nclass AnisoDiffusivity : public Material\n{\npublic:\n  static InputParameters validParams();\n  \n  AnisoDiffusivity(const InputParameters & parameters);\n\nprotected:\n    virtual void computeQpProperties() override;\n\n    virtual void assignEulerAngles();\n\n    RealVectorValue _Euler_angles;\n\n    const ElementPropertyReadFile * const _read_prop_user_object;\n\n    MaterialProperty<RealVectorValue> & _Euler_angles_mat_prop;\n\n    MaterialProperty<RankTwoTensor> & _crysrot;\n     \n    RotationTensor _R;\n\n    MaterialProperty<Real> & _diffusivity;\n\n    MaterialProperty<RealTensorValue> & _Diff_Matrix;\n    MaterialProperty<RealTensorValue> & _Diff_Tensor;\n};\n\nAnisoDiffusivity.C as below:\n#include \"AnisoDiffusivity.h\"\n#include \"RotationTensor.h\"\n\nregisterMooseObject(\"BabblerApp\", AnisoDiffusivity);\n\nInputParameters\nAnisoDiffusivity::validParams()\n{\n  InputParameters params = Material::validParams();\n  params.addClassDescription(\"Compute an diffusion tensor for anisotropic transport.\");\n  params.addParam<UserObjectName>(\"read_prop_user_object\",\n                                      \"The ElementReadPropertyFile\"\n                                      \"GeneralUserObject to read element \"\n                                      \"specific property values from file\");\n  params.addRequiredParam<RealTensorValue>(\"Diff_Matrix\", \"Anisotropic Diffusivity Tensor\");\n  return params;\n}\n\nAnisoDiffusivity::AnisoDiffusivity(const InputParameters & parameters)\n  : Material(parameters),\n   _read_prop_user_object(isParamValid(\"read_prop_user_object\")\n                                  ? &getUserObject<ElementPropertyReadFile>(\"read_prop_user_object\")\n                                   : nullptr),\n    _Euler_angles_mat_prop(declareProperty<RealVectorValue>(\"Euler_angles\")),\n    _crysrot(declareProperty<RankTwoTensor>(\"crysrot\")),\n    _R(_Euler_angles),\n    _diffusivity(declareProperty<Real>(\"diffusivity\")),\n    _Diff_Matrix(declareProperty<RealTensorValue>(\"Diff_Matrix\")),\n    _Diff_Tensor(declareProperty<RealTensorValue>(\"Diff_Tensor\"))\n{\n}\n\n void\n    AnisoDiffusivity::assignEulerAngles()\n    {\n      if (_read_prop_user_object)\n      {\n        _Euler_angles_mat_prop[_qp](0) = _read_prop_user_object->getData(_current_elem, 0);\n        _Euler_angles_mat_prop[_qp](1) = _read_prop_user_object->getData(_current_elem, 1);\n        _Euler_angles_mat_prop[_qp](2) = _read_prop_user_object->getData(_current_elem, 2);\n      }\n      else\n        _Euler_angles_mat_prop[_qp] = _Euler_angles;\n    }\n\n\n void\n    AnisoDiffusivity::computeQpProperties()\n    {\n     assignEulerAngles();\n     \n     _R.update(_Euler_angles_mat_prop[_qp]);\n     \n     _crysrot[_qp] = _R.transpose();\n\n     _Diff_Tensor[_qp] = _R*_Diff_Matrix[_qp]*_R.transpose();\n    }\n\nOn top of that Diff_Matrix values given in the input file is not properly passed to the kernels.\nCan you please see what is the issue?  I shall be very thankful.",
+                          "url": "https://github.com/idaholab/moose/discussions/19613#discussioncomment-1814738",
+                          "updatedAt": "2022-06-02T15:05:21Z",
+                          "publishedAt": "2021-12-15T17:09:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "The error message is pretty clear about what's going on here: error: 'MooseADWrapper<libMesh::TensorValue, false>' {aka 'class libMesh::TensorValue'} has no member named 'rotate'. You should use RankTwoTensor instead of RealTensorValue.",
+                          "url": "https://github.com/idaholab/moose/discussions/19613#discussioncomment-1822086",
+                          "updatedAt": "2022-07-30T17:01:49Z",
+                          "publishedAt": "2021-12-16T09:53:08Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I agree for rotate.\nFor diff_matrix not being passed, what are you doing is declaring a material property with the name passed as the diff_matrix parameter, with declareProperty<RealTensorValue>(\"Diff_Matrix\"). You are not filling said matrix.\nTo do that please have a look at the code for ADGenericConstantRankTwoTensor\nhttps://mooseframework.inl.gov/source/materials/ADGenericConstantRankTwoTensor.html\nhttps://github.com/idaholab/moose/blob/next/framework/src/materials/GenericConstantRankTwoTensor.C\nthis line in particular:   _tensor.fillFromInputVector(getParam<std::vector<Real>>(\"tensor_values\"));",
+                          "url": "https://github.com/idaholab/moose/discussions/19613#discussioncomment-1823966",
+                          "updatedAt": "2022-07-30T17:01:49Z",
+                          "publishedAt": "2021-12-16T14:58:24Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "avtarsinghh1991"
+                          },
+                          "bodyText": "Thank you very much, everyone. Now I can able to read the diffusion matrix. I can also able to rotate the matrix as\n_Diff_Matrix[_qp].rotate(_crysrot[_qp]);\nBut When I am trying to assign this value to another RankTwoTensor as\n_Temp[_qp] = _Diff_Matrix[_qp].rotate(_crysrot[_qp]);\nthe following error appears:\nerror: no match for 'operator=' (operand types are 'MooseADWrapper<RankTwoTensorTempl, false>' {aka 'RankTwoTensorTempl'} and 'void')\n58 |      _Temp[_qp] = _Diff_Matrix[_qp].rotate(_crysrot[_qp]);\nHeader file is as\n#pragma once\n#include \"Material.h\"\n#include \"ElementPropertyReadFile.h\"\n#include \"RankTwoTensor.h\"\n#include \"RotationTensor.h\"\nclass AnisoDiffusivity : public Material\n{\npublic:\nstatic InputParameters validParams();\nAnisoDiffusivity(const InputParameters & parameters);\nprotected:\nvirtual void computeQpProperties() override;\nvirtual void assignEulerAngles();\n\nRealVectorValue _Euler_angles;\n\nconst ElementPropertyReadFile * const _read_prop_user_object;\n\nMaterialProperty<RealVectorValue> & _Euler_angles_mat_prop;\n\nMaterialProperty<RankTwoTensor> & _crysrot;\nMaterialProperty<RankTwoTensor> & _Diff_Matrix;\nMaterialProperty<RankTwoTensor> & _Temp;\n \nRotationTensor _R;\n\nRankTwoTensor _diffusivity;\n\nMaterialProperty<RealTensorValue> & _Diff_Tensor;\n\n};\nSource file is as follows:\n#include \"AnisoDiffusivity.h\"\n#include \"RotationTensor.h\"\n#include \"GenericConstantRankTwoTensor.h\"\nregisterMooseObject(\"BabblerApp\", AnisoDiffusivity);\nInputParameters\nAnisoDiffusivity::validParams()\n{\nInputParameters params = Material::validParams();\nparams.addClassDescription(\"Compute an diffusion tensor for anisotropic transport.\");\nparams.addParam(\"read_prop_user_object\",\n\"The ElementReadPropertyFile\"\n\"GeneralUserObject to read element \"\n\"specific property values from file\");\nparams.addRequiredParam<std::vector>(\"diffusivity\", \"Stiffness tensor for material\");\nreturn params;\n}\nAnisoDiffusivity::AnisoDiffusivity(const InputParameters & parameters)\n: Material(parameters),\n_read_prop_user_object(isParamValid(\"read_prop_user_object\")\n? &getUserObject(\"read_prop_user_object\")\n: nullptr),\n_Euler_angles_mat_prop(declareProperty(\"Euler_angles\")),\n_crysrot(declareProperty(\"crysrot\")),\n_Diff_Matrix(declareProperty(\"Diff_Matrix\")),\n_Temp(declareProperty(\"Temp\")),\n_R(_Euler_angles),\n_Diff_Tensor(declareProperty(\"Diff_Tensor\"))\n{\n_diffusivity.fillFromInputVector(getParam<std::vector>(\"diffusivity\"));\n}\nvoid\nAnisoDiffusivity::assignEulerAngles()\n{\nif (_read_prop_user_object)\n{\n_Euler_angles_mat_prop_qp = _read_prop_user_object->getData(_current_elem, 0);\n_Euler_angles_mat_prop_qp = _read_prop_user_object->getData(_current_elem, 1);\n_Euler_angles_mat_prop_qp = _read_prop_user_object->getData(_current_elem, 2);\n}\nelse\n_Euler_angles_mat_prop[_qp] = _Euler_angles;\n}\nvoid\nAnisoDiffusivity::computeQpProperties()\n{\nassignEulerAngles();\n _R.update(_Euler_angles_mat_prop[_qp]);\n \n _crysrot[_qp] = _R.transpose();\n\n _Temp[_qp] = _Diff_Matrix[_qp].rotate(_crysrot[_qp]);\n _Diff_Tensor[_qp] = _Diff_Matrix[_qp].rotate(_crysrot[_qp]);\n}",
+                          "url": "https://github.com/idaholab/moose/discussions/19613#discussioncomment-1827277",
+                          "updatedAt": "2022-07-30T17:01:49Z",
+                          "publishedAt": "2021-12-16T19:36:48Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Please format your code snippets with triple quotes. This makes them easier to read.\nWhy do you need this _Temp material property?\nSeems like you have everything you need in diff_matrix already\nTry to separate the operations too\n_Diff_Matrix[_qp].rotate(_crysrot[_qp]);\n _Temp[_qp] = _Diff_Matrix[_qp];",
+                          "url": "https://github.com/idaholab/moose/discussions/19613#discussioncomment-1829195",
+                          "updatedAt": "2022-08-15T09:17:19Z",
+                          "publishedAt": "2021-12-16T22:55:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "avtarsinghh1991"
+                          },
+                          "bodyText": "Thank you very much. I thought it need to be passed to a variable in order to use it in the source code.\nNow, I implemented it as per your suggestion but didn't get the intended results. I am trying to print the _Diff_Matrix after the rotation\n\"\"\"   _Diff_Matrix[_qp].rotate(_crysrot[_qp]); \"\"\"\n\"\"\" std::cout << _Diff_Matrix[_qp] << std::endl; \"\"\"\nand find that there is no effect of the rotation, whatever Euler angles I choose results are the same which should not be the case. I am getting the same results with and without the rotation.\nResult: Diff_Matrix is same before and after the rotation\n(xx,xy,xz)=(7.08e-05,        0,        0)\n(yx,yy,yz)=(       0, 7.08e-05,        0)\n(zx,zy,zz)=(       0,        0, 7.08e-05)\nCan you please suggest if there are any loose ends in the code?",
+                          "url": "https://github.com/idaholab/moose/discussions/19613#discussioncomment-1836159",
+                          "updatedAt": "2022-08-15T09:17:24Z",
+                          "publishedAt": "2021-12-17T15:07:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "looks like you can do either, rotate in place (second) or create a rotated copy (first definition)\n  /**\n   * Returns a rotated version of the tensor data given a rank two tensor rotation tensor\n   * _coords[i][j] = R_ij * R_jl * _coords[k][l]\n   * @param R rotation matrix as another RankTwoTensorTempl\n   */\n  RankTwoTensorTempl<T> rotated(const RankTwoTensorTempl<T> & R) const;\n\n  /**\n   * rotates the tensor data given a rank two tensor rotation tensor\n   * _coords[i][j] = R_ij * R_jl * _coords[k][l]\n   * @param R rotation matrix as a RankTwoTensorTempl\n   */\n  void rotate(const RankTwoTensorTempl<T> & R);",
+                          "url": "https://github.com/idaholab/moose/discussions/19613#discussioncomment-1836293",
+                          "updatedAt": "2022-08-15T09:18:54Z",
+                          "publishedAt": "2021-12-17T15:33:05Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "avtarsinghh1991"
+                          },
+                          "bodyText": "Thank you. Actually, I am very new to MOOSE. Can you please let me know how to implement them in my case?\n#include \"AnisoDiffusivity.h\"\n#include \"RotationTensor.h\"\n#include \"GenericConstantRankTwoTensor.h\"\n#include \"RankTwoTensor.h\"\n\nregisterMooseObject(\"BabblerApp\", AnisoDiffusivity);\n\nInputParameters\nAnisoDiffusivity::validParams()\n{\n  InputParameters params = Material::validParams();\n  params.addClassDescription(\"Compute an diffusion tensor for anisotropic transport.\");\n  params.addParam<UserObjectName>(\"read_prop_user_object\",\n                                      \"The ElementReadPropertyFile\"\n                                      \"GeneralUserObject to read element \"\n                                      \"specific property values from file\");\n  params.addRequiredParam<std::vector<Real>>(\"diffusivity\", \"Stiffness tensor for material\");\n  return params;\n}\n\nAnisoDiffusivity::AnisoDiffusivity(const InputParameters & parameters)\n  : Material(parameters),\n   _read_prop_user_object(isParamValid(\"read_prop_user_object\")\n                                  ? &getUserObject<ElementPropertyReadFile>(\"read_prop_user_object\")\n                                   : nullptr),\n    _Euler_angles_mat_prop(declareProperty<RealVectorValue>(\"Euler_angles\")),\n    _crysrot(declareProperty<RankTwoTensor>(\"crysrot\")),\n    _Diff_Matrix(declareProperty<RankTwoTensor>(\"Diff_Matrix\")),\n    _R(_Euler_angles),\n    _Diff_Tensor(declareProperty<RealTensorValue>(\"Diff_Tensor\"))\n{\n    _diffusivity.fillFromInputVector(getParam<std::vector<Real>>(\"diffusivity\"));\n}\n\n void\n    AnisoDiffusivity::assignEulerAngles()\n    {\n      if (_read_prop_user_object)\n      {\n        _Euler_angles_mat_prop[_qp](0) = _read_prop_user_object->getData(_current_elem, 0);\n        _Euler_angles_mat_prop[_qp](1) = _read_prop_user_object->getData(_current_elem, 1);\n        _Euler_angles_mat_prop[_qp](2) = _read_prop_user_object->getData(_current_elem, 2);\n      }\n      else\n        _Euler_angles_mat_prop[_qp] = _Euler_angles;\n    }\n\n void\n    AnisoDiffusivity::computeQpProperties()\n    {\n     assignEulerAngles();\n     \n     _R.update(_Euler_angles_mat_prop[_qp]);\n     \n     _crysrot[_qp] = _R.transpose();\n\n     _Diff_Matrix[_qp] = _diffusivity; \n     \n     _Diff_Matrix[_qp].rotate(_crysrot[_qp]);\n    \n     std::cout << _Diff_Matrix[_qp] << std::endl;\n    }",
+                          "url": "https://github.com/idaholab/moose/discussions/19613#discussioncomment-1836578",
+                          "updatedAt": "2022-08-15T09:19:12Z",
+                          "publishedAt": "2021-12-17T16:00:31Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "dschwen"
+                  },
+                  "bodyText": "The right approach is to derive another object from GrainDataTracker that is similar to GrainTrackerElasticity, but provides a rotated RealTensorValue. I developed GrainDataTracker to deal with grain tracker edge cases like grain splitting, where new grain numbers can emerge that you won't have data for in your Euler angle table.\nYou can internally use RankTwoTensors to perform the matrix rotation and then downcast to a RealTensorValue.",
+                  "url": "https://github.com/idaholab/moose/discussions/19613#discussioncomment-1824297",
+                  "updatedAt": "2022-06-02T15:05:30Z",
+                  "publishedAt": "2021-12-16T15:23:40Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "avtarsinghh1991"
+                          },
+                          "bodyText": "Thank you very much. I tried that it works to a certain extent but I can't able to assign the rotated value to a certain variable. I am getting the error which I listed in the above reply.",
+                          "url": "https://github.com/idaholab/moose/discussions/19613#discussioncomment-1827292",
+                          "updatedAt": "2022-06-02T15:05:30Z",
+                          "publishedAt": "2021-12-16T19:38:49Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "single-phase benchmark validation-getting high value",
+          "author": {
+            "login": "rksin8"
+          },
+          "bodyText": "Hi,\nI am working on a single-phase hydromechanical benchmark problem:\n\nInjection rate: 0.02 kg/s/m\nI am getting the same shape for pressure but high values:\n\nDisplacement:\n\nMy input file & grid file:  https://github.com/rksin8/benchmark1p.\nAny idea to fix the problem would be greatly appreciated!\nThank you",
+          "url": "https://github.com/idaholab/moose/discussions/19665",
+          "updatedAt": "2022-09-29T13:06:03Z",
+          "publishedAt": "2021-12-19T06:02:38Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "cpgr"
+                  },
+                  "bodyText": "At a guess, it is probably the non-standard units not being consistent throughout the input file somewhere. The PorousFlowFullySaturated action takes a pressure_unit and time_unit input parameter to make sure that the correct fluid properties are computed, see https://mooseframework.inl.gov/source/actions/PorousFlowFullySaturated.html\nDoes simply adding pressure_unit = MPa and time_unit = days to this action fix it?",
+                  "url": "https://github.com/idaholab/moose/discussions/19665#discussioncomment-1844231",
+                  "updatedAt": "2023-09-24T09:44:53Z",
+                  "publishedAt": "2021-12-19T21:38:00Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "MultiApp transfer AuxKernel object at Gauss points?",
+          "author": {
+            "login": "rcontinuum"
+          },
+          "bodyText": "Hello,\nI want to define an AuxKernel elemental variable directly at the Gauss points of the elements. And then transfer this variable to another app in the multiapp context. Say, both meshes of the master app and the sub app have the same mesh with the same quadrature rule, so that their Gauss points coincides. Then such a transfer should be feasible and would not involve any \"interpolation\".\nIs that currently possible? Is their a trick to do that? Any help is appreciated.\nIf I understand correctly, then MOOSE AuxKernel offers volume averaged elemental variables (only?).\nhttps://mooseframework.inl.gov/getting_started/examples_and_tutorials/tutorial01_app_development/step10_auxkernels.html#step-10-develop-an-auxkernel-object\n\"When the variable type is elemental, the computeValue() method averages the values over the element quadrature points (QPs) weighted by their Gaussian quadratures in proportion to the total volume, area, or length of the element.\"\nThank you",
+          "url": "https://github.com/idaholab/moose/discussions/19634",
+          "updatedAt": "2022-07-27T14:21:15Z",
+          "publishedAt": "2021-12-15T08:52:19Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nI think the trick would be to use a shape function for the elemental variable that is exact on the Gauss points.\nAny of the ones in the family parameter on this page does the trick?\nhttps://mooseframework.inl.gov/syntax/Variables/index.html\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/19634#discussioncomment-1813563",
+                  "updatedAt": "2022-07-27T14:21:15Z",
+                  "publishedAt": "2021-12-15T15:11:46Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "rcontinuum"
+                  },
+                  "bodyText": "Hello,\nwould you be so kind and elaborate a bit more?\nAssume I have a mesh of QUAD4 elements, bilinear Lagrange shape functions.\nTypically one uses a 2x2 Gauss integration. With Gauss points located at \u00b10.577... in the isoparametric space which I assume is\n\nFor this specific case which shape function would you use \"for the elemental variable that is exact on the Gauss points\".\nDoes there exists an example input file for this case or a similar case?",
+                  "url": "https://github.com/idaholab/moose/discussions/19634#discussioncomment-1821584",
+                  "updatedAt": "2022-07-08T08:03:31Z",
+                  "publishedAt": "2021-12-16T08:22:27Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "If the master app and the subapp have the same mesh, you can use the copy transfer to move fields between apps\nhttps://mooseframework.inl.gov/source/transfers/MultiAppCopyTransfer.html\nif they locally have the same mesh, but in some places don't then you can use the projection transfer, which will still copy the field exactly if the mesh coincides locally.\nhttps://mooseframework.inl.gov/source/transfers/MultiAppProjectionTransfer.html\nthis will make sure the two fields have the same value at the Gauss points, since they have the same value everywhere. Please note that the order for the quadrature is chosen so that the product of the shape functions is integrated exactly.\nBut I think you want to be specifying the value at quadrature points directly as well. This is exactly what the auxkernel does. But when it returns the results, it doesnt return it on the quadrature point. It returns it on the nodes or on the elements. So there is an integration going on, with a system solve for higher orders, to go from quadrature points to nodal or elemental values.",
+                          "url": "https://github.com/idaholab/moose/discussions/19634#discussioncomment-1828175",
+                          "updatedAt": "2022-07-08T08:03:31Z",
+                          "publishedAt": "2021-12-16T21:22:01Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "rcontinuum"
+                  },
+                  "bodyText": "Thank you for the clarification!\nRalf",
+                  "url": "https://github.com/idaholab/moose/discussions/19634#discussioncomment-1832891",
+                  "updatedAt": "2022-07-08T08:03:34Z",
+                  "publishedAt": "2021-12-17T08:36:26Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Error opening mesh file",
+          "author": {
+            "login": "DYLDYLDYL"
+          },
+          "bodyText": "01.zip",
+          "url": "https://github.com/idaholab/moose/discussions/19652",
+          "updatedAt": "2022-01-31T18:46:07Z",
+          "publishedAt": "2021-12-16T13:02:18Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThe message is clear. The node set specified in the boundary parameter of the BC named bottom does not exist on the mesh. You need to add it to your mesh, either using trelis as you mentioned in your unprompted email, or using a mesh generator\nhttps://mooseframework.inl.gov/syntax/Mesh/index.html\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/19652#discussioncomment-1823810",
+                  "updatedAt": "2021-12-16T14:53:21Z",
+                  "publishedAt": "2021-12-16T14:53:11Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "DYLDYLDYL"
+                          },
+                          "bodyText": "Thanks\uff01",
+                          "url": "https://github.com/idaholab/moose/discussions/19652#discussioncomment-1830541",
+                          "updatedAt": "2021-12-17T01:43:04Z",
+                          "publishedAt": "2021-12-17T01:43:04Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "CH4, CO2, brine",
+          "author": {
+            "login": "mortezaaesmaeilpour"
+          },
+          "bodyText": "Dear MOOSE team\nI'm going to use the PorousFlow module to simulate multiphase flow in a reservoir. The main idea is to inject a mixture of brine and CO2 into a reservoir. the reservoir is initially filled with brine and CH4. since the solubility of CO2 in water is higher than CH4, CH4 will be released as a pure gas and we can extract it. the question is that is it possible to simulate mutual solubilities of CO2, CH4, and salt in the water together with accounting for salt precipitation. Is there any example for this kind of simulation.?\nKind regards\nMorteza",
+          "url": "https://github.com/idaholab/moose/discussions/19409",
+          "updatedAt": "2022-07-10T16:33:56Z",
+          "publishedAt": "2021-11-16T09:38:58Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "cpgr"
+                  },
+                  "bodyText": "Hi @mortezaaesmaeilpour,\nI do have this capability that I have used in the past (based on the model of Zirrahi et al, Mutual solubility of CH4, CO2, H2S and their mixtures in brine under subsurface disposal conditions, Fluid Phase Equilibria 324, 2012, pp 80-93), but it isn't publicly available at the moment, and most likely would need some work to make it compatible with the current MOOSE code.\nDo you need this right now, or could you wait a month or so for it? I just don't have the time to look into it at the moment.",
+                  "url": "https://github.com/idaholab/moose/discussions/19409#discussioncomment-1661647",
+                  "updatedAt": "2022-07-10T16:34:14Z",
+                  "publishedAt": "2021-11-18T00:40:25Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mortezaaesmaeilpour"
+                          },
+                          "bodyText": "dear Chris\nI'm still waiting for your answer.",
+                          "url": "https://github.com/idaholab/moose/discussions/19409#discussioncomment-1682987",
+                          "updatedAt": "2022-07-10T16:34:15Z",
+                          "publishedAt": "2021-11-22T17:25:54Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cpgr"
+                          },
+                          "bodyText": "Sorry, I missed your previous message. I'm certain that the code won't compile without probably several hours of work as it will be in a stale branch somewhere. I could try and dig it out, but I really don't have the time to bring it up to date in the next few weeks.",
+                          "url": "https://github.com/idaholab/moose/discussions/19409#discussioncomment-1684910",
+                          "updatedAt": "2022-07-10T16:34:16Z",
+                          "publishedAt": "2021-11-23T01:28:48Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "mortezaaesmaeilpour"
+                  },
+                  "bodyText": "Dear @cpgr\nThat's great. Could you please provide it in one or two weeks? I need to convince my supervisor to use the PorousFlow module for the simulation of this problem. Nevertheless, if you have developed another MOOSE-based application, I can use it for now and you have time to integrate it into PorousFlow Module.\nCheers\nMorteza",
+                  "url": "https://github.com/idaholab/moose/discussions/19409#discussioncomment-1663339",
+                  "updatedAt": "2022-07-10T16:35:04Z",
+                  "publishedAt": "2021-11-18T09:39:18Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@cpgr @mortezaaesmaeilpour can I close this?",
+                          "url": "https://github.com/idaholab/moose/discussions/19409#discussioncomment-1828398",
+                          "updatedAt": "2022-07-10T16:35:10Z",
+                          "publishedAt": "2021-12-16T21:43:33Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cpgr"
+                          },
+                          "bodyText": "I'm going to do this next month @GiudGiud when I get some time - just been crunched by other project deadlines! Feel free to close this if you want.",
+                          "url": "https://github.com/idaholab/moose/discussions/19409#discussioncomment-1829391",
+                          "updatedAt": "2022-07-10T16:35:14Z",
+                          "publishedAt": "2021-12-16T23:28:28Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Modelling of Plastic hardening (with necking)",
+          "author": {
+            "login": "abarun22"
+          },
+          "bodyText": "Dear Wen,\nFurther to our earlier discussions at https://groups.google.com/g/moose-users/c/cWcA44gI9hQ/m/MgGaJPJjBAAJ\nI would like to update that the new plasticity model built with PieceWise hardening function (PWH) gives reasonably asseptable results. Please see the attached slides. You could now see how realistic the plastic deformation is localizing heavily near the left symmetric face. The earlier problem with PWH has been bypassed by disallowing certain spurious states just after the yield. The results are looking good (with experiments and Ansys) at small strains, however showing a strange behaviour afterwards. There seems to be a stress drop, but with a linear variation, which looks pretty odd. Conversion to true Stress/Pl.Strain input hardening parameters at first place does not produce agreeable results. I would be extremely pleased if you could let me know thoughts on this behaviour.\nPS. I am yet to perform a comparison with ANSYS at present due to some issues. Will let you know as soon as it is done.\nMoose_FEA_UG_16Nov2020.pptx\nKind regards,\nArun",
+          "url": "https://github.com/idaholab/moose/discussions/16199",
+          "updatedAt": "2022-06-10T14:44:53Z",
+          "publishedAt": "2020-11-16T12:18:42Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@jiangwen84 @abarun22 can I close this? I imagine you guys had other occasions to talk about this over the last year",
+                  "url": "https://github.com/idaholab/moose/discussions/16199#discussioncomment-1828709",
+                  "updatedAt": "2022-06-10T14:44:54Z",
+                  "publishedAt": "2021-12-16T22:07:18Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "abarun22"
+                          },
+                          "bodyText": "Yes please, this can be considered closed now.",
+                          "url": "https://github.com/idaholab/moose/discussions/16199#discussioncomment-1829302",
+                          "updatedAt": "2022-06-10T14:44:54Z",
+                          "publishedAt": "2021-12-16T23:14:36Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "methods for improving mesh quality",
+          "author": {
+            "login": "japresa"
+          },
+          "bodyText": "I'm currently creating a geometry for my code with trelis/cubit. However, I'm stuck and am unable to improve the mesh quality at the corners of my geometry. (Code won't run due to this)\nI've tried using the pillowing and general refinement methods at the geometry's side-surfaces & at the walls of the holes near the poor quality sections. However, any mesh-improvement methods I try seem to move the deformities elsewhere.\nAny tips on how to improve mesh quality?",
+          "url": "https://github.com/idaholab/moose/discussions/19615",
+          "updatedAt": "2021-12-20T01:56:33Z",
+          "publishedAt": "2021-12-13T05:10:35Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYou can use MOOSE to smooth the meshes.\nOnce your mesh is loaded by a FileMeshGenerator, then use a smooth mesh generator\nhttps://mooseframework.inl.gov/source/meshgenerators/SmoothMeshGenerator.html\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/19615#discussioncomment-1798809",
+                  "updatedAt": "2021-12-13T19:53:34Z",
+                  "publishedAt": "2021-12-13T14:59:43Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "japresa"
+                          },
+                          "bodyText": "Going to try this. If this doesn't work, are there any other methods you know of?",
+                          "url": "https://github.com/idaholab/moose/discussions/19615#discussioncomment-1802535",
+                          "updatedAt": "2021-12-14T02:18:23Z",
+                          "publishedAt": "2021-12-14T02:18:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "if very few nodes (like 10 or so) are problematic, you can move them one by one with https://mooseframework.inl.gov/source/meshgenerators/MoveNodeGenerator.html\nFor a mesh like this one (array of cylinders in a hex lattice), you could probably re-generate it using the moose mesh generators in the Reactor module\nhttps://mooseframework.inl.gov/modules/reactor/index.html",
+                          "url": "https://github.com/idaholab/moose/discussions/19615#discussioncomment-1828932",
+                          "updatedAt": "2021-12-16T22:37:59Z",
+                          "publishedAt": "2021-12-16T22:37:59Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Error during ghosting....",
+          "author": {
+            "login": "makeclean"
+          },
+          "bodyText": "I have a large(ish) problem running, coupled thermo-mechanical problem running well. I added contact, and now when I run the problem it fails during re-initing during ghosting\nBuilding mesh ......                                                                       [  7.37 s]\nCaching mesh information                                                                   [  1.83 s]\nCaching mesh information                                                                   [  1.80 s]\nBuilding node to element map                                                               [  1.00 s]\nCaching mesh information .                                                                 [  2.01 s]\nCaching mesh information                                                                   [  1.85 s]\nInitializing equation system ................................                              [ 33.81 s]\nCaching mesh information .                                                                 [  2.12 s]\nCaching mesh information                                                                   [  1.94 s]\nCaching mesh information                                                                   [  1.91 s]\n\nFramework Information:\nMOOSE Version:           git commit 5a5d066cb8 on 2021-03-10\nLibMesh Version:         ed76100f41840c34c146dd0a7f1ff5410370b489\nPETSc Version:           3.14.2\nSLEPc Version:           3.14.0\nCurrent Time:            Mon Sep 27 21:16:00 2021\nExecutable Timestamp:    Thu Mar 11 16:12:36 2021\n\nParallelism:\n  Num Processors:          30\n  Num Threads:             56\n\nMesh: \n  Parallel Type:           distributed (pre-split)\n  Mesh Dimension:          3\n  Spatial Dimension:       3\n  Nodes:                   \n    Total:                 6758745\n    Local:                 210785\n  Elems:                   \n    Total:                 36069737\n    Local:                 1202637\n  Num Subdomains:          5\n  Num Partitions:          1\n  Partitioner:             parmetis\n\nNonlinear System:\n  Num DOFs:                27034980\n  Num Local DOFs:          843140\n  Variables:               { \"temp\" \"disp_x\" \"disp_y\" \"disp_z\" } \n  Finite Element Types:    \"LAGRANGE\" \n  Approximation Orders:    \"FIRST\" \n\nAuxiliary System:\n  Num DOFs:                1050505106\n  Num Local DOFs:          34938546\n  Variables:               { \"temp_in_C\" \"radiation_flux\" } { \"stress_xx_nodal\" \"strain_xx_nodal\" \"stress_yy_nodal\" \n                             \"strain_yy_nodal\" \"stress_zz_nodal\" \"strain_zz_nodal\" \"vonmises_nodal\" } { \"penetration\" \n                             \"contact_pressure\" \"nodal_area_leftright\" \"paired_temp\" } \n  Finite Element Types:    \"LAGRANGE\" \"MONOMIAL\" \"LAGRANGE\" \n  Approximation Orders:    \"FIRST\" \"FIRST\" \"FIRST\" \n\nExecution Information:\n  Executioner:             Transient\n  TimeStepper:             ConstantDT\n  Solver Mode:             NEWTON\n  MOOSE Preconditioner:    SMP (auto)\n\nProjecting initial condition ...                                                           [  4.41 s]\nComputing initial stateful property values ..........................                      [ 27.87 s]\nCopying soultions back .                                                                   [  2.34 s]\nUpdating geometric search objects                                                          [  1.00 s]\nReiniting because of ghosting ............................................................\n..........................................................................................\n..........................................................................................\n..........................................................................................\n.......................................................--------------------------------------------------------------------------\nPrimary job  terminated normally, but 1 process returned\na non-zero exit code. Per user-direction, the job has been aborted.\n--------------------------------------------------------------------------\n--------------------------------------------------------------------------\nWARNING: Open MPI failed to TCP connect to a peer MPI process.  This\nshould not happen.\n\nYour Open MPI job may now fail.\n\n  Local host: cpu-p-31\n  PID:        184555\n  Message:    connect() to 10.43.161.29:1024 failed\n  Error:      Operation now in progress (115)\n--------------------------------------------------------------------------\n--------------------------------------------------------------------------\nAn MPI communication peer process has unexpectedly disconnected.  This\nusually indicates a failure in the peer process (e.g., a crash or\notherwise exiting without calling MPI_FINALIZE first).\n\nAlthough this local MPI process will likely now behave unpredictably\n(it may even hang or crash), the root cause of this problem is the\nfailure of the peer -- that is what you need to investigate.  For\nexample, there may be a core file that you can examine.  More\ngenerally: such peer hangups are frequently caused by application bugs\nor other external events.\n\n  Local host: cpu-p-8\n  Local PID:  170943\n  Peer host:  cpu-p-37\n--------------------------------------------------------------------------\n.--------------------------------------------------------------------------\nmpirun noticed that process rank 20 with PID 210143 on node cpu-p-28 exited on signal 11 (Segmentation fault).\n--------------------------------------------------------------------------\n[cpu-p-8:170901] 3 more processes have sent help message help-mpi-btl-tcp.txt / client connect fail\n[cpu-p-8:170901] Set MCA parameter \"orte_base_help_aggregate\" to 0 to see all help / error messages\n[cpu-p-8:170901] 3 more processes have sent help message help-mpi-btl-tcp.txt / peer hung up\nslurmstepd: error: task_p_post_term: rmdir(/sys/fs/cgroup/cpuset/slurm46950214/slurm46950214.4294967294_0) failed Device or resource busy\n\nIf it helps/matters, the mesh is pre-split first, this happens whether or not I used MPI or threads. I've tried adding more memory per CPU and a range of other things, any and all suggestions appreciated :)",
+          "url": "https://github.com/idaholab/moose/discussions/18941",
+          "updatedAt": "2022-08-03T19:55:24Z",
+          "publishedAt": "2021-09-27T20:41:49Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "I would first run it in devel mode to see that this code doesn't hit any asserts, which check for things that are not implemented or that are not supposed to happen.\nThen I would run it in debug mode and get a backtrace to see where the crash came from\nI would also update MOOSE to use the new perf_graph live print and get more info on memory consumption.\nMemory might really be the issue, with 27M dofs per rank. Have you checked that are not running out? (even just using top)\nThe 56 threads might be too much for some modules. Most of MOOSE will be happier with no threads and full MPI solves (though it should not crash). If the mesh is distributed and pre-split then the memory consumption will be the same as for threads.",
+                  "url": "https://github.com/idaholab/moose/discussions/18941#discussioncomment-1392806",
+                  "updatedAt": "2022-08-03T19:55:25Z",
+                  "publishedAt": "2021-09-27T21:28:27Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "makeclean"
+                          },
+                          "bodyText": "I'm not sure it isn't memory, but merely adding contact would have to add an awful lot more memory, seeing as it runs fine without. I'll go through the stages you suggest. I've run my other calcs with pure MPI, but just added threads to see if it majorly impacted memory usage",
+                          "url": "https://github.com/idaholab/moose/discussions/18941#discussioncomment-1392922",
+                          "updatedAt": "2022-08-03T19:55:26Z",
+                          "publishedAt": "2021-09-27T21:59:12Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "makeclean"
+                          },
+                          "bodyText": "Ok, Ive rebuilt, FYI this it the regular (not dbg or devel) run but just to show progress, today hopefully I'll get a debug or devel run working\nSetting Up\n  Finished Deleting Remote Elements                                             \n         [  9.01 s] [    5 MB]\n  Initializing\n    Updating Because Mesh Changed\n      Updating Mesh...                                                          \n         [ 22.66 s] [   25 MB]\n    Finished Updating Because Mesh Changed                                      \n         [ 22.68 s] [   29 MB]\n\n      Updating Mesh.....                                                        \n         [ 42.37 s] [   22 MB]\n    Finished Updating Because Mesh Changed                                               [ 42.39 s] [   26 MB]\n    Initializing Equation Systems...........                                             [ 71.95 s] [  152 MB]\n    Initializing Displaced Equation System............                                   [ 70.56 s] [   86 MB]\n...                                                                   [ 25.01 s] [    7 MB]\n    Finished Updating Because Mesh Changed                                               [ 25.02 s] [    7 MB]\n  Finished Initializing                                                                  [233.13 s] [  397 MB]\nFinished Setting Up                                                                      [244.08 s] [  461 MB]\nFramework Information:\nMOOSE Version:           git commit b5a350860f on 2021-09-28\nLibMesh Version:         aebb5a5c0e1f6d8cf523a720e19f70a6d17c0236\nPETSc Version:           3.15.1\nSLEPc Version:           3.15.1\nCurrent Time:            Wed Sep 29 01:59:53 2021\nExecutable Timestamp:    Tue Sep 28 17:52:04 2021\n\nParallelism:\n  Num Processors:          840\n  Num Threads:             1\n\nMesh: \n  Parallel Type:           distributed (pre-split)\n  Mesh Dimension:          3\n  Spatial Dimension:       3\n  Nodes:                   \n    Total:                 6758745\n    Local:                 8292\n    Min/Max/Avg:           6259/10934/8046\n  Elems:                   \n    Total:                 36069737\n    Local:                 42859\n    Min/Max/Avg:           41689/44221/42940\n  Num Subdomains:          5\n  Num Partitions:          1\n  Partitioner:             parmetis\n\nNonlinear System:\n  Num DOFs:                27034980\n  Num Local DOFs:          33168\n  Variables:               { \"temp\" \"disp_x\" \"disp_y\" \"disp_z\" } \n  Finite Element Types:    \"LAGRANGE\" \n  Approximation Orders:    \"FIRST\" \n\nAuxiliary System:\n  Num DOFs:                1050505106\n  Num Local DOFs:          1249804\n  Variables:               { \"temp_in_C\" \"radiation_flux\" } { \"stress_xx_nodal\" \"strain_xx_nodal\" \"stress_yy_nodal\" \n                             \"strain_yy_nodal\" \"stress_zz_nodal\" \"strain_zz_nodal\" \"vonmises_nodal\" } { \"penetration\" \n                             \"contact_pressure\" \"nodal_area_leftright\" \"paired_temp\" } \n  Finite Element Types:    \"LAGRANGE\" \"MONOMIAL\" \"LAGRANGE\" \n  Approximation Orders:    \"FIRST\" \"FIRST\" \"FIRST\" \n\nExecution Information:\n  Executioner:             Transient\n  TimeStepper:             ConstantDT\n  Solver Mode:             NEWTON\n  MOOSE Preconditioner:    SMP (auto)\n\n\n    Reinitializing Because of Geometric Search Objects...............................................------------------------------------------------\n--------------------------\nPrimary job  terminated normally, but 1 process returned\na non-zero exit code. Per user-direction, the job has been aborted.\n--------------------------------------------------------------------------\n--------------------------------------------------------------------------\nAn MPI communication peer process has unexpectedly disconnected.  This\nusually indicates a failure in the peer process (e.g., a crash or\notherwise exiting without calling MPI_FINALIZE first).\n\nAlthough this local MPI process will likely now behave unpredictably\n(it may even hang or crash), the root cause of this problem is the\nfailure of the peer -- that is what you need to investigate.  For\nexample, there may be a core file that you can examine.  More\ngenerally: such peer hangups are frequently caused by application bugs\nor other external events.\n\n  Local host: cpu-p-309\n  Local PID:  75474\n  Peer host:  cpu-p-575\n--------------------------------------------------------------------------\n.--------------------------------------------------------------------------\nmpirun noticed that process rank 681 with PID 154172 on node cpu-p-515 exited on signal 11 (Segmentation fault).\n--------------------------------------------------------------------------\n[cpu-p-65:278580] 176 more processes have sent help message help-mpi-btl-tcp.txt / peer hung up\n[cpu-p-65:278580] Set MCA parameter \"orte_base_help_aggregate\" to 0 to see all help / error messages\n7 total processes killed (some possibly by mpirun during cleanup)\nslurmstepd: error: task_p_post_term: rmdir(/sys/fs/cgroup/cpuset/slurm46974006/slurm46974006.4294967294_0) failed Device or resource busy",
+                          "url": "https://github.com/idaholab/moose/discussions/18941#discussioncomment-1400345",
+                          "updatedAt": "2022-08-03T19:55:38Z",
+                          "publishedAt": "2021-09-29T06:14:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "makeclean"
+                          },
+                          "bodyText": "Ok this ones a little weird, I can build dbg fine, but I can't build devel;\nmake -j8 METHOD=devel\nUsing HIT from /home/dc-davi4/rds/rds-ukaea-ap001/moose_dev/moose/framework/contrib/hit\nLinking Library /home/dc-davi4/rds/rds-ukaea-ap001/moose_dev/moose/framework/contrib/pcre/libpcre-devel.la...\nLinking Library /home/dc-davi4/rds/rds-ukaea-ap001/moose_dev/moose/framework/contrib/gtest/libgtest.la...\nLinking Library /home/dc-davi4/rds/rds-ukaea-ap001/moose_dev/moose/framework/contrib/hit/libhit-devel.la...\nCompiling C++ (in devel mode) /home/dc-davi4/rds/rds-ukaea-ap001/moose_dev/moose/modules/chemical_reactions/build/unity_src/actions_Unity.C...\nCompiling C++ (in devel mode) /home/dc-davi4/rds/rds-ukaea-ap001/moose_dev/moose/modules/chemical_reactions/build/unity_src/materials_Unity.C...\nCompiling C++ (in devel mode) /home/dc-davi4/rds/rds-ukaea-ap001/moose_dev/moose/modules/chemical_reactions/src/base/ChemicalReactionsApp.C...\nCompiling C++ (in devel mode) /home/dc-davi4/rds/rds-ukaea-ap001/moose_dev/moose/modules/external_petsc_solver/build/unity_src/timesteppers_Unity.C...\nCompiling C++ (in devel mode) /home/dc-davi4/rds/rds-ukaea-ap001/moose_dev/moose/modules/external_petsc_solver/build/unity_src/mesh_Unity.C...\n/usr/bin/ld: cannot find -lmesh_devel\n/usr/bin/ld: cannot find -ltimpi_devel\n/usr/bincollect2: error: ld returned 1 exit status\n/ld: cannot find -lmesh_devel\n/usr/bin/ld: cannot find -ltimpi_devel\ncollect2: error: ld returned 1 exit status\n/usr/bin/ld: cannot find -lmesh_devel\n/usr/bin/ld: cannot find -ltimpi_devel\ncollect2: error: ld returned 1 exit status\nmake: *** [/home/dc-davi4/rds/rds-ukaea-ap001/moose_dev/moose/framework/contrib/hit/libhit-devel.la] Error 1\nmake: *** Waiting for unfinished jobs....\nmake: *** [/home/dc-davi4/rds/rds-ukaea-ap001/moose_dev/moose/framework/contrib/gtest/libgtest.la] Error 1\nmake: *** [/home/dc-davi4/rds/rds-ukaea-ap001/moose_dev/moose/framework/contrib/pcre/libpcre-devel.la] Error 1\n\nAny ideas?",
+                          "url": "https://github.com/idaholab/moose/discussions/18941#discussioncomment-1400385",
+                          "updatedAt": "2022-08-03T19:56:14Z",
+                          "publishedAt": "2021-09-29T06:23:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "makeclean"
+                          },
+                          "bodyText": "Am I being dim, should I be rebuilding the entire stack with METHOD=devel?",
+                          "url": "https://github.com/idaholab/moose/discussions/18941#discussioncomment-1400453",
+                          "updatedAt": "2022-10-05T08:43:30Z",
+                          "publishedAt": "2021-09-29T06:34:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "loganharbour"
+                          },
+                          "bodyText": "To build with devel you need it in METHODS when you build libmesh. Something like:\nMETHODS=\u201copt devel dbg\u201d /path/to/moose/scripts/update_and_rebuild_libmesh.sh",
+                          "url": "https://github.com/idaholab/moose/discussions/18941#discussioncomment-1402784",
+                          "updatedAt": "2022-10-05T08:43:30Z",
+                          "publishedAt": "2021-09-29T14:01:27Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "makeclean"
+                          },
+                          "bodyText": "Ok, we have liftoff, but Im none the wiser\nInitializing\n    Updating Because Mesh Changed\n      Updating Mesh..                                                                    [ 15.73 s] [   25 MB]\n    Finished Updating Because Mesh Changed                                               [ 15.77 s] [   29 MB]\n......                                                                [ 40.87 s] [   22 MB]\n    Finished Updating Because Mesh Changed                                               [ 40.91 s] [   26 MB]\n    Initializing Equation Systems............                                            [ 75.58 s] [  151 MB]\n    Initializing Displaced Equation System...........                                    [ 66.40 s] [   88 MB]\n..                                                                    [ 18.31 s] [    6 MB]\n    Finished Updating Because Mesh Changed                                               [ 18.34 s] [    6 MB]\n  Finished Initializing                                                                  [217.63 s] [  398 MB]\nFinished Setting Up                                                                      [235.30 s] [  463 MB]\nFramework Information:\nMOOSE Version:           git commit b657ae26aa on 2021-09-29\nLibMesh Version:         aebb5a5c0e1f6d8cf523a720e19f70a6d17c0236\nPETSc Version:           3.15.1\nSLEPc Version:           3.15.1\nCurrent Time:            Thu Sep 30 00:35:14 2021\nExecutable Timestamp:    Wed Sep 29 21:32:31 2021\n\nParallelism:\n  Num Processors:          840\n  Num Threads:             1\n\nMesh: \n  Parallel Type:           distributed (pre-split)\n  Mesh Dimension:          3\n  Spatial Dimension:       3\n  Nodes:                   \n    Total:                 6758745\n    Local:                 8292\n    Min/Max/Avg:           6259/10934/8046\n  Elems:                   \n    Total:                 36069737\n    Local:                 42859\n    Min/Max/Avg:           41689/44221/42940\n  Num Subdomains:          5\n  Num Partitions:          1\n  Partitioner:             parmetis\n\nNonlinear System:\n  Num DOFs:                27034980\n  Num Local DOFs:          33168\n  Variables:               { \"temp\" \"disp_x\" \"disp_y\" \"disp_z\" } \n  Finite Element Types:    \"LAGRANGE\" \n  Approximation Orders:    \"FIRST\" \n\nAuxiliary System:\n  Num DOFs:                1050505106\n  Num Local DOFs:          1249804\n  Variables:               { \"temp_in_C\" \"radiation_flux\" } { \"stress_xx_nodal\" \"strain_xx_nodal\" \"stress_yy_nodal\" \n                             \"strain_yy_nodal\" \"stress_zz_nodal\" \"strain_zz_nodal\" \"vonmises_nodal\" } { \"penetration\" \n                             \"contact_pressure\" \"nodal_area_leftright\" \"paired_temp\" } \n  Finite Element Types:    \"LAGRANGE\" \"MONOMIAL\" \"LAGRANGE\" \n  Approximation Orders:    \"FIRST\" \"FIRST\" \"FIRST\" \n\nExecution Information:\n  Executioner:             Transient\n  TimeStepper:             ConstantDT\n  Solver Mode:             NEWTON\n  MOOSE Preconditioner:    SMP (auto)\n\n\n    Finished Projecting Initial Solutions                                                [  7.47 s] [    0 MB]\n    Reinitializing Because of Geometric Search Objects..........................................................Assertion `_elements[i]' failed.\n\n[709] /home/dc-davi4/rds/rds-ukaea-ap001/moose_dev/moose/scripts/../libmesh/src/mesh/distributed_mesh.C, line 470, compiled Sep 29 2021 at 20:50:11\nAssertion `_elements[i]' failed.\n\n[801] /home/dc-davi4/rds/rds-ukaea-ap001/moose_dev/moose/scripts/../libmesh/src/mesh/distributed_mesh.C, line 470, compiled Sep 29 2021 at 20:50:11\nAssertion `_elements[i]' failed.\n\n[802] /home/dc-davi4/rds/rds-ukaea-ap001/moose_dev/moose/scripts/../libmesh/src/mesh/distributed_mesh.C, line 470, compiled Sep 29 2021 at 20:50:11\nAssertion `_elements[i]' failed.\n\n[807] /home/dc-davi4/rds/rds-ukaea-ap001/moose_dev/moose/scripts/../libmesh/src/mesh/distributed_mesh.C, line 470, compiled Sep 29 2021 at 20:50:11\nAssertion `_elements[i]' failed.\n\nAssertion `_elements[i]' failed.",
+                          "url": "https://github.com/idaholab/moose/discussions/18941#discussioncomment-1409665",
+                          "updatedAt": "2022-10-05T08:43:37Z",
+                          "publishedAt": "2021-09-30T15:08:40Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "ah this is unfortunate.\nCan you run this inside a debugger with a breakpoint on MPI_Abort ?\nThis page should help\nhttps://mooseframework.inl.gov/application_development/debugging.html#!",
+                          "url": "https://github.com/idaholab/moose/discussions/18941#discussioncomment-1410060",
+                          "updatedAt": "2022-10-02T15:50:49Z",
+                          "publishedAt": "2021-09-30T16:13:50Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "makeclean"
+                          },
+                          "bodyText": "In debug mode, the calculation takes more than 36 hours to start, just building the initial mesh so never gets to where it needs to be. Im going to try and make an MVP that has the same features.",
+                          "url": "https://github.com/idaholab/moose/discussions/18941#discussioncomment-1423665",
+                          "updatedAt": "2022-10-02T15:50:49Z",
+                          "publishedAt": "2021-10-04T09:06:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "that is pretty slow. Devel mode should be a little faster.\nWhen hitting a libmesh assert, we often may not need the full backtrace with code lines either btw, since we know which line crashes and can trace it back manually",
+                          "url": "https://github.com/idaholab/moose/discussions/18941#discussioncomment-1427259",
+                          "updatedAt": "2022-10-02T15:50:49Z",
+                          "publishedAt": "2021-10-04T23:16:50Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Any news on this? devel-build should really be faster. And now that I think of it, since we have the final line, even an opt build backtrace could be workable",
+                          "url": "https://github.com/idaholab/moose/discussions/18941#discussioncomment-1498922",
+                          "updatedAt": "2022-10-02T15:50:50Z",
+                          "publishedAt": "2021-10-18T22:14:46Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Visualising Peridynamics Simulation Results",
+          "author": {
+            "login": "ABallisat"
+          },
+          "bodyText": "Hello all,\nI am starting to use the Peridynamics module and was wondering what tools people use for visualising the results? I have tried Paraview and Peacock but they show the mesh as a connected grid as in the attached image. I was hoping to be able see the individual particles, as in the image on the Peridynamics module main page. I am probably missing something obvious but any help greatly appreciated!\nAlex",
+          "url": "https://github.com/idaholab/moose/discussions/16496",
+          "updatedAt": "2022-07-06T06:42:17Z",
+          "publishedAt": "2020-12-15T15:17:59Z",
+          "category": {
+            "name": "Q&A Tools"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nPeople use paraview and peacock for visualization mostly.\nTo achieve an image like the peridynamics module one, you can use the 'points' in paraview. They will be colored based on the value of the function visualized. And there size can be customized.\nI think that image is still showing the mesh, but restricted to the solid phase, and deformed by creep and all the other phenomena from irradiation.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/16496#discussioncomment-1828694",
+                  "updatedAt": "2022-07-06T06:42:54Z",
+                  "publishedAt": "2021-12-16T22:04:22Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

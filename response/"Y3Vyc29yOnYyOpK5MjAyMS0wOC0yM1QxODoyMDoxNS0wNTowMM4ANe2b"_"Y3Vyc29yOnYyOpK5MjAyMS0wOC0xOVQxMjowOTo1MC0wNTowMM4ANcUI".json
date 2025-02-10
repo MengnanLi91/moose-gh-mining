@@ -1,0 +1,1095 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMS0wOC0xOVQxMjowOTo1MC0wNTowMM4ANcUI"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Unable to use Neumann BCs in 3D",
+          "author": {
+            "login": "richmondodufisan"
+          },
+          "bodyText": "Hi all, I'm having trouble applying Neumann BCs on 3D meshes in MOOSE. I initially thought the problem was with the meshes I used previously, which were created by gmsh, but I tried this other mesh made with cubit (both as .inp files). FunctionDirichletBCs work fine (for BOTH meshes), but Neumann conditions give the following error:\n*** ERROR ***\n/home/richmondodufisan/projects/farm/Concrete/test_input2_3D.i:152: (BCs/load/boundary):\n    the following side set ids do not exist on the mesh: 3\n\n    MOOSE distinguishes between \"node sets\" and \"side sets\" depending on whether\n    you are using \"Nodal\" or \"Integrated\" BCs respectively. Node sets corresponding\n    to your side sets are constructed for you by default.\n\n    Try setting \"Mesh/construct_side_list_from_node_list=true\" if you see this error.\n    Note: If you are running with adaptivity you should prefer using side sets.\n\nEven after adding that extra argument to the Mesh block, I still get the same error. Are there any leads for the possible cause of the error? They're both sent to MOOSE as .inp files.\nI also tried exporting the gmsh mesh as a .vtu mesh. With that one, I got a different error:\n*** ERROR ***\nERROR: negative Jacobian -5.88862e-07 at point (x,y,z)=( 0.34306, 0.326145, -0.000642792) in element 41303\n\nThen I tried using the --mesh-only argument to run the file that I saw in a different discussion. The .inp meshes worked fine and showed the Mesh Information, but the .vtu mesh gave an error:\n*** ERROR ***\nError: Exodus requires all elements with a given subdomain ID to be the same type.\nCan't write both TET4 and QUAD4 in the same block!\n\nWhich is unexpected, because all elements are Quad elements. Again, I want to stress that all meshes worked completely fine with Dirichlet conditions. Also, the 2D meshes I create with gmsh work with Dirichlet and Neumann conditions. My issue is only with 3D meshes. Here are the mesh files used:\nmesh_files.zip\nIn case it's necessary the gmsh mesh script is saved as a .geo_unrolled file there too.",
+          "url": "https://github.com/idaholab/moose/discussions/18668",
+          "updatedAt": "2022-07-01T03:12:39Z",
+          "publishedAt": "2021-08-20T22:04:51Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThe side set error can happen for a number of reasons, usually mispelling between the 'boundary=' field and the boundary name in the mesh. Does the sideset appear when you open the mesh in paraview?\nThe Jacobian error is likely because you have an inverted or very flat element. I had a look at your mesh in Paraview and some elements have rather high quality metrics.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/18668#discussioncomment-1216942",
+                  "updatedAt": "2022-07-01T03:12:56Z",
+                  "publishedAt": "2021-08-21T17:34:29Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "richmondodufisan"
+                          },
+                          "bodyText": "Hi,\nThe \"boundary=boundary_name\" isn't misspelled, the error only comes after changing \"Dirichlet\" to \"Neumann\" in the \"type=\" field (with Dirichlet it runs fine).\nWe managed to figure out the problem- we needed to slightly modify the problem to run with MOOSE. When we defined the nodeset as two rows of nodes, for some reason MOOSE had trouble converting to sidesets. But when we used 4 rows then it worked fine. This is with the .inp files created by cubit.",
+                          "url": "https://github.com/idaholab/moose/discussions/18668#discussioncomment-1224006",
+                          "updatedAt": "2022-07-01T03:12:56Z",
+                          "publishedAt": "2021-08-23T18:55:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "ok that's odd. Could you please paste the 2 row and 4 row setup here? It's probably a parsing issue of some sort",
+                          "url": "https://github.com/idaholab/moose/discussions/18668#discussioncomment-1224190",
+                          "updatedAt": "2022-07-01T03:12:57Z",
+                          "publishedAt": "2021-08-23T19:40:43Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "richmondodufisan"
+                          },
+                          "bodyText": "beam.zip\nThese are the two meshes",
+                          "url": "https://github.com/idaholab/moose/discussions/18668#discussioncomment-1224436",
+                          "updatedAt": "2022-07-01T03:13:08Z",
+                          "publishedAt": "2021-08-23T21:02:05Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Output inteval flag seems not work if adaptivity mesh is turned on",
+          "author": {
+            "login": "ZhigangPu"
+          },
+          "bodyText": "Hi all, I am new to MOOSE and I have trouble dealing with output when I turn on the adaptivity mesh refining. My disk capacity is limited so I don't want MOOSE to output results every timestep. It's fine when I don't use adaptivity mesh refining(AMR), there is only one exodus output file and 'inteval' flag works. But when I turn on AMR, MOOSE will output a exodus file every step, whose suffix is '.e-sxxx'(xxx is timestep number). I wonder if there is some flags that can turn off this. For you better reference, below is my configuration for AMR and output.\nThanks in advance!\n\n[./Adaptivity]\ninitial_adaptivity = 6 # Number of times mesh is adapted to initial condition\nrefine_fraction = 0.7 # Fraction of high error that will be refined\ncoarsen_fraction = 0.1 # Fraction of low error that will coarsened\nmax_h_level = 7 # Max number of refinements used, starting from initial mesh (before uniform refinement)\nweight_names = 'c   eta'\nweight_values = '1  1'\ninteval = 5\n[../]\n[Outputs]\n[./exodus]\ntype = Exodus\ninteval = 3\nexecute_on = 'TIMESTEP_END'\n[../]\n[./my_checkpoint]\ntype=Checkpoint\nnum_files = 4\ninterval = 30\n[../]\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/18670",
+          "updatedAt": "2021-08-23T04:14:28Z",
+          "publishedAt": "2021-08-21T02:38:23Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\ninterval is misspelled in the Exodus block. Could that be the problem?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/18670#discussioncomment-1215150",
+                  "updatedAt": "2021-08-21T06:16:07Z",
+                  "publishedAt": "2021-08-21T06:15:57Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ZhigangPu"
+                          },
+                          "bodyText": "Hello Guillaume\nThanks for pointing out the typo. I've changed the typo and re-run, but things are the same.\nThanks anyway!\nzhigang",
+                          "url": "https://github.com/idaholab/moose/discussions/18670#discussioncomment-1215749",
+                          "updatedAt": "2021-08-21T12:46:03Z",
+                          "publishedAt": "2021-08-21T12:46:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "did you catch the typo in the [Adaptivity] block as well? Not sure if you were trying to limit adaptivity to limit output here\nIf interval does not work for your case, I dont see any other parameters that would reduce the number outputs in a similar way.\nI'd have to look in the code to see why interval doesnt work",
+                          "url": "https://github.com/idaholab/moose/discussions/18670#discussioncomment-1216909",
+                          "updatedAt": "2021-08-21T17:16:33Z",
+                          "publishedAt": "2021-08-21T17:16:33Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ZhigangPu"
+                          },
+                          "bodyText": "Oh, I think I get the point.\nI thought the suffix of the output exodus file stands for the step. For example, 'xxx.e-s002' stands for time step 002, but actually it is not so. It only means that this is a second output file, the real time step it represents may be 3, 10, 20, whatever depending on my interval setting. But to be honest, I think it is a little bit misleading. I think I will try to find ways to change the naming rule.\nAnd I don't need to add inteval flags in the [Adaptivity] block, inteval in [Output] block is enough.\nThanks!\nzhigang",
+                          "url": "https://github.com/idaholab/moose/discussions/18670#discussioncomment-1220175",
+                          "updatedAt": "2021-08-23T03:03:42Z",
+                          "publishedAt": "2021-08-23T02:59:11Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to simply iterate over nodes/elements to compute a source term used in a Kernel?",
+          "author": {
+            "login": "lgab13"
+          },
+          "bodyText": "Hi Moose experts,\nHow iterate over the elements/nodes of the mesh to compute, at the beginning or at the end of each time step, a  source term that depends on one or more fields and that is used in a Kernel?\nPlease consider the following (absurd) example\nfor(unsigned_int n=0; n<nnodes;n++){\n\n   MySourceTerm[n] = sqrt(Temperature[n]) ;   \n\n}\n\nWhat is the best way to do it (AuxKernels, Kernels, UserObject,...) ?\nDo you have any examples?\nIt is likely that this loop should be performed at a higher level but I did not find these explanations in the documentation.\nIs there a document describing a generic \"solving tree\" with the name of the methods and the order in which they are called at runtime:\npreprocessing()?\ninitialize() ?\nexecute() ?\npostprocessing()?\nfinalize()?\nBest regards,\nlg",
+          "url": "https://github.com/idaholab/moose/discussions/18675",
+          "updatedAt": "2022-10-20T18:38:09Z",
+          "publishedAt": "2021-08-22T00:38:49Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nI would add an AuxVariable source, to the simulation, and a new AuxKernel that computes the custom source.\nIf the expression of source is simple, like sqrt(T), you can use a ParsedAux for this purpose\nFor specifying beginning/end of time step for computing the new source, you can use the execute_on = TIMESTEP_BEGIN / END parameter of the AuxKernel.\nThe Kernel that uses the source in the equation can then take it as a CoupledVar parameter. Note that if this kernel is a simple constant * variable term there are already pre-implemented kernels for this such as CoupledForce\nBest,\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/18675#discussioncomment-1220097",
+                  "updatedAt": "2022-11-04T14:22:36Z",
+                  "publishedAt": "2021-08-23T02:21:50Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Problem in installing atom",
+          "author": {
+            "login": "aaelmeli"
+          },
+          "bodyText": "Hi\nI downloaded atom for windows from the link provided in MOOS's link. I installed it using the downloaded file and I could open it. However, I do not know how to do this command select _Atom->Install Shell Commands_ shown in the link above.\nAnd when I do atom in the terminal, I am getting this message\n\n(moose) aaelmeli@CCEE-DT-284:~/projects$ atom\n'\\wsl$\\Ubuntu-20.04\\home\\aaelmeli\\projects'\nCMD.EXE was started with the above path as the current directory.\nUNC paths are not supported.  Defaulting to Windows directory.\n\nso, can you please help me to fix this?\nthank you.\nAbdo.",
+          "url": "https://github.com/idaholab/moose/discussions/18653",
+          "updatedAt": "2022-06-23T15:13:24Z",
+          "publishedAt": "2021-08-20T06:55:24Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "dschwen"
+                  },
+                  "bodyText": "Launch Atom from the Windows Start menu",
+                  "url": "https://github.com/idaholab/moose/discussions/18653#discussioncomment-1214821",
+                  "updatedAt": "2022-06-23T15:13:43Z",
+                  "publishedAt": "2021-08-21T02:33:50Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aaelmeli"
+                          },
+                          "bodyText": "Thank you, dschwen, for the reply.\nIn this case, I think I have already done that. However, I am still getting the above error message (in the original post) when trying to launch it from the terminal using atom . I think it has to be something with the path.",
+                          "url": "https://github.com/idaholab/moose/discussions/18653#discussioncomment-1216514",
+                          "updatedAt": "2022-06-23T15:13:45Z",
+                          "publishedAt": "2021-08-21T14:43:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "I remember in windows you can open a folder, then right click, and the context menu will have an option to let you open the current directory in atom. Can you try that?\nThe tutorial on the moose website is specific to MacOS I believe, while it is similar in Linux. But not for windows.",
+                          "url": "https://github.com/idaholab/moose/discussions/18653#discussioncomment-1216732",
+                          "updatedAt": "2022-06-23T15:13:45Z",
+                          "publishedAt": "2021-08-21T15:58:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dschwen"
+                          },
+                          "bodyText": "In this case, I think I have already done that.\n\nGood\n\nHowever, I am still getting the above error message (in the original post) when trying to launch it from the terminal using atom.\n\nThen don't do that. :-D",
+                          "url": "https://github.com/idaholab/moose/discussions/18653#discussioncomment-1217156",
+                          "updatedAt": "2022-06-23T15:13:52Z",
+                          "publishedAt": "2021-08-21T19:23:59Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Solving Peridynamics Problem with Retained FE Mesh",
+          "author": {
+            "login": "ppandit95"
+          },
+          "bodyText": "Dear MOOSE Community\nI was trying to run a test application with retain_fe_mesh option as \"true\" but I was not able to solve the problem and ran into error as -\n*** ERROR ***\nThe following error occurred in the object \"mesh\", of type \"PeridynamicsMesh\".\nQuerying node ID exceeds the available PD node IDs!\nBut was able to vizualise the mesh with '--mesh-only' option while executing . So my querry iswhather can one solve the problem with retaining FE mesh or not .\nRegards\nPushkar",
+          "url": "https://github.com/idaholab/moose/discussions/18582",
+          "updatedAt": "2022-07-14T21:07:25Z",
+          "publishedAt": "2021-08-11T16:54:39Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@dschwen not sure who to tag on peridynamics",
+                  "url": "https://github.com/idaholab/moose/discussions/18582#discussioncomment-1214166",
+                  "updatedAt": "2022-07-14T21:08:36Z",
+                  "publishedAt": "2021-08-20T20:12:04Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "actually, @hchen139",
+                          "url": "https://github.com/idaholab/moose/discussions/18582#discussioncomment-1214171",
+                          "updatedAt": "2022-07-14T21:08:41Z",
+                          "publishedAt": "2021-08-20T20:14:42Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "hchen139"
+                  },
+                  "bodyText": "The retained FE mesh is for the purpose of developing other capabilities in the future. For now, we don't really use the retained FE mesh for any PD problems. You will need to set the \"retain_fe_mesh\" option to false in order to use the current PD capabilities.\nBTW, why do you need to retain the FE mesh in your PD simulation?",
+                  "url": "https://github.com/idaholab/moose/discussions/18582#discussioncomment-1214264",
+                  "updatedAt": "2022-07-14T21:08:43Z",
+                  "publishedAt": "2021-08-20T20:53:43Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "ppandit95"
+                  },
+                  "bodyText": "Thanks alot for the explanation, ohh regarding retained_fe_mesh  I was just\nplaying around in order to understand how peridynamics module really works.\n\u2026\nOn Sat, Aug 21, 2021 at 2:23 AM Hailong Chen ***@***.***> wrote:\n The retained FE mesh is for the purpose of developing other capabilities\n in the future. For now, we don't really use the retained FE mesh for any PD\n problems. You will need to set the \"retain_fe_mesh\" option to false in\n order to use the current PD capabilities.\n\n BTW, why do you need to retain the FE mesh in your PD simulation?\n\n \u2014\n You are receiving this because you authored the thread.\n Reply to this email directly, view it on GitHub\n <#18582 (comment)>,\n or unsubscribe\n <https://github.com/notifications/unsubscribe-auth/ALP7KHSAJFSLC6SVE3WUBVDT526GFANCNFSM5B67MALQ>\n .\n Triage notifications on the go with GitHub Mobile for iOS\n <https://apps.apple.com/app/apple-store/id1477376905?ct=notification-email&mt=8&pt=524675>\n or Android\n <https://play.google.com/store/apps/details?id=com.github.android&utm_campaign=notification-email>\n .",
+                  "url": "https://github.com/idaholab/moose/discussions/18582#discussioncomment-1215042",
+                  "updatedAt": "2022-07-14T21:08:47Z",
+                  "publishedAt": "2021-08-21T04:51:21Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Issue with the efficiency of Distributed mesh with mesh adaptivity",
+          "author": {
+            "login": "simopier"
+          },
+          "bodyText": "When performing large 3D phase field simulations, the computational cost can quickly become prohibitive. For that reason, I have been trying to leverage some of the features offered by MOOSE to decrease these costs. Two of them being the use of Distributed mesh over Replicated mesh, and the use of mesh adaptivity.\nHowever, I do not get good performances when I try to combined the two, especially when my phase field simulation uses elasticity. After discussing this with @roystgnr, @amjokisaari, and @jiangwen84, I figured I would provide examples of the types of system I am trying to simulate, and document the performance issues I was observing.\nI am performing phase field simulation with elasticity, and below are the different combinations of options that I have used:\n\nUsing Distributed mesh or Replicated mesh\nUsing mesh adaptivity (2 levels) or not.\nWhen using Distributed mesh, I also tried using the part_package = ptscotch option.\n\nI have recorded the active time for each of these 6 simulations using the postprocessor\n[./activetime]  \n    type = PerfGraphData  \n    data_type = TOTAL  \n    section_name = Root  \n[../]\n\nThe results are provided in the table below. I made sure to perform large enough simulations to have a significant amount of nonlinear DOFs (> 2M) for Distributed mesh to be relevant. Note that when using mesh adaptivity (MA), I simulated a larger domain to still have a large amount of DOFs. Results show that without mesh adaptivity (left figure), the active time does decrease when using the distributed mesh rather than the regular mesh. However, the trend is reversed when using mesh adaptivity (right figure). With mesh adaptivity, using Distributed mesh is more time consuming that using Replicated mesh. I am not sure what causes this, but it limits the advantage of Distributed mesh.\n\n\n\nWithout mesh adaptivity\nWith mesh adaptivity (larger domain)\n\n\n\n\n\n\n\n\n\nAttached with this post are the input files, and example of the .pbs file that I have been using to run these on HPC (falcon), and the output files. Note that I have run these simulations with the -snes_view -log_view options, as well as with\n[./pgraph]\n  type = PerfGraphOutput\n  execute_on = 'initial final'  # Default is \"final\"\n  level = 3                     # Default is 1\n  heaviest_branch = true        # Default is false\n  heaviest_sections = 7         # Default is 0\n []\n\nto provide performance data. Let me know I need to provide more information or run additional tests.\nMoose_discussion_simopier_distributed_mesh.zip",
+          "url": "https://github.com/idaholab/moose/discussions/18163",
+          "updatedAt": "2022-09-20T10:03:32Z",
+          "publishedAt": "2021-06-24T16:10:31Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "lynnmunday"
+                  },
+                  "bodyText": "Why does distributed run faster than replicated?  I thought the only advantage distributed had over replicated was a reduction in memory.",
+                  "url": "https://github.com/idaholab/moose/discussions/18163#discussioncomment-917571",
+                  "updatedAt": "2022-09-20T10:04:08Z",
+                  "publishedAt": "2021-06-24T20:52:47Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "roystgnr"
+                          },
+                          "bodyText": "That's a very good question.  DistributedMesh setup can theoretically be faster, since you're not setting up a bunch of remote elements on each processor that you'll never use, but after that point the only advantage in CPU speed ought to be when the mesh is modified, which shouldn't affect the non-adaptive case.",
+                          "url": "https://github.com/idaholab/moose/discussions/18163#discussioncomment-921705",
+                          "updatedAt": "2022-09-20T10:04:08Z",
+                          "publishedAt": "2021-06-25T16:57:46Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "fdkong"
+                  },
+                  "bodyText": "Why does distributed run faster than replicated? I thought the only advantage distributed had over replicated was a reduction in memory.\n\nI believe the time reduction mainly came from a distributed mesh generator. The distributed mesh generator is way faster than the serial generator since it does not need to move data around.\n[gmg]\n  type = DistributedRectilinearMeshGenerator\n  dim = 3\n  nx = 64\n  ny = 64\n  nz = 64\n  xmin = -20\n  xmax = 20\n  ymin = -20\n  ymax = 20\n  zmin = -20\n  zmax = 20\n[]",
+                  "url": "https://github.com/idaholab/moose/discussions/18163#discussioncomment-933976",
+                  "updatedAt": "2022-09-20T10:04:12Z",
+                  "publishedAt": "2021-06-28T17:46:34Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "fdkong"
+                  },
+                  "bodyText": "It would be helpful if someone can share a graph from gperftools for the distributed mesh with the MA.  https://mooseframework.inl.gov/application_development/profiling.html\nFrom @simopier's input and description, I feel like this might be related to \"point ghosting functor\" on which we have trouble when doing uniform refinement.  However, a confirmation is still needed to avoid doing too much unrelated optimization.",
+                  "url": "https://github.com/idaholab/moose/discussions/18163#discussioncomment-934004",
+                  "updatedAt": "2022-09-20T10:04:24Z",
+                  "publishedAt": "2021-06-28T17:58:13Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "simopier"
+                          },
+                          "bodyText": "I would be happy to do that, but these simulations are quite expensive to run and require HPC. Unfortunately, I have not been able to install/use gperftools on HPC.\nAny recommendations/insight for that?\nThank you!",
+                          "url": "https://github.com/idaholab/moose/discussions/18163#discussioncomment-935650",
+                          "updatedAt": "2023-03-23T20:45:46Z",
+                          "publishedAt": "2021-06-28T23:48:24Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "fdkong"
+                          },
+                          "bodyText": "If you are on sawtooth, you could do the following\nmodule load use.moose\nmodule  load gperftools/2.9-gcc-8.5.0",
+                          "url": "https://github.com/idaholab/moose/discussions/18163#discussioncomment-938960",
+                          "updatedAt": "2023-03-23T20:45:47Z",
+                          "publishedAt": "2021-06-29T15:40:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "simopier"
+                          },
+                          "bodyText": "I performed the exact same simulations on Sawtooth with gperftools, but I am getting very different results then on Falcon, as you can see in the table below:\n\n\n\nWithout mesh adaptivity\nWith mesh adaptivity (larger domain)\n\n\n\n\n\n\n\n\n\nNow, the relative performances of the simulations are the opposite of what I was getting on falcon. Distributed mesh slows down the simulations when I am not using mesh adaptivity, but speed things up when I do use mesh adaptivity. I attach the .prof files of the runs on Sawtooth. I am quite confused by these results, as they seem to depend on the machine on which I perform the simulations.\nLet me know if you need additional information, or if you have any insight.\nThank you.\nhttps://inlbox.box.com/s/v4a8vp2iplre9255nhnpa49ef1u82sql",
+                          "url": "https://github.com/idaholab/moose/discussions/18163#discussioncomment-971673",
+                          "updatedAt": "2023-03-23T20:45:47Z",
+                          "publishedAt": "2021-07-06T19:03:50Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "How many MPI proceses are you running on each? did you bind the processes? (--bind-to option, not usually required, but can explain some performance differences if processes migrate from one socket to the next)",
+                          "url": "https://github.com/idaholab/moose/discussions/18163#discussioncomment-971760",
+                          "updatedAt": "2023-03-23T20:45:47Z",
+                          "publishedAt": "2021-07-06T19:27:15Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "simopier"
+                          },
+                          "bodyText": "For both Falcon and Sawtooth, I used #PBS -l select=2:ncpus=36:mpiprocs=36.\nI have never used the --bind-to option. I saw here that it can be used as --bind-to-none (Default), --bind-to-core, or as --bind-to-socket. Which option would you advise me to use?",
+                          "url": "https://github.com/idaholab/moose/discussions/18163#discussioncomment-974758",
+                          "updatedAt": "2023-03-23T20:45:47Z",
+                          "publishedAt": "2021-07-07T12:59:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Why select=2? If in one run all the processes ended on one node and one other it was split, then that would make the communication costs very different. To know where the processes ended up, you can call hostname inside mpirun\nI used to bind to socket with OpenMOC, to avoid inter-socket migration. Binding to cores is fine too, as long as only one process gets bound to each core.",
+                          "url": "https://github.com/idaholab/moose/discussions/18163#discussioncomment-974867",
+                          "updatedAt": "2023-03-23T20:45:54Z",
+                          "publishedAt": "2021-07-07T13:23:43Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "fdkong"
+                          },
+                          "bodyText": "Why select=2?\n\n@simopier is trying to take two nodes. The nodes are not shared by anyone because he selected all 36 cores. That being said, the PBS script should not be the issue.\nWe pushed too far here. Let us back a bit.\nQuestions for @simopier\n\n\nCould you generate a picture of the call graph with .prof files? Nobody except you can create that picture. The .prof files depend on your executable and libs.  Again, instructions are here https://mooseframework.inl.gov/application_development/profiling.html\n\n\nIn the second picture (with mesh adaptivity), there are three lines. Were all three simulations generated using the same environment? Especially whether or not the gperf module was loaded for all three simulations. If the module were loaded only for one simulation, the simulation results would be very different. TMalloc shipped with the gperf can significantly speed up a simulation for specific problems.\n\n\nIt might be worthwhile to unload the gperf module and regenerate the second picture. We are trying to figure out whether or not the gperf module changed the whole story.",
+                          "url": "https://github.com/idaholab/moose/discussions/18163#discussioncomment-975284",
+                          "updatedAt": "2023-03-23T20:45:56Z",
+                          "publishedAt": "2021-07-07T14:48:14Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "simopier"
+                          },
+                          "bodyText": "Could you generate a picture of the call graph with .prof files? Nobody except you can create that picture. The .prof files depend on your executable and libs. Again, instructions are here https://mooseframework.inl.gov/application_development/profiling.html\n\nI am not sure what I am doing wrong, but I cannot manage to create that picture.\nIn my folder on Sawtooth, I have a list of files named run12_*.prof with * going from 0 to num_processor - 1.\nI loaded module load use.moose gperftools, and then I have tried running:\npprof run12.prof\n(pprof) png > run12.png\n\nbut I get the following error:\nUsing remote profile at run12.prof.\nUse of uninitialized value $line in substitution (s///) at /apps/moose/stack/gperftools-2.9-gcc-8.5.0/bin/pprof line 3326.\nhttp://run12.prof/pprof/symbol doesn't exist\n/var/spool/pbs/mom_priv/jobs/5202194.sawtoothpbs.SC: line 29: syntax error near unexpected token `png'\n/var/spool/pbs/mom_priv/jobs/5202194.sawtoothpbs.SC: line 29: `(pprof) png > run12.png'\n\nWhen I try:\npprof run12_1.prof\n(pprof) png > run12_1.png\n\nI get:\nUsing local file run12_1.prof.\nDid not specify profile file\n\nfollowed by the help message.\nWhat am I missing?\n\n\nIn the second picture (with mesh adaptivity), there are three lines. Were all three simulations generated using the same environment? Especially whether or not the gperf module was loaded for all three simulations. If the module were loaded only for one simulation, the simulation results would be very different. TMalloc shipped with the gperf can significantly speed up a simulation for specific problems.\nIt might be worthwhile to unload the gperf module and regenerate the second picture. We are trying to figure out whether or not the gperf module changed the whole story.\n\nI used gperf for all 6 simulations on sawtooth. Once I figure out how to generate the gperf pictures, I will perform these simulations on sawtooth with and without gperf to check if the gperf module changed the whole story",
+                          "url": "https://github.com/idaholab/moose/discussions/18163#discussioncomment-1001213",
+                          "updatedAt": "2023-03-23T20:46:10Z",
+                          "publishedAt": "2021-07-13T22:32:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "pprof might want the executable as an argument as well.\nUsage:\n/apps/moose/stack/gperftools-2.9-gcc-8.5.0/bin/pprof [options] <program> <profiles>\n   <profiles> is a space separated list of profile names.\n\nPlease let us know how this goes",
+                          "url": "https://github.com/idaholab/moose/discussions/18163#discussioncomment-1048160",
+                          "updatedAt": "2023-03-23T20:46:19Z",
+                          "publishedAt": "2021-07-25T20:49:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "any news on this?",
+                          "url": "https://github.com/idaholab/moose/discussions/18163#discussioncomment-1122157",
+                          "updatedAt": "2023-03-23T20:46:19Z",
+                          "publishedAt": "2021-08-02T20:58:43Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "fdkong"
+                  },
+                  "bodyText": "I also converted  this discussion  to a moose ticket in case nontrivial work is required to resolve the issue.\n#18191",
+                  "url": "https://github.com/idaholab/moose/discussions/18163#discussioncomment-934021",
+                  "updatedAt": "2022-09-20T10:04:39Z",
+                  "publishedAt": "2021-06-28T18:04:26Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to Refine mesh in Moose",
+          "author": {
+            "login": "Ali1990dashti"
+          },
+          "bodyText": "Dear community,\nI have a mesh file which has some volumes and their related physical groups. I want to refine my mesh in one of the physical groups. I have seen that in moose we can define a box and then refine mesh in that box. But, is it possible to refine the mesh in the volume using its name or block number rather than a box with coordinates? I tried the following code to refine in the box but it was not successful for me (I want to for example split each tetrahedron to three ones in one of my physical groups (the Reservoir group)):\n[Adaptivity]\n max_h_level = 3\n cycles_per_step = 1\n marker = box\n [./Markers]\n   [./box]\n     type = BoxMarker\n     bottom_left = '1800. 1200. -1950.'\n     top_right = '2500. 800. -1500.'\n     inside = REFINE\n     outside =  DO_NOTHING\n   [../]\n [../]\n[]\n\nI have seen explanations in this page but still I could not solve my issue. I have also uploaded my mesh file.\nI do appreciate any consideration in advance.\nmesh.zip",
+          "url": "https://github.com/idaholab/moose/discussions/18655",
+          "updatedAt": "2022-06-14T21:47:31Z",
+          "publishedAt": "2021-08-20T12:59:28Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "aeslaughter"
+                  },
+                  "bodyText": "The UniformMarker, as the name suggests, can perform a uniform refinement within a subdomain by setting the \"block\" parameter.\nhttps://mooseframework.inl.gov/source/markers/UniformMarker.html",
+                  "url": "https://github.com/idaholab/moose/discussions/18655#discussioncomment-1211997",
+                  "updatedAt": "2022-06-14T21:47:45Z",
+                  "publishedAt": "2021-08-20T14:30:49Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aeslaughter"
+                          },
+                          "bodyText": "Actually, all markers have the \"block\" parameter so they should be able to be restricted to a domain.",
+                          "url": "https://github.com/idaholab/moose/discussions/18655#discussioncomment-1212004",
+                          "updatedAt": "2022-06-14T21:47:41Z",
+                          "publishedAt": "2021-08-20T14:32:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Ali1990dashti"
+                          },
+                          "bodyText": "Dear @aeslaughter, Thanks for devoting time to my issue. I tried the following method you proposed but it did not converge. My problem is a steady state one and I just want to refine mesh in one block and then solve the steady state problem. It firstly converges in solving the problem and then goes for adaptavity but in this step it does not converge. it says : Linear solve did not converge due to DIVERGED_BREAKDOWN iterations 30.",
+                          "url": "https://github.com/idaholab/moose/discussions/18655#discussioncomment-1212146",
+                          "updatedAt": "2022-06-14T21:47:41Z",
+                          "publishedAt": "2021-08-20T15:03:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Can you cut the simulation there and look at the mesh? Did the refinement work as expected?",
+                          "url": "https://github.com/idaholab/moose/discussions/18655#discussioncomment-1212328",
+                          "updatedAt": "2022-06-14T21:47:41Z",
+                          "publishedAt": "2021-08-20T15:28:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Ali1990dashti"
+                          },
+                          "bodyText": "When I use the --mesh-only functionality, it gives me the mesh but it is not refined. I do not know why it firstly runs the simulation and then starts to adapt the mesh. I expected that firstly it should refine the mesh and then do all the numerical calculations.",
+                          "url": "https://github.com/idaholab/moose/discussions/18655#discussioncomment-1212373",
+                          "updatedAt": "2022-07-05T06:42:09Z",
+                          "publishedAt": "2021-08-20T15:34:54Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Adaptivity does not run with --mesh-only. You need to look at the output of the mesh  after the simulation.\nSince the simulation fails after adaptivity:\n\ntry to relax the tolerances enough so that you still get a 'simulation converged' and regular output\nOR\nchange the output execute_on flags, that you still get the output right after adaptivity",
+                          "url": "https://github.com/idaholab/moose/discussions/18655#discussioncomment-1213020",
+                          "updatedAt": "2022-07-05T06:42:09Z",
+                          "publishedAt": "2021-08-20T16:00:50Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aeslaughter"
+                          },
+                          "bodyText": "I am not able to get the adaptivity working like I would expect. I am creating an issue with an input file and will see if anyone knows what is missing or if there is a problem.",
+                          "url": "https://github.com/idaholab/moose/discussions/18655#discussioncomment-1213150",
+                          "updatedAt": "2022-07-05T06:42:09Z",
+                          "publishedAt": "2021-08-20T16:16:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Ali1990dashti"
+                          },
+                          "bodyText": "I exported the incomplete simulation using flags in the output block of my input file. In paraview I can see the selected block (I called it const ), but its mesh size has not changed. I set my parameters as following:\n[Adaptivity]\n  [./Markers]\n    [./const]\n      type =  UniformMarker\n      mark = REFINE\n      block = 'Reservoir'\n    [../]\n  [../]\n  marker = const\n  steps = 2\n[]\n\nIt also creates a file with this prefix which is new for me: .e-s002. But still it does not converge.",
+                          "url": "https://github.com/idaholab/moose/discussions/18655#discussioncomment-1213154",
+                          "updatedAt": "2022-07-05T06:42:10Z",
+                          "publishedAt": "2021-08-20T16:16:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Sounds good.\nOtherwise, @socratesgorilla is working on a block refinement using mesh generators. This will be much easier to use than adaptivity in my opinion. It's coming real soon, PR next week probably",
+                          "url": "https://github.com/idaholab/moose/discussions/18655#discussioncomment-1213204",
+                          "updatedAt": "2022-07-05T06:42:11Z",
+                          "publishedAt": "2021-08-20T16:25:21Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aeslaughter"
+                          },
+                          "bodyText": "I figured out the correct syntax, see #18657.",
+                          "url": "https://github.com/idaholab/moose/discussions/18655#discussioncomment-1213231",
+                          "updatedAt": "2022-07-05T06:42:11Z",
+                          "publishedAt": "2021-08-20T16:30:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aeslaughter"
+                          },
+                          "bodyText": "It also creates a file with this prefix which is new for me: .e-s002. But still it does not converge.\n\nEvery time the mesh changes a new Exodus file is created.",
+                          "url": "https://github.com/idaholab/moose/discussions/18655#discussioncomment-1213234",
+                          "updatedAt": "2022-07-05T06:42:11Z",
+                          "publishedAt": "2021-08-20T16:32:14Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Sample problem .e files",
+          "author": {
+            "login": "TLWise"
+          },
+          "bodyText": "I would like to run the example contact sliding block problem. Where do I find the exodus (sliding_elastic_blocks_2d.e) files needed to perform the analysis?",
+          "url": "https://github.com/idaholab/moose/discussions/18551",
+          "updatedAt": "2021-08-20T15:23:10Z",
+          "publishedAt": "2021-08-06T20:20:43Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "You can find files with that name (which will contain the mesh) in the tests there:\n/modules/contact/test/tests/frictional/sliding_elastic_blocks_2d/gold/sliding_elastic_blocks_2d_out.e\n/modules/contact/test/tests/frictional/sliding_elastic_blocks_2d/sliding_elastic_blocks_2d.e\n/modules/contact/test/tests/sliding_block/sliding/sliding_elastic_blocks_2d.e\nLet me know if that s not the one you need",
+                  "url": "https://github.com/idaholab/moose/discussions/18551#discussioncomment-1155420",
+                  "updatedAt": "2021-08-10T18:30:37Z",
+                  "publishedAt": "2021-08-10T18:30:26Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "TLWise"
+                          },
+                          "bodyText": "Got it. I was able to find the files and run the code. Thank you.",
+                          "url": "https://github.com/idaholab/moose/discussions/18551#discussioncomment-1212300",
+                          "updatedAt": "2021-08-20T15:23:00Z",
+                          "publishedAt": "2021-08-20T15:23:00Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Error running distributed mesh",
+          "author": {
+            "login": "bhollra"
+          },
+          "bodyText": "Hi and thanks for reading,\nI am attempting to run a simulation with a distributed mesh by following the information here. I am able split the mesh successfully with this command: sam-opt -i input.i --split-mesh 6 creating a folder ./mesh_file.cpr/6/ as I expected.\nHowever, when I attempt to run the simulation on the distributed mesh with mpiexec -n 6 ~/projects/SAM/sam-opt -i input.i --use-split I get the following error:\nERROR: Neither one of the following files can be located:\n        '/path/./mesh_file.cpr/1/header.cpr' nor\n        '/path/./mesh_file.cpr'\nIf you are running a parallel job, double check that you've created a split for 1 ranks.\nNote: One of paths above may refer to a valid directory on your system, however we are attempting to read a valid header file.\nIn the documentation it sounds like the code should automatically search for a mesh split by the number of cores specified in the mpiexec command, in this case 6. But this error message seems to indicate the code is looking for a mesh with 1 split.\nI am curious if anyone has any insight into the cause of this error? Is it possible this is a SAM specific issue?\nP.S. My framework information is:\nMOOSE Version:           git commit 48fe948cda on 2020-02-17\nLibMesh Version:         3b8296b3b7c2b526d0be242fa6208750c0ede69b\nPETSc Version:           3.11.4\nSLEPc Version:           3.11.0",
+          "url": "https://github.com/idaholab/moose/discussions/18583",
+          "updatedAt": "2022-06-21T14:44:06Z",
+          "publishedAt": "2021-08-11T19:03:43Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThe fact that it's looking for a 1-split makes me think something went terribly wrong with MPI. Like the code was compiled with a different MPI implementation than the mpirun you are using, and each process is identifying the number of ranks incorrectly.\nI'm not familiar with SAM. I dont think they would have modified this, even though their typical use case should not require split meshes.\n@travismui is there anything we should be aware of with regards to SAM and distributed runs?\nDo you really need distributed meshes with a pre-split? The impact on performance is usually negligible. It's only done to save some memory (and save some time on IO with slow file systems for the split). What is your application? SAM is more than reasonable with memory usage\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/18583#discussioncomment-1165097",
+                  "updatedAt": "2022-06-21T14:52:21Z",
+                  "publishedAt": "2021-08-12T18:35:14Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "bhollra"
+                          },
+                          "bodyText": "Hi Guillaume,\nThanks for your response. In this case, I am using SAM to model a large 3D solid heat conduction domain, so the memory demands are quite large. Without a distributed mesh I am currently limited to running on only one processor.\nMy SAM/MOOSE version was about a year and a half old. After updating to the newest version last night, the simulation is now able to load the '/path/./mesh_file.cpr/6/header.cpr' folder correctly. So it seems you were right and there likely was some incompatibility issue going on with MPI.\nHowever, I am now seeing a new error:\n*** ERROR ***\nThe following error occurred in the object \"MOOSE Problem\", of type \"FEProblem\".\nNeed Exodus reader to restart variables but the reader is not available\nUse either FileMesh with an Exodus mesh file or FileMeshGenerator with an Exodus mesh' 'file and with use_for_exodus_restart equal to true\nIncluded bedlow are my mesh blocks and variable blocks:\n[Mesh]\n\tfile = ${meshFileName}\n[]\n[Variables]\n\t[./T_solid]\n\t\torder = FIRST\n\t\tfamily = LAGRANGE\n\t\tblock = 'all blocks'\n\t\tscaling = 1.0E-2\n\t\tinitial_from_file_var = T_solid\n\t\tinitial_from_file_timestep = 2\n\t[../]\n[]\nIt appears to me that the error is cause by the initial_from_file_var parameter in the variable sub-block. When initial_from_file_var and initial_from_file_timestep are removed and replaced with test constant IC:\n[./InitialCondition]\ntype = ConstantIC\nvalue = 1000\n[../]\nThe simulation is able to run successfully.\nIt seems that variable data are not stored in the split mesh files. Is it possible to initialize a distributed simulation with a variable from an Exodus file that is not distributed via another method?\nSome background on my simulations: The simulation that is currently giving me an error is a transient simulation that needs to be initialized with a temperature distribution calculated by a steady state simulation. The steady state simulation uses multiapps to couple the 3D solid domain with several 1D fluid components. It is my understanding that is is not possible to use multiapps and a distributed mesh together, so I was forced to use one processor for the steady state simulation. Now, attempting the transient simulation, the model no longer includes the 1D fluid multiapps (it is a pure 3D solid conduction problem), so I am hoping to use to distributed mesh to decrease the simulation time.\nThank you,\nBrent\nP.S. I have created a very simplified version of my input and reproduced the same errors using the combined-opt moose module, so I feel confident this is not a SAM specific error.\nP.P.S. Updated framework information:\nMOOSE Version:           git commit 71aebe45e9 on 2021-08-11\nLibMesh Version:         \nPETSc Version:           3.15.1\nSLEPc Version:           3.15.1",
+                          "url": "https://github.com/idaholab/moose/discussions/18583#discussioncomment-1169284",
+                          "updatedAt": "2022-06-21T16:44:38Z",
+                          "publishedAt": "2021-08-13T16:52:58Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\n\nThe solution for your issue is to use a file mesh generator (in one word) and set the parameter \u2018use_for_exodus_restart = true\u2019.\n\nGuillaume\n\u2026\n Le 13 ao\u00fbt 2021 \u00e0 10:53, bhollra ***@***.***> a \u00e9crit :\n\n \ufeff\n Hi Guillaume,\n\n Thanks for your response. In this case, I am using SAM to model a large 3D solid heat conduction domain, so the memory demands are quite large. Without a distributed mesh I am currently limited to running on only one processor.\n\n My SAM/MOOSE version was about a year and a half old. After updating to the newest version last night, the simulation is now able to load the '/path/./mesh_file.cpr/6/header.cpr' folder correctly. So it seems you were right and there likely was some incompatibility issue going on with MPI.\n\n However, I am now seeing a new error:\n *** ERROR ***\n The following error occurred in the object \"MOOSE Problem\", of type \"FEProblem\".\n Need Exodus reader to restart variables but the reader is not available\n Use either FileMesh with an Exodus mesh file or FileMeshGenerator with an Exodus mesh' 'file and with use_for_exodus_restart equal to true\n\n Included bedlow are my mesh blocks and variable blocks:\n [Mesh]\n file = ${meshFileName}\n []\n\n [Variables]\n [./T_solid]\n order = FIRST\n family = LAGRANGE\n block = 'all blocks'\n scaling = 1.0E-2\n initial_from_file_var = T_solid\n initial_from_file_timestep = 2\n [../]\n []\n\n It appears to me that the error is cause by the initial_from_file_var parameter in the variable sub-block. When initial_from_file_var and initial_from_file_timestep are removed and replaced with test constant IC:\n [./InitialCondition]\n type = ConstantIC\n value = 1000\n [../]\n The simulation is able to run successfully.\n It seems that variable data are not stored in the split mesh files. Is it possible to initialize a distributed simulation with a variable from an Exodus file that is not distributed via another method?\n\n Some background on my simulations: The simulation that is currently giving me an error is a transient simulation that needs to be initialized with a temperature distribution calculated by a steady state simulation. The steady state simulation uses multiapps to couple the 3D solid domain with several 1D fluid components. It is my understanding that is is not possible to use multiapps and a distributed mesh together, so I was forced to use one processor for the steady state simulation. Now, attempting the transient simulation, the model no longer includes the 1D fluid multiapps (it is a pure 3D solid conduction problem), so I am hoping to use to distributed mesh to decrease the simulation time.\n\n Thank you,\n Brent\n\n P.S. I have created a very simplified version of my input and reproduced the same errors using the combined-opt moose module, so I feel confident this is not a SAM specific error.\n P.P.S. Updated framework information:\n MOOSE Version: git commit 71aebe4 on 2021-08-11\n LibMesh Version:\n PETSc Version: 3.15.1\n SLEPc Version: 3.15.1\n\n \u2014\n You are receiving this because you commented.\n Reply to this email directly, view it on GitHub, or unsubscribe.\n Triage notifications on the go with GitHub Mobile for iOS or Android.",
+                  "url": "https://github.com/idaholab/moose/discussions/18583#discussioncomment-1169834",
+                  "updatedAt": "2022-07-09T08:25:04Z",
+                  "publishedAt": "2021-08-13T19:43:37Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "bhollra"
+                          },
+                          "bodyText": "Thanks Guillaume, but when I try this I get the same error message.\nTo test this I took the following steps:\n\n\nUpdate mesh block to the following:\n[Mesh]\n#       file = ${meshFileName}\n[./fmg]\n type = FileMeshGenerator\n file = mesh.e\n use_for_exodus_restart = true\n[../]\n[]\n\n\nCreate split mesh:\nmpiexec -n 6 ~/MOOSE_08_2021/moose/modules/combined/combined-opt -i simplified.i --split-mesh 6 --split-file mesh_fmg.cpr\n\n\nRun simulation:\nmpiexec -n 6 ~/MOOSE_08_2021/moose/modules/combined/combined-opt -i simplified.i --use-split --split-file mesh_fmg.cpr\n\n\nIf it is any help, you can find the full input file here:\nsimplified.txt",
+                          "url": "https://github.com/idaholab/moose/discussions/18583#discussioncomment-1170209",
+                          "updatedAt": "2022-07-09T08:25:05Z",
+                          "publishedAt": "2021-08-13T20:59:41Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nI seem to have missed a few things in my previous reply, I ll try to be more exhaustive here.\n\nFor your use case, you do need to split the mesh. You can simply use the --distributed-mesh option, as it will distribute the mesh among each process and reduce the memory cost of the simulation accordingly. Splitting meshes is used on multi-node jobs to reduce I/O, so each node does not have to load the entire mesh but just the split it is in charge of.\n\nSplitting meshes is also useful if the mesh does not fit on the memory of a single node. This is not your case it seems. Could you please share with us the size of the problem, eg the number of elements and the number of dofs/element?\n\nSplitting the mesh, step 2, only creates the mesh split. It does not load the variables and initialize them. So essentially, it prevents you from using the exodus restart capability. The exodus file containing the initial variable values is never loaded, because the mesh split is used instead. I'll let others pitch in on this, but I think we will add a log to document this issue.\n\nYou could work with Checkpoint restart to create the initialization if you absolutely want to use split meshes. This will require using the same amount of nodes, and may fail if the Steady simulation system is not exactly the same as the Transient one. I would just recommend you avoid using split meshes and use the distributed option instead, which can work in conjunction with Exodus restart.\nBest\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/18583#discussioncomment-1187766",
+                  "updatedAt": "2022-07-09T08:25:08Z",
+                  "publishedAt": "2021-08-16T00:35:13Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "bhollra"
+                          },
+                          "bodyText": "Hi Guillaume,\nI really appreciate your continued help on this issue. I had somehow missed the availability of the \"--distributed-mesh\" command line option. It appears I was making this much more complicated than it needed to be. I am now able to run my simulation distributed across 5 cores.\nIf I attempt to use more cores the simulation is either unable to converge or terminates after computing the initial residual of time step one (potentially due to a temporary spike in RAM usage). I have not spent much time troubleshooting this, but running on 5 processors should be good enough for my simulation.\nP.S.\nFor some information on the size of the simulation I am attempting please see the following output. This simulation uses between 60-70% of the RAM on my 24GB desktop:\n\nMesh: \nParallel Type:           distributed\nMesh Dimension:          3\nSpatial Dimension:       3\nNodes:                   \nTotal:                 2805425\nLocal:                 466047\nMin/Max/Avg:           422088/496784/467570\nElems:                   \nTotal:                 4329440\nLocal:                 696246\nMin/Max/Avg:           663922/757444/721573\nNum Subdomains:          727\nNum Partitions:          6\nPartitioner:             parmetis\n\n\nNonlinear System:\nNum DOFs:                2805425\nNum Local DOFs:          466047\nVariables:               \"T_solid\" \nFinite Element Types:    \"LAGRANGE\" \nApproximation Orders:    \"FIRST\" \n\n\nAuxiliary System:\nNum DOFs:                886420\nNum Local DOFs:          152121\nVariables:               \"power_density\" \nFinite Element Types:    \"LAGRANGE\" \nApproximation Orders:    \"FIRST\" \n\n\nExecution Information:\nExecutioner:             Transient\nTimeStepper:             FunctionDT\nSolver Mode:             NEWTON\nPETSc Preconditioner:    gamg \nMOOSE Preconditioner:    SMP",
+                          "url": "https://github.com/idaholab/moose/discussions/18583#discussioncomment-1192510",
+                          "updatedAt": "2022-07-09T08:25:18Z",
+                          "publishedAt": "2021-08-16T23:30:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "The inability to converge with more cores is usually just a matter of tuning the tolerances and the pre-conditioner settings. For example, the asm preconditioner will need to have an overlap parameter specified to perform better with more core. Less efficient pre-conditioning can mean that allowing for more linear iterations helps the solve.\nWith the Newton solve method, it's likely your memory issue is due to the need to store the system matrix. You could switch to the PJFNK solve method. This will not converge as well, but scales better in terms of memory.\nWe are 1-2 weeks away from merging new memory profiling utilities in MOOSE (see #16298) if you ever want to determine the cause of the memory spike for sure.",
+                          "url": "https://github.com/idaholab/moose/discussions/18583#discussioncomment-1192613",
+                          "updatedAt": "2022-07-09T08:25:21Z",
+                          "publishedAt": "2021-08-17T00:26:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "bhollra"
+                          },
+                          "bodyText": "Hi Guillaume,\nAnother question just came up, this time regarding the compatibility of using --recover and --use-distributed together.\nMy desktop had an issue that cause the simulation to terminate early. When I attempted running mpiexec -n 5 ~/SAM_08_2021/SAM/sam-opt -i  square_full_core_SBO.i --recover --distributed-mesh I got the following error:\n*** ERROR ***\nERROR: Neither one of the following files can be located:\n        'square_full_core_SBO_out_cp/0270_mesh.cpr/1/header.cpr' nor\n        'square_full_core_SBO_out_cp/0270_mesh.cpr'\nIf you are running a parallel job, double check that you've created a split for 1 ranks.\nNote: One of paths above may refer to a valid directory on your system, however we are attempting to read a valid header file.\nI found this interesting because when I attempted to run the input with a restart block added:\n[Problem]\nrestart_file_base = square_full_core_SBO_out_cp/LATEST\n[]\nThe simulation has no issues initializing using the checkpoint. To confirm:\n*** Info ***                                                                                                        \nUsing /home/bhollra/spring_2021/summer_2021/square_full_core/SBO/square_full_core_SBO_out_cp/0270 for restart.      \nis output in the terminal.\nThere are workarounds I can use to reinitialize my simulation using the results from the last output time step of the terminated simulation, but I did find it interesting that using --recover did not work while using a restart from the same checkpoint did.",
+                          "url": "https://github.com/idaholab/moose/discussions/18583#discussioncomment-1207515",
+                          "updatedAt": "2022-07-09T08:25:21Z",
+                          "publishedAt": "2021-08-19T16:07:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Interesting. This might be a bug with the --recover option and splits. I ll try to reproduce that later and I ll raise an issue if needed.\nThanks for letting us know.\nI'm glad it works with the restart option though.",
+                          "url": "https://github.com/idaholab/moose/discussions/18583#discussioncomment-1207714",
+                          "updatedAt": "2022-07-09T08:25:38Z",
+                          "publishedAt": "2021-08-19T16:31:52Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Ok I confirmed recover+split worked on the simple diffusion case.\nI simply made that case a transient and added\n checkpoint = true\nThen I ran:\n../../../moose_test-opt -i simple_diffusion.i --split-mesh 4 --split-file mesh_split\nmpirun -n 4 ../../../moose_test-opt -i simple_diffusion.i --use-split 4 --split-file mesh_split --half-transient\nmpirun -n 4 ../../../moose_test-opt -i simple_diffusion.i --use-split 4 --split-file mesh_split --recover\n\nI would recommend you make it work on a small example like this before trying to see what is different with your case.",
+                          "url": "https://github.com/idaholab/moose/discussions/18583#discussioncomment-1208421",
+                          "updatedAt": "2022-07-09T08:25:38Z",
+                          "publishedAt": "2021-08-19T19:10:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "You could also have a look at the recover/checkpoint tests in test/tests/mesh/checkpoint btw",
+                          "url": "https://github.com/idaholab/moose/discussions/18583#discussioncomment-1208461",
+                          "updatedAt": "2022-07-09T08:25:39Z",
+                          "publishedAt": "2021-08-19T19:18:57Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Boundary condition:NeumannBC did not working",
+          "author": {
+            "login": "emmelines"
+          },
+          "bodyText": "Hi\nI am using the phase-field model to simulate two phase-separated microstructure evolution. In my model, I set NeumannBC as the boundary condition. However, when I check the boundary flux using SideAverageValue, the result showed the value of flux is not zero. Is there any reason for the boundary condition cannot work properly?\nThank you.",
+          "url": "https://github.com/idaholab/moose/discussions/18608",
+          "updatedAt": "2022-06-10T13:57:22Z",
+          "publishedAt": "2021-08-16T18:50:55Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nSideAverageValue computes the average of a variable not really of a flux. Are you using the gradient as the variable?\nIf not you may be wanting to use SideDiffusiveFluxIntegral\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/18608#discussioncomment-1191711",
+                  "updatedAt": "2022-06-10T13:57:23Z",
+                  "publishedAt": "2021-08-16T19:03:55Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "emmelines"
+                          },
+                          "bodyText": "Hi\nI did use gradient variable, so the SideAverageValue should fit in my case. Is it?\nThanks.\nEmmeline",
+                          "url": "https://github.com/idaholab/moose/discussions/18608#discussioncomment-1196857",
+                          "updatedAt": "2022-06-10T13:57:39Z",
+                          "publishedAt": "2021-08-17T18:41:08Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "But a SideAverageValue does not take gradient variables? Did you use the gradient component as the variable?\nI think pasting your variable block and the postprocessor block would help here",
+                          "url": "https://github.com/idaholab/moose/discussions/18608#discussioncomment-1197311",
+                          "updatedAt": "2022-06-10T13:57:40Z",
+                          "publishedAt": "2021-08-17T20:49:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "emmelines"
+                          },
+                          "bodyText": "Hi\nThe following are my variable and postprocessor. Thank you for staying on this problem with me. I appreciate.\n[Variables]\n  [./c]\n  [../]\n  [./w]\n  [../]\n  [./eta_a1]\n  [../]\n  [./eta_b1]\n  [../]\n  [./eta_b2]\n  [../]\n  [./eta_b3]\n  [../]\n  [./eta_b4]\n  [../]\n[]\n\n[Postprocessors]\n  [./ElementInt_c]\n    type = ElementIntegralVariablePostprocessor\n    variable = c\n  [../]\n  [./precip_area] # since eta=1.0 inside the precipitate\n    type = ElementIntegralVariablePostprocessor\n    variable = 'eta_a1 eta_b1 eta_b2 eta_b3 eta_b4'\n  [../]\n  [./total_F]\n    type = ElementIntegralVariablePostprocessor\n    variable = total_F\n  [../]\n  [./F]\n    type = ElementIntegralVariablePostprocessor\n    variable = F\n  [../]\n  [./dwdx]\n    type = ElementIntegralVariablePostprocessor\n    variable = dwdx\n    execute_on = 'initial timestep_end'\n  [../]\n  [./dwdy]\n    type = ElementIntegralVariablePostprocessor\n    variable = dwdy\n    execute_on = 'initial timestep_end'\n  [../]\n#######\n  [./total_Fc]\n  type = ElementIntegralVariablePostprocessor\n  variable = total_Fc\n  [../]\n  [./total_Feta]\n  type = ElementIntegralVariablePostprocessor\n  variable = total_Feta\n  [../]\n  [./F_c]\n    type = ElementIntegralVariablePostprocessor\n    variable = F_c\n    execute_on = 'initial timestep_end'\n  [../]\n  [./F_eta]\n    type = ElementIntegralVariablePostprocessor\n    variable = F_eta\n    execute_on = 'initial timestep_end'\n  [../]\n  [./F_etaandc]\n    type = ElementIntegralVariablePostprocessor\n    variable = F_etaandc\n    execute_on = 'initial timestep_end'\n  [../]\n  [./right_jx]\n    type = SideAverageValue\n    variable = jx\n    boundary = right\n  [../]\n  [./right_jy]\n    type = SideAverageValue\n    variable = jy\n    boundary = right\n  [../]\n  [./left_jx]\n    type = SideAverageValue\n    variable = jx\n    boundary = left\n  [../]\n  [./left_jy]\n    type = SideAverageValue\n    variable = jy\n    boundary = left\n  [../]\n  [./right_j_tot]\n    type = SideAverageValue\n    variable = j_tot\n    boundary = right\n  [../]\n  [./left_j_tot]\n    type = SideAverageValue\n    variable = j_tot\n    boundary = left\n  [../]\n  [./top_jx]\n    type = SideAverageValue\n    variable = jx\n    boundary = top\n  [../]\n  [./top_jy]\n    type = SideAverageValue\n    variable = jy\n    boundary = top\n  [../]\n  [./bottom_jx]\n    type = SideAverageValue\n    variable = jx\n    boundary = bottom\n  [../]\n  [./bottom_jy]\n    type = SideAverageValue\n    variable = jy\n    boundary = bottom\n  [../]\n  [./top_j_tot]\n    type = SideAverageValue\n    variable = j_tot\n    boundary = top\n  [../]\n  [./bottom_j_tot]\n    type = SideAverageValue\n    variable = j_tot\n    boundary = bottom\n  [../]",
+                          "url": "https://github.com/idaholab/moose/discussions/18608#discussioncomment-1197368",
+                          "updatedAt": "2022-06-10T13:57:41Z",
+                          "publishedAt": "2021-08-17T20:59:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "So jx and jy are AuxVariables? Did you define them in the input file ?\nTagging @laagesen in case there s something special about phase field here",
+                          "url": "https://github.com/idaholab/moose/discussions/18608#discussioncomment-1197546",
+                          "updatedAt": "2024-03-16T04:08:42Z",
+                          "publishedAt": "2021-08-17T21:57:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "emmelines"
+                          },
+                          "bodyText": "I defined jx and jy in AuxKernels.\n[AuxKernels]\n[./dwdx]\n    type = VariableGradientComponent\n    variable = dwdx\n    gradient_variable = w\n    component = x\n  [../]\n  [./dwdy]\n    type = VariableGradientComponent\n    variable = dwdy\n    gradient_variable = w\n    component = y\n  [../]\n  [./jx]\n    type = ParsedAux\n    variable = jx\n    args = 'dwdx'\n    function = '-1.0*dwdx'\n  [../]\n  [./jy]\n    type = ParsedAux\n    variable = jy\n    args = 'dwdy'\n    function = '-1.0*dwdy'\n  [../]",
+                          "url": "https://github.com/idaholab/moose/discussions/18608#discussioncomment-1197562",
+                          "updatedAt": "2022-09-12T14:52:36Z",
+                          "publishedAt": "2021-08-17T22:02:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Not sure. While we wait for someone else to pitch in, you are dealing with a diffusive flux right?\nIf so, SideDiffusiveFluxIntegral will compute it from the variable definition. Does that work for you?",
+                          "url": "https://github.com/idaholab/moose/discussions/18608#discussioncomment-1197592",
+                          "updatedAt": "2022-09-12T14:52:57Z",
+                          "publishedAt": "2021-08-17T22:14:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "emmelines"
+                          },
+                          "bodyText": "Hi\nI am trying the SideDiffusiveFluxIntegral, and it seems like my library has to update first. I will get back to you once I complete the computation. Thanks a lot!",
+                          "url": "https://github.com/idaholab/moose/discussions/18608#discussioncomment-1201904",
+                          "updatedAt": "2022-09-12T14:52:57Z",
+                          "publishedAt": "2021-08-18T16:01:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dschwen"
+                          },
+                          "bodyText": "[./dwdx]\n    type = ElementIntegralVariablePostprocessor\n    variable = dwdx\n    execute_on = 'initial timestep_end'\n  [../]\n  [./dwdy]\n    type = ElementIntegralVariablePostprocessor\n    variable = dwdy\n    execute_on = 'initial timestep_end'\n  [../]\n\nYou're integrating the gradient components over a volume rather than evaluating it on the side where you apply the BC.",
+                          "url": "https://github.com/idaholab/moose/discussions/18608#discussioncomment-1203270",
+                          "updatedAt": "2022-09-12T14:53:31Z",
+                          "publishedAt": "2021-08-18T21:38:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "they are talking about these postprocessors I think\n    type = SideAverageValue\n    variable = jx\n    boundary = top\n  [../]\n  [./top_jy]\n    type = SideAverageValue\n    variable = jy\n    boundary = top\n  [../]\n  [./bottom_jx]\n    type = SideAverageValue\n    variable = jx\n    boundary = bottom\n  [../]\n  [./bottom_jy]\n    type = SideAverageValue\n    variable = jy\n    boundary = bottom\n  [../]",
+                          "url": "https://github.com/idaholab/moose/discussions/18608#discussioncomment-1203293",
+                          "updatedAt": "2022-09-12T14:53:30Z",
+                          "publishedAt": "2021-08-18T21:43:56Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "jiangwen84"
+                  },
+                  "bodyText": "@emmelines In FEM, NeumannBC is weakly enforced. The flux won't be exactly zero. However, the flux will become more accurate as mesh is refined.\nFor your problem, you can take a look at the global concentration. Zero flux will result in conserved concentration.",
+                  "url": "https://github.com/idaholab/moose/discussions/18608#discussioncomment-1204013",
+                  "updatedAt": "2022-06-10T13:58:44Z",
+                  "publishedAt": "2021-08-19T03:03:38Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "emmelines"
+                          },
+                          "bodyText": "@jiangwen84\nCould I ask what is the reason for NeumannBC has weak enforcement in FEM?\nThank you.",
+                          "url": "https://github.com/idaholab/moose/discussions/18608#discussioncomment-1207676",
+                          "updatedAt": "2022-06-10T13:58:42Z",
+                          "publishedAt": "2021-08-19T16:25:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "You can go to https://mooseframework.inl.gov/workshop/workshop/index.html#/2/7\nThe third term of the weak form is the Neumann BC. As you can see, that term is weighted by the test function \\phi_i. That means this term is weakly enforced. As you increase the test function space (use higher order and/or small mesh size), the flux k\\grad T n will become more accurate.",
+                          "url": "https://github.com/idaholab/moose/discussions/18608#discussioncomment-1207895",
+                          "updatedAt": "2022-06-10T13:58:42Z",
+                          "publishedAt": "2021-08-19T17:09:50Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

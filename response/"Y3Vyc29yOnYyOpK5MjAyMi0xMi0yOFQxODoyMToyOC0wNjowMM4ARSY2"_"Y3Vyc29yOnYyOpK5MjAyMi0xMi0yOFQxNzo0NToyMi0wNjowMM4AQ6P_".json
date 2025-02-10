@@ -1,0 +1,1331 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMi0xMi0yOFQxNzo0NToyMi0wNjowMM4AQ6P_"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "PorousFlow: NeumannBC not affecting Pressure Gradient.",
+          "author": {
+            "login": "batodon"
+          },
+          "bodyText": "Hi,\nI\u2019m using the PorousFlow module to perform a simple steady-state darcy flow through a unit square model with displacement BC of 1e4 at the top and zero everywhere. The inlet has a NeumannBC of 10e-10kg/s, and the outlet has a pressure of 1MPa. After running the simulation and comparing the results with the benchmark study, I noticed that my pressure gradient was extremely low (also inaccurate). I\u2019m guessing the way I applied the NeumannBC on the inlet is not the best because the pressure gradient only changes when I change the pressure at the outer boundary (i.e., the legend shows the pressure gradient from the initial pressure condition to the outer pressure condition). Could someone please help? I attached my input file, an image of my result, and the benchmark. Thanks.\nBenchmark result:\n\nMOOSE result:\n\n\n\n[Mesh]\n  [efmcube]\n    type = FileMeshGenerator\n    file = square.inp\n []\n[]\n\n\n[GlobalParams]\n displacements = 'disp_x disp_y'\n  gravity = '0 0 0'\n  biot_coefficient = 0.0\n  PorousFlowDictator = dictator\n[]\n\n\n[UserObjects]\n  [dictator]\n    type = PorousFlowDictator\n    porous_flow_vars = 'pwater disp_x disp_y '\n    number_fluid_phases = 1\n    number_fluid_components = 1\n  []\n  [pc]\n    type = PorousFlowCapillaryPressureVG\n    alpha = 1E-6\n   m = 0.6\n  []\n[]\n\n\n[Variables]\n  [pwater]\n    initial_condition = 1.01325e5 \n  []\n  [disp_x]\n    scaling = 1E-5\n  []\n  [disp_y]\n    scaling = 1E-5\n  []\n[]\n\n\n[AuxVariables]\n  [effective_fluid_pressure]\n    family = MONOMIAL\n    order = CONSTANT\n  []\n    [darcy_vel_x]\n    family = MONOMIAL\n    order = CONSTANT\n  []\n  [darcy_vel_y]\n    family = MONOMIAL\n    order = CONSTANT\n  []\n  [stress_xx]\n    family = MONOMIAL\n    order = CONSTANT\n  []\n  [stress_yy]\n    family = MONOMIAL\n    order = CONSTANT\n  []\n  [porosity]\n    family = MONOMIAL\n    order = CONSTANT\n  []\n    [permeability]\n    family = MONOMIAL\n    order = CONSTANT\n  []\n    [strain_normal]\n    family = MONOMIAL\n    order = CONSTANT\n  []\n[]\n\n[AuxKernels]\n  [effective_fluid_pressure]\n    type = ParsedAux\n    args = 'pwater'\n    function = 'pwater'\n    variable = effective_fluid_pressure\n  []\n    [darcy_vel_x]\n    type = PorousFlowDarcyVelocityComponent\n    component = x\n    variable = darcy_vel_x\n    fluid_phase = 0                             # OPTIONAL for single-phase\n    execute_on = TIMESTEP_END\n  []\n  [darcy_vel_y]\n    type = PorousFlowDarcyVelocityComponent\n    component = y\n    variable = darcy_vel_y\n    fluid_phase = 0                             # OPTIONAL for single-phase\n    execute_on = TIMESTEP_END\n  []\n  [stress_xx]\n    type = RankTwoScalarAux\n    variable = stress_xx\n    rank_two_tensor = stress\n    scalar_type = MinPrincipal\n    point1 = '0 0 0'\n    point2 = '0 0 1'\n    execute_on = timestep_end\n  []\n  [stress_yy]\n    type = RankTwoScalarAux\n    variable = stress_yy\n    rank_two_tensor = stress\n    scalar_type = MidPrincipal\n    point1 = '0 0 0'\n    point2 = '0 0 1'\n    execute_on = timestep_end\n  []\n  [porosity]\n    type = PorousFlowPropertyAux\n    variable = porosity\n    property = porosity\n    execute_on = timestep_end\n  []\n    [permeability]\n    type = PorousFlowPropertyAux\n    variable = permeability\n    property = permeability\n    execute_on = timestep_end\n  []\n  [strain_normal]\n    type = MaterialRealAux\n    variable = strain_normal\n    property = fracture_normal_strain_qp\n    execute_on = timestep_end\n  []\n[]\n\n\n[Kernels]\n  [flux_water]\n    type = PorousFlowAdvectiveFlux\n    variable = pwater\n    use_displaced_mesh = false\n  []\n  [grad_stress_x] \n    type = StressDivergenceTensors \n    variable = disp_x\n    use_displaced_mesh = false\n    component = 0\n  []\n  [poro_x]\n    type = PorousFlowEffectiveStressCoupling\n    variable = disp_x\n    use_displaced_mesh = false\n    component = 0\n  []\n  [grad_stress_y]\n    type = StressDivergenceTensors\n    variable = disp_y\n    use_displaced_mesh = false\n    component = 1\n  []\n  [poro_y]\n    type = PorousFlowEffectiveStressCoupling\n    variable = disp_y\n    use_displaced_mesh = false\n    component = 1\n  []\n[]\n\n#[Modules]\n#  [FluidProperties]\n#    [true_water]\n#      type = Water97FluidProperties\n#    []\n#    [tabulated_water]\n#      type = TabulatedFluidProperties\n#      fp = true_water\n#      temperature_min = 275\n#      pressure_max = 1E8\n#      interpolated_properties = 'density viscosity enthalpy internal_energy'\n#      fluid_property_file = water97_tabulated_11.csv\n#    []\n#   []\n#[]\n\n\n[Modules]\n  [FluidProperties]\n    [water]\n      type = SimpleFluidProperties\n      bulk_modulus = 2.27e14\n      density0 = 2.15e3\n      viscosity = 1e-3\n    []\n  []\n[]\n\n\n[Materials]\n  [temperature]\n    type = PorousFlowTemperature\n    temperature = 313.15\n    use_displaced_mesh = false\n  []\n  [saturation_calculator]\n    type = PorousFlow1PhaseP\n    porepressure = pwater\n    capillary_pressure = pc\n  []\n    [massfrac]\n    type = PorousFlowMassFraction\n  []\n  [water_viscosity_density]\n    type = PorousFlowSingleComponentFluid\n   # fp = tabulated_water                       #viscosity and density obtained from EOS    \n    fp = water\n    phase = 0\n  []\n   [porosity_mat]\n    type = PorousFlowPorosity\n    fluid = true\n    mechanical = true\n    thermal = true\n    porosity_zero = 0.0\n    reference_temperature = 330\n    reference_porepressure = 20E6\n    thermal_expansion_coeff = 15E-6 # volumetric\n    solid_bulk = 8E9 # unimportant since biot = 1\n  []\n    [permeability]\n    type = PorousFlowEmbeddedFracturePermeabilityBase\n    a =  0.01\n    b0 = 0.0\n    e0 = 1e-5\n    km = 1e-20\n    rad_xy = 0.785398\n    rad_yz = 0.785398\n    jf = 1\n    n = \"0 1 0\"\n\n    # type = PorousFlowPermeabilityKozenyCarman\n    # poroperm_function = kozeny_carman_phi0\n    # phi0 = 0.1\n    # n = 2\n    #m = 2\n    #k0 = 1E-12\n\n  []\n  [relperm_water]\n    type = PorousFlowRelativePermeabilityCorey\n    n = 4.0\n    s_res = 0.1\n    sum_s_res = 0.2\n    phase = 0\n  []\n\n  [elasticity_tensor]\n    type = ComputeIsotropicElasticityTensor\n    youngs_modulus = 1E9\n    poissons_ratio = 0.3\n  []\n  [strain]\n    type = ComputeSmallStrain\n    eigenstrain_names = 'initial_stress'\n  []\n  [initial_strain]\n    type = ComputeEigenstrainFromInitialStress\n   initial_stress = '20E6 0 0  0 20E6 0  0 0 20E6'\n    eigenstrain_name = initial_stress\n  []\n  [stress]\n    type = ComputeLinearElasticStress\n  []\n\n  [effective_fluid_pressure_mat]\n    type = PorousFlowEffectiveFluidPressure\n  []\n  [volumetric_strain]\n    type = PorousFlowVolumetricStrain\n  []\n[]\n\n[BCs]\n  [u_fix_left_x]\n    type = DirichletBC\n    variable = disp_x\n    value = 0\n    boundary = 'inlet'       \n  []\n  [u_fix_top_y]\n    type = DirichletBC\n    variable = disp_y\n    value = 1.1e-4\n    boundary = 'top'         \n  []\n  [u_fix_bottom_y]\n    type = DirichletBC\n   variable = disp_y\n   value = 0\n    boundary = 'bottom'      \n  []\n  [u_fix_right_x]\n    type = DirichletBC\n    variable = disp_x\n    boundary = 'outlet' \n    value = 0      \n  []\n   [pressure_right_x]\n    type = DirichletBC\n    boundary = 'outlet'              \n    variable = pwater\n    value = 1e5\n    use_displaced_mesh = false \n  []\n    [fluid_pressure_left]\n    type = Pressure\n    boundary = inlet\n    variable = disp_x\n    component = 0\n   postprocessor = constrained_effective_fluid_pressure_at_wellbore\n   use_displaced_mesh = false\n  []\n  [flux_left]\n   type = PorousFlowSink\n    boundary = inlet\n    variable = pwater\n    fluid_phase = 0\n    flux_function = -10e-10\n    use_displaced_mesh = false\n  []\n#[./left]\n#  type = NeumannBC\n#  variable = disp_x\n#  boundary = inlet\n#  value = -10e-10\n#[../]\n[]\n\n[Postprocessors]\n  [effective_fluid_pressure_at_wellbore]\n    type = PointValue\n    variable = effective_fluid_pressure\n    point = '1 0 0'\n    execute_on = timestep_begin\n    use_displaced_mesh = false\n  []\n  [constrained_effective_fluid_pressure_at_wellbore]\n    type = FunctionValuePostprocessor\n    function = constrain_effective_fluid_pressure\n    execute_on = timestep_begin\n []\n   [fracture_normal_strain]\n    type = PointValue\n    variable = strain_normal\n    point = '1 0 0'\n    execute_on = timestep_begin\n  []\n   [pwater_pressure]\n    type = PointValue\n    variable = pwater\n    point = '1 0 0'\n    execute_on = timestep_begin\n  [] \n   [permeability]\n    type = PointValue\n    variable = permeability\n    point = '1 0 0'\n    execute_on = timestep_begin\n  []\n[]\n\n[Functions]\n  [constrain_effective_fluid_pressure]\n    type = ParsedFunction\n    vars = effective_fluid_pressure_at_wellbore\n    vals = effective_fluid_pressure_at_wellbore\n    value = 'max(effective_fluid_pressure_at_wellbore, 1.01325e5)'\n  []\n[]\n\n[Preconditioning]\n  active = basic\n  [basic]\n    type = SMP\n    full = true\n    petsc_options = '-ksp_diagonal_scale -ksp_diagonal_scale_fix'\n    petsc_options_iname = '-pc_type -sub_pc_type -sub_pc_factor_shift_type -pc_asm_overlap'\n    petsc_options_value = ' asm      lu           NONZERO                   2'\n  []\n  [preferred_but_might_not_be_installed]\n    type = SMP\n    full = true\n    petsc_options_iname = '-pc_type -pc_factor_mat_solver_package'\n    petsc_options_value = ' lu       mumps'\n  []\n[]\n\n[Executioner]\n  type = Steady\n  solve_type = Newton\n  [TimeStepper]\n    type = IterationAdaptiveDT\n    dt = 1E3  # 1E3 1E4\n    growth_factor = 1.2\n    optimal_iterations = 10\n  []\n  nl_abs_tol = 1E-1\n[]\n\n[Outputs]\n  exodus = true\n  [csv]\n  type = CSV\n  execute_on = 'initial timestep_end'\n  []\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/22918",
+          "updatedAt": "2022-12-29T10:01:24Z",
+          "publishedAt": "2022-12-08T16:48:05Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "cpgr"
+                  },
+                  "bodyText": "Possibly just a typo? You're flux in the BC's on the inlet is 10e-10 in the input file, so basically zero. Is that really the flux?",
+                  "url": "https://github.com/idaholab/moose/discussions/22918#discussioncomment-4346827",
+                  "updatedAt": "2022-12-08T20:43:10Z",
+                  "publishedAt": "2022-12-08T20:43:09Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "batodon"
+                          },
+                          "bodyText": "Hi @cpgr . Sorry, that's a typo. The BC is 10e-10kg/s (yeah, i guess basically zero) in the published article. Even if I changed it to 10e10kg/s, I got the following error:\nNonlinear solve did not converge due to DIVERGED_MAX_IT iterations 50\n Solve Did NOT Converge!\nAborting as solve did not converge",
+                          "url": "https://github.com/idaholab/moose/discussions/22918#discussioncomment-4346870",
+                          "updatedAt": "2022-12-08T20:54:23Z",
+                          "publishedAt": "2022-12-08T20:53:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cpgr"
+                          },
+                          "bodyText": "Yeah, I wouldn't imagine it would work with 10e10 kg/s!\nThe flux_function in PorousFlowSink is measured in kg/m^2/s as it is integrated over the boundary. Unless your inlet boundary has an area of 1m^2 then your flux isn't 10e-10 kg/s. If your model is small, it might be less than that.\nDo you have a link to the benchmark problem?",
+                          "url": "https://github.com/idaholab/moose/discussions/22918#discussioncomment-4346942",
+                          "updatedAt": "2022-12-08T21:13:02Z",
+                          "publishedAt": "2022-12-08T21:11:09Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "batodon"
+                          },
+                          "bodyText": "Yeah, sure. That's what I thought. I guess they were referring to mass flow rate instead of mass flux. Here is the link: https://doi.org/10.1016/j.ijrmms.2021.104879. Btw, the model is a 'unit' square. That makes the boundary 1m, i guess.",
+                          "url": "https://github.com/idaholab/moose/discussions/22918#discussioncomment-4346984",
+                          "updatedAt": "2022-12-08T21:19:05Z",
+                          "publishedAt": "2022-12-08T21:19:04Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "cpgr"
+                  },
+                  "bodyText": "I wonder if there is a typo in the paper. Assuming that I am reading it correctly, at zero strain it is basically a 1m x 1m block with k=1e-19 m2. If mu = 1e-3 Pa.s, A = 1 m2, L = 1 m, Q = m / rho = 1e-10 / 1e3 = 1e-13, then Darcy's law rearranged gives\nDelta P = mu Q / k = 1e-3 x 1e-13 / 1e-19 = 1e3 which is basically what you get.\nFor the published Delta P = 1 MPa at zero strain, m = 1e-7 kg/s (or Q = 1e-10 m3/s). So I wonder whether the authors just have the wrong units for their input flux?",
+                  "url": "https://github.com/idaholab/moose/discussions/22918#discussioncomment-4347740",
+                  "updatedAt": "2022-12-09T00:01:17Z",
+                  "publishedAt": "2022-12-08T23:59:57Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "batodon"
+                          },
+                          "bodyText": "Hi @cpgr, you\u2019re absolutely right !. The authors got the units wrong; they should have reported Q=1e-10 m3/s instead of 1e-10 kg/s. I just sent an email to their corresponding author. I\u2019ll give you feedback on it soon. But even when I changed the flux to 1e-7 kg/s, I had the same results as before, the gradient is extremely small, and it seems the (flux) change is not affecting the pore pressure change.\nJust to give you insight, I got the following results on my console with the same gradient (image/result) I posted previously:",
+                          "url": "https://github.com/idaholab/moose/discussions/22918#discussioncomment-4348030",
+                          "updatedAt": "2022-12-09T01:15:19Z",
+                          "publishedAt": "2022-12-09T01:05:48Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "batodon"
+                          },
+                          "bodyText": "I think there is something fundamentally wrong with my input file. No matter the value I assign to the flux, I still get the same result...",
+                          "url": "https://github.com/idaholab/moose/discussions/22918#discussioncomment-4348100",
+                          "updatedAt": "2022-12-09T01:25:32Z",
+                          "publishedAt": "2022-12-09T01:25:31Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cpgr"
+                          },
+                          "bodyText": "Can you tighten your tolerance? It hasn't actually done anything here, as the initial residual is smaller than your tolerance. Perhaps set nl_abs_tol = 1e-12 for starters?",
+                          "url": "https://github.com/idaholab/moose/discussions/22918#discussioncomment-4348280",
+                          "updatedAt": "2022-12-09T02:12:35Z",
+                          "publishedAt": "2022-12-09T02:12:34Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "batodon"
+                          },
+                          "bodyText": "Great news! Now i'm getting there! I got results for 3D steady-state (i.e., cube) but yet to get a result for the 2D version (i.e., square). See below for the results i'm getting.\nLeft=3D  Right= 2D",
+                          "url": "https://github.com/idaholab/moose/discussions/22918#discussioncomment-4348364",
+                          "updatedAt": "2022-12-09T02:34:45Z",
+                          "publishedAt": "2022-12-09T02:34:44Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "batodon"
+                          },
+                          "bodyText": "Hi @cpgr, Just wanna let you know I got the results for the 2D case now. I attached below a comparison (both pressure and permeability) of the benchmark and my result.\nIn all cases, Left = Benchmark Right = my results.",
+                          "url": "https://github.com/idaholab/moose/discussions/22918#discussioncomment-4348700",
+                          "updatedAt": "2022-12-09T03:42:38Z",
+                          "publishedAt": "2022-12-09T03:42:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "batodon"
+                          },
+                          "bodyText": "Btw, I got these results using m=1e-7 kg/s.",
+                          "url": "https://github.com/idaholab/moose/discussions/22918#discussioncomment-4348712",
+                          "updatedAt": "2022-12-09T03:46:43Z",
+                          "publishedAt": "2022-12-09T03:46:43Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cpgr"
+                          },
+                          "bodyText": "OK, making progress! I guess the next step is to work out why your permeability is 3 times greater than the benchmark problem.\nAlso, it looks like the pressure is higher at the top corner than it is at the bottom corner in your results, when it should look more like the benchmark one I imagine.",
+                          "url": "https://github.com/idaholab/moose/discussions/22918#discussioncomment-4348927",
+                          "updatedAt": "2022-12-09T04:49:37Z",
+                          "publishedAt": "2022-12-09T04:49:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "batodon"
+                          },
+                          "bodyText": "Hello @cpgr ,\nHere is a much better result. I\u2019m finding it challenging to get the exact results from the benchmark. My pore-pressure seems to be half that of the benchmark. I\u2019m guessing this might be due to the magnitude of my displacement. Not quiet sure because I assigned the proper displacement BCs. Also, my permeability looks a bit smaller (don't know if it is changing at all). Any suggestion? I\u2019m still working on it. I attached the results here:\nmy_results\n\nbenchmark",
+                          "url": "https://github.com/idaholab/moose/discussions/22918#discussioncomment-4355153",
+                          "updatedAt": "2022-12-09T18:33:50Z",
+                          "publishedAt": "2022-12-09T18:33:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "batodon"
+                          },
+                          "bodyText": "Sorry, pls, ignore the previous comments about the displacements. I got the correct values now, but my pore pressure is still about half the correct value. My permeability has also not changed. It is still lesser than the benchmark value by a factor of 1.4.",
+                          "url": "https://github.com/idaholab/moose/discussions/22918#discussioncomment-4355422",
+                          "updatedAt": "2022-12-09T22:01:15Z",
+                          "publishedAt": "2022-12-09T18:45:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "batodon"
+                          },
+                          "bodyText": "Hello @cpgr,\nSo I received feedback from the corresponding author of the paper, and I just want to update you. In their literature, they used a density of 1kg/m3 instead of the usual density of water (i.e., 1e3 kg/m3) that we\u2019re familiar with and are using to compute the pressure gradient. That makes their mass flow rate equal to 1e10 kg/s. After making the changes, I got an almost exact value (see attached), but the magnitude of my permeability is still a bit off, although it is the same in the X and Y direction. I\u2019m still working on it. Thanks a lot!\nBenchmark= Left my_results =Right",
+                          "url": "https://github.com/idaholab/moose/discussions/22918#discussioncomment-4383419",
+                          "updatedAt": "2022-12-12T21:21:31Z",
+                          "publishedAt": "2022-12-12T21:20:03Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Compile-time error: no match for \u2018operator[]\u2019",
+          "author": {
+            "login": "batodon"
+          },
+          "bodyText": "Hello,\nI\u2019m building a simple customized AuxKernel to retrieve the components (i.e., x,y,z) of my permeability tensor. However, I keep getting the compile-time error shown below. Pls, help\nerror: no match for 'operator[]' (operand types are 'MooseADWrapper<libMesh::TensorValue<double>, false>' {aka 'const libMesh::TensorValue<double>'} and 'const unsigned int')\n   40 |   return (_EmbeddedFracturePermeability[_qp][_ph]) (_component);\n\nHere is my auxkernel header file:\n#pragma once\n\n#include \"AuxKernel.h\"\n#include \"PorousFlowDictator.h\"\n\n/**\n * Computes a component of the Permeability Tensor:\n */\nclass EFPComponents : public AuxKernel\n{\npublic:\n\tstatic InputParameters validParams();\n\n\tEFPComponents(const InputParameters& parameters);\n\nprotected:\n\tvirtual Real computeValue();\n\n\t/// Permeability of porous material\n\tconst MaterialProperty<RealTensorValue>& _EmbeddedFracturePermeability;\n\n\t/// PorousFlowDicatator UserObject\n\tconst PorousFlowDictator& _dictator;\n\n\t/// Index of the fluid phase\n\tconst unsigned int _ph;\n\n\t/// Desired spatial component\n\tunsigned int _component;\n};\n\nAnd my src file:\n#include \"EFPComponents.h\"\n\nregisterMooseObject(\"PorousFlowApp\", EFPComponents);\n\nInputParameters\nEFPComponents::validParams()\n{\n  InputParameters params = AuxKernel::validParams();\n  params.addRequiredParam<UserObjectName>(\n      \"PorousFlowDictator\", \"The UserObject that holds the list of PorousFlow variable names\");\n  params.addParam<unsigned int>(\"fluid_phase\", 0, \"The index corresponding to the fluid phase\");\n  MooseEnum component(\"x=0 y=1 z=2\");\n  params.addRequiredParam<MooseEnum>(\n      \"component\", component, \"The spatial component of the Darcy flux to return\");\n  params.addClassDescription(\"Permeability components\");\n  return params;\n}\n\nEFPComponents::EFPComponents(\n    const InputParameters & parameters)\n  : AuxKernel(parameters),\n    _EmbeddedFracturePermeability(getMaterialProperty<RealTensorValue>(\"PorousFlow_permeability_qp\")),\n    _dictator(getUserObject<PorousFlowDictator>(\"PorousFlowDictator\")),\n    _ph(getParam<unsigned int>(\"fluid_phase\")),\n    _component(getParam<MooseEnum>(\"component\"))\n{\n  if (_ph >= _dictator.numPhases())\n    paramError(\"fluid_phase\",\n               \"The Dictator proclaims that the maximum phase index in this simulation is \",\n               _dictator.numPhases() - 1,\n               \" whereas you have used \",\n               _ph,\n               \". Remember that indexing starts at 0. The Dictator is watching you, to \"\n               \"ensure your wellbeing.\");\n}\n\nReal\nEFPComponents::computeValue()\n{\n  return (_EmbeddedFracturePermeability[_qp][_ph]) (_component);\n}",
+          "url": "https://github.com/idaholab/moose/discussions/22951",
+          "updatedAt": "2022-12-29T00:21:20Z",
+          "publishedAt": "2022-12-12T23:20:06Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "See the doxygen for this class\nhttps://mooseframework.inl.gov/docs/doxygen/moose/classRankTwoTensorTempl.html\nI think you are supposed to use parenthesis?",
+                  "url": "https://github.com/idaholab/moose/discussions/22951#discussioncomment-4384421",
+                  "updatedAt": "2022-12-12T23:24:19Z",
+                  "publishedAt": "2022-12-12T23:24:18Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "batodon"
+                          },
+                          "bodyText": "Hi @GiudGiud, I had a look at the RankTwoTensor class, I'm not sure if I clearly understand what you meant. I think _qp needs a square bracket instead of parenthesis. correct?",
+                          "url": "https://github.com/idaholab/moose/discussions/22951#discussioncomment-4384537",
+                          "updatedAt": "2022-12-12T23:35:46Z",
+                          "publishedAt": "2022-12-12T23:35:45Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I m not sure that's true.\nMaybe have a look at other classes using RankTwoTensors, see how they are accessed",
+                          "url": "https://github.com/idaholab/moose/discussions/22951#discussioncomment-4384578",
+                          "updatedAt": "2022-12-12T23:45:26Z",
+                          "publishedAt": "2022-12-12T23:45:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "actually is this a RankTwoTensor? or a RealTensorValue?\nI think we may be looking at the wrong one\nhttps://libmesh.github.io/doxygen/classlibMesh_1_1TensorValue.html",
+                          "url": "https://github.com/idaholab/moose/discussions/22951#discussioncomment-4384588",
+                          "updatedAt": "2022-12-12T23:49:48Z",
+                          "publishedAt": "2022-12-12T23:49:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "batodon"
+                          },
+                          "bodyText": "Hi @GiudGiud. I still can't find a solution after combing through the Libmesh Tensor class. I changed the square brackets to parenthesis, but I got this error:\nerror: no match for call to '(const MaterialProperty<libMesh::TensorValue<double> >) (unsigned int&)'\n   40 |   return (_EmbeddedFracturePermeability(_qp)[_ph])(_component);",
+                          "url": "https://github.com/idaholab/moose/discussions/22951#discussioncomment-4384776",
+                          "updatedAt": "2022-12-13T00:21:56Z",
+                          "publishedAt": "2022-12-13T00:21:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "How many dimensions to this tensor?\nFor 2 dimensions I expect (i, j)",
+                          "url": "https://github.com/idaholab/moose/discussions/22951#discussioncomment-4384794",
+                          "updatedAt": "2022-12-13T00:24:21Z",
+                          "publishedAt": "2022-12-13T00:24:21Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "batodon"
+                          },
+                          "bodyText": "Here is a better version of the files. These ones compile successfully. But I got a new error when I try running my input file:\n*** ERROR ***\nMaterial has no property named: PorousFlow_permeability_qp\n\nheader file:\n#pragma once\n\n#include \"AuxKernel.h\"\n#include \"RankTwoTensor.h\"\n\nclass EFPComponents : public AuxKernel\n{\npublic:\n\tstatic InputParameters validParams();\n\tEFPComponents(const InputParameters& parameters);\n\nprotected:\n\tvirtual Real computeValue();\n\nprivate:\n\tconst MaterialProperty<RankTwoTensor>& _EmbeddedFracturePermeability;\n\tconst unsigned int _i;\n\tconst unsigned int _j;\n};\n\nsrc file:\n#include \"EFPComponents.h\"\n\nregisterMooseObject(\"PorousFlowApp\", EFPComponents);\n\nInputParameters\nEFPComponents::validParams()\n{\n  InputParameters params = AuxKernel::validParams();\n  params.addClassDescription(\"Access components of the permeability tensor.\");\n  params.addRequiredRangeCheckedParam<unsigned int>(\n      \"index_i\",\n      \"index_i >= 0 & index_i <= 2\",\n      \"The index i of ij for the permeability tensor (0, 1, 2)\");\n  params.addRequiredRangeCheckedParam<unsigned int>(\n      \"index_j\",\n      \"index_j >= 0 & index_j <= 2\",\n      \"The index j of ij for the permeability tensor (0, 1, 2)\");\n  return params;\n}\n\nEFPComponents::EFPComponents(const InputParameters & parameters)\n  : AuxKernel(parameters),\n    _EmbeddedFracturePermeability(getMaterialProperty<RankTwoTensor>(\"PorousFlow_permeability_qp\")),\n    _i(getParam<unsigned int>(\"index_i\")),\n    _j(getParam<unsigned int>(\"index_j\"))\n{\n}\n\nReal\nEFPComponents::computeValue()\n{\n  return _EmbeddedFracturePermeability[_qp](_i, _j);\n}",
+                          "url": "https://github.com/idaholab/moose/discussions/22951#discussioncomment-4384945",
+                          "updatedAt": "2022-12-13T00:50:24Z",
+                          "publishedAt": "2022-12-13T00:50:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "use show_material_properties in the debug block to see what the correct name should be",
+                          "url": "https://github.com/idaholab/moose/discussions/22951#discussioncomment-4384953",
+                          "updatedAt": "2022-12-13T00:52:48Z",
+                          "publishedAt": "2022-12-13T00:52:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "batodon"
+                          },
+                          "bodyText": "PorousFlow_permeability_qp is a material property as shown below, but I keep getting that error.\n      Material Name:       porosity_mat\n      Property Names:      \"PorousFlow_porosity_qp\" \"dPorousFlow_porosity_qp_dgradvar\" \"dPorousFlow_porosity_qp_dvar\"\n\n      Material Name:       permeability\n      Property Names:      \"PorousFlow_permeability_qp\" \"dPorousFlow_permeability_qp_dgradvar\" \"dPorousFlow_permeability_qp_dvar\"\n                             \"fracture_normal_strain_qp\"\n      Material Name:       relperm_water\n      Property Names:      \"PorousFlow_relative_permeability_qp0\" \"dPorousFlow_relative_permeability_qp0/dsaturation_variable\"",
+                          "url": "https://github.com/idaholab/moose/discussions/22951#discussioncomment-4385013",
+                          "updatedAt": "2022-12-13T01:08:05Z",
+                          "publishedAt": "2022-12-13T01:08:05Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cpgr"
+                          },
+                          "bodyText": "You might just be able to use PorousFlowPropertyAux, which does output permeability components. Although I'm almost certain that it looks very similar to what you have in your code...",
+                          "url": "https://github.com/idaholab/moose/discussions/22951#discussioncomment-4385840",
+                          "updatedAt": "2022-12-13T04:14:38Z",
+                          "publishedAt": "2022-12-13T04:14:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "batodon"
+                          },
+                          "bodyText": "Yeah, sure. I figured it doesn\u2019t worth defining another auxKernel; the PorousFlowPropertyAux does the same thing. My results are not affected in anyway. Thanks @GiudGiud  @cpgr",
+                          "url": "https://github.com/idaholab/moose/discussions/22951#discussioncomment-4386104",
+                          "updatedAt": "2022-12-13T05:19:56Z",
+                          "publishedAt": "2022-12-13T05:19:55Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Insufficient version of system glibc (GLIBCXX_3.4.26 not found) - install works, but all tests fail",
+          "author": {
+            "login": "WulfHans"
+          },
+          "bodyText": "I installed MOOSE exactly as described and the compilation worked without errors. However, all tests failed with an error message:\n/usr/lib/x86_64-linux-gnu/libstdc++.so.6: version GLIBCXX_3.4.26 not found\nAnalysis of the error is simple by:\nldd ./lib/libmoose_test-opt.so.0\nstrings /usr/lib/x86_64-linux-gnu/libstdc++.so.6 | grep GLIBCXX\n\nThis shows easily, that the error message is just correct: libmoose links to a mixture of local libs (from miniconda) and system-wide libs. The systemwide glibc is indeed just a bit too old (it supports all up to GLIBCXX_3.4.25). For completeness: My system is Debian10, gcc 8.3.0, glibc 2.28\nSome quick research shows, that such issues are not unheard of in context of conda. There are a lots of proposed solutions, including some rather scary ones (like upgrading your whole system-wide glibc) or annoying ones (like applying patchelf to a lot of things).\nMy solution was inserting this into ~/miniconda3/envs/moose/etc/conda/activate.d/env_vars.sh:\nexport OLD_LD_LIBRARY_PATH=${LD_LIBRARY_PATH}\nexport LD_LIBRARY_PATH=~/miniconda3/envs/moose/lib:${LD_LIBRARY_PATH}\n\nand this into the corresponding ~/miniconda3/envs/moose/etc/conda/deactivate.d/env_vars.sh:\nexport LD_LIBRARY_PATH=${OLD_LD_LIBRARY_PATH}\nunset OLD_LD_LIBRARY_PATH\n\nThe miniconda environment contains its own (newer) libstdc++ and now the linker prefers these libs.\nThis solves the main issue. All tests pass now. However, any call is accompagnied by this:\n/bin/bash: /home/hans/miniconda3/envs/moose/lib/libtinfo.so.6: no version information available (required by /bin/bash)\nMy questions are:\n\nIs this supposed to happen? Perhaps I am spoilt by how easy installing software usually is nowadays - but I suppose this should work out-of-the-box? What went wrong?\nIs my fix the recommended solution?\nAre there any pitfalls to be aware of with this?",
+          "url": "https://github.com/idaholab/moose/discussions/18378",
+          "updatedAt": "2022-12-29T00:18:39Z",
+          "publishedAt": "2021-07-19T16:09:03Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "milljm"
+                  },
+                  "bodyText": "There was a recent failure in dependency resolution for our moose-libmesh package. Can you verify what version of moose-$$$ packages are installed?\nconda list | grep moose\nI suspect (and hope), that you actually have an older moose-libmesh (or moose-tools) than what is supposed to be the correct combination of the two. The fix went in only an hour or so ago manually into our Idaholab channel.\nA good list:\nmoose-libmesh             2021.06.30              build_1    idaholab\nmoose-libmesh-vtk         6.3.0                   build_6    idaholab\nmoose-mpich               3.3.2                   build_6    idaholab\nmoose-petsc               3.15.1                  build_1    idaholab\nmoose-tools               2021.07.13       py39h3dbc78d_0    idaholab\n\nWhat I think you might see for the error you are receiving:\nBad list (recorded from another post, hence the python differences):\nmoose-libmesh             2021.06.30              build_1    idaholab\nmoose-libmesh-vtk         6.3.0                   build_6    idaholab\nmoose-mpich               3.3.2                   build_6    idaholab\nmoose-petsc               3.15.1                  build_1    idaholab\nmoose-tools               2020.04.13       py37h734910c_0    idaholab\n\nThe fix was to moose-libmesh. Even though they look identical. The problem was with the internals of said package depending on a version of libnetcdf that the latest moose-tools was requesting. I simply fixed moose-libmesh specifically, and overwrote it on our Anaconda Idaholab channel (hence the identical name/version/build). In retrospect I probably should have bumped a version or build number. But I wanted to create the exact build our CI was going to build later (and it still hasn't). The fix is detailed here if you are curious: #18268",
+                  "url": "https://github.com/idaholab/moose/discussions/18378#discussioncomment-1023074",
+                  "updatedAt": "2022-09-29T16:18:42Z",
+                  "publishedAt": "2021-07-19T17:17:14Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WulfHans"
+                          },
+                          "bodyText": "(moose) hans@hpc:~/Arbeit/moose_projects/moose/test$ conda list | grep moose\n# packages in environment at /home/hans/miniconda3/envs/moose:\nmoose-libmesh             2021.06.30              build_0    idaholab\nmoose-libmesh-vtk         6.3.0                   build_5    idaholab\nmoose-mpich               3.3.2                   build_5    idaholab\nmoose-petsc               3.15.1                  build_0    idaholab\nmoose-tools               2020.04.13       py37h734910c_0    idaholab\n\nI clearly have the bad list. However, its nice to see, that a fix is already on the way. Can I just update and revert the changes to the activate/deactive scripts?",
+                          "url": "https://github.com/idaholab/moose/discussions/18378#discussioncomment-1023876",
+                          "updatedAt": "2022-12-29T00:21:38Z",
+                          "publishedAt": "2021-07-19T21:20:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "The good news is the fix should already be available to you :). I would delete that pesky moose environment and recreate it. While you're at it, something we are working to move to is mamba. It's wicked quick at Conda solve/install times (all threaded operations). My condolences, if you were using conda create -n moose moose-libmesh moose-tools during this broken 'moose-libmesh' package. The solve time was horrendous.\nPlease try this next!!:\nconda deactivate\nconda env remove -n moose\nconda install mamba\nmamba create -n moose moose-libmesh moose-tools\nconda activate moose\nmamba is a drop in replacement for conda. So you can basically use all the same commands with mamba as you would with conda (mamba install, mamba search, mamba remove, etc). Except: conda activate. That one remains a necessity.",
+                          "url": "https://github.com/idaholab/moose/discussions/18378#discussioncomment-1023895",
+                          "updatedAt": "2022-09-29T16:18:46Z",
+                          "publishedAt": "2021-07-19T21:30:48Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WulfHans"
+                          },
+                          "bodyText": "I did this and it seems, that I have the good list now:\n(moose) hans@hpc:~/Arbeit/moose_projects/moose/test$ conda list | grep moose\n# packages in environment at /home/hans/miniconda3/envs/moose:\nmoose-libmesh             2021.06.30              build_1    idaholab\nmoose-libmesh-vtk         6.3.0                   build_6    idaholab\nmoose-mpich               3.3.2                   build_6    idaholab\nmoose-petsc               3.15.1                  build_1    idaholab\nmoose-tools               2021.07.13       py39h3dbc78d_0    idaholab\n\nHowever, i get the same error again:\n/home/hans/Arbeit/moose_projects/moose/test/moose_test-opt: /usr/lib/x86_64-linux-gnu/libstdc++.so.6: version GLIBCXX_3.4.26' not found (required by /home/hans/Arbeit/moose_projects/moose/test/lib/libmoose_test-opt.so.0)\n`\nI suppose I could fix it again by above mentioned small scripts, but if you have some further ideas, I would prefer trying those first.",
+                          "url": "https://github.com/idaholab/moose/discussions/18378#discussioncomment-1025126",
+                          "updatedAt": "2022-09-29T16:18:47Z",
+                          "publishedAt": "2021-07-20T07:24:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "It's very possible you have stale libs lying around after updating your conda environment.\nYou can try make clobberall to clean the moose directory and recompile. If that doesn't work, you can try git clean -xfd to clean all untracked files (remember to commit your work before doing so) then recompile.",
+                          "url": "https://github.com/idaholab/moose/discussions/18378#discussioncomment-1025844",
+                          "updatedAt": "2022-09-29T16:19:06Z",
+                          "publishedAt": "2021-07-20T11:04:24Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "There is also a new submodule in play which contains the pyhit parser: moosetools. While I believe make clobberall reaches this submodule, there is a sure-fire way to clean everything as @hugary1995  mentions with git clean. In order to get submodules clean I use:\ncd moose\ngit submodule forearch --recursive git clean -xfd\ngit clean -xfd\nThe first git command removes any untracked files in all submodules, recursively.\nThe last git command removes any untracked files in the top-level repo. I always forget to run this one...",
+                          "url": "https://github.com/idaholab/moose/discussions/18378#discussioncomment-1026406",
+                          "updatedAt": "2022-09-29T16:19:06Z",
+                          "publishedAt": "2021-07-20T13:23:27Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WulfHans"
+                          },
+                          "bodyText": "The last one finally solved it! Thanks for the swift and focussed help @ALL!",
+                          "url": "https://github.com/idaholab/moose/discussions/18378#discussioncomment-1033865",
+                          "updatedAt": "2022-09-29T16:19:20Z",
+                          "publishedAt": "2021-07-21T16:38:37Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "adCoupledGradient in FV interface kernel",
+          "author": {
+            "login": "heinono1"
+          },
+          "bodyText": "I am working on an FV interface kernel that needs to compute the difference in an (elemental) adCoupledGradient. That is, I have an FV elemental variable  (an adCoupledValue in the interface kernel) and an adCoupledGradient that is the gradient of that FV elemental variable, and I need to evaluate the adCoupledGradient on both sides of the interface. I have not quite been able to figure out how to do that. For adFunctors I can just evaluate them at elemFromFace and neighborFromFace. If I assume that I can pass components of the gradient as variable1 and variable2, the I can use the FVInterfaceKernel system to generate differences in the gradient components:\nconst auto gradient_diff = var1().getElemValue(&_face_info -> elem())-var2().getElemValue(_face_info -> neighborPtr())\nBut that is clumsy - it would be better to directly evaluate the adCoupledGradient at the two elements. There should be a simple way of  doing that, I think.",
+          "url": "https://github.com/idaholab/moose/discussions/22590",
+          "updatedAt": "2022-12-29T00:18:00Z",
+          "publishedAt": "2022-11-03T17:17:11Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nAre you trying to build your own gradient?\nWe have the following ways to get you gradients here:\n\nvar1().grad(face_arg) and var2().grad(face_arg) for face gradients\nvar1().grad(elem_arg) and var2().grad(neighbor_arg) for element gradients\n\nelem or face_arg are built from elem/neighborFromFace() routine and singleSidedFaceArg routine\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22590#discussioncomment-4052576",
+                  "updatedAt": "2022-11-04T01:32:48Z",
+                  "publishedAt": "2022-11-04T01:32:48Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "heinono1"
+                          },
+                          "bodyText": "Hello Guillaume,\nThanks.! Yes, using\nADRealVectorValue gradient_diff = var1().adGradSln(&_face_info->elem())-var2().adGradSln(_face_info->neighborPtr)));\nseems to work to generate a difference in gradients across the interface. At least the compiler does not puke.\nI also need to generate differences of nonlinear variables, say mag_x, across the interface. I managed (I think) to generate differences between elemental values using\nparams.addRequiredParam(\"mag_x\",  );\n..\n_mag_x(getFunctor(\"mag_x\")),\n...\nconst auto mag_x_diff = _mag_x(elemFromFace()) - _mag_x(neighborFromFace());\nthat is, I passed the nonlinear variable as an adFunctor so I could access the elemFromFace routine. I could not use the adSln(&_face_info->elem()) for the functor or if I pass the nonlinear variable as adCoupledValue. I am not sure if it makes sense to pass the nonlinear variable mag_x as a functor. And alternative, I guess, would be to build up the interface residual by running twice with var1 and var2 being the different nonlinear variables in each call, but that seems a little clumsy.",
+                          "url": "https://github.com/idaholab/moose/discussions/22590#discussioncomment-4057946",
+                          "updatedAt": "2022-11-04T15:20:01Z",
+                          "publishedAt": "2022-11-04T15:20:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Retrieving it as a functor allows you to use, in addition to variables:\n\nfunctions\nfunctor material property\nThat s not useful to everyone. Many will still want to retrieve a pointer to the variable.\n\nThe flux is supposed to be the same on both sides of the interface right? Like there is conservation of whatever quantity is going through the face?\nNote that coupledValue() does not allow to use the functor routines. This is for retrieving variable values the traditional way only",
+                          "url": "https://github.com/idaholab/moose/discussions/22590#discussioncomment-4058306",
+                          "updatedAt": "2022-11-04T15:49:48Z",
+                          "publishedAt": "2022-11-04T15:49:48Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "heinono1"
+                          },
+                          "bodyText": "OK, so I can retrieve the nonlinear variable as a functor - cool! No, the flux is not conserved across the interface - the gradient of the potential has a discontinuity across the interface with sources related to the nonlinear variable mag_x.",
+                          "url": "https://github.com/idaholab/moose/discussions/22590#discussioncomment-4058328",
+                          "updatedAt": "2022-11-04T15:52:30Z",
+                          "publishedAt": "2022-11-04T15:52:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "yes\nAh i was worried about that. We dont currently allow that in FVIKs\nvoid\nFVInterfaceKernel::computeResidual(const FaceInfo & fi)\n{\n  setupData(fi);\n\n  const auto var_elem_num = _elem_is_one ? _var1.number() : _var2.number();\n  const auto var_neigh_num = _elem_is_one ? _var2.number() : _var1.number();\n\n  const auto r = MetaPhysicL::raw_value(fi.faceArea() * fi.faceCoord() * computeQpResidual());\n\n  processResidual(r, var_elem_num, false);\n  processResidual(-r, var_neigh_num, true);\n}\n\nas you can see the residual is added to both sides with just a sign change.\nI actually worked on adding this for a discontinuous pressure term in Navier Stokes (for a flow diode), but it was not merged as the end product was not 100% functional.\nThe discontinuous flux term, with the capability to have different fluxes on both sides of an interface, was working.\nI m going to tag @lindsayad for awareness and comment (and to make sure I m not delusional)",
+                          "url": "https://github.com/idaholab/moose/discussions/22590#discussioncomment-4058412",
+                          "updatedAt": "2022-11-04T16:00:26Z",
+                          "publishedAt": "2022-11-04T16:00:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "heinono1"
+                          },
+                          "bodyText": "Oh, I see. So I would need to be able to add two different pieces, one from each side of the interface. I can arrange so that computeQpResidual in my interface kernel calculates and returns the contributions from both sides of the interface. Would there be an easy way for me to modify my FVInterfaceKernel so the contribution I have calculated just get multiplied by the appropriate face area (without adding equal and opposite contributions from each side)?",
+                          "url": "https://github.com/idaholab/moose/discussions/22590#discussioncomment-4058644",
+                          "updatedAt": "2022-11-04T16:20:32Z",
+                          "publishedAt": "2022-11-04T16:20:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "you ll need to overwrite ComputeResidual to make that change. computeQpResidual is only called once right now, so even if you have the right logic for distinguishing, it wont contribute a different amount on both sides\nIt's not where we want to be in the future but it should be doable now",
+                          "url": "https://github.com/idaholab/moose/discussions/22590#discussioncomment-4058677",
+                          "updatedAt": "2022-11-04T20:42:07Z",
+                          "publishedAt": "2022-11-04T16:24:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "heinono1"
+                          },
+                          "bodyText": "I'll give it a shot....\nThanks again for your help!",
+                          "url": "https://github.com/idaholab/moose/discussions/22590#discussioncomment-4058683",
+                          "updatedAt": "2022-11-04T16:25:34Z",
+                          "publishedAt": "2022-11-04T16:25:33Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "we could make a virtual computeNeighborQpResidual whose base implementation just returns the negative of computeQpResidual",
+                          "url": "https://github.com/idaholab/moose/discussions/22590#discussioncomment-4079142",
+                          "updatedAt": "2022-11-07T17:56:03Z",
+                          "publishedAt": "2022-11-07T17:56:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "Although that is kind of wasteful ... in most cases it would perform the AD computeQpResidual computation twice",
+                          "url": "https://github.com/idaholab/moose/discussions/22590#discussioncomment-4079145",
+                          "updatedAt": "2022-11-07T17:56:48Z",
+                          "publishedAt": "2022-11-07T17:56:48Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "I've created issue #22610 for this",
+                          "url": "https://github.com/idaholab/moose/discussions/22590#discussioncomment-4079185",
+                          "updatedAt": "2022-11-07T18:00:58Z",
+                          "publishedAt": "2022-11-07T18:00:57Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How do I apply two load levels in a Multi-stage creep test in MOOSE?",
+          "author": {
+            "login": "batodon"
+          },
+          "bodyText": "Hello, I\u2019m performing a multi-stage creep test with two applied load levels. However, I can\u2019t figure out how to apply this load conditions. Any clue will help. Thanks. Here is my input file:\n[GlobalParams]\n  displacements = 'disp_x disp_y disp_z'\n[]\n\n[Mesh]\n  type = GeneratedMesh\n  dim = 3\n  nx = 1\n  ny = 1\n  nz = 1\n[]\n\n[AuxVariables]\n  [damage_param]\n    order = CONSTANT\n    family = MONOMIAL\n  []\n   [kelvin_creep_rate]\n    order = CONSTANT\n    family = MONOMIAL\n  []\n[]\n\n[AuxKernels]\n   [damage_evol]\n    type = MaterialRealAux\n    variable = damage_param\n    property = damage_param\n    execute_on = 'initial timestep_end'\n  []\n    [kelvin_creep_rate_evol]\n    type = MaterialRealAux\n    variable = kelvin_creep_rate\n    property = kelvin_creep_rate\n    execute_on = 'initial timestep_end'\n  []\n[]\n\n\n[Modules/TensorMechanics/Master]\n  [all]\n    strain = SMALL\n    incremental = true\n    add_variables = true \n    generate_output = 'stress_yy creep_strain_xx creep_strain_yy creep_strain_zz elastic_strain_yy' \n  []\n[]\n\n[Functions]\n  [top_pull]\n    type = PiecewiseLinear\n    x = '0 1'\n    y = '1 1'\n  []\n[]\n\n[BCs]\n  [u_top_pull]\n    type = Pressure\n    variable = disp_y\n    boundary = top\n    factor = '-10.0e6'\n    function = top_pull\n  []\n  [u_bottom_fix]\n    type = DirichletBC\n    variable = disp_y\n    boundary = bottom\n    value = 0.0\n  []\n  [u_yz_fix]\n    type = DirichletBC\n    variable = disp_x\n    boundary = left\n    value = 0.0\n  []\n  [u_xy_fix]\n    type = DirichletBC\n    variable = disp_z\n    boundary = back\n    value = 0.0\n  []\n[]\n\n\n[Materials]\n  [elasticity_tensor]\n    type = ComputeIsotropicElasticityTensor\n    youngs_modulus = 2e10     # 2e11\n    poissons_ratio = 0.3      # 0.3\n  []\n  [radial_return_stress]\n    type = ComputeMultipleInelasticStress\n    inelastic_models = 'LuxWolters_Eps'\n    tangent_operator = elastic\n    combined_inelastic_strain_weights = '1.0'\n  []\n  [LuxWolters_Eps]\n    type = LuxWoltersEps\n    mvM =  -2.47e-6            \n    etaM0 = 2.03e7           \n    mvK =   -1.68e-6           \n    mk =    -1.91e-6           \n    etaK0 =  8.94e3            \n    GK0 =    5.08e5          \n      a4 = 0.3\n      a5 = 0.05\n      a6 = 67.0\n      a7 = 41.0\n      a8 = 0.25\n      a9 = 1.0\n     a10 = 0.25\n     a15 = 1.67e-1\n     a16 = 1.0e-8\n     a17 = 3.5e-8\n     sigma0 = 1.0\n       L= 5.5E-2\n      L1= 0.0\n       T= 333\n       a = 0\n       b = 0\n  []\n[]\n\n[Executioner]\n  type = Transient\n  solve_type = 'PJFNK' \n\n  petsc_options = '-snes_ksp'\n  petsc_options_iname = '-ksp_gmres_restart'\n  petsc_options_value = '101'\n  line_search = 'none'\n  automatic_scaling = true\n  computing_scaling_once = false\n\n  l_max_its = 20\n  nl_max_its = 20\n  nl_rel_tol = 1e-6\n  nl_abs_tol = 1e-6\n  l_tol = 1e-5\n  start_time = 0.0\n  end_time = 100.0\n  num_steps = 100\n  dt = 0.001\n[]\n\n[Postprocessors]\n    [elastic]\n    type = PointValue\n    point = '1 1 1'\n    variable = elastic_strain_yy\n  []\n    [creep_strainXX]\n    type = PointValue\n    point = '1 1 1'\n    variable = creep_strain_xx\n  []\n    [creep_strainYY]\n    type = PointValue\n    point = '1 1 1'\n    variable = creep_strain_yy\n  []\n    [creep_strainZZ]\n    type = PointValue\n    point = '1 1 1'\n    variable = creep_strain_zz\n  []\n    [stressYY]\n    type = PointValue\n    point = '1 1 1'\n    variable = stress_yy\n  []\n  [damage_evol]\n   type = PointValue\n   point = '1 1 1'\n   variable = damage_param\n  []\n  [scalar_Kelvin_strain_rate]\n   type = PointValue\n   point = '1 1 1'\n   variable = kelvin_creep_rate\n  []\n[]\n\n[Outputs]\n  exodus = true\n  [csv]\n  type = CSV\n  execute_on = 'initial timestep_end'\n  []\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/22410",
+          "updatedAt": "2022-12-29T00:12:27Z",
+          "publishedAt": "2022-10-16T01:35:43Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nWhat do you mean exactly by two load levels? I m not sure\nmaybe @hugary1995 will know what you mean\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22410#discussioncomment-3891906",
+                  "updatedAt": "2022-10-17T01:01:25Z",
+                  "publishedAt": "2022-10-17T01:01:24Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "I suppose you mean two different magnitudes of load for two periods of time. You can change the top_pull function in your input file. For example,\n[Functions]\n  [top_pull]\n    type = PiecewiseLinear\n    x = '0 1 2'\n    y = '1 1 2'\n  []\n[]\nThere are many, many different ways of specifying a function in MOOSE. Please consult the documentation.",
+                  "url": "https://github.com/idaholab/moose/discussions/22410#discussioncomment-3892271",
+                  "updatedAt": "2022-10-17T02:27:58Z",
+                  "publishedAt": "2022-10-17T02:27:58Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "batodon"
+                          },
+                          "bodyText": "Thanks, @hugary1995 . Exactly, I want to apply two magnitudes of loads at two time periods, but the second time period should begin after the first test occurred. That means the second load will initiate a new test. I tried using the PiecewiseLinear function before but came up with a graph showing only one load level (test).",
+                          "url": "https://github.com/idaholab/moose/discussions/22410#discussioncomment-3898013",
+                          "updatedAt": "2022-10-17T16:00:43Z",
+                          "publishedAt": "2022-10-17T16:00:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "if they are one after the other, you can bake both profiles into the same function.\nThis can be easily done with a parsed expression in a ParsedFunction if you need some flexibility",
+                          "url": "https://github.com/idaholab/moose/discussions/22410#discussioncomment-3898235",
+                          "updatedAt": "2022-10-17T16:23:29Z",
+                          "publishedAt": "2022-10-17T16:23:28Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "I tried using the PiecewiseLinear function before but came up with a graph showing only one load level (test).\n\nhmm, interesting. So are you suggesting PiecewiseLinear gave you a different function than what you specified?",
+                          "url": "https://github.com/idaholab/moose/discussions/22410#discussioncomment-3898294",
+                          "updatedAt": "2022-10-17T16:30:57Z",
+                          "publishedAt": "2022-10-17T16:30:50Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "batodon"
+                          },
+                          "bodyText": "@GiudGiud  @hugary1995. I made some  adjustments to the Piecewiselinear. Both methods worked! I'm, however, sticking with the PiecewiseLinear function. Thanks. \ud83d\udc4d",
+                          "url": "https://github.com/idaholab/moose/discussions/22410#discussioncomment-3937845",
+                          "updatedAt": "2022-10-21T23:47:24Z",
+                          "publishedAt": "2022-10-21T23:47:24Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Yep, and if you don't want to manually control the \"ramping\" from one load to another, there is also a PiecewiseConstant object.",
+                          "url": "https://github.com/idaholab/moose/discussions/22410#discussioncomment-3938026",
+                          "updatedAt": "2022-10-22T01:06:45Z",
+                          "publishedAt": "2022-10-22T01:06:45Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "The following material properties are declared on block 1 by multiple materials:",
+          "author": {
+            "login": "DYLDYLDYL"
+          },
+          "bodyText": "Hi\uff01\nI am trying to add Thermal and Irradiation Creep with PowerLawCreepStressUpdate.\nIt works fine when I add one, but adding two at the same time causes an error.\n    [./creep1]\n    type = PowerLawCreepStressUpdate\n    activation_energy = 52000\n    temperature = T\n    coefficient = 5000\n    n_exponent = 1\n  [../]\n    [./creep2]\n    type = PowerLawCreepStressUpdate\n    activation_energy = 52000\n    temperature = T\n    coefficient = 6\n    n_exponent = 4.5\n  [../]\n\nThe following material properties are declared on block 1 by multiple materials:\n  Material Property             Material Objects\n  creep_strain                  all_strain creep1 creep2 stress vonmises_stress_all \n  effective_creep_strain        all_strain creep1 creep2 stress vonmises_stress_all",
+          "url": "https://github.com/idaholab/moose/discussions/22714",
+          "updatedAt": "2023-01-03T22:34:57Z",
+          "publishedAt": "2022-11-16T02:12:30Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "You'll have to use different base names.",
+                  "url": "https://github.com/idaholab/moose/discussions/22714#discussioncomment-4152422",
+                  "updatedAt": "2022-11-16T02:15:25Z",
+                  "publishedAt": "2022-11-16T02:15:24Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "DYLDYLDYL"
+                          },
+                          "bodyText": "Thanks a lot \uff01Your answer solves my problem perfectly \uff01",
+                          "url": "https://github.com/idaholab/moose/discussions/22714#discussioncomment-4153896",
+                          "updatedAt": "2022-11-16T07:13:59Z",
+                          "publishedAt": "2022-11-16T07:13:58Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Defining creep rate with a custom function",
+          "author": {
+            "login": "AndrewFalkowski"
+          },
+          "bodyText": "I have creep rate data as a function of temperature and shear stress in a table. After importing this data as a bilinear interpolation function is there a way to utilize this function for modeling creep? Or would a custom kernel need to be written for this?",
+          "url": "https://github.com/idaholab/moose/discussions/22879",
+          "updatedAt": "2023-01-03T22:35:38Z",
+          "publishedAt": "2022-12-05T18:57:13Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@bwspenc @recuero",
+                  "url": "https://github.com/idaholab/moose/discussions/22879#discussioncomment-4316396",
+                  "updatedAt": "2022-12-05T19:15:37Z",
+                  "publishedAt": "2022-12-05T19:15:37Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "So something similar to this\nhttps://mooseframework.inl.gov/source/materials/PowerLawCreepStressUpdate.html\nbut not power law?",
+                          "url": "https://github.com/idaholab/moose/discussions/22879#discussioncomment-4316398",
+                          "updatedAt": "2022-12-05T19:16:07Z",
+                          "publishedAt": "2022-12-05T19:16:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "AndrewFalkowski"
+                          },
+                          "bodyText": "Yes, in this case I don't have access to fitted power law parameters and instead just have creep rates that result from a combination of shear stress and temperature. The data covers several different creep regimes, which would make simple power law fitting inapplicable.",
+                          "url": "https://github.com/idaholab/moose/discussions/22879#discussioncomment-4316494",
+                          "updatedAt": "2022-12-05T19:28:59Z",
+                          "publishedAt": "2022-12-05T19:28:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "recuero"
+                          },
+                          "bodyText": "If your use case doesn't use a power law and directly prescribes the creep rate as a function of some variables, I'd create a new creep object which takes a function with a number of parameters, some of them may be optional. So, I don't think you need a kernel but a material property.",
+                          "url": "https://github.com/idaholab/moose/discussions/22879#discussioncomment-4316498",
+                          "updatedAt": "2022-12-05T19:29:35Z",
+                          "publishedAt": "2022-12-05T19:29:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "AndrewFalkowski"
+                          },
+                          "bodyText": "Would you be willing to provide a simple example of the implementation of that in a MOOSE input file?",
+                          "url": "https://github.com/idaholab/moose/discussions/22879#discussioncomment-4316517",
+                          "updatedAt": "2022-12-05T19:32:47Z",
+                          "publishedAt": "2022-12-05T19:32:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "recuero"
+                          },
+                          "bodyText": "I don't think we currently have that capability in MOOSE (I may be missing some options though). So I don't think you can prescribe that from the input file; you'd need an a creep object that takes Functions as input parameters and operate on them with coupled variables to return the creep rate that your data represents. You could define a function in the input file that takes parameters as temperature and then pass the function to such an object. There are objects that take functions, such as: ComputeDynamicFrictionalForceLMMechanicalContact with\nparams.addParam<FunctionName>(\n      \"function_friction\",\n      \"Coupled function to evaluate friction with values from contact pressure and relative \"\n      \"tangential velocities (from the previous step).\");",
+                          "url": "https://github.com/idaholab/moose/discussions/22879#discussioncomment-4316605",
+                          "updatedAt": "2022-12-05T19:46:22Z",
+                          "publishedAt": "2022-12-05T19:46:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "AndrewFalkowski"
+                          },
+                          "bodyText": "Pulling a variable dependent function into an object seems simple enough.\nI assume that any creep object is going to follow a similar structure to the other StressUpdate objects in order to work with ComputeMultipleInelasticStress.  Can I follow the structure of the ComputeMultipleInelasticStress source file as a reference or would some of the quantities computed in that file be unnecessary in my implementation?",
+                          "url": "https://github.com/idaholab/moose/discussions/22879#discussioncomment-4317410",
+                          "updatedAt": "2022-12-05T21:39:20Z",
+                          "publishedAt": "2022-12-05T21:39:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "recuero"
+                          },
+                          "bodyText": "I would follow the same structure as other stress update objects that work with ComputeMultipleInelasticStress. There are a number of capabilities associated with that object: substepping, management of various inelasticity sources, tangent operator, etc.",
+                          "url": "https://github.com/idaholab/moose/discussions/22879#discussioncomment-4348656",
+                          "updatedAt": "2022-12-09T03:32:49Z",
+                          "publishedAt": "2022-12-09T03:32:48Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "AndrewFalkowski"
+                          },
+                          "bodyText": "Gotcha thank you! I was able to build the custom object and get reasonable values for my creep rate, but I am struggling to get the simulation to converge with the object active. Is there an effective way or recommended approach to debug this?\nExceeded maximum iterations in material return mapping iterations.\nAt element 0 _qp=0 Coordinates (x,y,z)=(-0.000781231, 0.0013792, 0.00186622) block=1\nIn 1000 iterations the residual went from 1.53452e+07 to 3.35603e+11 in 'FrostPowerLawCreep'.",
+                          "url": "https://github.com/idaholab/moose/discussions/22879#discussioncomment-4392927",
+                          "updatedAt": "2022-12-13T18:07:15Z",
+                          "publishedAt": "2022-12-13T18:07:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "AndrewFalkowski"
+                          },
+                          "bodyText": "To follow up on this, I have pivoted from pulling from a lookup table and am instead using fitted function to compute my creep rate in the form: $$A * \\sigma^n * exp\\left(\\frac{-Q_1}{RT}\\right) + B * \\sigma^m * exp\\left(\\frac{-Q_2}{RT}\\right)$$\nI believe I have implemented it correctly, but I continue to get the above error when running it. Although the residual just is often more extreme as shown below.\nExceeded maximum iterations in material return mapping iterations.\nAt element 0 _qp=1 Coordinates (x,y,z)=(-0.0010648, 0.00128243, 0.00186622) block=1\nIn 1000 iterations the residual went from 2.02083e+48 to -2.39293e-10 in 'FrostPowerLaw_creep'.\n\nWhen using use_substep=true I am returned a the message The number of substeps computed exceeds the maximum_number_substeps. The system time step will be cut. , which is then followed by the following error message:\n  Elem Information\n   id()=0, unique_id()=5704, processor_id()=0\n   type()=HEX8\n   dim()=3\n   n_nodes()=8\n   mapping=LAGRANGE_MAP\n    0  Node id()=0, processor_id()=0, Point=(x,y,z)=(0.00739408, -0.00908827, 0.0165142)\n    DoFs=(0/0/0) (0/1/1) (0/2/2) (1/0/0) \n    1  Node id()=1, processor_id()=0, Point=(x,y,z)=(0.00804161, -0.0089018, 0.0167091)\n    DoFs=(0/0/3) (0/1/4) (0/2/5) (1/0/1) \n    2  Node id()=2, processor_id()=0, Point=(x,y,z)=(0.00787107, -0.00843567, 0.0162784)\n    DoFs=(0/0/6) (0/1/7) (0/2/8) (1/0/2) \n    3  Node id()=3, processor_id()=0, Point=(x,y,z)=(0.00731591, -0.00865312, 0.0160966)\n    DoFs=(0/0/9) (0/1/10) (0/2/11) (1/0/3) \n    4  Node id()=4, processor_id()=0, Point=(x,y,z)=(0.00989949, -0.0112232, 0.0196849)\n    DoFs=(0/0/12) (0/1/13) (0/2/14) (1/0/4) \n    5  Node id()=5, processor_id()=0, Point=(x,y,z)=(0.0104961, -0.0110342, 0.0199122)\n    DoFs=(0/0/15) (0/1/16) (0/2/17) (1/0/5) \n    6  Node id()=6, processor_id()=0, Point=(x,y,z)=(0.0103128, -0.0105176, 0.0194098)\n    DoFs=(0/0/18) (0/1/19) (0/2/20) (1/0/6) \n    7  Node id()=7, processor_id()=0, Point=(x,y,z)=(0.00980942, -0.010741, 0.0191968)\n    DoFs=(0/0/21) (0/1/22) (0/2/23) (1/0/7) \n   n_sides()=6\n    neighbor(0)=669\n    neighbor(1)=1\n    neighbor(2)=41\n    neighbor(3)=4\n    neighbor(4)=30\n    neighbor(5)=nullptr\n   hmin()=0.000590468, hmax()=0.00550838\n   volume()=-2.85096e-11\n   active()=1, ancestor()=0, subactive()=0, has_children()=0\n   parent()=nullptr\n   level()=0, p_level()=0\n   refinement_flag()=DO_NOTHING\n   p_refinement_flag()=DO_NOTHING\n   DoFs=(1/1/863) (1/1/864) (1/1/865) (1/1/866) (1/1/867) (1/1/868) (1/1/869) (1/1/870) (1/1/871) (1/1/872) (1/2/873) (1/2/874) (1/2/875) (1/2/876) (1/2/877) (1/2/878) (1/2/879) (1/2/880) (1/2/881) (1/2/882) (1/3/883) (1/3/884) (1/3/885) (1/3/886) (1/3/887) (1/3/888) (1/3/889) (1/3/890) (1/3/891) (1/3/892) (1/4/893) (1/4/894) (1/4/895) (1/4/896) (1/4/897) (1/4/898) (1/4/899) (1/4/900) (1/4/901) (1/4/902) (1/5/903) (1/5/904) (1/5/905) (1/5/906) (1/5/907) (1/5/908) (1/5/909) (1/5/910) (1/5/911) (1/5/912) (1/6/913) (1/6/914) (1/6/915) (1/6/916) (1/6/917) (1/6/918) (1/6/919) (1/6/920) (1/6/921) (1/6/922) \nERROR: negative Jacobian -2.0273e-12 at point (x,y,z)=(0.00773864, -0.00925779, 0.0168458) in element 0\n[0] ../src/fe/fe_map.C, line 1173, compiled Aug 25 2022 at 10:22:39\nWe caught a libMesh error in ThreadedElementLoopBase\nCannot take square root of a number less than or equal to zero in the calculation of C1 for the Rashid approximation for the rotation tensor. This zero or negative number may occur when elements become heavily distorted.\n\nAny advice on how to debug or remedy this would be greatly appreciated.",
+                          "url": "https://github.com/idaholab/moose/discussions/22879#discussioncomment-4413455",
+                          "updatedAt": "2022-12-15T21:20:23Z",
+                          "publishedAt": "2022-12-15T20:48:09Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "recuero"
+                          },
+                          "bodyText": "am instead using fitted function to compute my creep rate in the form\n\nYou are probably then using MOOSE's capabilities, which allow to combine power law functions.\n\nIn 1000 iterations the residual went from 2.02083e+48 to -2.39293e-10 in 'ZrC_creep'\n\nIt seems that your residual went down 58 orders of magnitude. I'd probably modify the relative or absolute tolerance to allow for that reduction in residual to be acceptable.\n\nThe number of substeps computed exceeds the maximum_number_substeps. The system time step will be cut.\n\nThe number of substeps will depend on the criterion used to perform substepping. If the tolerance you used for that is okay, this message probably means your time step is too large.",
+                          "url": "https://github.com/idaholab/moose/discussions/22879#discussioncomment-4413495",
+                          "updatedAt": "2022-12-15T20:53:32Z",
+                          "publishedAt": "2022-12-15T20:53:32Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to build a model of two blocks without gaps\uff1f",
+          "author": {
+            "login": "DYLDYLDYL"
+          },
+          "bodyText": "Hi!\nI wonder how to build a model of two blocks without gaps\uff1fMy mesh is merged by  two mesh files with ICEM.\n\nI want to simulate heat conduction between two blocks. And when I use GapHeatTransfer, it`s not work in this no-gap condition.\nWhen adding Tensor Mechanics, it has gaps between blocks.\n\nI wonder how to creat a whole  Heat Conduction and Tensor Mechanics  Mesh with tow different materials blocks.\nThanks in advance for your help!",
+          "url": "https://github.com/idaholab/moose/discussions/22889",
+          "updatedAt": "2022-12-29T00:12:09Z",
+          "publishedAt": "2022-12-06T09:06:59Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "Edward-Eth"
+                  },
+                  "bodyText": "If the nodes on each mesh align you could use the StitchedMeshGenerator to merge the nodes of the two meshes, making them connected for the physics \ud83d\udc4d",
+                  "url": "https://github.com/idaholab/moose/discussions/22889#discussioncomment-4321086",
+                  "updatedAt": "2022-12-06T09:11:23Z",
+                  "publishedAt": "2022-12-06T09:11:22Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "DYLDYLDYL"
+                          },
+                          "bodyText": "Thanks a lot \uff01Your answer solves my problem perfectly \uff01",
+                          "url": "https://github.com/idaholab/moose/discussions/22889#discussioncomment-4323234",
+                          "updatedAt": "2022-12-06T13:46:01Z",
+                          "publishedAt": "2022-12-06T13:46:01Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYou may want to use ThinLayerHeatTransfer in the connected situation instead of the GapHeatTransfer\nhttps://mooseframework.inl.gov/moose/source/interfacekernels/ThinLayerHeatTransfer.html\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22889#discussioncomment-4323315",
+                  "updatedAt": "2022-12-06T13:55:41Z",
+                  "publishedAt": "2022-12-06T13:55:20Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "DYLDYLDYL"
+                          },
+                          "bodyText": "Thanks a lot \uff01 I use the StitchedMeshGenerator, set heat source in block 1, and find heat transfer in block 2.  And when adding Tensor Mechanics, it has no gaps between blocks! My problem is solved perfectly!",
+                          "url": "https://github.com/idaholab/moose/discussions/22889#discussioncomment-4332647",
+                          "updatedAt": "2022-12-07T12:45:15Z",
+                          "publishedAt": "2022-12-07T12:45:15Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Normal stress-  error: 'declareProperty' was not declared in this scope",
+          "author": {
+            "login": "Rahim-Habibi"
+          },
+          "bodyText": "Dear all,\nI was looking for a way to calculate \"Normal Stress\" to model Mohr-Coulomb Failure criterion. Hopefully, I found that \"_normals\" represents the normals of element face which is also used in \"pressure BC\" in Tensor Mechanics. So I developed the header and source file, but it does not compile, shows the error:\nIn file included from /mnt/c/For_MOOSE/projects/tiger/build/unity_src/auxkernels_Unity.C:3:\n/mnt/c/For_MOOSE/projects/tiger/src/auxkernels/TigerMohrCoulombFailureCriterion.C: In constructor 'TigerMohrCoulombFailureCriterion::TigerMohrCoulombFailureCriterion(const InputParameters&)':\n/mnt/c/For_MOOSE/projects/tiger/src/auxkernels/TigerMohrCoulombFailureCriterion.C:36:18: error: 'declareProperty' was not declared in this scope\n   36 |         _normals(declareProperty<RealVectorValue>(\"_normals\")),\n      |                  ^~~~~~~~~~~~~~~\n/mnt/c/For_MOOSE/projects/tiger/src/auxkernels/TigerMohrCoulombFailureCriterion.C:36:49: error: expected primary-expression before '>' token\n   36 |         _normals(declareProperty<RealVectorValue>(\"_normals\")),\n      |                                                 ^\nmake: *** [/mnt/c/For_MOOSE/projects/moose/framework/build.mk:145: /mnt/c/For_MOOSE/projects/tiger/build/unity_src/auxkernels_Unity.x86_64-conda-linux-gnu.opt.lo] Error 1.\n\nThe .h :\n#pragma once\n\n#include \"AuxKernel.h\"\n#include \"MooseTypes.h\"\n#include \"libmesh/quadrature_gauss.h\"\n#include \"RankTwoTensor.h\"\n\n class TigerMohrCoulombFailureCriterion : public AuxKernel\n {\n public:\n   static InputParameters validParams();\n   TigerMohrCoulombFailureCriterion(const InputParameters & parameters);\n\n    protected:\n\n    Real computeValue() override;\n\n     unsigned int _component;\n    const bool _use_displaced_mesh;\n    const std::string _base_name;\n    const MaterialProperty<RankTwoTensor> & _TenMech_total_stress;\n\n    Moose::CoordinateSystemType _coord_type;\n    const MaterialProperty<RealVectorValue>  & _normals;\n    //const MooseArray<RealVectorValue> & _normals;\n    MaterialProperty<Real>    _normals_stress;\n };\n\nand .c files as follows:\n#include \"TigerMohrCoulombFailureCriterion.h\"\n#include \"Material.h\"\n#include \"Assembly.h\"\n\nregisterMooseObject(\"TigerApp\", TigerMohrCoulombFailureCriterion);\n\nInputParameters\n\nTigerMohrCoulombFailureCriterion::validParams()\n{\n  InputParameters params = AuxKernel::validParams();\n  params.addClassDescription(\"calculates normal stress on a given boundary by normal vector\");\n  params.addDeprecatedParam<unsigned int>(\n      \"component\", \"The component for the pressure\", \"This parameter is no longer necessary\");\n  params.addParam<std::string>(\"base_name\", \"the identical base name provided \"\n        \"in TensorMechanics Action\");\n  params.addRequiredParam<MaterialPropertyName>(\"total_stress\",\n                                                \"The rank two material tensor name\");\n\n  params.set<bool>(\"use_displaced_mesh\") = true;\n  return params;\n};\nTigerMohrCoulombFailureCriterion::TigerMohrCoulombFailureCriterion(const InputParameters & parameters)\n  : AuxKernel(parameters),\n        _component(libMesh::invalid_uint),\n        _use_displaced_mesh(getParam<bool>(\"use_displaced_mesh\")),\n        //_normals(getMaterialProperty<RealVectorValue>(\"normals\")),\n        _normals(declareProperty<RealVectorValue>(\"_normals\")),\n        //_normals(_assembly.adNormals<RealVectorValue>(\"_normals\")),\n        _base_name(isParamValid(\"base_name\") ? getParam<std::string>(\"base_name\") + \"_\" : \"\"),\n        _TenMech_total_stress(getMaterialProperty<RankTwoTensor>(_base_name + \"total_stress\"))\n{\n}\n  Real\n  TigerMohrCoulombFailureCriterion::computeValue()\n {\n       _normals_stress[_qp] = (_normals[_qp] * (_TenMech_total_stress[_qp])) * (_normals[_qp]);\n\n        return 0;\n }\n\nThanks in advance to any suggestion to solve this error.\nRahim",
+          "url": "https://github.com/idaholab/moose/discussions/21945",
+          "updatedAt": "2022-12-29T08:52:17Z",
+          "publishedAt": "2022-08-26T07:44:03Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\ndeclareProperty is for material properties, defined (and declared) in Materials.\nYou are writing an auxkernel here.\nMaybe you meant to retrieve a material property instead? With getMaterialProperty\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21945#discussioncomment-3485110",
+                  "updatedAt": "2022-08-26T15:57:00Z",
+                  "publishedAt": "2022-08-26T15:56:59Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Rahim-Habibi"
+                          },
+                          "bodyText": "Hi,\nSorry for late back, actually, my purpose is to use normal vector of element face by applying \"_normals\". Already, the normal vector was used in \"PressureBC\" and here by @ngrilli.\nSo, based on these and your suggestion, I editted my Auxkernel:\n1- I used \" const MooseArray & _normals; \" instead of \"const MaterialProperty  & _normals;\" in .h file.\n2- and, \" _normals(_assembly.normals(\"_normals\")),\" instead of declarying \"_normals(declareProperty(\"_normals\")),\".\nNow, It is linked to my App, but once I am running a simple example,  it shows following error:\n===================================================================================\n=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES\n=   PID 27330 RUNNING AT\n=   EXIT CODE: 9\n=   CLEANING UP REMAINING PROCESSES\n=   YOU CAN IGNORE THE BELOW CLEANUP MESSAGES\n===================================================================================\nYOUR APPLICATION TERMINATED WITH THE EXIT STRING: Segmentation fault (signal 11)\nThis typically refers to a problem with your application.\nPlease see the FAQ page for debugging suggestions\n\nBTW, I used it in my input file like:\n[./direction2]\ntype = TigerMohrCoulombFailureCriterion\ntotal_stress = stress\nvariable = direction2\nexecute_on = 'TIMESTEP_END'\nblock = 'Fault'\n[../]",
+                          "url": "https://github.com/idaholab/moose/discussions/21945#discussioncomment-3497946",
+                          "updatedAt": "2022-08-29T16:56:34Z",
+                          "publishedAt": "2022-08-29T07:59:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\ncould you please follow the debugging instructions on the website and get us a backtrace? It should tell us which line you are getting a segfault on\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/21945#discussioncomment-3499876",
+                          "updatedAt": "2022-08-29T12:15:57Z",
+                          "publishedAt": "2022-08-29T12:15:56Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Rahim-Habibi"
+                          },
+                          "bodyText": "Hi,\nI debuged based on the instruction on that page: first build a debug executable then I debuged using \"gdb\". The following shows the results. BTW I tried to run after debuging, but still shows the same error.\n(moose) rahim-agw@AGW-GEOT-STUD15:/mnt/c/For_MOOSE/projects/tiger$ gdb --args ./tiger-dbg\nGNU gdb (Ubuntu 9.2-0ubuntu1~20.04.1) 9.2\nCopyright (C) 2020 Free Software Foundation, Inc.\nLicense GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\nThis is free software: you are free to change and redistribute it.\nThere is NO WARRANTY, to the extent permitted by law.\nType \"show copying\" and \"show warranty\" for details.\nThis GDB was configured as \"x86_64-linux-gnu\".\nType \"show configuration\" for configuration details.\nFor bug reporting instructions, please see:\n<http://www.gnu.org/software/gdb/bugs/>.\nFind the GDB manual and other documentation resources online at:\n    <http://www.gnu.org/software/gdb/documentation/>.\n\nFor help, type \"help\".\nType \"apropos word\" to search for commands related to \"word\"...\nReading symbols from ./tiger-dbg...\n(gdb) run\nStarting program: /mnt/c/For_MOOSE/projects/tiger/tiger-dbg\n[Thread debugging using libthread_db enabled]\nUsing host libthread_db library \"/lib/x86_64-linux-gnu/libthread_db.so.1\".\n[New Thread 0x7fffe85f0700 (LWP 7558)]\n\nUsage: /mnt/c/For_MOOSE/projects/tiger/tiger-dbg [<options>]\n\nOptions:\n  --allow-test-objects                              Register test objects and syntax.\n  --app <AppName>                                   Specify the application that should be used to run the input file. This must match an application name registered to the application factory. Note that this option is case-sensitive.\n  --type                                            Return the name of the application object.\n  --check-input                                     Check the input file (i.e. requires -i <filename>) and quit.\n  --color [auto,on,off]                             Whether to use color in console output (default 'on').\n  --copy-tests                                      copy installed tests to an [appname]_tests dir\n  --definition                                      Shows a SON style input definition dump for input validation\n  --disable-perf-graph-live                         Disables PerfGraph Live Printing.\n  -v --version                                      Print application version\n  --distributed-mesh                                The libMesh Mesh underlying MooseMesh should always be a DistributedMesh\n  --dump [search_string]                            Shows a dump of available input file syntax.\n  --error                                           Turn all warnings into errors\n  --error-deprecated                                Turn deprecated code messages into Errors\n  -o --error-override                               Error when encountering overridden or parameters supplied multiple times\n  -e --error-unused                                 Error when encountering unused input file options\n  --half-transient                                  When true the simulation will only run half of its specified transient (ie half the timesteps).  This is useful for testing recovery and restart\n  -h --help                                         Displays CLI usage statement.\n  -i <input_files>                                  Specify one or multiple input files. Multiple files get merged into a single simulation input.\n  --json                                            Dumps input file syntax in JSON format.\n  --keep-cout                                       Keep standard output from all processors when running in parallel\n  --list-constructed-objects                        List all moose object type names constructed by the master app factory.\n  --mesh-only [mesh_file_name]                      Setup and Output the input mesh only (Default: \"<input_file_name>_in.e\")\n  --minimal                                         Ignore input file and build a minimal application with Transient executioner.\n  --n-threads=<n>                                   Runs the specified number of threads per process\n  --no-color                                        Disable coloring of all Console outputs.\n  --no-timing                                       Disabled performance logging. Overrides -t or --timing if passed in conjunction with this flag\n  --no-trap-fpe                                     Disable Floating Point Exception handling in critical sections of code when using DEBUG mode.\n  --perf-graph-live-all                             Forces printing of ALL progress messages.\n  --recover [file_base]                             Continue the calculation.  If file_base is omitted then the most recent recovery file will be utilized\n  --recoversuffix [suffix]                          Use a different file extension, other than cpr, for a recovery file\n  --redirect-stdout                                 Keep standard output from all processors when running in parallel\n  -r <n>                                            Specify additional initial uniform refinements for automatic scaling\n  --registry                                        Lists all known objects and actions.\n  --registry-hit                                    Lists all known objects and actions in hit format.\n  --tests                                           run all tests\n  --show-controls                                   Shows the Control logic available and executed.\n  --docs                                            print url/path to the documentation website\n  --show-input                                      Shows the parsed input file before running the simulation.\n  --show-outputs                                    Shows the output execution time information.\n  --split-file [filename]                           optional name of split mesh file(s) to write/read\n  --split-mesh [splits]                             comma-separated list of numbers of chunks to split the mesh into\n  --start-in-debugger <debugger>                    Start the application and attach a debugger.  This will launch xterm windows using the command you specify for 'debugger'\n  --stop-for-debugger [seconds]                     Pauses the application during startup for the specified time to allow for connection of debuggers.\n  --syntax                                          Dumps the associated Action syntax paths ONLY\n  -t --timing                                       Enable all performance logging for timing purposes. This will disable all screen output of performance logs for all Console objects.\n  --trap-fpe                                        Enable Floating Point Exception handling in critical sections of code.  This is enabled automatically in DEBUG mode\n  --executor                                        Use the new Executor system instead of Executioners\n  --use-split                                       use split distributed mesh files\n  -w --warn-unused                                  Warn about unused input file options\n  --yaml                                            Dumps input file syntax in YAML format.\n\nSolver Options:\n  See solver manual for details (Petsc or Trilinos)\n[Thread 0x7fffe85f0700 (LWP 7558) exited]\n\n ----------------------------------------------------------------------------\n| Reference count information                                                |\n ----------------------------------------------------------------------------\n| N7libMesh10Parameters5ValueE reference count information:\n|  Creations:    311\n|  Destructions: 311\n| N7libMesh4ElemE reference count information:\n|  Creations:    1\n|  Destructions: 1\n| N7libMesh9DofObjectE reference count information:\n|  Creations:    1\n|  Destructions: 1\n ----------------------------------------------------------------------------\n[Inferior 1 (process 7554) exited normally]\n(gdb)",
+                          "url": "https://github.com/idaholab/moose/discussions/21945#discussioncomment-3501567",
+                          "updatedAt": "2022-08-29T16:56:43Z",
+                          "publishedAt": "2022-08-29T15:34:05Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "you need to run with the input file to get the backtrace\nrun -i <input_file.i>",
+                          "url": "https://github.com/idaholab/moose/discussions/21945#discussioncomment-3501776",
+                          "updatedAt": "2022-08-29T15:58:10Z",
+                          "publishedAt": "2022-08-29T15:58:09Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I think _normals should be initiliazed like this:\n_normals(_assembly.normals()),\nwith no string in the function call like you pasted?",
+                          "url": "https://github.com/idaholab/moose/discussions/21945#discussioncomment-3502258",
+                          "updatedAt": "2022-08-29T16:56:18Z",
+                          "publishedAt": "2022-08-29T16:56:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Rahim-Habibi"
+                          },
+                          "bodyText": "Hi,\nI debuged the input file, but it shows following error:\nAssertion `i < _size' failed\nAccess out of bounds in MooseArray (i: 0 size: 0)\nat /mnt/c/For_MOOSE/projects/moose/framework/build/header_symlinks/MooseArray.h, line 276\nStack frames: 22\n0: libMesh::print_trace(std::ostream&)\n1: /mnt/c/For_MOOSE/projects/tiger/lib/libtiger-dbg.so.0(+0x14ac2d) [0x7fffff65dc2d]\n2: TigerMohrCoulombFailureCriterion::computeValue()\n3: AuxKernelTempl<double>::compute()\n4: ComputeElemAuxVarsThread<AuxKernelTempl<double> >::onElement(libMesh::Elem const*)\n5: ThreadedElementLoopBase<libMesh::StoredRange<libMesh::MeshBase::const_element_iterator, libMesh::Elem const*> >::operator()(libMesh::StoredRange<libMesh::MeshBase::const_element_iterator, libMesh::Elem const*> const&, bool)\n6: /mnt/c/For_MOOSE/projects/moose/framework/libmoose-dbg.so.0(+0x34bd1c0) [0x7ffff58441c0]\n7: void AuxiliarySystem::computeElementalVarsHelper<AuxKernelTempl<double> >(MooseObjectWarehouse<AuxKernelTempl<double> > const&, std::vector<std::vector<MooseVariableFieldBase*, std::allocator<MooseVariableFieldBase*> >, std::allocator<std::vector<MooseVariableFieldBase*, std::allocator<MooseVariableFieldBase*> > > > const&)\n8: AuxiliarySystem::computeElementalVars(MooseEnumItem)\n9: AuxiliarySystem::compute(MooseEnumItem)\n10: FEProblemBase::computeAuxiliaryKernels(MooseEnumItem const&)\n11: FEProblemBase::execute(MooseEnumItem const&)\n12: FixedPointSolve::solveStep(double&, double&, std::set<unsigned long, std::less<unsigned long>, std::allocator<unsigned long> > const&)\n13: FixedPointSolve::solve()\n14: TimeStepper::step()\n15: Transient::takeStep(double)\n16: Transient::execute()\n17: MooseApp::executeExecutioner()\n18: MooseApp::run()\n19: /mnt/c/For_MOOSE/projects/tiger/tiger-dbg(+0xa7fb) [0x800a7fb]\n20: __libc_start_main\n21: /mnt/c/For_MOOSE/projects/tiger/tiger-dbg(+0xa089) [0x800a089]\n[0] /mnt/c/For_MOOSE/projects/moose/framework/build/header_symlinks/MooseArray.h, line 276, compiled Aug 29 2022 at 14:39:18\napplication called MPI_Abort(MPI_COMM_WORLD, 1) - process 0\n[unset]: write_line error; fd=-1 buf=:cmd=abort exitcode=1\n:\nsystem msg for write_line failure : Bad file descriptor\n[Thread 0x7fffe90778c0 (LWP 512) exited]\n[Inferior 1 (process 512) exited with code 01]\n\nBTW, I went through to discussion forum, I found #21920 started almost a week ago but not answered so far.\nRegarding to your suggestion on how to initialize normal vector, I could say I initialized it already as you recommended.",
+                          "url": "https://github.com/idaholab/moose/discussions/21945#discussioncomment-3506384",
+                          "updatedAt": "2022-08-30T13:58:31Z",
+                          "publishedAt": "2022-08-30T07:34:34Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "somewhere in 2: TigerMohrCoulombFailureCriterion::computeValue()\nyou are accessing an array out of bounds. Could you run this in a debugger, add a breakpoint on MPI Abort and get us the exact line",
+                          "url": "https://github.com/idaholab/moose/discussions/21945#discussioncomment-3509343",
+                          "updatedAt": "2022-08-30T13:59:32Z",
+                          "publishedAt": "2022-08-30T13:59:31Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Rahim-Habibi"
+                          },
+                          "bodyText": "I added breakpoint at that line, the following shows the backtrace:\nThread 1 \"tiger-dbg\" hit Breakpoint 1, 0x00007fffea084880 in PMPI_Abort ()\nfrom /home/rahim-agw/miniconda3/envs/moose/lib/libmpi.so.12\n(gdb) bt\n#0  0x00007fffea084880 in PMPI_Abort () from /home/rahim-agw/miniconda3/envs/moose/lib/libmpi.so.12\n#1  0x00007fffff65dc6b in MooseArraylibMesh::Point::operator[] (this=0x8938990, i=0)\nat /mnt/c/For_MOOSE/projects/moose/framework/build/header_symlinks/MooseArray.h:276\n#2  0x00007fffff6591b3 in TigerMohrCoulombFailureCriterion::computeValue (this=0x8cccd60)\nat /mnt/c/For_MOOSE/projects/tiger/src/auxkernels/TigerMohrCoulombFailureCriterion.C:47\n#3  0x00007ffff48ca2a2 in AuxKernelTempl::compute (this=0x8cccd60)\nat /mnt/c/For_MOOSE/projects/moose/framework/src/auxkernels/AuxKernel.C:295\n#4  0x00007ffff4e624f8 in ComputeElemAuxVarsThread<AuxKernelTempl >::onElement (this=0x7ffffffeb580,\nelem=0x888dcd0) at /mnt/c/For_MOOSE/projects/moose/framework/src/loops/ComputeElemAuxVarsThread.C:115\n#5  0x00007ffffb9e357f in ThreadedElementLoopBase<libMesh::StoredRange<libMesh::MeshBase::const_element_iterator, libMesh::Elem const*> >::operator() (this=0x7ffffffeb580, range=..., bypass_threading=false)\nat /mnt/c/For_MOOSE/projects/moose/framework/build/header_symlinks/ThreadedElementLoopBase.h:226\n#6  0x00007ffff58441c0 in libMesh::Threads::parallel_reduce<libMesh::StoredRange<libMesh::MeshBase::const_element_iterator, libMesh::Elem const*>, ComputeElemAuxVarsThread<AuxKernelTempl > > (range=..., body=...)\nat /home/rahim-agw/miniconda3/envs/moose/libmesh/include/libmesh/threads_pthread.h:380\n#7  0x00007ffff57f0919 in AuxiliarySystem::computeElementalVarsHelper<AuxKernelTempl > (this=0x88df290,\nwarehouse=..., vars=...) at /mnt/c/For_MOOSE/projects/moose/framework/src/systems/AuxiliarySystem.C:830\n#8  0x00007ffff57eff61 in AuxiliarySystem::computeElementalVars (this=0x88df290, type=...)\nat /mnt/c/For_MOOSE/projects/moose/framework/src/systems/AuxiliarySystem.C:756\n#9  0x00007ffff57ecacc in AuxiliarySystem::compute (this=0x88df290, type=...)\nat /mnt/c/For_MOOSE/projects/moose/framework/src/systems/AuxiliarySystem.C:445\n#10 0x00007ffff55869e7 in FEProblemBase::computeAuxiliaryKernels (this=0x88bc8f0, type=...)\nat /mnt/c/For_MOOSE/projects/moose/framework/src/problems/FEProblemBase.C:3737\n#11 0x00007ffff55868e4 in FEProblemBase::execute (this=0x88bc8f0, exec_type=...)\nat /mnt/c/For_MOOSE/projects/moose/framework/src/problems/FEProblemBase.C:3722\n#12 0x00007ffff4bb7b9d in FixedPointSolve::solveStep (this=0x8917510, begin_norm=@0x9288530: 0,\nend_norm=@0x924d120: 0, transformed_dofs=...)\nat /mnt/c/For_MOOSE/projects/moose/framework/src/executioners/FixedPointSolve.C:426\n#13 0x00007ffff4bb6b7a in FixedPointSolve::solve (this=0x8917510)\nat /mnt/c/For_MOOSE/projects/moose/framework/src/executioners/FixedPointSolve.C:273\n#14 0x00007ffff598cd24 in TimeStepper::step (this=0x8b580d0)\nat /mnt/c/For_MOOSE/projects/moose/framework/src/timesteppers/TimeStepper.C:161\n#15 0x00007ffff4bc631a in Transient::takeStep (this=0x8916ca0, input_dt=-1)\nat /mnt/c/For_MOOSE/projects/moose/framework/src/executioners/Transient.C:444\n#16 0x00007ffff4bc5640 in Transient::execute (this=0x8916ca0)\nat /mnt/c/For_MOOSE/projects/moose/framework/src/executioners/Transient.C:329\n#17 0x00007ffff5c4c533 in MooseApp::executeExecutioner (this=0x81ed6c0)\nat /mnt/c/For_MOOSE/projects/moose/framework/src/base/MooseApp.C:1081\n#18 0x00007ffff5c4fa4f in MooseApp::run (this=0x81ed6c0)\nat /mnt/c/For_MOOSE/projects/moose/framework/src/base/MooseApp.C:1465\n#19 0x000000000800a7fb in main (argc=3, argv=0x7ffffffec7c8) at /mnt/c/For_MOOSE/projects/tiger/src/main.C:24\nBTW, I am using MOOSE on UBUNTU APP on Windows.",
+                          "url": "https://github.com/idaholab/moose/discussions/21945#discussioncomment-3515268",
+                          "updatedAt": "2022-08-31T07:17:01Z",
+                          "publishedAt": "2022-08-31T07:17:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Ok so what is line 47 in TigerMohrCoulombFailure?\nWould it be possible to give me access to tiger?",
+                          "url": "https://github.com/idaholab/moose/discussions/21945#discussioncomment-3517767",
+                          "updatedAt": "2022-08-31T13:05:49Z",
+                          "publishedAt": "2022-08-31T13:05:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Rahim-Habibi"
+                          },
+                          "bodyText": "The line 47:  return MetaPhysicL::raw_value (_normals[_qp] * (_TenMech_total_stress[_qp]) * (_normals[_qp]));\nwhere _normals refers to normal vector on element face and _tenMech_total_stress gets stress state in current time step, which calculates normal stress. I other words, it returns the multiplication: vector * matrix* vector.\nAlso, you can see .c file on top of the discussion.\nRegarding your access to tiger, I should say that tiger is already commit https://github.com/MGK-Lab/tiger, but failure criterion is being developed by this auxkernel.",
+                          "url": "https://github.com/idaholab/moose/discussions/21945#discussioncomment-3517850",
+                          "updatedAt": "2022-08-31T14:07:07Z",
+                          "publishedAt": "2022-08-31T13:12:37Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Peacock Problem in PostprocessorViewer",
+          "author": {
+            "login": "sSajjad90"
+          },
+          "bodyText": "Hi,\nI recently re-installed moose and installed the required packages (mamba environment). I can lunch peacock and run the simulation in the execute tab without problem(however, I think it is slower with some graphical issues than the previous one I used before updating to the mamba environment). As soon as I push the PostprocessorViewer tab, the peacock will close, and I see the following messages in the terminal:\nExodus filenames: ['peacock_run_exe_tmp_TestMicro_out.e']\nPostprocessor filenames: ['peacock_run_exe_tmp_TestMicro_out.csv']\nRunning command: mpiexec -n 2 /home/sajjad/projects/precipitation/precipitation-opt Outputs/csv=true --n-threads=2 --allow-test-objects -i peacock_run_exe_tmp_TestMicro.i\nWorking directory: /home/sajjad/projects/precipitation\nFinished: Exit code: 1\nTraceback (most recent call last):\n  File \"/home/sajjad/projects/moose/python/peacock/PostprocessorViewer/plugins/LineGroupWidget.py\", line 106, in onDataChanged\n    self.plot()\n  File \"/home/sajjad/projects/moose/python/peacock/PostprocessorViewer/plugins/LineGroupWidget.py\", line 137, in plot\n    self._initialize()\n  File \"/home/sajjad/projects/moose/python/peacock/PostprocessorViewer/plugins/LineGroupWidget.py\", line 266, in _initialize\n    toggle = LineSettingsWidget(var, linestyle=style, color=color)\n  File \"/home/sajjad/projects/moose/python/peacock/PostprocessorViewer/plugins/LineSettingsWidget.py\", line 81, in __init__\n    self.setup()\n  File \"/home/sajjad/projects/moose/python/peacock/base/MooseWidget.py\", line 57, in setup\n    setupMethod(attr)\n  File \"/home/sajjad/projects/moose/python/peacock/PostprocessorViewer/plugins/LineSettingsWidget.py\", line 189, in _setupColorButton\n    c = QtGui.QColor(color[0]*255, color[1]*255, color[2]*255)\nTypeError: arguments did not match any overloaded call:\n  QColor(Qt.GlobalColor): argument 1 has unexpected type 'numpy.float64'\n  QColor(int): argument 1 has unexpected type 'numpy.float64'\n  QColor(QRgba64): argument 1 has unexpected type 'numpy.float64'\n  QColor(Any): too many arguments\n  QColor(): too many arguments\n  QColor(int, int, int, alpha: int = 255): argument 1 has unexpected type 'numpy.float64'\n  QColor(str): argument 1 has unexpected type 'numpy.float64'\n  QColor(Union[QColor, Qt.GlobalColor, QGradient]): argument 1 has unexpected type 'numpy.float64'\nAborted (core dumped)\n(peacock) sajjad@sajjad-PC:~/projects/precipitation$ \n\nI was wondering if you could tell me how I can solve this issue.\nMany thanks,\nSajjad",
+          "url": "https://github.com/idaholab/moose/discussions/22266",
+          "updatedAt": "2022-12-28T23:45:22Z",
+          "publishedAt": "2022-09-29T17:36:33Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "From this error it looks like we need to fix peacock, an underlying package has changed",
+                  "url": "https://github.com/idaholab/moose/discussions/22266#discussioncomment-3765381",
+                  "updatedAt": "2022-09-29T18:06:09Z",
+                  "publishedAt": "2022-09-29T18:06:08Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sSajjad90"
+                          },
+                          "bodyText": "So, should I reinstall the peacock package with the required dependencies using mamba create -n peacock moose-peacock python=3.10?or wait for your response whenever that package is fixed?",
+                          "url": "https://github.com/idaholab/moose/discussions/22266#discussioncomment-3766313",
+                          "updatedAt": "2022-09-29T20:25:58Z",
+                          "publishedAt": "2022-09-29T20:25:57Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nNo I think the easiest way is to install peacock in a separate mamba environment.\nThat will make sure the dependencies are just right for peacock\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/22266#discussioncomment-3773024",
+                          "updatedAt": "2022-09-30T14:40:19Z",
+                          "publishedAt": "2022-09-30T14:40:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sSajjad90"
+                          },
+                          "bodyText": "Hi,\nI have moose and peacock in two separate mamba environments, and I receive a similar error after re-installation. As far as I am concerned, this error backs to the dependent packages of the peacock, not to my installation__it should be fixed by the developer team. What is your opinion?\nThanks in advance for your kind support and consideration,\nError is as follows:\nFile \"/home/sajjad/projects/moose/python/peacock/PostprocessorViewer/plugins/LineSettingsWidget.py\", \n    line 189, in _setupColorButton\n    c = QtGui.QColor(color[0]*255, color[1]*255, color[2]*255)\n\nTypeError: arguments did not match any overloaded call:\n  QColor(Qt.GlobalColor): argument 1 has unexpected type 'numpy.float64'\n  QColor(int): argument 1 has unexpected type 'numpy.float64'\n  QColor(QRgba64): argument 1 has unexpected type 'numpy.float64'\n  QColor(Any): too many arguments\n  QColor(): too ma\n![Error](https://user-images.githubusercontent.com/78385504/193469493-1162b68f-4034-4843-baf9-2ea622e2d953.jpg)\nny arguments\n  QColor(int, int, int, alpha: int = 255): argument 1 has unexpected type 'numpy.float64'\n  QColor(str): argument 1 has unexpected type 'numpy.float64'\n  QColor(Union[QColor, Qt.GlobalColor, QGradient]): argument 1 has unexpected type 'numpy.float64'\nAborted (core dumped)\n(peacock) sajjad@sajjad-PC:~/projects/precipitation$",
+                          "url": "https://github.com/idaholab/moose/discussions/22266#discussioncomment-3782725",
+                          "updatedAt": "2022-10-02T18:16:06Z",
+                          "publishedAt": "2022-10-02T18:09:52Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "It's possible we now need to be strict on our moose-peacock package:\n  pin_depends: strict\nI'll look into this as best I can.",
+                          "url": "https://github.com/idaholab/moose/discussions/22266#discussioncomment-3787731",
+                          "updatedAt": "2022-10-03T13:53:56Z",
+                          "publishedAt": "2022-10-03T13:53:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sSajjad90"
+                          },
+                          "bodyText": "Please keep me updated\nMany thanks",
+                          "url": "https://github.com/idaholab/moose/discussions/22266#discussioncomment-3788206",
+                          "updatedAt": "2022-10-03T14:51:57Z",
+                          "publishedAt": "2022-10-03T14:51:56Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "friedmud"
+                          },
+                          "bodyText": "Fixing the mamba packages so that we get an old version of PySide/PyQt will help... but the real fix here is that we need to update Peacock to use the new API.  I'll make an issue for that.",
+                          "url": "https://github.com/idaholab/moose/discussions/22266#discussioncomment-3789888",
+                          "updatedAt": "2022-10-03T18:37:55Z",
+                          "publishedAt": "2022-10-03T18:37:54Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "I was able to run Peacock using a VirtualBox image of Ubuntu 22.04. But only when disabling 3D Acceleration. So; not a very good test. Can you tell us what operating system/version you are using?\nI need to setup a full-hardware linux workstation on my end to properly test a real-world scenario.",
+                          "url": "https://github.com/idaholab/moose/discussions/22266#discussioncomment-3790238",
+                          "updatedAt": "2022-10-03T19:29:53Z",
+                          "publishedAt": "2022-10-03T19:29:52Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sSajjad90"
+                          },
+                          "bodyText": "I use a P53 Lenovo ThinkPad with the following operating system:\nMMMMMMMMMMMMMMMMMMMMMMMMMmds+.        sajjad@sajjad-PC \nMMm----::-://////////////oymNMd+`     ---------------- \nMMd      /++                -sNMd:    OS: Linux Mint 19.3 Tricia x86_64 \nMMNso/`  dMM    `.::-. .-::.` .hMN:   Host: 20QN002DCA ThinkPad P53 \nddddMMh  dMM   :hNMNMNhNMNMNh: `NMm   Kernel: 5.4.0-87-generic \n    NMm  dMM  .NMN/-+MMM+-/NMN` dMM   Uptime: 8 hours, 4 mins \n    NMm  dMM  -MMm  `MMM   dMM. dMM   Packages: 2585 \n    NMm  dMM  -MMm  `MMM   dMM. dMM   Shell: bash 4.4.20 \n    NMm  dMM  .mmd  `mmm   yMM. dMM   Resolution: 1920x1080 \n    NMm  dMM`  ..`   ...   ydm. dMM   DE: Cinnamon 4.4.8 \n    hMM- +MMd/-------...-:sdds  dMM   WM: Mutter (Muffin) \n    -NMm- :hNMNNNmdddddddddy/`  dMM   WM Theme: Arc-Dark (Arc-Darker) \n     -dMNs-``-::::-------.``    dMM   Theme: Arc-Darker [GTK2/3] \n      `/dMNmy+/:-------------:/yMMM   Icons: Mint-Y-Grey [GTK2/3] \n         ./ydNMMMMMMMMMMMMMMMMMMMMM   Terminal: gnome-terminal \n            .MMMMMMMMMMMMMMMMMMM      CPU: Intel i7-9850H (12) @ 4.600GHz \n                                      GPU: Intel Integrated Graphics \n                                      GPU: NVIDIA NVIDIA Corporation Device 1fb8 \n                                      Memory: 5156MiB / 31726MiB",
+                          "url": "https://github.com/idaholab/moose/discussions/22266#discussioncomment-3790642",
+                          "updatedAt": "2022-10-03T20:27:12Z",
+                          "publishedAt": "2022-10-03T20:27:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "@sSajjad90 Can you try the following just to test whether or not this works for you?\nmamba create -n proto moose-peacock pyqt=5.15.7 qt-main=5.15.4 matplotlib=3.5.2 setuptools=59 openssl=1\nmamba activate proto\n...and then run Peacock?",
+                          "url": "https://github.com/idaholab/moose/discussions/22266#discussioncomment-3796087",
+                          "updatedAt": "2022-10-04T13:36:02Z",
+                          "publishedAt": "2022-10-04T13:36:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sSajjad90"
+                          },
+                          "bodyText": "It didn't work, and I got the same error.\nThe main problem, which is the automatic closing of the peacock by pushing the \"postprocessor viewer\" tab, remains with the following error. But, I should say with the recent changes and using proto, some graphical issues I had, like holding on to the previous screen when I moved between tabs, were solved.\nTraceback (most recent call last):\n  File \"/home/sajjad/projects/moose/python/peacock/PostprocessorViewer/plugins/LineGroupWidget.py\", line 106, in onDataChanged\n    self.plot()\n  File \"/home/sajjad/projects/moose/python/peacock/PostprocessorViewer/plugins/LineGroupWidget.py\", line 137, in plot\n    self._initialize()\n  File \"/home/sajjad/projects/moose/python/peacock/PostprocessorViewer/plugins/LineGroupWidget.py\", line 266, in _initialize\n    toggle = LineSettingsWidget(var, linestyle=style, color=color)\n  File \"/home/sajjad/projects/moose/python/peacock/PostprocessorViewer/plugins/LineSettingsWidget.py\", line 81, in __init__\n    self.setup()\n  File \"/home/sajjad/projects/moose/python/peacock/base/MooseWidget.py\", line 57, in setup\n    setupMethod(attr)\n  File \"/home/sajjad/projects/moose/python/peacock/PostprocessorViewer/plugins/LineSettingsWidget.py\", line 189, in _setupColorButton\n    c = QtGui.QColor(color[0]*255, color[1]*255, color[2]*255)\nTypeError: arguments did not match any overloaded call:\n  QColor(Qt.GlobalColor): argument 1 has unexpected type 'numpy.float64'\n  QColor(int): argument 1 has unexpected type 'numpy.float64'\n  QColor(QRgba64): argument 1 has unexpected type 'numpy.float64'\n  QColor(Any): too many arguments\n  QColor(): too many arguments\n  QColor(int, int, int, alpha: int = 255): argument 1 has unexpected type 'numpy.float64'\n  QColor(str): argument 1 has unexpected type 'numpy.float64'\n  QColor(Union[QColor, Qt.GlobalColor, QGradient]): argument 1 has unexpected type 'numpy.float64'\nAborted (core dumped)\n(proto) sajjad@sajjad-PC:~/projects/precipitation$",
+                          "url": "https://github.com/idaholab/moose/discussions/22266#discussioncomment-3798689",
+                          "updatedAt": "2022-10-04T18:30:12Z",
+                          "publishedAt": "2022-10-04T18:30:11Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

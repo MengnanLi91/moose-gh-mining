@@ -1,0 +1,804 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMi0wNy0yMlQwMzo1NDoxMy0wNTowMM4AP-Vr"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Define the coordinates of the elements for a 2 element mesh in the input file",
+          "author": {
+            "login": "ambehnam"
+          },
+          "bodyText": "Hi there. I want to validate an interface kernel by creating a 2 element mesh with arbitrary coordinates. currently I am generating the mesh using the following input commands:\n[Mesh]\n  [./gen]\n    type = GeneratedMeshGenerator\n    dim = 3\n    nx = 2\n    xmax = 2\n    ny = 1\n    ymax = 1\n    nz = 1\n    zmax = 1\n    elem_type = HEX8\n  [../]\n  [./left]\n    type = SubdomainBoundingBoxGenerator\n    input = 'gen'\n    block_id = 1\n    bottom_left = '0 0 0'\n    top_right = '1 1 1'\n  [../]\n  [./right]\n    type = SubdomainBoundingBoxGenerator\n    input = 'left'\n    block_id = 2\n    bottom_left = '1 0 0'\n    top_right = '2 1 1'\n  [../]\n  [./breakmesh]\n    type = BreakMeshByBlockGenerator\n    input = right\n  []\n[]\n\nbut, I want to change the coordinate of the middle node slightly to activate the off diagonal parameters of a penalty tensor. So is there anyway to define the coordinates of these two elements in the input file?\nThanks,\nAmir",
+          "url": "https://github.com/idaholab/moose/discussions/21671",
+          "updatedAt": "2022-07-23T19:03:13Z",
+          "publishedAt": "2022-07-23T04:16:57Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "WilkAndy"
+                  },
+                  "bodyText": "Some random remarks....   Do you have to use MOOSE to create your mesh?  If yes, and you're doing some sort of parametric study where the node position varies between multiple MOOSE simulations, then i think i'd write my own mesh generator.  Otherwise, then external meshers allow this sort of freedom, so i think i'd use one of those.",
+                  "url": "https://github.com/idaholab/moose/discussions/21671#discussioncomment-3211447",
+                  "updatedAt": "2022-07-23T08:35:04Z",
+                  "publishedAt": "2022-07-23T08:35:04Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nI see a few options within MOOSE mesh generation have a \"slightly off\" middle node.\n\nadd MoveNodeGenerator after those 3 https://mooseframework.inl.gov/moose/source/meshgenerators/MoveNodeGenerator.html\nOR\nuse a CartesianMG instead of GeneratedMG then use different lengths for two cells\nhttps://mooseframework.inl.gov/moose/source/meshgenerators/CartesianMeshGenerator.html\n\nGuilllaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21671#discussioncomment-3212428",
+                  "updatedAt": "2022-07-23T13:29:41Z",
+                  "publishedAt": "2022-07-23T13:29:41Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "prepareVectorTag and accumulateTaggedLocalResidual",
+          "author": {
+            "login": "dingqiushi"
+          },
+          "bodyText": "My MultiKernel.cpp inherited from the existing Kernel.cpp in moose, and I wanted to add multi-physics calculations, so I overloaded the computeResidual() function with an extra layer of p-loops, but this will cause some problems when opening the displacement (even if the displacement field was 0).\nvoid Kernel::computeResidual()\n{\nprepareVectorTag(_assembly, _var.number());\nprecalculateResidual();\nfor (_i = 0; _i < _test.size(); _i++)\n  for (_qp = 0; _qp < _qrule->n_points(); _qp++)\n    _local_re(_i) += _JxW[_qp] * _coord[_qp] * computeQpResidual();\naccumulateTaggedLocalResidual();\nif (_has_save_in)\n{\n   Threads::spin_mutex::scoped_lock lock(Threads::spin_mtx);\n   for (const auto & var : _save_in)\n     var->sys().solution().add_vector(_local_re, var->dofIndices());\n}\n}\n\nvoid MultiKernel::computeResidual()\n{\n\tfor (unsigned int p = 0; p < _n_equation; ++p)\n\t{\n\t\tprepareVectorTag(_assembly, p);\n\t\tfor (_qp = 0; _qp < _qrule->n_points(); _qp++)\n\t\t{\n\t\t\tprecalculateResidual();\n\t\t\tfor (_i = 0; _i < _test.size(); _i++)\n\t\t\t\t_local_re(_i)+=_JxW[_qp] * _coord[_qp] * computeQpResidual(p);\n\t\t\t\n\n\t\t}\n\t\taccumulateTaggedLocalResidual();\n\t}\n}\n\nI tried to change the way I wrote it so that I could ensure that the calculations for 0 displacement field and no displacement field were exactly the same, but obviously neither was the result I wanted.\nvoid MultiKernel::computeResidual()\n{\n\tfor (unsigned int p = 0; p < _n_equation; ++p)\n\t{\n\t\tprepareVectorTag(_assembly, _var.number());\n\t\tfor (_qp = 0; _qp < _qrule->n_points(); _qp++)\n\t\t{\n\t\t\tprecalculateResidual();\n\t\t\tfor (_i = 0; _i < _test.size(); _i++)\n\t\t\t\t_local_re(_i)+=_JxW[_qp] * _coord[_qp] * computeQpResidual(p);\n\t\t\t\n\n\t\t}\n\t\taccumulateTaggedLocalResidual();\n\t}\n}\n\nI would like to know the exact meaning and use of the functions prepareVectorTag() and accumulateTaggedLocalResidual(), and my intuition is that there is a problem with placing these two functions in a p-loop. What is the problem with putting them in the p-loop I defined?\nvoid TaggingInterface::prepareVectorTag(Assembly & assembly, unsigned int ivar)\n{\n  _re_blocks.resize(_vector_tags.size());\n  mooseAssert(_vector_tags.size() >= 1, \"we need at least one active tag\");\n  auto vector_tag = _vector_tags.begin();\n  for (MooseIndex(_vector_tags) i = 0; i < _vector_tags.size(); i++, ++vector_tag)\n    _re_blocks[i] = &assembly.residualBlock(ivar, *vector_tag);\n  _local_re.resize(_re_blocks[0]->size());\n}\n\nvoid TaggingInterface::accumulateTaggedLocalResidual()\n{\n  for (auto & re : _re_blocks)\n    *re += _local_re;\n}",
+          "url": "https://github.com/idaholab/moose/discussions/21386",
+          "updatedAt": "2022-08-13T16:15:13Z",
+          "publishedAt": "2022-06-23T03:21:41Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nSo you are trying to get multiple kernels in a single kernel? For a single equation or for multiple terms in a single equation?\nEither way this is at a lower level than we'd advise users to work at. If you could please work with regular kernels first it ll be easier to support you.\nIf not you may use the MOOSE doxygen to get more information about all these routines\nhttps://mooseframework.inl.gov/docs/doxygen/moose/classTaggingInterface.html#a7db1f9ea23c3f5fb0473118984dc4c0f\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21386#discussioncomment-3201968",
+                  "updatedAt": "2022-07-21T23:43:19Z",
+                  "publishedAt": "2022-07-21T23:43:19Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "YaqiWang"
+                  },
+                  "bodyText": "I thought you decided to use ArrayKernel.",
+                  "url": "https://github.com/idaholab/moose/discussions/21386#discussioncomment-3210018",
+                  "updatedAt": "2022-07-22T22:53:46Z",
+                  "publishedAt": "2022-07-22T22:53:46Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "TET4 element with one quadrature point",
+          "author": {
+            "login": "rcontinuum"
+          },
+          "bodyText": "Hello,\nmy aim is to use TET4 elements with one quadrature point. But with the following input fragment moose selects me a quadrature rule with four five quadrature points.\nWhat should I change so that a quadrature rule with only one quadrature point gets selected?\nI read a mesh file with one TET4 element, generated by gmsh, as\n[GlobalParams]\n  displacements = 'disp_x disp_y disp_z'\n  large_kinematics = false\n[]\n\n[Mesh]\n  [msh]\n    type = FileMeshGenerator\n    file = '1tet4.msh'\n    show_info = true\n  []\n[]\n\n[Variables]\n  [disp_x]\n    order = FIRST\n    family = LAGRANGE\n  []\n  [disp_y]\n    order = FIRST\n    family = LAGRANGE\n  []\n  [disp_z]\n    order = FIRST\n    family = LAGRANGE\n  []\n[]\n\nMesh check\nFileMeshGenerator 'msh':  Mesh Subdomains:\nFileMeshGenerator 'msh':   Subdomain 1 (Tetrahedron): 1 elems (TET4, 1 active), 4 active nodes\nFileMeshGenerator 'msh':    Volume: 0.166667\nFileMeshGenerator 'msh':    Bounding box minimum: (x,y,z)=(       0,        0,        0)\nFileMeshGenerator 'msh':    Bounding box maximum: (x,y,z)=(       1,        1,        1)\nFileMeshGenerator 'msh':    Bounding box delta: (x,y,z)=(       1,        1,        1)\nFileMeshGenerator 'msh':   Global mesh volume = 0.166667\n\nBut in my src/materials \"subroutine\" for calculating stresses and tangent operator the variable _qp runs from 0 to 4 3 .\nThus, it's a 4  5-point TET4 quadrature scheme. That works, but I was hoping to be able to select the one point quadrature rule.\nLike in libmesh the case FIRST: in line 53 ff. of the file\nhttps://mooseframework.inl.gov/docs/doxygen/libmesh/quadrature__gauss__3D_8C_source.html#l00029\n//---------------------------------------------\n      // Tetrahedral quadrature rules\n    case TET4:\n    case TET10:\n    case TET14:\n      {\n        switch(get_order())\n          {\n            // Taken from pg. 222 of \"The finite element method,\" vol. 1\n            // ed. 5 by Zienkiewicz & Taylor\n          case CONSTANT:\n          case FIRST:\n            {\n              // Exact for linears\n              _points.resize(1);\n              _weights.resize(1);\n \n \n              _points[0](0) = .25;\n              _points[0](1) = .25;\n              _points[0](2) = .25;\n \n              _weights[0] = Real(1)/6;\n \n              return;\n            }\n\nIf I use [Variables] ... order = CONSTANT I get an error message \"Unsupported order: 0\"\nAny hints?\nEdit: four -> five",
+          "url": "https://github.com/idaholab/moose/discussions/21662",
+          "updatedAt": "2022-07-22T16:43:55Z",
+          "publishedAt": "2022-07-22T14:10:15Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYou may use a constant monomial for that if you want to have this smaller quadrature all over the domain\n[Variables]\n  [u]\n    family = MONOMIAL\n    order = CONSTANT\n  []\n[]\n\nnote that the kernels and boundary conditions are often different for these discontinuous FEM families.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21662#discussioncomment-3206694",
+                  "updatedAt": "2022-07-22T14:12:51Z",
+                  "publishedAt": "2022-07-22T14:12:37Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rcontinuum"
+                          },
+                          "bodyText": "Well, if I do this, then I get the runtime error (as you suspected)\n*** ERROR ***\nTrying to use nodal boundary condition 'fix_x' on a non-nodal variable 'disp_x'.\nBecause I want to apply boundary conditions at nodes (typical for Tensor Mechanics) like\n[BCs]\n  [fix_x]\n    type = DirichletBC\n    preset = true\n    boundary = 'Point_1 Point_3 Point_4'\n    variable = disp_x\n    value = 0.0\n  []\n  ...\n\nI mean, the numerical integration of the stiffness matrix of a TET4 element with one quadrature point rule is exact. As the gradients of the shape functions are constants. Sure, for a mass matrix that is not true. But even for the mass matrix it works from a practical point of view.\nDo you know any other possibility to select the quadrature rule \"manually\" for C0 elements like the TET4 element?\nEdit: Btw, _qp runs from 0 to 4. So it's actually a 5-point quadrature rule.",
+                          "url": "https://github.com/idaholab/moose/discussions/21662#discussioncomment-3206805",
+                          "updatedAt": "2022-07-22T14:29:40Z",
+                          "publishedAt": "2022-07-22T14:27:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "are you trying to have a reduced quadrature only on the boundary?",
+                          "url": "https://github.com/idaholab/moose/discussions/21662#discussioncomment-3206818",
+                          "updatedAt": "2022-07-22T14:29:00Z",
+                          "publishedAt": "2022-07-22T14:28:59Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rcontinuum"
+                          },
+                          "bodyText": "No, I don't have boundary integrals.\nSure, if I would have, e.g., NeumannBCs then one quadrature point for the triangular surface of the element would not be enough.\nI only apply DirichletBCs at the nodes (for debugging reasons). Thus I don't have integrals over the boundary of the domain.\nFor the usual Tensor Mechanics kernel, I use TotalLagrangianStressDivergence but doesn't really matter, we have only one volume integral to compute the stiffness matrix. And that volume integral is computed exact with a one-point quadrature rule for the TET4 element.",
+                          "url": "https://github.com/idaholab/moose/discussions/21662#discussioncomment-3206964",
+                          "updatedAt": "2022-07-22T14:47:16Z",
+                          "publishedAt": "2022-07-22T14:47:15Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "Do this:\n[Executioner]\n  [Quadrature]\n    order = CONSTANT\n  []\n[]",
+                  "url": "https://github.com/idaholab/moose/discussions/21662#discussioncomment-3206987",
+                  "updatedAt": "2022-07-22T14:49:58Z",
+                  "publishedAt": "2022-07-22T14:49:58Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Ref: https://mooseframework.inl.gov/moose/source/actions/SetupQuadratureAction.html",
+                          "url": "https://github.com/idaholab/moose/discussions/21662#discussioncomment-3206998",
+                          "updatedAt": "2022-07-22T14:51:25Z",
+                          "publishedAt": "2022-07-22T14:51:24Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rcontinuum"
+                          },
+                          "bodyText": "Thank you!\nThat works!",
+                          "url": "https://github.com/idaholab/moose/discussions/21662#discussioncomment-3207728",
+                          "updatedAt": "2022-07-22T16:32:50Z",
+                          "publishedAt": "2022-07-22T16:32:50Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Action of residuals in chemical potential kernels for KKS",
+          "author": {
+            "login": "aclin4"
+          },
+          "bodyText": "I'm trying to understand how exactly the non-linear variables are updated in kernels such as KKSPhaseChemicalPotential or SLKKSChemicalPotential. From my basic understanding, non-linear variables are updated using the residual R calculated in each kernel following:\nc(new) = c(old) + R\nHowever in the case of the chemical potential equality kernels, the non-linear variable only appears in the residual in the form of a partial derivative:\nR = df/dc - df'/dc'\nwhere c is the non-linear variable. In the kernels where the non-linear variable does not directly appear in the residual, how exactly is the calculated value of the residual used to update the non-linear variable?\nThanks!\nAlbert",
+          "url": "https://github.com/idaholab/moose/discussions/21666",
+          "updatedAt": "2022-07-22T16:41:20Z",
+          "publishedAt": "2022-07-22T15:47:59Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "hello\nc(new) = c(old) + R dt\n\nthis is only very roughly (and actually not really) true for first order Euler time integrating.\nThe variables are updated as the result of the nonlinear solve. We can handle many time integration schemes, we can handle nonlinear variables that dont appear in the equations directly (like hidden in material properties for example), etc.\nIn the end, the solution returned when convergence is reached is the solution vector such that the residual is minimized.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21666#discussioncomment-3207514",
+                  "updatedAt": "2022-07-22T16:55:28Z",
+                  "publishedAt": "2022-07-22T16:00:48Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aclin4"
+                          },
+                          "bodyText": "I see. That makes more sense now, thanks!",
+                          "url": "https://github.com/idaholab/moose/discussions/21666#discussioncomment-3207768",
+                          "updatedAt": "2022-07-22T16:41:17Z",
+                          "publishedAt": "2022-07-22T16:41:16Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "CoupledValueFunctionIC coupling more variables?",
+          "author": {
+            "login": "xueyang94"
+          },
+          "bodyText": "Hello,\nIn a phase-field KKS model, to define the IC of the global concentration variable as sum(c_i*eta_i) where i is phase and c_i is the phase concentration, we can use CoupledValueFunctionIC. This IC can couple variables up to four (x,y,z,t). However, I have a KKS model with more than four phase, so I need to couple more than four etas. Is there any existing method that does similar things as CoupledValueFunctionIC but can couple more variables? Thanks. @dschwen",
+          "url": "https://github.com/idaholab/moose/discussions/21657",
+          "updatedAt": "2022-08-13T16:15:57Z",
+          "publishedAt": "2022-07-21T15:44:14Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nI dont know about more than four variables in this IC since I didnt know about this IC.\nWhat you could (maybe) do is leverage block restriction if you can make sure that over each subdomain you only need four phases. Then you may use multiple of these CoupledValueFunctionICs with different block restrictions.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21657#discussioncomment-3200464",
+                  "updatedAt": "2022-07-21T18:39:22Z",
+                  "publishedAt": "2022-07-21T18:39:21Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xueyang94"
+                          },
+                          "bodyText": "In general, how does the diffused interface work between two subdomains?",
+                          "url": "https://github.com/idaholab/moose/discussions/21657#discussioncomment-3200904",
+                          "updatedAt": "2022-07-21T19:44:55Z",
+                          "publishedAt": "2022-07-21T19:44:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "as long as you dont block-restrict variables or kernels, only the IC, then the subdomain will have absolutely no impact on the simulation.\nIn other terms,\nIf all objects are block-restricted to two domains, then it is just as if these two blocks were the same",
+                          "url": "https://github.com/idaholab/moose/discussions/21657#discussioncomment-3201101",
+                          "updatedAt": "2022-07-21T20:19:41Z",
+                          "publishedAt": "2022-07-21T20:19:40Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xueyang94"
+                          },
+                          "bodyText": "The variable I want to use this IC for is interpolated within the whole domain, I don't know how using a subdomain will work...",
+                          "url": "https://github.com/idaholab/moose/discussions/21657#discussioncomment-3206830",
+                          "updatedAt": "2022-07-22T14:31:30Z",
+                          "publishedAt": "2022-07-22T14:31:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xueyang94"
+                          },
+                          "bodyText": "as long as you dont block-restrict variables or kernels, only the IC, then the subdomain will have absolutely no impact on the simulation.\nIn other terms, If all objects are block-restricted to two domains, then it is just as if these two blocks were the same\n\nIf a variable exists within the whole domain, and the domain has a few sub-blocks, how is the interfacial value between the two sub-blocks defined in that case?",
+                          "url": "https://github.com/idaholab/moose/discussions/21657#discussioncomment-3206848",
+                          "updatedAt": "2022-07-22T14:34:49Z",
+                          "publishedAt": "2022-07-22T14:34:48Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I m thinking subdomains are just for setting the IC subdomain by subdomain\nYou mean the value on a node shared between two subdomains?\nNot sure. it's probably defined by the order in which the ICs are run but I would need to check",
+                          "url": "https://github.com/idaholab/moose/discussions/21657#discussioncomment-3207207",
+                          "updatedAt": "2022-07-22T15:20:40Z",
+                          "publishedAt": "2022-07-22T15:20:40Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "dschwen"
+                  },
+                  "bodyText": "@xueyang94, unfortunately there is no such IC yet. I do have a system that could be used to generate a very high dimensional approximation if you have the data. Another option would be to perform a solve in the IC. We've recently been discussing to use a GEM solver for that.",
+                  "url": "https://github.com/idaholab/moose/discussions/21657#discussioncomment-3201125",
+                  "updatedAt": "2022-07-21T20:23:22Z",
+                  "publishedAt": "2022-07-21T20:23:21Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xueyang94"
+                          },
+                          "bodyText": "Currently I can define the IC for eta using BoundingBoxIC, and define the IC for global concentration using NestedBoundingBoxIC. I think that being able to set global concentration IC directly from eta is more accurate. What data do we need for the system you mentioned?",
+                          "url": "https://github.com/idaholab/moose/discussions/21657#discussioncomment-3207175",
+                          "updatedAt": "2022-07-22T15:16:26Z",
+                          "publishedAt": "2022-07-22T15:16:25Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to define the physical parameters associated with variables",
+          "author": {
+            "login": "AdelineHunter"
+          },
+          "bodyText": "Hi, Prof\nI would like to ask how to define variable-related physical parameters in the input file.\nFor example, I want to define a density that is related to the temperature variable. Can I define the property parameters of this type through the Function in the input file without modifying the code.\nThanks.",
+          "url": "https://github.com/idaholab/moose/discussions/21656",
+          "updatedAt": "2022-07-22T14:23:19Z",
+          "publishedAt": "2022-07-21T14:35:13Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nTypically for a quantity that is dependent on another variable, we use the Materials and Material Properties system.\nPlease see the documentation for that system here:\nhttps://mooseframework.inl.gov/syntax/Materials/index.html\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21656#discussioncomment-3200495",
+                  "updatedAt": "2022-07-21T18:41:54Z",
+                  "publishedAt": "2022-07-21T18:41:53Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "AdelineHunter"
+                          },
+                          "bodyText": "Thank you, Guillaume\nYour advice is of great help to me.\nI remember using a method that didn't need to change the code, just set the input file, but I seem to have forgotten it.",
+                          "url": "https://github.com/idaholab/moose/discussions/21656#discussioncomment-3204310",
+                          "updatedAt": "2022-07-22T08:22:14Z",
+                          "publishedAt": "2022-07-22T08:22:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "there are parsed material expressions you may use:\nhttps://mooseframework.inl.gov/source/materials/ParsedMaterial.html\nand for fluid properties, it's easier to work with the fluid properties module to set all these quantities\nhttps://mooseframework.inl.gov/modules/fluid_properties/index.html",
+                          "url": "https://github.com/idaholab/moose/discussions/21656#discussioncomment-3206609",
+                          "updatedAt": "2022-07-22T14:01:42Z",
+                          "publishedAt": "2022-07-22T14:01:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "AdelineHunter"
+                          },
+                          "bodyText": "Thank you, Guillaume\nThank you for your help.",
+                          "url": "https://github.com/idaholab/moose/discussions/21656#discussioncomment-3206774",
+                          "updatedAt": "2022-07-22T14:23:20Z",
+                          "publishedAt": "2022-07-22T14:23:19Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Preconditioner and Linear solver",
+          "author": {
+            "login": "AdelineHunter"
+          },
+          "bodyText": "Hi,\nAt first, I have some questions about the preconditioner and linear solver.\n\n\nIn some simple problems, we can use LU/iLU and ksp gmres/bcgs to solve linear equations. Unfortunately, LU could not solve complex problems due to expensive resource consumption, especially with more than 100000 DOFs. Therefore we must use other preconditioners such as asm or bjacobi to solve linear equations. Frustratingly, it often happens that the system of linear equations does not converge so that the whole problem cannot be solved. But I found that we can change some options such as -sub_pc_factor_levels and -pc_factor_shift_type to help solve linear equations. Are there any descriptions of these options like -sub_pc_factor_levels on any website?\n\n\nI am always confused by diverged problems such as DIVERGED_FNORM_NAN and DIVERGED_LINEAR_SEARCH, etc.  Are there any descriptions of these diverged problems like DIVERGED_FNORM_NAN and DIVERGED_LINEAR_SEARCH, etc on any website?\n\n\nBesides, I have some questions about the nonlinear solver.\n\n\nMOOSE's default nonlinear solve method is PJFNK. In my opinion, if the jacobian matrix is could be made by hand or automatic difference, the NEWTON method is more effective and fast to solve the FEM problems. I'm not sure I'm right about the opinion.\n\n\nIn nonlinear solve progress, Is linear_search necessary? Are there any descriptions of these line_search methods on any website?\n\n\nThanks.",
+          "url": "https://github.com/idaholab/moose/discussions/21601",
+          "updatedAt": "2022-07-28T16:19:25Z",
+          "publishedAt": "2022-07-17T13:19:13Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\n1)\nSee petsc documentation for more info. All we have on solver options is here:\nhttps://mooseframework.inl.gov/source/executioners/Steady.html\n2)\nThese are errors codes from Petsc that we are passing to the user. You may look at their documentation. They generally mean the nonlinear solver is failing, which either means there's a bug in the Jacobian or better initialization would help.\nYou should check the Jacobian with the Jacobian analyzer\nhttps://mooseframework.inl.gov/help/development/analyze_jacobian.html\nNonlinear solver:\n1)\nSee this documentation\nhttps://mooseframework.inl.gov/moose/source/systems/NonlinearSystem.html\nSince we often use the Jacobian for the preconditioning in PJFNK, the memory consumption is similar to Newton's. But if we did not, the memory consumption would be much smaller for PJFNK than Newton's, hence the default.\n\n\n\nAll we have on line searches are this page. The petsc manual is a better reference since we're just importing a petsc tool here\nhttps://mooseframework.inl.gov/syntax/LineSearches/\nI turn off the line search for ALL my modeling. I've never had it improve things. But this is physics and numerics dependent.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21601#discussioncomment-3166254",
+                  "updatedAt": "2022-07-17T16:56:16Z",
+                  "publishedAt": "2022-07-17T16:56:15Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "AdelineHunter"
+                          },
+                          "bodyText": "Thank you, Mr. Guillaume\nYour advice is of great help to me.\nAccording to my experience, the NEWTON method is the most efficient and effective method for solving nonlinear equations. PJFNK method is too slow.\nAccording to Krylov, I think there should be a way to tweak the JFNK method so that the residual drops even more, possibly at the cost of slower computation\n\nWhat I want to know is whether there is such an adjustable interface to tune JFNK methods.\nThanks",
+                          "url": "https://github.com/idaholab/moose/discussions/21601#discussioncomment-3204387",
+                          "updatedAt": "2022-07-22T08:33:10Z",
+                          "publishedAt": "2022-07-22T08:33:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "This is also going to live on the petsc side I'm afraid. See their documentation / their forum",
+                          "url": "https://github.com/idaholab/moose/discussions/21601#discussioncomment-3206594",
+                          "updatedAt": "2022-07-22T13:59:21Z",
+                          "publishedAt": "2022-07-22T13:59:21Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Can MOOSE support silp boundary condition like as no-penetration boundary condition",
+          "author": {
+            "login": "suqingji"
+          },
+          "bodyText": "Dear,\nI want to simulate some non-sticky problems. So I need to set no-penetration boundary condition. What I'm wondering is that can MOOSE support silp boundary condition like as no-penetration boundary condition.\nLooking forward to your reply, thank you.",
+          "url": "https://github.com/idaholab/moose/discussions/21418",
+          "updatedAt": "2022-07-22T09:14:21Z",
+          "publishedAt": "2022-06-25T01:29:13Z",
+          "category": {
+            "name": "Q&A Modules: Navier-Stokes"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nPlease have a look at the contact module documentation, especially the frictionless models\nhttps://mooseframework.inl.gov/modules/contact/\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21418#discussioncomment-3021128",
+                  "updatedAt": "2022-06-25T04:07:31Z",
+                  "publishedAt": "2022-06-25T04:07:30Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "suqingji"
+                          },
+                          "bodyText": "Thanks for your reply. I think I may not have described my problem clearly.\nIn fact, I want to simulate  non-sticky flow through navier-stokes module. So I need to set no-penetration boundary condition as shown below.\n\nThen I want to add wall function BC and no-penetration BC to k-\u03c9 or k-\u03b5 model. What I'm wondering is that can I set a no-penetration as a NodalBC or  IntegratedBC?\nLooking forward to your reply, thank you.",
+                          "url": "https://github.com/idaholab/moose/discussions/21418#discussioncomment-3022322",
+                          "updatedAt": "2022-06-25T11:43:13Z",
+                          "publishedAt": "2022-06-25T11:43:12Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nNo flux is the default boundary condition, so no-slip no-penetration is the default.\nSo for FE you could leave it as is.\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/21418#discussioncomment-3023111",
+                          "updatedAt": "2022-06-26T06:06:49Z",
+                          "publishedAt": "2022-06-25T15:50:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "suqingji"
+                          },
+                          "bodyText": "Dear Prof.\nThank you for your reply.I think what I described may have led you to misunderstand.\nIn other words.I want to add a no penetration bc for momentum equation rather than a no flux or no slip bc.\nAs you mentioned above, no slip is /vec u=0, and no flux is /nabla u /cdot /vec n=/nabla v  /cdot /vec n = /nabla w  /cdot /vec n=0.\nHere I write no penetration bc is /vec u /cdot /vec n = 0. These are different, so I want to consult you if moose have no penetration bc.\nLooking forward toyour reply. Thank you for your reply and help again.",
+                          "url": "https://github.com/idaholab/moose/discussions/21418#discussioncomment-3024533",
+                          "updatedAt": "2022-06-26T02:17:59Z",
+                          "publishedAt": "2022-06-26T02:17:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "suqingji"
+                          },
+                          "bodyText": "Dear Prof.\nPlease allow me to add a little description as shown below.",
+                          "url": "https://github.com/idaholab/moose/discussions/21418#discussioncomment-3024704",
+                          "updatedAt": "2022-06-26T04:13:34Z",
+                          "publishedAt": "2022-06-26T04:13:33Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "the last one is no diffusive flux.\nno-penetration is the same as no advective flux\nIf you want you can add a boundary condition that does nothing. Simply not executing advection kernels on the boundary nodes is enough to have 0 advection there",
+                          "url": "https://github.com/idaholab/moose/discussions/21418#discussioncomment-3024917",
+                          "updatedAt": "2022-06-26T06:12:24Z",
+                          "publishedAt": "2022-06-26T06:12:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "suqingji"
+                          },
+                          "bodyText": "Dear Prof.\nThank you for your reply.\nIf I understand you correctly, you mean to introduce the terms of advective flux by integration by parts to advective term. Here's how I did it.\n\nIf this method is used, the outlet must be given a advection boundary condition. Unfortunately, I found this method to be less robust than the current method. And I think that's probably why by default MOOSE don't integrate by parts for advection terms.\nTherefore I'm wondering whether there are other robust methods to achieve no penetration BC on MOOSE.\nLooking forward toyour reply. Thank you for your reply and help again.",
+                          "url": "https://github.com/idaholab/moose/discussions/21418#discussioncomment-3028459",
+                          "updatedAt": "2022-06-27T03:48:02Z",
+                          "publishedAt": "2022-06-27T03:48:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "In INS-FE both approaches have been implemented. I dont know that a conclusion was made as to which approach is more robust. But we moved to finite volume for most of the Navier Stokes work, where we do integrate that term over faces (eg basically an integration by part)",
+                          "url": "https://github.com/idaholab/moose/discussions/21418#discussioncomment-3201922",
+                          "updatedAt": "2022-07-21T23:27:18Z",
+                          "publishedAt": "2022-07-21T23:27:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "suqingji"
+                          },
+                          "bodyText": "Thank you,\nThis is worth studying. As far as I know, the COMSOL turbulence module has these functions.",
+                          "url": "https://github.com/idaholab/moose/discussions/21418#discussioncomment-3204684",
+                          "updatedAt": "2022-07-22T09:14:22Z",
+                          "publishedAt": "2022-07-22T09:14:21Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Can MOOSE get a normal vectors and the height of the first grid on \"Nodal BC\"",
+          "author": {
+            "login": "suqingji"
+          },
+          "bodyText": "Dear,\nI want to add a Dirichlet BC to an advection-diffusion problem, but the node values need to be calculated by the normal vector and the height of the first grid.\nIn fact, IntegratedBC can help me calculate the normal vectors through _current_side_elem[_qp]->normal(). Unfortunately, I need to set up a DirichletBC. The NodalBC have no function to compute normal vectors. Even though I add _normals(_assembly.normals()) in my class. It still could not  compute normal vectors correctly.\ntips:\n\nThe height of the first grid on \"Nodal BC\"\n\nnormal vectors\n\n\nLooking forward to your reply.",
+          "url": "https://github.com/idaholab/moose/discussions/21428",
+          "updatedAt": "2022-07-22T09:12:23Z",
+          "publishedAt": "2022-06-27T13:23:58Z",
+          "category": {
+            "name": "Q&A Modules: Navier-Stokes"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "I assume this is FE not FV. Either way, the node normals aren't well defined. You'll need to do some sort of averaging over the connected element edges. There is a NodalNormals aux kernel that you could use as a starting point.",
+                  "url": "https://github.com/idaholab/moose/discussions/21428#discussioncomment-3033155",
+                  "updatedAt": "2022-06-27T17:06:02Z",
+                  "publishedAt": "2022-06-27T17:06:01Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "see this page of documentation for example\nhttps://mooseframework.inl.gov/source/actions/AddNodalNormalsAction.html",
+                          "url": "https://github.com/idaholab/moose/discussions/21428#discussioncomment-3104953",
+                          "updatedAt": "2022-07-08T05:17:05Z",
+                          "publishedAt": "2022-07-08T05:17:05Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "suqingji"
+                          },
+                          "bodyText": "Thank you,\nYour advice is very helpful to me.",
+                          "url": "https://github.com/idaholab/moose/discussions/21428#discussioncomment-3204668",
+                          "updatedAt": "2022-07-22T09:12:24Z",
+                          "publishedAt": "2022-07-22T09:12:23Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "RANS k-\u03b5 model",
+          "author": {
+            "login": "AdelineHunter"
+          },
+          "bodyText": "Hi Everyone,\n\nFirst of all, thank you to all the workers in Idaho. MOOSE has really helped me a lot.\nAnd I learned from Workshop Slides that a coarse regularized k-epsilon model will be added soon. What I want to know is whether the model is based on FEM? And how soon can it be added?\nBesides, I feel that no new model has been added to the FEM Navier-Stokes module for a long time. I don't know whether the module will be updated in the future.\nThank you for your time.",
+          "url": "https://github.com/idaholab/moose/discussions/21480",
+          "updatedAt": "2022-07-22T08:54:13Z",
+          "publishedAt": "2022-07-01T14:52:11Z",
+          "category": {
+            "name": "Q&A Modules: Navier-Stokes"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThe model will be based on finite volume.\nIt ll be added this summer.\nAt INL we are no longer expanding the finite element Navier Stokes capability. For our applications it has proved unsatisfactory and the finite volume work is our focus right now. We are still accepting and would gladly review contributions from the community on the finite element side.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21480#discussioncomment-3064902",
+                  "updatedAt": "2022-07-01T14:55:36Z",
+                  "publishedAt": "2022-07-01T14:55:29Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "AdelineHunter"
+                          },
+                          "bodyText": "Hello,\nIt has proved unsatisfactory.\nDoes this mean that the finite element research in CFD is not in-depth enough, resulting in the poor robustness of this method? Or because of the program structure, it may be unexpectedly difficult for finite element CFD to continue to develop based on MOOSE.\nIf it is the first reason, I think I will continue to do this and provide open source code to the community in the future.\nIf it's the second reason, it's really a shame, because I think MOOSE is the most beautiful of the finite element frameworks so far\nThank you for your time.",
+                          "url": "https://github.com/idaholab/moose/discussions/21480#discussioncomment-3065018",
+                          "updatedAt": "2022-07-01T15:12:59Z",
+                          "publishedAt": "2022-07-01T15:12:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "MOOSE didnt preclude implementing advanced schemes for finite element CFD. The unsatisfactory parts were the lack of local conservation in our CFEM implementation (DG schemes can be conservative), the sharps peaks near flow corners, and the ambiguity at corners of fixed velocity inlets with no-slip walls (what value do you pick for the corner node?)\nI dont mean to discourage your research or adding much-needed turbulence models to our FEM CFD.\nSome of the developments we are working on, such as segregated solver capabilities in MOOSE, will also be applicable to finite element, benefitting both implementation's performance",
+                          "url": "https://github.com/idaholab/moose/discussions/21480#discussioncomment-3065180",
+                          "updatedAt": "2022-07-01T15:37:59Z",
+                          "publishedAt": "2022-07-01T15:37:56Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "AdelineHunter"
+                          },
+                          "bodyText": "Hello, Guillaume\nSegregated solver capabilities in MOOSE. That is an exciting capability. How soon will this capability be implemented in MOOSE?",
+                          "url": "https://github.com/idaholab/moose/discussions/21480#discussioncomment-3082487",
+                          "updatedAt": "2022-07-05T07:18:53Z",
+                          "publishedAt": "2022-07-05T07:18:52Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "within a year most likely.",
+                          "url": "https://github.com/idaholab/moose/discussions/21480#discussioncomment-3085173",
+                          "updatedAt": "2022-07-05T13:37:23Z",
+                          "publishedAt": "2022-07-05T13:37:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "AdelineHunter"
+                          },
+                          "bodyText": "Thank you, Mr. Guillaume\nLook forward to more features, thanks to the Idaho staff.\nBy the way. Where can I get some of the new features for Navier-Stokes? Although the code may not have passed the rigorous testing in Idaho, I want to get a taste of some of these features.\nOr some other finite element program for Navier-Stokes that was previously developed but not posted to Github, even though it's not completely finished.\nThanks.",
+                          "url": "https://github.com/idaholab/moose/discussions/21480#discussioncomment-3204523",
+                          "updatedAt": "2022-07-22T08:54:14Z",
+                          "publishedAt": "2022-07-22T08:54:13Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

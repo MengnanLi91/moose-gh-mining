@@ -1,0 +1,1109 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMy0wMS0xOFQxMTo1NDoyOC0wNjowMM4ASLJL"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Preventing negative variable values, or assigning range of possible values to variable",
+          "author": {
+            "login": "EdSheltonUKAEA"
+          },
+          "bodyText": "Is there a way to prevent a Variable (or AuxVariable) from taking negative values when this would be physically meaningless?\nMore generally is it possible to assign a range of possible values to a variable?\nThere doesn't seem to be anything in Variable parameters which does this - unless I have missed it.\nIs there a Kernel which can restrict the range of values of a variable?\nI see there are these optional parameter for the Materials type ParsedMaterial (and ADParsedMaterial?):\ntol_names\nC++ Type:std::vector<std::string>\nControllable:No\nDescription:Vector of variable names to be protected from being 0 or 1 within a tolerance (needed for log(c) and log(1-c) terms)\n\ntol_values\nC++ Type:std::vector<double>\nControllable:No\nDescription:Vector of tolerance values for the variables in tol_names\n\nIt looks like these might help do what I want, but I'm not sure of the syntax of how to apply these.  Does anyone have any examples they can share?",
+          "url": "https://github.com/idaholab/moose/discussions/23210",
+          "updatedAt": "2023-01-21T15:02:50Z",
+          "publishedAt": "2023-01-20T13:56:41Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nyou can use the Bounds system to impose that. There are files under auxkernels\nfor auxiliary variables, auxkernels can be made to bound the variable any way you like, these restrictions will just need to appear in the main value routine of the auxkernel\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/23210#discussioncomment-4738382",
+                  "updatedAt": "2023-01-20T15:07:13Z",
+                  "publishedAt": "2023-01-20T15:07:12Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "EdSheltonUKAEA"
+                          },
+                          "bodyText": "That's brilliant.  Thanks so much.  This has done exactly what I wanted to stop variables taking negative values.  However, I also have at least one ADParsedMaterial that I need to prevent being negative.  Is there an equivalent way of doing this?\nIs there a kernel which can effectively just assign the value of the material property to a variable, so that I can then use the Bounds system to stop that variable being negative?",
+                          "url": "https://github.com/idaholab/moose/discussions/23210#discussioncomment-4744385",
+                          "updatedAt": "2023-01-21T10:42:50Z",
+                          "publishedAt": "2023-01-21T10:42:50Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "EdSheltonUKAEA"
+                          },
+                          "bodyText": "Hold on, I think I might have just found it:\nhttps://mooseframework.inl.gov/source/kernels/MaterialPropertyValue.html",
+                          "url": "https://github.com/idaholab/moose/discussions/23210#discussioncomment-4744393",
+                          "updatedAt": "2023-01-21T10:45:23Z",
+                          "publishedAt": "2023-01-21T10:45:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "With a parsedMaterial you can use an if(a>0, a, 0) syntax to force it to always be positive",
+                          "url": "https://github.com/idaholab/moose/discussions/23210#discussioncomment-4745312",
+                          "updatedAt": "2023-01-21T15:02:51Z",
+                          "publishedAt": "2023-01-21T15:02:50Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Negative Jacobian During Contact Problem",
+          "author": {
+            "login": "Vandenbg"
+          },
+          "bodyText": "I've been plagued with this issue for some time now in one form or another. I am modeling nanoindentation and I will occasionally see a negative Jacobian error as my tip is pressed into the material. I have tuned my contact parameters to a point where there is nearly 0 visible distortion under the tip, however, I am still getting this negative Jacobian in some simulations. Here is a picture of my material surface:\n\nWithin my material the mesh is updated each time step. The elements MOOSE creates when updating the mesh are sometimes very small splinters. In the picture below, I focus on a region which has the element that caused the error.\n\nIs there any parameters that I can use to control when and how MOOSE updates the mesh elements? Should I continue to tune my contact module parameters to a point where this is 0 visual surface deformation? I have run this simulation many times and this problem only arises with some meshes, even though they have all been prepared very similarly.  Any advice would be greatly appreciated.\nPossibly relevant portions of my input deck:\n[Mesh]\n  file = berk_3umpuck_rev2.e\n  patch_update_strategy = auto\n  #patch_size = 20\n[]\n\n[Functions]\n  [push_down]\n    type = ParsedFunction\n    value = 'if(t < 2, -t/4000, -0.0005)'\n  []\n[]\n\n[Modules/TensorMechanics/Master]\n  [arbitrary_name]\n    add_variables = true\n    strain = FINITE\n    block = '1 2'\n    use_automatic_differentiation = false\n    generate_output = 'stress_xx stress_xy stress_xz stress_yy stress_zz'\n    save_in = 'saved_x saved_y saved_z'\n    use_finite_deform_jacobian = true\n  []\n[]\n\n[Executioner]\n  type = Transient\n  solve_type = 'PJFNK'\n  petsc_options_iname = '-pc_type -pc_factor_mat_solver_type'\n  petsc_options_value = 'lu    superlu_dist'\n  line_search = 'none'\n  l_max_its = 80\n  nl_max_its = 30\n  dt = 0.004\n  dtmin = 0.00005\n  end_time = 8\n  nl_rel_tol = 1e-6\n  nl_abs_tol = 1e-6\n  l_tol = 1e-4\n  automatic_scaling = true\n[]\n\n[Preconditioning]\n  [smp]\n    type = SMP\n    full = true\n  []\n[]\n\n[Dampers]\n  [contact_slip]\n    type = ContactSlipDamper\n    primary = '202'\n    secondary = '102'\n  []\n[]\n\n[Contact]\n  [ind_base]\n    primary = '202'\n    secondary = '102'\n    model = coulomb\n    friction_coefficient = 0.4\n    normalize_penalty = true\n    formulation = tangential_penalty\n    penalty = 1e8\n    tangential_tolerance = 1\n  []\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/22967",
+          "updatedAt": "2023-06-12T18:01:38Z",
+          "publishedAt": "2022-12-15T00:46:01Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@recuero @bwspenc @jbtompkins @hugary1995 on advice for meshes undergoing contact deformation\nDo we have a doc page on this?",
+                  "url": "https://github.com/idaholab/moose/discussions/22967#discussioncomment-4405359",
+                  "updatedAt": "2022-12-15T01:00:56Z",
+                  "publishedAt": "2022-12-15T01:00:55Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "Within my material the mesh is updated each time step.\n\nThat sounds horrifying... I hope you meant something else.\nMy usual suggestion to this sort of problem is: use AD or our new system which gives you the exact Jacobian, and switch from pjfnk to Newton.\nFrom there on, if the issue persists, other contact experts will give you more specific suggestions. The best setting, though, is usually problem dependent.",
+                  "url": "https://github.com/idaholab/moose/discussions/22967#discussioncomment-4405513",
+                  "updatedAt": "2022-12-15T01:43:02Z",
+                  "publishedAt": "2022-12-15T01:43:02Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "recuero"
+                          },
+                          "bodyText": "In addition to that,  I'd try using a predictor, which tends to help in some contact problems.\nThe problem you show appears to be similar to an example in the contact module. The geometry has sharp corners which may contribute to the inversion of elements during the solves. Resolving the geometry problem with some smooth approximation can help. Not sure what enforcement you are using, but if the negative Jacobians become a barrier to get the simulation to complete, I'd try penalty or relaxing the penalty factor.",
+                          "url": "https://github.com/idaholab/moose/discussions/22967#discussioncomment-4405771",
+                          "updatedAt": "2022-12-15T02:37:59Z",
+                          "publishedAt": "2022-12-15T02:37:59Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sapitts"
+                          },
+                          "bodyText": "Gary, thanks for the response. Gavin is working with a crystal plasticity problem that isn't available in AD. Do you know if the ComputeLagrangianWrappedStress will work to call stress update materials outside of the ComputeMultiPlasticityStress class? The ComputeMultipleCrystalPlasticityStress is similar but obviously not the\nAntonio, would you point us to an example of a good predictor to use for this sort of contact problem? Gavin set up his problem following your indenter_berkovich_friction.i example, which uses the SMP preconditioner",
+                          "url": "https://github.com/idaholab/moose/discussions/22967#discussioncomment-4411200",
+                          "updatedAt": "2022-12-15T15:34:33Z",
+                          "publishedAt": "2022-12-15T15:34:33Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Vandenbg"
+                          },
+                          "bodyText": "In addition to that, I'd try using a predictor, which tends to help in some contact problems.\n\nI can try to set up a predictor.\n\nThe problem you show appears to be similar to an example in the contact module. The geometry has sharp corners which may contribute to the inversion of elements during the solves.\n\nOriginally the example had sharp edges, however, the mesh I created for nanoindentation has a 20nm fillet which largely took care of the negative Jacobian issue.\n\nNot sure what enforcement you are using, but if the negative Jacobians become a barrier to get the simulation to complete, I'd try penalty or relaxing the penalty factor.\n\nThank you for the advice.",
+                          "url": "https://github.com/idaholab/moose/discussions/22967#discussioncomment-4412831",
+                          "updatedAt": "2022-12-15T19:03:01Z",
+                          "publishedAt": "2022-12-15T19:03:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Vandenbg"
+                          },
+                          "bodyText": "Within my material the mesh is updated each time step.\n\n\n\nThat sounds horrifying... I hope you meant something else.\n\nIt is horrifying, I am not sure how to interpret this behavior otherwise though.\nt = 0\n\nt = 0.08, step 20\n\nt = 0.34, step 85\n\nDoes this behavior have a name? or is it something that I shouldn't worry about?\n\nand switch from pjfnk to Newton.\n\nI can try this.",
+                          "url": "https://github.com/idaholab/moose/discussions/22967#discussioncomment-4412905",
+                          "updatedAt": "2022-12-15T19:13:50Z",
+                          "publishedAt": "2022-12-15T19:13:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "For indentation problem, the deformation is very large which might cause negative Jacobian. You might want to use the elements which are taller in the vertical direction to avoid negative Jacobian. For commercial codes, people typically need to do remeshing when the elements are distorted.",
+                          "url": "https://github.com/idaholab/moose/discussions/22967#discussioncomment-4413009",
+                          "updatedAt": "2022-12-15T19:27:20Z",
+                          "publishedAt": "2022-12-15T19:27:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "bwspenc"
+                          },
+                          "bodyText": "The mesh is being displaced, and the displaced mesh is updated each iteration. However, we're never modifying the mesh topology. I think what you're seeing in those images is just a Paraview visualization artifact.",
+                          "url": "https://github.com/idaholab/moose/discussions/22967#discussioncomment-4471052",
+                          "updatedAt": "2022-12-21T21:29:49Z",
+                          "publishedAt": "2022-12-21T21:29:49Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "friedmud"
+                  },
+                  "bodyText": "How is the boundary condition applied?  Is it a Dirichlet condition on the indenter?  If so - you may need to slow it down.\nGenerally: I would think that the material would move away from the indentation enough to keep the elements ok... but it looks like you have a decent amount of plasticity or something going on there.\nRemeshing (during the solve) is the ultimate answer... but is VERY difficult to do for solid mechanics do to needing to remap the state variables (stateful properties) like accumulated plastic strain, etc.",
+                  "url": "https://github.com/idaholab/moose/discussions/22967#discussioncomment-4469579",
+                  "updatedAt": "2022-12-21T17:16:37Z",
+                  "publishedAt": "2022-12-21T17:16:36Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "bwspenc"
+                          },
+                          "bodyText": "I agree with this assessment. I would imagine that if you load this very carefully and use all the best formulation and solver options, you can probably get pretty far (which you already have done), but at a certain point, the distortion in those elements right at the tip will be so high that they will be very close to inverting. One thing that hasn't been mentioned yet which might be helpful is the ElementJacobianDamper. It limits the change in the Jacobian during a given nonlinear iteration, which could prevent element inversions when the elements get really distorted.",
+                          "url": "https://github.com/idaholab/moose/discussions/22967#discussioncomment-4471091",
+                          "updatedAt": "2022-12-21T21:35:36Z",
+                          "publishedAt": "2022-12-21T21:35:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Vandenbg"
+                          },
+                          "bodyText": "Thank you for the advice, I will look into this damper. I have lowered the time step by half while keeping the total displacement rate the same to see if this helps.",
+                          "url": "https://github.com/idaholab/moose/discussions/22967#discussioncomment-4471401",
+                          "updatedAt": "2022-12-21T22:43:39Z",
+                          "publishedAt": "2022-12-21T22:43:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "I'm also curious to know what happened when you encountered negative Jacobian. Did it abort abruptly? Or did it cut the time step and retry?",
+                          "url": "https://github.com/idaholab/moose/discussions/22967#discussioncomment-4471494",
+                          "updatedAt": "2022-12-21T23:02:59Z",
+                          "publishedAt": "2022-12-21T23:02:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Vandenbg"
+                          },
+                          "bodyText": "I'm also curious to know what happened when you encountered negative Jacobian. Did it abort abruptly? Or did it cut the time step and retry?\n\nIt would cut the time step every few steps and then eventually get to a spot where even cutting the time step multiple times would cause it to fail.",
+                          "url": "https://github.com/idaholab/moose/discussions/22967#discussioncomment-4471564",
+                          "updatedAt": "2022-12-21T23:25:42Z",
+                          "publishedAt": "2022-12-21T23:25:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Then I guess cutting the time step won't help. Still worth trying though.",
+                          "url": "https://github.com/idaholab/moose/discussions/22967#discussioncomment-4471770",
+                          "updatedAt": "2022-12-22T00:08:10Z",
+                          "publishedAt": "2022-12-22T00:08:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Sorry, to be clear, I'm referring to\n\nI have lowered the time step by half while keeping the total displacement rate the same to see if this helps.",
+                          "url": "https://github.com/idaholab/moose/discussions/22967#discussioncomment-4471772",
+                          "updatedAt": "2022-12-22T00:09:07Z",
+                          "publishedAt": "2022-12-22T00:09:06Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "Vandenbg"
+                  },
+                  "bodyText": "Okay, I have had the opportunity to try several of the suggestions presented here. If you are having issues with the same thing, read all of the replies, you may find something helpful. In my case, the solution ended up being my mesh generation. because I am working at the nano-scale, my mesh is very small. Cubit had a difficult time making a mesh this size that was high quality. The solution was to build the mesh 100x larger and scale after it was complete, this new mesh has less problems than the old ones.",
+                  "url": "https://github.com/idaholab/moose/discussions/22967#discussioncomment-4627599",
+                  "updatedAt": "2023-01-08T21:07:06Z",
+                  "publishedAt": "2023-01-08T21:07:05Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GregVernon"
+                          },
+                          "bodyText": "@Vandenbg - since you mention needing to scale your mesh in Cubit I thought I might add some commentary.  The CAD kernel used by Cubit is ACIS which, like other BREP-based CAD kernels, uses absolute tolerances.  The default absolute tolerance for Cubit is 1E-06 - you can set the accuracy via set geometry accuracy <double> where the tolerance is limited to the range: 10.0 <-> 1E-06.\nWhat we recommend for users is to scale their geometry so that the smallest BREP feature length is ~1.0, though for most \"normal engineering\" problems (i.e., those that come from their company's CAD/PLM system) it's not strictly necessary.  But for many \"physics engineering\" problems it is often necessary.  In these cases I usually scale my geometry by the nearest power of 10 for simplicity.  Then after you've built your mesh on the scaled model you can tell the exporter to apply a scale factor when exporting the mesh (documentation here):\ntransform mesh output scale <factor>\n\nNote that transform commands are cumulative, added to the effect of previous transforms. To clear a transformation matrix, use the reset option:\ntransform mesh output reset\n\nMesh input and output transformations are also cleared when you reset the entire model using the reset command.\nAn example script template might look like:\nreset\n## Import geometry and scale\nimport stp \"nanoindenter.stp\" noheal\n#{scale_factor = 1e3}\nvolume all scale {scale_factor}\ntransform mesh output {1/scale_factor}\n## Mesh\nwebcut vol all xplane \nwebcut vol all yplane \nimprint all\nmerge all\nmesh vol all\n## Export\nset exodus netcdf4 off\nset large exodus file on\nexport mesh \"nanoindenter.e\"  overwrite \ntransform mesh output reset",
+                          "url": "https://github.com/idaholab/moose/discussions/22967#discussioncomment-4732727",
+                          "updatedAt": "2023-01-20T02:33:26Z",
+                          "publishedAt": "2023-01-19T23:40:44Z",
+                          "isAnswer": true
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Thanks @GregVernon, very helpful comments!",
+                          "url": "https://github.com/idaholab/moose/discussions/22967#discussioncomment-4732892",
+                          "updatedAt": "2023-01-20T00:06:32Z",
+                          "publishedAt": "2023-01-20T00:06:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Vandenbg"
+                          },
+                          "bodyText": "@GregVernon Thank you for the information,\nI am curious if the method you outlined is different than simply using volume all scale # after meshing to make the mesh smaller. Is it important to scale on the output instead of scaling in my journal file?",
+                          "url": "https://github.com/idaholab/moose/discussions/22967#discussioncomment-4742759",
+                          "updatedAt": "2023-01-21T00:43:47Z",
+                          "publishedAt": "2023-01-21T00:43:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GregVernon"
+                          },
+                          "bodyText": "@GregVernon Thank you for the information,\nI am curious if the method you outlined is different than simply using volume all scale # after meshing to make the mesh smaller. Is it important to scale on the output instead of scaling in my journal file?\n\nIt is different because volume all scale <factor> scales the underlying BREP data, which \"owns\" the mesh entities.  It's thus possible to corrupt the BREP, which in turn corrupts the mesh attached to it.  It doesn't necessarily always happen, but the difference with using transform mesh is that it simply applies the scale factor using double-precision operations applied to the nodal coordinates.  Because it doesn't interact with the BREP, there's zero risk of a corrupt BREP messing up your mesh.",
+                          "url": "https://github.com/idaholab/moose/discussions/22967#discussioncomment-4743514",
+                          "updatedAt": "2023-01-21T06:15:35Z",
+                          "publishedAt": "2023-01-21T06:15:35Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Not getting convergence on multiple processors",
+          "author": {
+            "login": "vermaprk"
+          },
+          "bodyText": "Hi\nI am running a phase-field simulation on my university cluster. For 1 processors my job submit file gives a convergence\n#!/bin/bash\n#SBATCH -J moose-mpiexec # name of the job\n#SBATCH -p standard-low # name of the partition: available options \"standard, standard-low, gpu, gpu-low, hm\"\n#SBATCH -n 1 # no of processes\n#SBATCH -t 70:00:00 # walltime in HH:MM:SS, Max value 72:00:00\n\n#list of modules you want to use, for example\nsource /home/19es92r03/mambaforge3/bin/activate moose\n\n#name of the executable\n\n#run the application\n$exe mpiexec -n 1 /home/19es92r03/projects/flamingo/flamingo-opt -i serial1d.i\n\nHowever for n 40 processors the convergence fails.\nHow can I increase the number of processors to reduce the computation time.\nmy output files header looks like this for 40 processors\n=========================================\nSLURM_CLUSTER_NAME = param-shakti\nSLURM_JOB_ACCOUNT = sreerajes\nSLURM_JOB_ID = 1019698\nSLURM_JOB_NAME = moose-mpiexec\nSLURM_JOB_NODELIST = cn[024,147-148,226,341-343]\nSLURM_JOB_USER = 19es92r03\nSLURM_JOB_UID = 6905\nSLURM_JOB_PARTITION = standard-low\nSLURM_TASK_PID = 91278\nSLURM_SUBMIT_DIR = /scratch/19es92r03\nSLURM_CPUS_ON_NODE = 12\nSLURM_NTASKS = 40\nSLURM_TASK_PID = 91278\n==========================================\n^[[36mThe following total 16 aux variables:\n  FNF\n  G\n  c\n  dFNF/deta\n  dFNF/dphi\n  dG/deta\n  dG/dpot\n  dG/dw\n  d^2FNF/deta^2\n  d^2FNF/detadphi\n  d^2FNF/dphi^2\n  d^3FNF/deta^2dphi\n   d^3FNF/deta^3\n  d^3FNF/detadphi^2\n  d^3FNF/dphi^3\n  etaminus\nare added for automatic output by MaterialOutputAction.^[[39m\nFinished Setting Up                                                                      [^[[33m  5.36 s^[[39m] [^[[33m   22 MB^[[39m]\nFramework Information:\nMOOSE Version:           git commit d6a95f5 on 2022-07-28\nLibMesh Version:\nPETSc Version:           3.16.5\nSLEPc Version:           3.16.2\nCurrent Time:            Wed Jan 18 10:14:02 2023\nExecutable Timestamp:    Tue Jan 17 20:24:11 2023\n\nParallelism:\n  Num Processors:          40\n  Num Threads:             1\n\nMesh:\n  Parallel Type:           replicated\n  Mesh Dimension:          2\n  Spatial Dimension:       2\n  Nodes:\n    Total:                 402\n    Local:                 12\n    Min/Max/Avg:           8/12/10\n  Elems:\n  Total:                 200\n    Local:                 5\n    Min/Max/Avg:           5/5/5\n  Num Subdomains:          1\n  Num Partitions:          40\n  Partitioner:             metis\n\nNonlinear System:\n  Num DOFs:                1608\n  Num Local DOFs:          48\n  Variables:               { \"w\" \"eta\" \"phi\" \"pot\" }\n  Finite Element Types:    \"LAGRANGE\"\n  Approximation Orders:    \"FIRST\"\n\nAuxiliary System:\n  Num DOFs:                3200\n  Num Local DOFs:          80\n  Variables:               { \"FNF\" \"G\" \"c\" \"dFNF/deta\" \"dFNF/dphi\" ... \"d^3FNF/deta^2dphi\" \"d^3FNF/deta^3\"\n                             \"d^3FNF/detadphi^2\" \"d^3FNF/dphi^3\" \"etaminus\" }\n  Finite Element Types:    \"MONOMIAL\"\n  Approximation Orders:    \"CONSTANT\"\n\nExecution Information:\n  Executioner:             Transient\n  TimeStepper:             ConstantDT\n  Solver Mode:             Preconditioned JFNK\n  PETSc Preconditioner:    asm\n  MOOSE Preconditioner:    SMP\n  ^[[31mLEGACY MODES ENABLED:^[[39m\n This application uses the legacy material output option: material properties are output only on TIMESTEP_END, not INITIAL. To remove this message, set 'use_legacy_material_output' to false in this application. If there are gold output files that contain material property output for which output occurs on INITIAL, then these will generate diffs due to zero values being stored, and these tests should be re-golded.\n^[[39m\n\nTime Step 0, time = 0\n```",
+          "url": "https://github.com/idaholab/moose/discussions/23188",
+          "updatedAt": "2023-02-04T15:56:39Z",
+          "publishedAt": "2023-01-18T10:15:10Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThis happens because the preconditioning default is not the same in serial and in parallel.\nYou ll want to work on your preconditioniong in parallel\nThis page has some information on the basics\nhttps://mooseframework.inl.gov/source/executioners/Steady.html\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/23188#discussioncomment-4716773",
+                  "updatedAt": "2023-01-18T12:07:32Z",
+                  "publishedAt": "2023-01-18T12:07:32Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "vermaprk"
+                          },
+                          "bodyText": "Thanks for replying. I have one more question related to this.\nEven if I make my 1d simulation (that converges with -n 1) into 2d with identical conditions along y-dimension (-n 1) I have convergence issues.\nCan this also be due to preconditioning? or any other reason",
+                          "url": "https://github.com/idaholab/moose/discussions/23188#discussioncomment-4734088",
+                          "updatedAt": "2023-01-20T05:04:33Z",
+                          "publishedAt": "2023-01-20T05:04:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nthe differences in convergence can also be tied to partitioning.\nYou can use the output_process_domains in the [Debug] block to see how the system is partitioned.\nIf you use a different partitioner, maybe that completely mimicks the 1D partitioning that might help.\nthat is not the whole picture though. The 2D matrix is not exactly the same as the 1D one, especially if there are more elements in the the transverse direction\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/23188#discussioncomment-4738357",
+                          "updatedAt": "2023-01-20T15:04:31Z",
+                          "publishedAt": "2023-01-20T15:04:30Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "HHT-alpha time integration vs external forces (Neumann BCs)",
+          "author": {
+            "login": "rcontinuum"
+          },
+          "bodyText": "Hello,\nI'm trying to use in (old) TensorMechanics the HHT-alpha time integrator and I want to apply a time dependent external mechanical force (\"dead load\") given as a piecewise linear function.\nI do that with\n[Functions]\n  [load]\n    type = PiecewiseLinear\n    x = '0.0 0.25 0.75 1.0'    # time \n    y = '0.0 2.0 -2.0  0.0'    # value   \n  []\n[]\n\n[BCs]\n [pull_x]\n    type = FunctionNeumannBC\n    boundary = right\n    variable = disp_x\n    function = load\n  []\n[]\n\nIn the documentation of the HHT-alpha method, see Section \"Hilber-Hughes-Taylor time integration\" in\nhttps://mooseframework.inl.gov/moose/modules/tensor_mechanics/Dynamics.html\nthe external force $F_{ext}$ (here FunctionNeumannBC) should be evaluated at time $t_\\alpha = t+(1+\\alpha)\\Delta t$ . $t$ would be $t_{old}$.\nBut I presume, I may be wrong, that the Function type = PiecewiseLinear is always evaluated at the current time which would be $t_{new} = t+\\Delta t$ and not at the (generalised) midpoint time $t_\\alpha$ given by the parameter $\\alpha \\in [-1/3, 0]$.\nAm I right or wrong about this? Any chance to get the parameter $\\alpha$ into type = PiecewiseLinear? Or in any other predefined function, so that the function is evaluated at the midpoint time?\nCheers\nPS:  Other mechanical external forces $F_{ext}$ as, e.g.,  Pressure (follower force)\nhttps://mooseframework.inl.gov/moose/source/bcs/Pressure.html\nand Gravity\nhttps://mooseframework.inl.gov/source/kernels/Gravity.html\nhave an additional parameter (hht_)alpha to evaluate  $F_{ext}$  at the correct midpoint time. Or maybe the evaluation is done by linear interpolation using $\\alpha$ and $F_{ext}(t_{old})$ and $F_{ext}(t_{new})$. I didn't check the implementation.\nPPS: I was able to get $t_{new}, \\Delta t$ and $\\alpha$ into a ParsedFunction, so I could use that to define a PiecewiseLinear\nfunction which is evaluated at the correct midpoint time. That looks a bit \"clunky\" ... but seems to work.",
+          "url": "https://github.com/idaholab/moose/discussions/23209",
+          "updatedAt": "2023-01-20T15:17:04Z",
+          "publishedAt": "2023-01-20T09:30:17Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "You are correct in that FunctionNeumannBC does not honor HHT-alpha time integration.\nFor now, there are two workarounds\n\nUse ParsedFunction as you discovered;\nCreate your own class that derives from FunctionNeumannBC, in which you'll handle the time integration by querying the function at time _t + (1 + _alpha ) * _dt.\n\nThis is a design issue, so feel free to open a feature request ticket. I don't guarantee an ETA for the fix though. You'll have to consult with the MOOSE team. As always, pull requests are welcome.",
+                  "url": "https://github.com/idaholab/moose/discussions/23209#discussioncomment-4737462",
+                  "updatedAt": "2023-01-20T13:38:41Z",
+                  "publishedAt": "2023-01-20T13:38:41Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Temperature Dependent Anisotrpic Heat Transfer",
+          "author": {
+            "login": "bhollra"
+          },
+          "bodyText": "Greetings all,\nI would like to implement a model for ansiotropic heat transfer with temperature dependent thermal conductivities. I have looked at the AnisoHeatConduction kernel with AnisoHeatConductionMaterial, but it was not clear to me how temperature dependency can be included. The only option I see to create a variable thermal conductivity is with the thermal_conductivity_x_pp parameter, but this accepts only a scalar post processor, so it seems a spatially varying material property is not possible.\nI did not see any other Kernel or Material blocks that looked capable of solving this problem. Is temperature dependent, anisotropic heat transfer possible in MOOSE?\nThank you!",
+          "url": "https://github.com/idaholab/moose/discussions/18082",
+          "updatedAt": "2023-01-19T21:51:57Z",
+          "publishedAt": "2021-06-14T15:38:47Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "singhgp4321"
+                  },
+                  "bodyText": "#17783 might be what you are planning to use. This pull request is under review and should get merged soon . . . in about a week or so I think.",
+                  "url": "https://github.com/idaholab/moose/discussions/18082#discussioncomment-869742",
+                  "updatedAt": "2022-06-11T11:34:34Z",
+                  "publishedAt": "2021-06-14T17:50:13Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "bhollra"
+                          },
+                          "bodyText": "Thanks for the heads up, looking forward to using the new version!",
+                          "url": "https://github.com/idaholab/moose/discussions/18082#discussioncomment-869931",
+                          "updatedAt": "2022-06-11T11:34:34Z",
+                          "publishedAt": "2021-06-14T18:45:27Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hamedattariani"
+                          },
+                          "bodyText": "#17783 might be what you are planning to use. This pull request is under review and should get merged soon . . . in about a week or so I think.\n\nDoes this kernel work for user-defined temperature-dependent thermal conductivity and specific heat? I tried to define them as ParsedMaterial, but I am getting errors.",
+                          "url": "https://github.com/idaholab/moose/discussions/18082#discussioncomment-4627877",
+                          "updatedAt": "2023-01-08T22:19:26Z",
+                          "publishedAt": "2023-01-08T22:19:26Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "It should but you need to specify anisotropic material properties, so typically vectors or tensors-values, not Real-valued.\nFor this new kernel it seems you need to use a RankTwo tensor\nHow are you defining the ParsedMaterial ?\nYou can try with something like this\nhttps://mooseframework.inl.gov/source/materials/ADGenericFunctionRankTwoTensor.html",
+                          "url": "https://github.com/idaholab/moose/discussions/18082#discussioncomment-4633144",
+                          "updatedAt": "2023-01-09T12:45:17Z",
+                          "publishedAt": "2023-01-09T12:45:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hamedattariani"
+                          },
+                          "bodyText": "I used \"DerivativeParsedMaterial\" and also \"ParsedMaterial\" in the input script for  \"Thermal Conductivity\" and \"specific heat\". I got errors for both scenarios. Error\" Unable to find function \"specific heat\"\nThe ADGenericFunctionRankTwoTensor is indeed interesting. But, the issue is the ParsedFunction can be an \"expression as a function of time (t) or coordinate (x, y, or z)\". I need it as a function of the temperature. Please, correct me if I am wrong and making a fundamental mistake here.\nExample:\nI defined KTX, etc as  the \"DerivativeParsedMaterial\" or \"ParsedMaterial\" in the material block\n[Materials]\n[heat1]\ntype = AnisoHeatConductionMaterial\ntemperature = temperature\nspecific_heat = specific_heat\nthermal_conductivity = 'K_TX K_TY K_TZ 0 0 0 0 0 0'\n[]\n[./specific_heat ]\ntype = ParsedMaterial\nf_name = specific_heat\nargs = 'temperature'\nfunction = '(1/(1+exp(-2**(temperature-273))))(483.04+0.215temperature)'\noutputs = exodus\n[../]",
+                          "url": "https://github.com/idaholab/moose/discussions/18082#discussioncomment-4639236",
+                          "updatedAt": "2023-01-09T23:41:25Z",
+                          "publishedAt": "2023-01-09T23:41:24Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "So this field should be a function not a material property. That s what the error is complaining about\nyou ll need to rework that material a bit if you want a temperature dependence.\nAlternatively you could try to use another material that supports it, maybe splitting up the three properties in three materials.",
+                          "url": "https://github.com/idaholab/moose/discussions/18082#discussioncomment-4639933",
+                          "updatedAt": "2023-01-10T01:24:31Z",
+                          "publishedAt": "2023-01-10T01:24:31Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "singhgp4321"
+                          },
+                          "bodyText": "@hamedattariani Checkout out #22028 and the included test. Seems like that is what you want? If yes, I will put it on my priority list to get it merged.",
+                          "url": "https://github.com/idaholab/moose/discussions/18082#discussioncomment-4649459",
+                          "updatedAt": "2023-01-10T20:11:22Z",
+                          "publishedAt": "2023-01-10T20:11:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hamedattariani"
+                          },
+                          "bodyText": "@singhgp4321 Yessss, thanks, that is exactly what I need.",
+                          "url": "https://github.com/idaholab/moose/discussions/18082#discussioncomment-4649677",
+                          "updatedAt": "2023-01-10T20:42:14Z",
+                          "publishedAt": "2023-01-10T20:42:14Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "singhgp4321"
+                          },
+                          "bodyText": "Okay, I'll work on it and let you know when it is ready . . . may be 1-2 weeks. If you want it earlier than that then may be you can just copy the code from the PR.",
+                          "url": "https://github.com/idaholab/moose/discussions/18082#discussioncomment-4650477",
+                          "updatedAt": "2023-01-10T22:35:36Z",
+                          "publishedAt": "2023-01-10T22:35:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hamedattariani"
+                          },
+                          "bodyText": "@singhgp4321 Thanks! I just copied the files from PR and compiled the code. It works well.",
+                          "url": "https://github.com/idaholab/moose/discussions/18082#discussioncomment-4732144",
+                          "updatedAt": "2023-01-19T21:50:44Z",
+                          "publishedAt": "2023-01-19T21:50:43Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "singhgp4321"
+                          },
+                          "bodyText": "Excellent! @hamedattariani",
+                          "url": "https://github.com/idaholab/moose/discussions/18082#discussioncomment-4732155",
+                          "updatedAt": "2023-01-19T21:51:57Z",
+                          "publishedAt": "2023-01-19T21:51:57Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Using a same input parameter in different Material",
+          "author": {
+            "login": "SomnusYu"
+          },
+          "bodyText": "Hi all,\nI'd like to use the same input parameters in two different source codes of Materials, but I don't want to define these parameters twice. I just want to define these in one of the source codes, the other material code can directly use them. For example, the parameters is shown as:\nMooseEnum b_choice(\"1 2 3 \", \"1\");\nparams.addParam(\"b\",  b_choice, \" \");\nWhat should I do?\nThank you!",
+          "url": "https://github.com/idaholab/moose/discussions/23200",
+          "updatedAt": "2023-01-19T14:45:01Z",
+          "publishedAt": "2023-01-19T13:31:56Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nyou can create a base class that has these parameters.\nthen either one of your material is the base class and the other is a derived class or both are derived classes.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/23200#discussioncomment-4727716",
+                  "updatedAt": "2023-01-19T13:38:23Z",
+                  "publishedAt": "2023-01-19T13:38:22Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "SomnusYu"
+                          },
+                          "bodyText": "Hi\nDo you have an example of the base class material (AD type)? I have tried this way but the computeQpProperties function in the base class may cause the error. I don't know how to fix it.\nThank you!",
+                          "url": "https://github.com/idaholab/moose/discussions/23200#discussioncomment-4727787",
+                          "updatedAt": "2023-01-19T13:44:49Z",
+                          "publishedAt": "2023-01-19T13:44:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "what error?\nYou do not necessarily need computeQpProperties defined in the base class as long as it s an abstract class (eg it s not meant to be instantiated in an input file, you dont register it to MooseApp). You will need computeQpProperties defined in all the classes that are registered",
+                          "url": "https://github.com/idaholab/moose/discussions/23200#discussioncomment-4727833",
+                          "updatedAt": "2023-01-19T13:49:22Z",
+                          "publishedAt": "2023-01-19T13:49:21Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "SomnusYu"
+                          },
+                          "bodyText": "But it is necessary to contain the computeQpProperties if we inherited the ADMaterial. Do you have an example?",
+                          "url": "https://github.com/idaholab/moose/discussions/23200#discussioncomment-4727902",
+                          "updatedAt": "2023-01-19T13:56:29Z",
+                          "publishedAt": "2023-01-19T13:56:28Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "only if the class is registered. The base class could not define it.\nIf you want you can just define it as an empty routine, but make sure to override it in the derived classes",
+                          "url": "https://github.com/idaholab/moose/discussions/23200#discussioncomment-4728100",
+                          "updatedAt": "2023-01-19T14:13:36Z",
+                          "publishedAt": "2023-01-19T14:13:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "SomnusYu"
+                          },
+                          "bodyText": "Sorry, I'm not clear on what should I do. How to define it as an empty routine? If you kindly offer me an example, it would be clearer.",
+                          "url": "https://github.com/idaholab/moose/discussions/23200#discussioncomment-4728307",
+                          "updatedAt": "2023-01-19T14:32:18Z",
+                          "publishedAt": "2023-01-19T14:32:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "void <className>::computeQpProperties() {} \nfor the empty one\nthen in the derived classes:\nvoid <derivedClassName>::computeQpProperties()\n{\n  some_property[_qp] = value it needs;\n}",
+                          "url": "https://github.com/idaholab/moose/discussions/23200#discussioncomment-4728350",
+                          "updatedAt": "2023-01-19T14:37:03Z",
+                          "publishedAt": "2023-01-19T14:36:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "SomnusYu"
+                          },
+                          "bodyText": "Oh, I see. Thank you very much!",
+                          "url": "https://github.com/idaholab/moose/discussions/23200#discussioncomment-4728431",
+                          "updatedAt": "2023-01-19T14:44:00Z",
+                          "publishedAt": "2023-01-19T14:43:59Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Convergence of advection in PF module",
+          "author": {
+            "login": "lloyd-5731"
+          },
+          "bodyText": "I am looking to advect a variable inside the porous flow module.\nThe value has to be limited between 0 and 1, however I am experiencing massive overshooting and instability (resulting in oscillations) when advecting, leading it to be outside this region.\nI have looked at the different stabiliser options, however none seem to be doing the trick. The closest to realistic results I am getting are from the PorousFlowBasicAdvection kernel. It seems logical the upwinding will not work because there are regions where the value is approximately in a steady state, I do not understand why the KT stabilisation is not helping however.\nIn the wider context, this variable will be acted on by other kernels but these have been removed for the MWE below.\nSome of the advection stabilisation options I've tried have been commented out in the MWE.\nAny direction would be appreciated.\nBest wishes,\nLloyd\nMWE:\nP0 = 5e5      # Injection pressure\nrho = 920       # Density\nk = 2.5e-11       # Permeability\nphi = 0.45      # Porosity\nT = 298\n\ninit_variable = 0  \ninput_from_BC = 1\n\n\n[Mesh]\n    [plate]\n        type = GeneratedMeshGenerator\n        dim = 2\n        xmax = 0.01\n        nx = 5\n        ymax = 1.0\n        ny = 100\n    []\n[]\n[UserObjects]\n    [dictator]\n        type = PorousFlowDictator\n        porous_flow_vars = 'porepressure'\n        number_fluid_phases = 1\n        number_fluid_components = 1\n    []\n    [pc]\n        type = CustomCapillaryPressure\n    []\n    [fluid_advective_flux]\n        type = PorousFlowAdvectiveFluxCalculatorUnsaturated\n        flux_limiter_type = superbee\n    []\n[]\n\n[GlobalParams]\n    PorousFlowDictator = dictator\n    gravity = '0 0 0'\n[]\n\n[Variables]\n    [porepressure]\n        initial_condition = 0\n    []\n    [variable_to_advect]\n        initial_condition = ${init_variable}\n    []\n[]\n\n[Kernels]\n    [dmdt]\n        type = PorousFlowMassTimeDerivative\n        variable = porepressure\n    []\n    [flux]\n        type = PorousFlowAdvectiveFlux\n        variable = porepressure\n    []\n    [advect_var_flux]\n        type = PorousFlowBasicAdvection\n        # type = PorousFlowAdvectiveFlux\n        # type = FluxLimitedTVDAdvection\n        # type = PorousFlowFluxLimitedTVDAdvection\n        \n        variable = variable_to_advect\n        \n        # advective_flux_calculator = fluid_advective_flux\n    []\n    [advect_var_time_derivative]\n        type = ADTimeDerivative\n        # type = MassLumpedTimeDerivative\n        \n        # multiply_by_density = false\n        \n        variable = variable_to_advect\n    []\n[]\n\n[AuxVariables]\n    [saturation]\n        family = MONOMIAL\n        order = CONSTANT\n    []\n[]\n\n[AuxKernels]\n    [saturation]\n        type = PorousFlowPropertyAux\n        variable = saturation\n        property = saturation\n    []\n[]\n\n[BCs]\n    [injection]\n        type = DirichletBC\n        variable = porepressure\n        boundary = 'top'\n        value = ${P0}\n    []\n\n    [DOC_in]\n        type = DirichletBC\n        variable = variable_to_advect\n        boundary = 'top'\n        value = ${input_from_BC}\n    []\n[]\n\n[Modules]\n    [FluidProperties]\n        [resin]\n            type = SimpleFluidProperties\n            density0 = ${rho}\n        []\n    []\n[]\n\n[Materials]\n    [porosity]\n        type = PorousFlowPorosity\n        porosity_zero = ${phi}\n    []\n    [permeability]\n        type = PorousFlowPermeabilityConst\n        permeability = '${k} 0 0   0 ${k} 0   0 0 ${k}'\n    []\n    [saturation_calculator]\n        type = PorousFlow1PhaseP\n        porepressure = porepressure\n        capillary_pressure = pc\n    []\n    [temperature]\n        type = PorousFlowTemperature\n        temperature = ${T}\n    []\n    [massfrac]\n        type = PorousFlowMassFraction\n    []\n    [resin]\n        type = PorousFlowSingleComponentFluid\n        fp = resin\n        phase = 0\n    []\n    [relperm]\n        type = PorousFlowRelativePermeabilityCorey\n        n = 3\n        s_res = 0.1\n        sum_s_res = 0.1\n        phase = 0\n    []\n    [darcy_velocity]\n        type = PorousFlowDarcyVelocityMaterial\n    []\n[]\n\n[Preconditioning]\n    [smp]\n        type = SMP\n        full = true\n        petsc_options_iname = '-pc_type -pc_factor_mat_solver_package'\n        petsc_options_value = ' lu       mumps'\n    []\n    \n[]\n\n[Executioner]\n    type = Transient\n    solve_type = 'NEWTON'\n    end_time = 2000\n\n    [TimeStepper]\n        type = SolutionTimeAdaptiveDT\n        dt = 0.001\n    []\n\n    automatic_scaling = true\n    nl_abs_tol = 1e-9\n    nl_rel_tol = 1e-9\n[]\n\n[Outputs]\n    exodus = true\n    print_linear_residuals = false\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/23082",
+          "updatedAt": "2023-01-19T16:16:48Z",
+          "publishedAt": "2023-01-05T15:37:53Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "lloyd-5731"
+                  },
+                  "bodyText": "Here is an example of it working well with the PorousFlowBasicAdvection and ADTimeDerivative :\n\nAnd here is an example of the advection acting strangely with PorousFlowFluxLimitedTVDAdvection and MassLumpedTimeDerivative using superbee which to my understanding should be better:\n\nin a post from @hugary1995 #21598 he mentions -pc_type lu should not be used with DirichletBC. Could this be a source of the error.",
+                  "url": "https://github.com/idaholab/moose/discussions/23082#discussioncomment-4603424",
+                  "updatedAt": "2023-01-05T17:18:33Z",
+                  "publishedAt": "2023-01-05T16:38:34Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "WilkAndy"
+                  },
+                  "bodyText": "The PorousFlow TVD schemes are mostly designed to work within a PorousFlow context only, and i can't really guarantee that they'll work outside of it.   Your current setup has PorousFlow creating the advective velocity, but a separate variable advecting via that velocity.   If that separate variable is supposed to be a fluid component, then i'd make it such (using number_fluid_components = 2 in the Dictator and following something like modules/porous_flow/test/tests/flux_limited_TVD_pflow/pffltvd_1D.i , but probably using the https://mooseframework.inl.gov/source/actions/PorousFlowUnsaturated.html Action instead of Kernels).  However, if the separate variable is not a fluid component, then I think i'd use the https://mooseframework.inl.gov/source/kernels/ConservativeAdvection.html Kernel",
+                  "url": "https://github.com/idaholab/moose/discussions/23082#discussioncomment-4605568",
+                  "updatedAt": "2023-01-05T21:02:21Z",
+                  "publishedAt": "2023-01-05T21:02:20Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lloyd-5731"
+                          },
+                          "bodyText": "Hi Andy,\nThanks for the comment and the help!\n\n\nThe variable is an attribute of the fluid that im looking to advect at the Darcy velocity, rather than a separate fluid component so it is my understanding that using a different fluid component wouldn't work. Is this right?\n\n\nUnfortunately I don't think I can use the action system as I need to add my custom kernels in, as this is only a MWE>\n\n\nI will have a look at ConservativeAdvection, will this still advect at the Darcy velocity as it does when I use the porous flow advection kernels?\n\n\nIll get back to you and let you know the outcome!\nLloyd",
+                          "url": "https://github.com/idaholab/moose/discussions/23082#discussioncomment-4606395",
+                          "updatedAt": "2023-01-05T22:44:46Z",
+                          "publishedAt": "2023-01-05T22:44:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "(1) You could treat it as a fluid component, and have all the fluid properties, etc, not depend on it, and PorousFlow will work fine, BUT it seems an overkill - i think your current approach is better\n(3) Yes, ConservativeAdvection will advect at the Darcy velocity - you just have to define an AuxVariable that is the Darcy velocity.   The slight problem is that you'll miss terms in the Jacobian, because ConservativeAdvection won't calculate the derivatives of the Darcy velocity with respect to the porepressure, so you'll get poorer convergence.  However, in many real-life situations, the porepressure rapidly goes to steadystate, so the Darcy velocity doesn't change much anyway, so it's likely you won't see many problems, except for during the first few timesteps.\nA",
+                          "url": "https://github.com/idaholab/moose/discussions/23082#discussioncomment-4609530",
+                          "updatedAt": "2023-01-06T07:54:47Z",
+                          "publishedAt": "2023-01-06T07:54:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lloyd-5731"
+                          },
+                          "bodyText": "Thanks Andy, that's made a real difference and is looking much better.\nI have slightly changed the ConservativeAdvection kernel so that it takes the Darcy velocity as the velocity (scaled by 1/ porosity) and it is now advecting with the flow front.\nThe instability at the start however is causing the instability to ripple through the rest of the solve.\nI suppose the solution to this is to write the proper Jacobian, but im not sure why the existing Jacobian is incorrect is I have just replace the viscosity with the Darcy Velocity?\nThe relevant part of the .C file looks like this:\n Real\nLSConservativeAdvection::negSpeedQp() const\n{\n  return -_grad_test[_i][_qp] * _darcy_velocity[_qp][0] / _porosity;\n}\n\nReal\nLSConservativeAdvection::computeQpResidual()\n{\n  // This is the no-upwinded version\n  // It gets called via Kernel::computeResidual()\n  return negSpeedQp() * _u[_qp];\n}\n\nReal\nLSConservativeAdvection::computeQpJacobian()\n{\n  // This is the no-upwinded version\n  // It gets called via Kernel::computeJacobian()\n  return negSpeedQp() * _phi[_j][_qp];\n}\n\nThanks for the help,\nLloyd",
+                          "url": "https://github.com/idaholab/moose/discussions/23082#discussioncomment-4632347",
+                          "updatedAt": "2023-01-09T12:12:25Z",
+                          "publishedAt": "2023-01-09T11:05:14Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "I'm glad that works.  Regarding your LSConservativeAdvection, I think that it would be better to do one of the following\n\nInherit from ConservativeAdvection, and just override the single function negSpeedQp by including your porosity.  No other coding should be necessary.  Then you get all the goodness of ConservativeAdvection, viz the tests that guarantee it is correct, and the upwinding.   (Perhaps this is what you've done already - i couldn't really tell from the above code snippets.)\nUse ConservativeAdvection (ie, don't do any C++ coding at all) but create an AuxVariable that is Darcy / porosity.   I think that's what i'd do, as it keep code modifications to a minimum (actually, zero modifications in this case!).\n\nI think the instability is due to not using upwinding_type = full, but i could easily be wrong!",
+                          "url": "https://github.com/idaholab/moose/discussions/23082#discussioncomment-4638129",
+                          "updatedAt": "2023-01-09T21:05:59Z",
+                          "publishedAt": "2023-01-09T21:05:58Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "lloyd-5731"
+                  },
+                  "bodyText": "Hi Andy, I had previously had 1) implemented initially but I have now implemented 2) (upwinding_type = full is activated)\nI have realised that the source of my error is that because I am saturating the fibre, the darcy velocity is zero in the unsaturated part, the advection velocity to be discontinuous.\nI am trying to come up a plan to tackle this. My current idea is to create a subapp that slightly diffuses the darcy velocity at each time step to make it continuous. - Is this reasonable or would you recommend something else?\nWhen trying to do this I am currently taking out the components of the darcy velocity, passing them into my sub app and then trying to diffuse them. This won't work however, I think because the PorousFlowDarcyVelocityComponent is a Constant Monomial, and therefore I cannot get the gradient for the diffusion.\nI'd love to hear your thoughts.\nLloyd",
+                  "url": "https://github.com/idaholab/moose/discussions/23082#discussioncomment-4667856",
+                  "updatedAt": "2023-01-12T13:51:18Z",
+                  "publishedAt": "2023-01-12T13:51:18Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "What do you think happens in real life, @lloyd-5731 ?",
+                          "url": "https://github.com/idaholab/moose/discussions/23082#discussioncomment-4681293",
+                          "updatedAt": "2023-01-13T20:01:40Z",
+                          "publishedAt": "2023-01-13T20:01:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lloyd-5731"
+                          },
+                          "bodyText": "So I think that the variable should advect with the saturation front as it is a property of the fluid. Obviously it doesn't diffuse in reality, as it is a property of the fluid and the fluid is not diffusing, but it seems to be a work around at the minute. Now I have that working Im going to explore a couple of different more representative methods \ud83d\udc4d",
+                          "url": "https://github.com/idaholab/moose/discussions/23082#discussioncomment-4728425",
+                          "updatedAt": "2023-01-19T14:43:08Z",
+                          "publishedAt": "2023-01-19T14:43:08Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "MOOSE update error - undefined reference",
+          "author": {
+            "login": "LukeFisherUKAEA"
+          },
+          "bodyText": "After a standard update of MOOSE using the commands in the Update MOOSE and Conda page, I am receiving the following error during execution of the make command.  I have checked and the 'libtiff' package is installed in the moose environment.  Any help would be much appreciated.  Thanks.",
+          "url": "https://github.com/idaholab/moose/discussions/23191",
+          "updatedAt": "2023-01-19T08:53:22Z",
+          "publishedAt": "2023-01-18T15:51:06Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThis is odd, it comes from a dependency not really from us.\nI d consider wiping the environment and installing it again. It's likely easier than debugging it.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/23191#discussioncomment-4719128",
+                  "updatedAt": "2023-01-18T16:19:23Z",
+                  "publishedAt": "2023-01-18T16:19:22Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "LukeFisherUKAEA"
+                          },
+                          "bodyText": "Hello Guillaume,\nMany thanks for this.  I'll go ahead with a new installation.\nLuke",
+                          "url": "https://github.com/idaholab/moose/discussions/23191#discussioncomment-4725481",
+                          "updatedAt": "2023-01-19T08:53:20Z",
+                          "publishedAt": "2023-01-19T08:53:20Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to add a self-defined state variable in moose source codes",
+          "author": {
+            "login": "pshen20127"
+          },
+          "bodyText": "Hello all\nI want to add a internal state variable in the file 'CrystalPlasticityKalidindiUpdate.C'. But I met this error message as below.  What should I do to fix it? The 'shearstrain' in error message is the state variable I defined.\napplication called MPI_Abort(MPI_COMM_WORLD, 1) - process 3\n*** ERROR ***\nThe following error occurred in the object \"MOOSE Problem\", of type \"FEProblem\".\nMaterial property 'shearstrain', requested by 'shearstrain_0' is not defined on block GRAIN105_SET_QUAD4\nMaterial property 'shearstrain', requested by 'shearstrain_1' is not defined on block GRAIN105_SET_QUAD4\nMaterial property 'shearstrain', requested by 'shearstrain_10' is not defined on block GRAIN105_SET_QUAD4\nMaterial property 'shearstrain', requested by 'shearstrain_11' is not defined on block GRAIN105_SET_QUAD4\nMaterial property 'shearstrain', requested by 'shearstrain_2' is not defined on block GRAIN105_SET_QUAD4\nMaterial property 'shearstrain', requested by 'shearstrain_3' is not defined on block GRAIN105_SET_QUAD4\nMaterial property 'shearstrain', requested by 'shearstrain_4' is not defined on block GRAIN105_SET_QUAD4\nMaterial property 'shearstrain', requested by 'shearstrain_5' is not defined on block GRAIN105_SET_QUAD4\nThanks\npshen20127",
+          "url": "https://github.com/idaholab/moose/discussions/23182",
+          "updatedAt": "2023-01-18T21:15:22Z",
+          "publishedAt": "2023-01-17T18:42:50Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYou need to make sure this property shearstrain is being defined on the relevant block.\nHow is it being defined currently?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/23182#discussioncomment-4710380",
+                  "updatedAt": "2023-01-17T19:33:59Z",
+                  "publishedAt": "2023-01-17T19:33:59Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "pshen20127"
+                          },
+                          "bodyText": "Thanks for your reply. I attached modified source codes and input file. You can search for 'shearstrain' in these files. In input file, all shearstrain-related settings follow the 'slip increment'. I am not sure if I should use type = MaterialStdVectorAux for shearstrain in AuxKernels.\nmodified source codes.zip",
+                          "url": "https://github.com/idaholab/moose/discussions/23182#discussioncomment-4711633",
+                          "updatedAt": "2023-01-17T22:29:01Z",
+                          "publishedAt": "2023-01-17T22:29:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "We try to avoid downloading zip files from the internet. Can you please make a github repo?\nI ll try to check it out next week.",
+                          "url": "https://github.com/idaholab/moose/discussions/23182#discussioncomment-4711697",
+                          "updatedAt": "2023-01-17T22:35:56Z",
+                          "publishedAt": "2023-01-17T22:35:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "pshen20127"
+                          },
+                          "bodyText": "Thank you so much. please see the link: https://github.com/pshen20127/IN625.git\nForgot to mention that when I modified the source codes, I copied the orginal files and change the filename and corresponding classes in codes by adding a suffix 'AddStateVar'. So don't be surprised these filenames are different from original ones.",
+                          "url": "https://github.com/idaholab/moose/discussions/23182#discussioncomment-4711922",
+                          "updatedAt": "2023-01-17T23:15:29Z",
+                          "publishedAt": "2023-01-17T23:15:28Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Shearstrain has been declared like this\n    _shearstrain(declareProperty<std::vector<Real>>(_base_name + \"_shearstrain\")),\n\nso it s name is never shearstrain.\nIt's either base_name_shearstrain OR if base_name is not used in the input file it's _shearstrain with the underscore",
+                          "url": "https://github.com/idaholab/moose/discussions/23182#discussioncomment-4711991",
+                          "updatedAt": "2023-01-17T23:28:07Z",
+                          "publishedAt": "2023-01-17T23:28:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "pshen20127"
+                          },
+                          "bodyText": "Thank you so much. I fix it. What is the '_base_name' in\n_shearstrain(declareProperty<std::vector<Real>>(_base_name + \"_shearstrain\")),\nI don't know where it is used.",
+                          "url": "https://github.com/idaholab/moose/discussions/23182#discussioncomment-4712213",
+                          "updatedAt": "2023-01-18T00:12:02Z",
+                          "publishedAt": "2023-01-18T00:10:27Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "it's to prefix material properties if you had multiple phases in the grains or something. Let's you define the same type of properties multiple times",
+                          "url": "https://github.com/idaholab/moose/discussions/23182#discussioncomment-4712221",
+                          "updatedAt": "2023-01-18T00:12:43Z",
+                          "publishedAt": "2023-01-18T00:12:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "pshen20127"
+                          },
+                          "bodyText": "Got it. Do you know how to define type in Auxkernels and postprocessor? I dont' know how many do they have and how to choose.\n\n[shearstrain_1]\ntype = MaterialStdVectorAux\nvariable = shearstrain_1\nproperty = shearstrain\nindex = 1\nexecute_on = timestep_end\n[]\n[shearstrain_1]\ntype = ElementAverageValue\nvariable = shearstrain_1\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/23182#discussioncomment-4713373",
+                          "updatedAt": "2023-01-18T04:55:17Z",
+                          "publishedAt": "2023-01-18T04:16:59Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "If you just want to output the material properties to exodus you should use the 'outputs' parameter of the material.\nOtherwise you will need to define many auxkernels and many posptprocessors for all the ones you care about",
+                          "url": "https://github.com/idaholab/moose/discussions/23182#discussioncomment-4716895",
+                          "updatedAt": "2023-01-18T12:18:10Z",
+                          "publishedAt": "2023-01-18T12:18:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "pshen20127"
+                          },
+                          "bodyText": "Is there a file in source codes recording which material properties I can output? Or where I can learn this content?\nIf I define a new variable,  how do I set types in auxkernels and postprocessors.  I'm always struggled with this part.",
+                          "url": "https://github.com/idaholab/moose/discussions/23182#discussioncomment-4719323",
+                          "updatedAt": "2023-01-18T16:40:42Z",
+                          "publishedAt": "2023-01-18T16:40:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "for any material you can specify material outputs parameters. Look at the list of parameters of any materials.",
+                          "url": "https://github.com/idaholab/moose/discussions/23182#discussioncomment-4719740",
+                          "updatedAt": "2023-01-18T17:16:59Z",
+                          "publishedAt": "2023-01-18T17:16:59Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Is there any kernel or auxkernel solving the (\\psi, f u)?",
+          "author": {
+            "login": "hhy2022"
+          },
+          "bodyText": "I am trying to solve a self-defined problem. When I tranlate the strong form to the weak form, there is a term in the format like (\\psi, f u), where \\psi is the test function, f is a known function and u is the variable I want to solve.\nI checked the lists of kernels and could not find a corresponding one to represent it. Does it mean I need to use auxkernel to represent the 'fu' and then use it as a auxvariable and then combine it to the kernel system?\nI might misundertand something. If so, please correct me.\nThank you so much for any help.",
+          "url": "https://github.com/idaholab/moose/discussions/23177",
+          "updatedAt": "2023-01-18T17:54:30Z",
+          "publishedAt": "2023-01-17T09:51:13Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nUsing an auxkernel to define f u would make it difficult to compute the contribution to the Jacobian.\nYou should use either Force or Reaction (difference is whether u is the variable being solved for in the equation) kernels here.\nThere's unfornately none that I can find that uses a function for the coefficient, only either constants or material properties.\nYou can convert the function to a material property using the GenericFunctionMaterial\nhttps://mooseframework.inl.gov/source/kernels/ADMatReaction.html\nhttps://mooseframework.inl.gov/source/kernels/MatCoupledForce.html\nhttps://mooseframework.inl.gov/source/materials/GenericFunctionMaterial.html\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/23177#discussioncomment-4708865",
+                  "updatedAt": "2023-01-17T16:53:07Z",
+                  "publishedAt": "2023-01-17T16:53:06Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hhy2022"
+                          },
+                          "bodyText": "That makes sense. Thank you so much for the information.",
+                          "url": "https://github.com/idaholab/moose/discussions/23177#discussioncomment-4720077",
+                          "updatedAt": "2023-01-18T17:54:28Z",
+                          "publishedAt": "2023-01-18T17:54:28Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

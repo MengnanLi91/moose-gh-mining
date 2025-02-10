@@ -1,0 +1,790 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMi0wNy0yMVQxMzozNzozOC0wNTowMM4AQIcZ"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Adjust the judgment condition of nonlinear convergence",
+          "author": {
+            "login": "AdelineHunter"
+          },
+          "bodyText": "Hello\uff0c\nIn some non-steady-state problems, some time steps may have less nonlinear residuals fall, while others may have more.  How should I give consideration to these two situations?\n\nIn other words, I want to make the nl_rel_tol that is difficult to converge less strict, and the nl_rel_tol that is easy to converge smaller. How can I set different nl_rel_tol at the same time\nThank you for your time.",
+          "url": "https://github.com/idaholab/moose/discussions/21539",
+          "updatedAt": "2022-07-28T16:19:15Z",
+          "publishedAt": "2022-07-08T14:47:19Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nWe currently dont support variable convergence criteria.\nYou can sort of hack it by setting min and max number of non linear iterations, but there's no first class support\nThe right way would be to rework the Executioner and the NLSystem classes to support functions for these convergence criteria\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21539#discussioncomment-3109228",
+                  "updatedAt": "2022-07-08T16:53:03Z",
+                  "publishedAt": "2022-07-08T16:53:02Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "lindsayad"
+                  },
+                  "bodyText": "I think it might be more beneficial to figure out why the nonlinear solve is performing so poorly. Is your Jacobian inaccurate? You can test this with -snes_test_jacobian. Are you taking too large of timesteps such that your initial guess is too far from the root such that Newton's method performs poorly?",
+                  "url": "https://github.com/idaholab/moose/discussions/21539#discussioncomment-3163619",
+                  "updatedAt": "2022-07-16T23:28:51Z",
+                  "publishedAt": "2022-07-16T23:28:50Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "also if you're debugging issues a particular timestep, it helps to create a checkpoint right before that time step (just add checkpoint=true to [Outputs]), then restart there to examine the issues.\nIt could also be scaling issues. This page has a few potential issues listed\nhttps://mooseframework.inl.gov/moose/application_usage/failed_solves.html",
+                          "url": "https://github.com/idaholab/moose/discussions/21539#discussioncomment-3163643",
+                          "updatedAt": "2022-07-16T23:51:08Z",
+                          "publishedAt": "2022-07-16T23:51:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "AdelineHunter"
+                          },
+                          "bodyText": "Thank you, Mr. Guillaume and Mr. lindsayad\nYour advice is of great help to me.\nI think maybe my problem is too complex, there are many problems like grid size, quality, and so on. Turbulence models may also be needed to help with convergence.\nThanks again",
+                          "url": "https://github.com/idaholab/moose/discussions/21539#discussioncomment-3204432",
+                          "updatedAt": "2022-07-22T08:41:55Z",
+                          "publishedAt": "2022-07-22T08:41:55Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "coupling of TH and poroelastic mechanics (HM)",
+          "author": {
+            "login": "Joseph-0123"
+          },
+          "bodyText": "Hello everyone,\nI meet a poroelastic problem of coupled natural convection (TH) and poroelastic mechanics (HM).\nThis benchmark is simplified based on this work using Comsol (https://www.essoar.org/pdfjs/10.1002/essoar.10508352.1).\nProblem information:\nAim: To study the effect of the mechanic (M) on the buoyancy-driven convection (TH)\nGeometry: x and y is (0, 5500) m; z is (-5500, 0) m; Fig. 1.\nBlocks: basement (impermeable) and fault (permeable)\nBCs: (1) Top surface: fixed 293.15 K temperature and 10^5 Pa porepressure; (2) Bottom surface: NeummannBC of temperature is 0.1 W/m^2, disp_x,y,z =0;\nICs: (1) temperature: '293.15-z0.03' ; (2) porepressure: '100000-10009.81*z'\nEOS: same to the above paper. Water density is the function of temperature and porepressure. Water viscosity is the function of temperature.\npermeability and porosity evolution: no.\nautomatic_scaling = true\nCouplings: TH (i.e. buoyancy-driven convection) and HM (i.e. poroelastic) couplings. No thermal expansion and volume expansion.\nForces: only body force (gravity).\nOther detailed properties are shown in input files.\nMy work:\n\nbuoyancy-driven convection (TH).\n\nThe result is Ok.\n\nHM poroelastic mechanics\n\nI test some examples from (https://github.com/ajacquey/golem/tree/master/test/tests/HM). The result is also fine.\n\ncoupling of buoyancy-driven convection (TH) and poroelastic mechanics (HM)\n\n(1) Steady simulation;\nkernels:\n\npure heat conduction (T kernel)\npure porepressure diffusion (H)\nbody force kernel (my app)\nPoroMechanicsCoupling\nTensor Mechanics Master Action System (M kernels).\nEOS: constant water density 1000 (kg/m3)and viscosity (1e-3 Pa.s).\n\n(2) Transient simulation:\n\nthe kernels in steady simulation\ntransient temperature and pore pressure kernels\nHM coupling kernel (my app, _biot[_qp] * _vol_strain_rate[_qp] * _test[_i][_qp])\n\na. It uses the output results (temperature, pore pressure, displacements (using or ignoring)) of steady simulation as the initial values of Transient simulation.\nb. Moreover, I learn the examples about setting 'ComputeEigenstrainFromInitialStress' (regarding body force as initial stress) from https://github.com/idaholab/falcon/blob/devel/test/tests/THM_injection/thm_steady.i and https://groups.google.com/g/moose-users/c/ceMFbx9CgiE. To be honest, I am not sure whether should I regarding body force as initial stress.\nc. The application of the stresses is applied progressively by setting the body gravity increases from 0.01 to 9.81 in 10 years.\nHowever, all my previous Transient simulations output very terrible convergence information (as follows) even at first time step t=1s.\nMy request: Could you please give me some tips on my problem? Thanks a lot!\ngood steady simulations information\n 0 Nonlinear |R| = \ufffd[32m7.435105e+00\ufffd[39m\n    |residual|_2 of individual variables:\n                disp_x:      0.795433\n                disp_y:      1.20725\n                disp_z:      0.670134\n                pressure:    4.87658e-08\n                temperature: 7.26234\n    |residual|_2 of individual variables:\n                disp_x:      0.795433\n                disp_y:      1.20725\n                disp_z:      0.670134\n                pressure:    4.87658e-08\n                temperature: 7.26234\n      0 Linear |R| = \ufffd[32m7.435105e+00\ufffd[39m\n      1 Linear |R| = \ufffd[32m3.257785e+00\ufffd[39m\n      2 Linear |R| = \ufffd[32m1.109984e+00\ufffd[39m\n...\n     26 Linear |R| = \ufffd[32m1.102510e-07\ufffd[39m\n     27 Linear |R| = \ufffd[32m4.116438e-08\ufffd[39m\n  Linear solve converged due to CONVERGED_RTOL iterations 27\n 1 Nonlinear |R| = \ufffd[32m9.905635e-03\ufffd[39m\n    |residual|_2 of individual variables:\n                disp_x:      1.856e-08\n                disp_y:      2.33502e-08\n                disp_z:      0.0040312\n                pressure:    4.44167e-08\n                temperature: 0.00904826\n    |residual|_2 of individual variables:\n                disp_x:      1.856e-08\n                disp_y:      2.33502e-08\n                disp_z:      0.0040312\n                pressure:    4.44167e-08\n                temperature: 0.00904826\n      0 Linear |R| = \ufffd[32m9.905635e-03\ufffd[39m\n...\n     27 Linear |R| = \ufffd[32m4.733500e-11\ufffd[39m\n  Linear solve converged due to CONVERGED_RTOL iterations 27\n\n 4 Nonlinear |R| = \ufffd[32m4.264257e-08\ufffd[39m\n    |residual|_2 of individual variables:\n                disp_x:      8.95223e-15\n                disp_y:      7.12969e-15\n                disp_z:      1.21779e-10\n                pressure:    4.26423e-08\n                temperature: 1.08163e-10\n    |residual|_2 of individual variables:\n                disp_x:      8.95223e-15\n                disp_y:      7.12969e-15\n                disp_z:      1.21779e-10\n                pressure:    4.26423e-08\n                temperature: 1.08163e-10\nNonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 4\n\ufffd[32m Solve Converged!\ufffd[39m\n\nOutlier Variable Residual Norms:\n  pressure: \ufffd[31m4.264226e-08\ufffd[39m\n\nbad transient simulations information\nTime Step 0, time = 0\nOutputting exodus ....                                                                     [\ufffd[33m  5.95 s\ufffd[39m]\n\nTime Step 1, time = 1, dt = 1\nComputing initial residual ......                                                          [\ufffd[33m  7.35 s\ufffd[39m]\n\nPerforming automatic scaling calculation\n\n 0 Nonlinear |R| = \ufffd[32m8.372612e+07\ufffd[39m\n    |residual|_2 of individual variables:\n                disp_x:      1.81623e-07\n                disp_y:      6.55306e-08\n                disp_z:      7.96715e-08\n                pressure:    8.37261e+07\n                temperature: 1.43173e-07\n  0 SNES Function norm 8.372611823977e+07 \nBuilding node to element map                                                               [\ufffd[33m  1.42 s\ufffd[39m]\n      0 Linear |R| = \ufffd[32m8.372612e+07\ufffd[39m\n      1 Linear |R| = \ufffd[32m3.617225e+03\ufffd[39m\n  Linear solve converged due to CONVERGED_RTOL iterations 1\n 1 Nonlinear |R| = \ufffd[32m3.040338e+07\ufffd[39m\n    |residual|_2 of individual variables:\n                disp_x:      9.35686e-05\n                disp_y:      7.84779e-05\n                disp_z:      0.000113443\n                pressure:    3.04034e+07\n                temperature: 1.71846e-08\n  1 SNES Function norm 3.040338271683e+07 \n      0 Linear |R| = \ufffd[32m3.040338e+07\ufffd[39m\n      1 Linear |R| = \ufffd[32m1.046802e+03\ufffd[39m\n  Linear solve converged due to CONVERGED_RTOL iterations 1\n...\n25 Nonlinear |R| = \ufffd[32m6.088715e+04\ufffd[39m\n    |residual|_2 of individual variables:\n                disp_x:      2.60351e-07\n                disp_y:      2.47446e-07\n                disp_z:      1.93876e-07\n                pressure:    60887.2\n                temperature: 2.08727e-10\n 25 SNES Function norm 6.088715233063e+04 \nNonlinear solve did not converge due to DIVERGED_MAX_IT iterations 25\n\ufffd[31m Solve Did NOT Converge!\ufffd[39m\nAborting as solve did not converge\n\nSolve failed, cutting timestep.",
+          "url": "https://github.com/idaholab/moose/discussions/21062",
+          "updatedAt": "2022-07-22T08:31:54Z",
+          "publishedAt": "2022-05-20T15:04:05Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nA few questions:\n\nis the gravity ramp up consistent between the steady and transient solutions? Or is the pressure field initialization for the real gravity in the transient?\ndoes it converge without the coupling term, with just the addition of the time derivatives\ndid you implement the Jacobian term for your custom coupling kernel? Or are you using automatic differentiation?\n\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21062#discussioncomment-2793634",
+                  "updatedAt": "2022-05-20T20:21:00Z",
+                  "publishedAt": "2022-05-20T20:21:00Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Compiling and Testing Moose",
+          "author": {
+            "login": "Oops-Qiao"
+          },
+          "bodyText": "I am not able to find the closing button.",
+          "url": "https://github.com/idaholab/moose/discussions/21499",
+          "updatedAt": "2022-07-22T07:52:45Z",
+          "publishedAt": "2022-07-05T09:15:34Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "Oops-Qiao"
+                  },
+                  "bodyText": "",
+                  "url": "https://github.com/idaholab/moose/discussions/21499#discussioncomment-3083393",
+                  "updatedAt": "2022-07-06T12:50:44Z",
+                  "publishedAt": "2022-07-05T09:24:39Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "what's the output of mamba list ?\nand the diagnostic script in moose/scripts ?",
+                          "url": "https://github.com/idaholab/moose/discussions/21499#discussioncomment-3085122",
+                          "updatedAt": "2022-07-05T13:31:52Z",
+                          "publishedAt": "2022-07-05T13:31:51Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Oops-Qiao"
+                          },
+                          "bodyText": "",
+                          "url": "https://github.com/idaholab/moose/discussions/21499#discussioncomment-3090649",
+                          "updatedAt": "2022-07-06T08:36:35Z",
+                          "publishedAt": "2022-07-06T08:36:31Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "It looks like the compilation was terminated by external means.\nYou may be running out of memory during the build. Seeing those diagnostics would really help (what @GiudGiud asked for). You can create a diagnostic log by performing the following:\ncd moose/scripts\n./diagnostics.sh > my_log.log\nand attaching the file created my_log.log.",
+                          "url": "https://github.com/idaholab/moose/discussions/21499#discussioncomment-3092469",
+                          "updatedAt": "2022-07-06T13:19:15Z",
+                          "publishedAt": "2022-07-06T13:18:45Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Closing this, interface not letting me select an empty message as the answer",
+                  "url": "https://github.com/idaholab/moose/discussions/21499#discussioncomment-3201989",
+                  "updatedAt": "2022-07-21T23:50:39Z",
+                  "publishedAt": "2022-07-21T23:50:39Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Unsuccessful convergence of a simple steady first order convection problem.",
+          "author": {
+            "login": "Raven-pro"
+          },
+          "bodyText": "Hi, I am just getting started to use moose and I want to first solve a very simple steady, first order problem.\nSo here is a thing, I want to solve enthalpy of this equation, where W is set to be constant so i can put it out of the partial differential term.\n\nThen if I offer the boundary condition at the inlet, it can be easily solved using FDM and we can get the outlet value. However, in my moose application, if the boundary condition is set to the inlet 'left', the solve will not converge, while setting it to the outlet 'right', the calculation will proceed normally.\nBut what's the difference? I cannot figure it out, can anybody help me with that? I'll appreciate it so much.\nBelow is my input file here.\n[Mesh]\n    type = GeneratedMesh\n    dim = 1\n    nx = 20\n    xmax = 1.0\n    xmin = 0\n[]\n\n[Variables]\n    [H]\n        order = FIRST\n        family = LAGRANGE\n    []\n[]\n\n[Kernels]\n    [ker1]\n        type = GradTerm\n        variable = H\n\tvelocity = '1.0 1.0 1.0'\n    []\n    [source1]\n        type = ValTerm\n        variable = H\n    []\n[]\n\n[BCs]\n    [bc1]\n        type = DirichletBC\n        variable = H\n        value = 1133820.0\n        boundary = \"left\"  \n# If I set the boundary to \"right\", the solve will proceed normally  \n    []\n[]\n\n[VectorPostprocessors]\n  [H]\n    type = NodalValueSampler\n    variable = H\n    #boundary = 'bottom'\n    block = 0\n    execute_on = 'initial timestep_end' \n    use_displaced_mesh = true\n    sort_by = x\n  []\n[]\n\n[Problem]\n    type = FEProblem\n    coord_type = XYZ\n    rz_coord_axis = X\n[]\n\n[Executioner]\n    type = Steady\n    solve_type = 'NEWTON'\n    automatic_scaling = true\n[]\n\n[Outputs]\n    exodus = true\n    csv = true\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/21598",
+          "updatedAt": "2022-07-22T02:32:41Z",
+          "publishedAt": "2022-07-16T03:55:57Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nSo this is an advection problem. The information sees to be flowing in the positive X direction ( I m guessing based on the parameters, you have to look at how you implemented this )  in this 1D mesh.\nSo the boundary condition has to be set at the inlet, which should be left not right.\nsince this is actually the non-converging case, I would guess there is an issue in GradTerm\nbtw you dont need this parameter in XYZ\n    rz_coord_axis = X\n\nalso you should initialize W. The initial guess of 0 might be difficult to solve from\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21598#discussioncomment-3163387",
+                  "updatedAt": "2022-07-16T20:54:27Z",
+                  "publishedAt": "2022-07-16T20:54:26Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Raven-pro"
+                          },
+                          "bodyText": "Thank you so much, I have revised my code, and tried to use JFNK method instead. The calculation has finally converged. Perhaps the JFNK method is better in performance than the Newton method after all.",
+                          "url": "https://github.com/idaholab/moose/discussions/21598#discussioncomment-3164060",
+                          "updatedAt": "2022-07-17T05:15:23Z",
+                          "publishedAt": "2022-07-17T05:15:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "The fact that Newton is poor almost definitely implies that the Jacobian in your code is wrong.  Otherwise, Newton would be far superior.",
+                          "url": "https://github.com/idaholab/moose/discussions/21598#discussioncomment-3167077",
+                          "updatedAt": "2022-07-17T20:42:25Z",
+                          "publishedAt": "2022-07-17T20:42:24Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Raven-pro"
+                          },
+                          "bodyText": "But I cannot find anything wrong in my code now, could you please have a look at them for me? THX!\nGradTerm.h\nValTerm.h\nGradTerm.C\nValTerm.C\ninput.i",
+                          "url": "https://github.com/idaholab/moose/discussions/21598#discussioncomment-3191343",
+                          "updatedAt": "2022-07-20T17:14:09Z",
+                          "publishedAt": "2022-07-20T17:13:40Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "In your GradTerm.C you have _test[_qp][_i] which is incorrect. It should be _test[_i][_qp] instead.\nI agree with @WilkAndy\nI don't think the convergence issue is related to your BC.\nYou have a pure advection problem, which cannot be solved by FEM without stabilization.",
+                          "url": "https://github.com/idaholab/moose/discussions/21598#discussioncomment-3192513",
+                          "updatedAt": "2022-07-20T21:58:44Z",
+                          "publishedAt": "2022-07-20T20:19:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Perhaps this is getting off-topic here, but i don't totally agree with @hugary1995 about advection: i believe FEM can solve advection without using stabilization, but in most cases (mesh sizes, timestep sizes) the errors are unacceptable.\nAdvection problems are also quite sensitive to correct boundary conditions.  Eg, it's quite easy to accidentally create a model which is trying to extract \"stuff\" (fluid, heat, etc) from a boundary when there actually isn't any \"stuff\" there to extract.  In that case MOOSE (and any decent numerical solver) will not converge because there truly isn't any solution.",
+                          "url": "https://github.com/idaholab/moose/discussions/21598#discussioncomment-3192677",
+                          "updatedAt": "2022-07-20T20:46:21Z",
+                          "publishedAt": "2022-07-20T20:46:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Interesting... I thought you get instabilities from the inf-sup condition for advection-dominated advection-diffusion problem, which as you said, can be solved without stabilization (subject to acceptable errors).\nBut it is different for pure advection problems. I haven't seen anyone solving it without stabilization IIRC. Let's say we look at the equation in the OP, there is no transient term, no artificial viscosity, no diffusion, no stabilization -- just advection and a constant source. Isn't the matrix singular?",
+                          "url": "https://github.com/idaholab/moose/discussions/21598#discussioncomment-3192936",
+                          "updatedAt": "2022-07-20T21:53:10Z",
+                          "publishedAt": "2022-07-20T21:38:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Ugh no, what was I taking about... there's a Dirichlet BC. So as long as he doesn't use -pc_type lu he should be fine.",
+                          "url": "https://github.com/idaholab/moose/discussions/21598#discussioncomment-3192997",
+                          "updatedAt": "2022-07-20T21:52:33Z",
+                          "publishedAt": "2022-07-20T21:52:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "And you are right about the BC as well.",
+                          "url": "https://github.com/idaholab/moose/discussions/21598#discussioncomment-3193027",
+                          "updatedAt": "2022-07-20T21:59:21Z",
+                          "publishedAt": "2022-07-20T21:59:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "I think your comments raise an important point, @hugary1995  .   That is, @89018580 , are you sure that this is the problem you actually want to solve?  The solution is just H = linear function of x.  Do you also want some time dependence, @89018580  ?",
+                          "url": "https://github.com/idaholab/moose/discussions/21598#discussioncomment-3193122",
+                          "updatedAt": "2022-07-20T22:24:01Z",
+                          "publishedAt": "2022-07-20T22:24:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Raven-pro"
+                          },
+                          "bodyText": "In fact I want to solve a more comlex problem where there are some time dependences. But as I am just getting started to use MOOSE, I think perhaps it's better to solve a simplified steaty problem as my first step.\nIn the original  steady conservation equations, the time derivatives are removed, as there is no diffusion and viscosity, the velocity W can be seen as the constant.\n\nThe equations can be seen as coupling of variables P and H, in which H can be solved alone\uff08rho is set as linear interpolation of H\uff09. So I tried to solve H first and H should be a linear function of x. I thought it should be easy but I ran into the convergence problem.\nSo does that mean advection problems are not suitable to be solved with NEWTON?",
+                          "url": "https://github.com/idaholab/moose/discussions/21598#discussioncomment-3194199",
+                          "updatedAt": "2022-07-21T03:18:34Z",
+                          "publishedAt": "2022-07-21T03:14:36Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to add compressive stress on dendrite growth surface\uff1f",
+          "author": {
+            "login": "biaogxb"
+          },
+          "bodyText": "I want to study the growth of dendrites by applying stress on the surface. How to add compressive stress on dendrite growth surface\uff1f\nAs shown in the picture below\uff1a\n\nZhang_2021_J._Electrochem._Soc._168_090522.pdf\nI studied some examples. Is this an example of increasing compressive stress on the surface\uff1fhttps://github.com/idaholab/moose/blob/next/modules/combined/examples/phase_field-mechanics/interface_stress.i",
+          "url": "https://github.com/idaholab/moose/discussions/21547",
+          "updatedAt": "2022-07-28T16:18:58Z",
+          "publishedAt": "2022-07-11T06:57:12Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@dschwen @recuero who can I tag on dendrites?\nAre Zijian Hong and Venkatasubramanian Viswanathan on github and active on the MOOSE repo?",
+                  "url": "https://github.com/idaholab/moose/discussions/21547#discussioncomment-3202054",
+                  "updatedAt": "2022-07-22T00:04:36Z",
+                  "publishedAt": "2022-07-22T00:04:35Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "recuero"
+                          },
+                          "bodyText": "@SudiptaBiswas?",
+                          "url": "https://github.com/idaholab/moose/discussions/21547#discussioncomment-3202093",
+                          "updatedAt": "2022-07-22T00:15:31Z",
+                          "publishedAt": "2022-07-22T00:15:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "SudiptaBiswas"
+                          },
+                          "bodyText": "@biaogxb I don't think we have the exact example you are looking for. This can be done with the phase-field mechanics approach. You will have to implement the free energy components though.",
+                          "url": "https://github.com/idaholab/moose/discussions/21547#discussioncomment-3202189",
+                          "updatedAt": "2022-07-22T00:40:29Z",
+                          "publishedAt": "2022-07-22T00:40:29Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "times operator for tensor products in RankTwoTensor",
+          "author": {
+            "login": "ambehnam"
+          },
+          "bodyText": "Hi there. I used the times operator to perform the tensor product shown in image below. Since 2 of the indices are repeated, the rank of the result (tau) should be a RankTwoTensor, but it outputs RankFourTensor. I was wondering if there is another way to perform this operation or convert the RankFour to RankTwo? I put part of the code and the equation below for more information.\nTauE1_3d_c(dv, nel, db, &intb, &vol); //db is a RankTwoTensor\nRankFourTensor C = dpk1dF_e[qp];\nusingTensorIndices(i , j , m_ , n_ );\nconst RankFourTensor tau = db.times<i_,j_,m_,i_,n_,j_>(C);\n\nThanks,\nAmir",
+          "url": "https://github.com/idaholab/moose/discussions/21564",
+          "updatedAt": "2022-07-28T16:18:43Z",
+          "publishedAt": "2022-07-12T17:40:22Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nNot sure, please check the doxygen for this info\nhttps://mooseframework.inl.gov/docs/doxygen/moose/classRankFourTensorTempl.html\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21564#discussioncomment-3202065",
+                  "updatedAt": "2022-07-22T00:06:29Z",
+                  "publishedAt": "2022-07-22T00:06:29Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "This operator is indeed missing. I plan to work on it. Sorry for the delay.",
+                          "url": "https://github.com/idaholab/moose/discussions/21564#discussioncomment-3202104",
+                          "updatedAt": "2022-07-22T00:20:00Z",
+                          "publishedAt": "2022-07-22T00:20:00Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Abaqus UMAT in MOOSE",
+          "author": {
+            "login": "Flolaffel"
+          },
+          "bodyText": "Hello,\nI was wondering how one can compile a multi-file UMAT with MOOSE. If I'm not mistaken, I need a single .plugin file to use with AbaqusUMATStress.C\nAnother question I have is what exactly is a .plugin file? When I manually compile my UMAT I get an umat.o and umat.so. Is it possible to manually compile the UMAT and use one of these files with MOOSE?",
+          "url": "https://github.com/idaholab/moose/discussions/21201",
+          "updatedAt": "2022-07-21T23:36:02Z",
+          "publishedAt": "2022-06-02T14:57:23Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@dschwen",
+                  "url": "https://github.com/idaholab/moose/discussions/21201#discussioncomment-2872229",
+                  "updatedAt": "2022-06-02T15:00:26Z",
+                  "publishedAt": "2022-06-02T15:00:24Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "ngrilli"
+                  },
+                  "bodyText": "Dear @Flolaffel and @GiudGiud\nIt depends on the specific nature of your UMAT.\nAn example of what I do is reported here:\nhttps://github.com/ngrilli/c_pfor_am/tree/main/test/plugins/Bristol_CP\nand see the corresponding Makefile commands here:\nhttps://github.com/ngrilli/c_pfor_am/blob/main/Makefile\nThe UMAT is divided into modules\nand the main file is the one that contains UEXTERNALDB and UMAT subroutines.\nModules are imported in the various subroutines using the \"use\" keyword.\n\"include\" keyword is also necessary, see here:\nhttps://github.com/ngrilli/c_pfor_am/blob/main/test/plugins/Bristol_CP/BRISTOL.f\nI need first to compile the modules one by one using:\ngfortran -c -free name_of_module.f\nin the order of dependency, meaning a module A dependent on B will be compiled after B.\nThis will generate .mod files.\nOnce all the modules are compiled, run \"make\" as usual in the MOOSE App.\nThe main file, which is the one with the UMAT inside is not a module and will be compiled by make.\nIf you don't compile all the modules, when you \"make\", you get an error saying missing module.\nI believe if you don't use modules, it is sufficient to \"include\" the necessary files,\nlike here:\nhttps://github.com/ngrilli/c_pfor_am/blob/main/test/plugins/Oxford_CP/umat.f\nbut have not tested this extensively.\nIn this case, just go for \"make\" directly.\nBoth procedures, with/without modules, will generate one .plugin file for each fortran file.\nIn the MOOSE input file, you will always point to the .plugin file corresponding to the fortran file\nthat contains the UMAT or UEXTERNALDB respectively.\nAn example input file for the previous code is here:\nhttps://github.com/ngrilli/c_pfor_am/blob/main/test/tests/umat/umat_visualise_SDV.i\nBest Regards,\nNicol\u00f2",
+                  "url": "https://github.com/idaholab/moose/discussions/21201#discussioncomment-2879338",
+                  "updatedAt": "2022-06-03T15:39:06Z",
+                  "publishedAt": "2022-06-03T15:39:01Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Flolaffel"
+                          },
+                          "bodyText": "Thanks a lot for your answer. While trying it out, I got an error that says\nCan't open included file 'xxx.f90'\nDoes that mean that MOOSE cannot handle free format fortran?",
+                          "url": "https://github.com/idaholab/moose/discussions/21201#discussioncomment-2906877",
+                          "updatedAt": "2022-06-08T15:27:59Z",
+                          "publishedAt": "2022-06-08T15:27:59Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Flolaffel"
+                          },
+                          "bodyText": "@ngrilli",
+                          "url": "https://github.com/idaholab/moose/discussions/21201#discussioncomment-2986524",
+                          "updatedAt": "2022-06-20T14:42:37Z",
+                          "publishedAt": "2022-06-20T14:42:33Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "ngrilli"
+                  },
+                  "bodyText": "@Flolaffel\nabout your second question, I am not sure.\nIf you put the fortran file inside the ./test/plugins/ folder\nof a MOOSE App, the \"make\" command will compile them and generate the .plugin files.\nSo, you don't need to compile the UMAT externally.\nNicol\u00f2",
+                  "url": "https://github.com/idaholab/moose/discussions/21201#discussioncomment-2879362",
+                  "updatedAt": "2022-06-03T15:43:18Z",
+                  "publishedAt": "2022-06-03T15:43:17Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Flolaffel"
+                          },
+                          "bodyText": "Well since I already have an externally compiled version I was just wondering whether there is a way to use it with MOOSE.\nAnd if my assumption that MOOSE cannot handle free format is correct, it would safe me the work to convert it to fixed.",
+                          "url": "https://github.com/idaholab/moose/discussions/21201#discussioncomment-2907109",
+                          "updatedAt": "2022-06-08T16:09:36Z",
+                          "publishedAt": "2022-06-08T15:51:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Flolaffel"
+                          },
+                          "bodyText": "@ngrilli",
+                          "url": "https://github.com/idaholab/moose/discussions/21201#discussioncomment-2986523",
+                          "updatedAt": "2022-06-20T14:42:26Z",
+                          "publishedAt": "2022-06-20T14:42:26Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I think it does. You may just have to pass additional compile flags\nIn this thread #21476\nJesse mentions the PLUGIN_FLAGS in the Makefile",
+                          "url": "https://github.com/idaholab/moose/discussions/21201#discussioncomment-3201948",
+                          "updatedAt": "2022-07-21T23:36:03Z",
+                          "publishedAt": "2022-07-21T23:36:02Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "phase field dissolution",
+          "author": {
+            "login": "latmarat"
+          },
+          "bodyText": "Hello:\nI am interested in simulating dissolution of pre-populated particles (2D or 3D) in a matrix using MOOSE/phase-field. Ideally, I would like to use thermodynamic functions from CALPHAD models. Do you have some example problems/input files that could be good starting points for such simulations in MOOSE?\nThanks!",
+          "url": "https://github.com/idaholab/moose/discussions/21637",
+          "updatedAt": "2022-07-28T16:17:18Z",
+          "publishedAt": "2022-07-19T22:20:00Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@SudiptaBiswas @laagesen",
+                  "url": "https://github.com/idaholab/moose/discussions/21637#discussioncomment-3184900",
+                  "updatedAt": "2022-07-20T00:54:46Z",
+                  "publishedAt": "2022-07-20T00:54:46Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "laagesen"
+                  },
+                  "bodyText": "Hello- are you wanting to do this for an alloy system? Like say an ordered intermetallic phase that is dissolving into a random solid solution phase in response to a change in temperature?",
+                  "url": "https://github.com/idaholab/moose/discussions/21637#discussioncomment-3192972",
+                  "updatedAt": "2022-07-20T21:47:19Z",
+                  "publishedAt": "2022-07-20T21:47:19Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "latmarat"
+                          },
+                          "bodyText": "@laagesen yes! that's exactly what I would like to do :)",
+                          "url": "https://github.com/idaholab/moose/discussions/21637#discussioncomment-3193084",
+                          "updatedAt": "2022-07-20T22:11:50Z",
+                          "publishedAt": "2022-07-20T22:11:49Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "laagesen"
+                  },
+                  "bodyText": "OK got it. We don't have an example that does exactly this in the repo, so I think the easiest thing to do would be to adapt one of the existing examples that simulates two-phase coexistence and modify it. We have a couple examples where you have an order parameter representing the phase and a single composition variable. In these cases, there is two-phase coexistence as dictated by the common tangent construction between the two phase free energies. I guess the simplest thing to do would be to add a constant offset to the intermetallic phase free energy so that it is always above the random solid solution phase free energy, so that dissolution of the intermetallic phase would be energetically favorable. I'd suggest trying this out with simple parabolic free energies before moving to Calphad-based functions; try doing two-phase coexistence, make sure you get the equilibrium compositions you expect first then add an offset to force dissolution.\nI think the best starting places would be: for a WBM-type phase-field model, there is a test you could modify:\nmoose/modules/phase_field/test/tests/MultiPhase/derivativetwophasematerial.i\nand you can see the documentation for this type of model here:\nhttps://mooseframework.inl.gov/source/materials/DerivativeTwoPhaseMaterial.html#!\nThere are some tweaks to this test if you want to use it for a physical system, such as increasing mesh resolution; let's discuss further if you want to go this route.\nFor a KKS-type of phase field model, you could start from\nmoose/modules/phase_field/examples/kim-kim-suzuki/kks_example_noflux.i\nThis is a 1D example but the parameters are maybe a little closer to simulating a physical system. You can find documentation on the KKS models here:\nhttps://mooseframework.inl.gov/modules/phase_field/MultiPhase/KKS.html",
+                  "url": "https://github.com/idaholab/moose/discussions/21637#discussioncomment-3201824",
+                  "updatedAt": "2022-07-21T22:57:37Z",
+                  "publishedAt": "2022-07-21T22:57:36Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Moving PointValue point as mesh is displaced",
+          "author": {
+            "login": "Vandenbg"
+          },
+          "bodyText": "Hello,\nI am making a nano-indentation model which involves driving a pyramid into a material. I'd like to know the value of stress at the tip of the pyramid as it is pressed into the material puck. I was thinking I could use a parsed function to determine the point as it changes position and feed that to the PointValue PostProcessor, I have not been successful. Is this the correct way to go about getting this value? Or is there a better option?\nHere is a small section of my input which I am currently tinkering with. This does not work, however, it displays the logic which I am trying to achieve.\n[Functions]\n[point_value]\ntype = ParsedFunction\nvalue = '0-t'\n[]\n[]\n[PostProcessors]\n[strss_zz_tip]\ntype = PointValue\nvariable = stress_zz\npoint = ' 0 point_value 12.5'\nblock = 1\n[]\n[]\nThank you.",
+          "url": "https://github.com/idaholab/moose/discussions/21649",
+          "updatedAt": "2022-07-21T20:27:12Z",
+          "publishedAt": "2022-07-20T20:52:27Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nNo you may not specify a point coordinate using a function.\nThis object expects 3 real numbers, not floating points.\nif you want to use PointValue you ll have to modify it to accept a function for each coordinate. This should not be very difficult at all.\nThe PointValue execute already searches for the point on every execution (and not just on initialization) so you wont need to change much there.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21649#discussioncomment-3193004",
+                  "updatedAt": "2022-07-20T21:53:53Z",
+                  "publishedAt": "2022-07-20T21:53:52Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Vandenbg"
+                          },
+                          "bodyText": "Thank you for the reply,\nI'll look into alternative solutions as I am hoping to accomplish this, or something similar, without editing the executables.",
+                          "url": "https://github.com/idaholab/moose/discussions/21649#discussioncomment-3193100",
+                          "updatedAt": "2022-07-20T22:17:14Z",
+                          "publishedAt": "2022-07-20T22:17:14Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "maxnezdyur"
+                  },
+                  "bodyText": "You might be able to use NodalVariableValue. You need to know the node id of the tip of the pyramid.",
+                  "url": "https://github.com/idaholab/moose/discussions/21649#discussioncomment-3198441",
+                  "updatedAt": "2022-07-21T14:21:38Z",
+                  "publishedAt": "2022-07-21T14:21:37Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Vandenbg"
+                          },
+                          "bodyText": "This works well, thank you for pointing it out.",
+                          "url": "https://github.com/idaholab/moose/discussions/21649#discussioncomment-3201143",
+                          "updatedAt": "2022-07-21T20:27:13Z",
+                          "publishedAt": "2022-07-21T20:27:12Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Initializing variables using other variables or materials",
+          "author": {
+            "login": "xueyang94"
+          },
+          "bodyText": "I have a model with a few nonlinear variables. I want to initialize one of the variables in the IC block using the other variables. I have tried FunctionIC, but seems like it cannot define a function of model variables. I am also wondering how to define the IC of a variable using one of the ParsedMaterial properties in the Material block. Thank you.",
+          "url": "https://github.com/idaholab/moose/discussions/21626",
+          "updatedAt": "2022-07-21T18:37:38Z",
+          "publishedAt": "2022-07-19T15:03:29Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYou wont be able to use ICs I think.\nAnd since they are non linear you can not use AuxKernels.\nSo what I would do would be a MultiApp ran on initial, with a couple transfers from_multiapp to overwrite the starting values of the nonlinear variables.\nIn the MultiApp you can do anything you want, a solve, use auxvariables, parsedAux etc\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21626#discussioncomment-3181740",
+                  "updatedAt": "2022-07-19T15:21:16Z",
+                  "publishedAt": "2022-07-19T15:21:07Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I saw your other post\nCoupledValueFunctionIC seems to be a workable solution too. I m posting it here for the future onlooker\nhttps://mooseframework.inl.gov/source/ics/CoupledValueFunctionIC.html",
+                          "url": "https://github.com/idaholab/moose/discussions/21626#discussioncomment-3200459",
+                          "updatedAt": "2022-07-21T18:37:38Z",
+                          "publishedAt": "2022-07-21T18:37:38Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

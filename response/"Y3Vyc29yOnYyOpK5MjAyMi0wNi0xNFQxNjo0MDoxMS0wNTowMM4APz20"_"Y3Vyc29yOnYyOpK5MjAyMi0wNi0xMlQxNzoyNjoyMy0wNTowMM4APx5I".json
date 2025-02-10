@@ -1,0 +1,1000 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMi0wNi0xMlQxNzoyNjoyMy0wNTowMM4APx5I"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "QuadraturePointMultiapp not working among parallel cores",
+          "author": {
+            "login": "abarun22"
+          },
+          "bodyText": "Hi,\nThe new multi-app system that i am developing based on the element quadrature points does not seem to work when executed in parallel. The issue mainly stems from the RVE sub-model where the simulation fails to converge. The problem could potentially lie in the object _positions which collects the coordinates of the individual quadrature points. The following code block is what i am having in the class QuadraturePointMultiapp.\nvoid\nQuadraturePointMultiapp::fillPositions()\n{\n  MooseMesh & master_mesh = _fe_problem.mesh();\n  auto & mesh = master_mesh.getMesh();\n  for (auto & elem : mesh.active_local_element_ptr_range()){\n    const FEFamily mapping_family = FEMap::map_fe_type(*elem);\n    \n    // Get a constant reference to the Finite Element type\n    FEType fe_type(elem->default_order(),mapping_family);\n\n    // Build a Finite Element object of the specified type.  Since the\n    // FEBase::build() member dynamically creates memory we will\n    // store the object as a std::unique_ptr<FEBase>.  This can be thought\n    // of as a pointer that will clean up after itself.\n    std::unique_ptr<FEBase> fe(FEBase::build(elem->dim(), fe_type));\n    const int extraorder = 0;\n    std::unique_ptr<QBase> qrule (fe_type.default_quadrature_rule (elem->dim(), extraorder));\n  \n    // Tell the finite element object to use our quadrature rule.\n    fe->attach_quadrature_rule (qrule.get());\n\n    // The physical XY locations of the quadrature points on the element.\n    // These might be useful for evaluating spatially varying material\n    // properties at the quadrature points.\n    const std::vector<Point> & q_points = fe->get_xyz();\n    fe->reinit(elem);\n      \n    if (hasBlocks(elem->subdomain_id())){\n       for (const auto & q: q_points)\n         _positions.push_back(q);\n    }\n  }\n\n  // Use the comm from the problem this MultiApp is part of\n  libMesh::ParallelObject::comm().allgather(_positions);\n\n  if (_positions.empty())\n    mooseError(\"No positions found for QuadraturePointMultiapp \", _name);\n\n  // An attempt to try to make this parallel stable\n  std::sort(_positions.begin(), _positions.end());\n}\n\nI do not see any issues here as the code simply collects the QP coordinates and store that on to this array _positions. If i ask the code to use the centroidal coordinates instead of the actual QP location it works fine. But somehow the parallel computation does not like this array which leads to the non-convergence of sub-app. I wonder if there is anything wrong with the way the QP coordinates are calculated, which in my opinion is very straightforward. Would be really appreciated if someone could point me to the right direction.\nKind regards,\nArun",
+          "url": "https://github.com/idaholab/moose/discussions/20749",
+          "updatedAt": "2022-06-25T05:47:02Z",
+          "publishedAt": "2022-04-08T14:51:50Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nI also dont see what's wrong with this.\nCould please attach more information to this post?\nLet's have a log with 2 MPI processes, a few (maybe like 10) quadrature points at most. And let's see the subapp convergence issues.\nDoes everything work well in serial?\nWhat transfers do you have to the subapps right now? Do they run on their own or do you need the transfer to happen to get convergence?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20749#discussioncomment-2545690",
+                  "updatedAt": "2022-06-02T14:51:16Z",
+                  "publishedAt": "2022-04-11T15:24:38Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "abarun22"
+                          },
+                          "bodyText": "Hi,\nHere is an example simulation with one element and 2 mpi processes. As you can see from the attached log, all goes well until the second macro time step, after which the sub-app cease to converge. The serial run is absolutely fine. At present i do not intend to transfer any thing out of the main model. Wanted to make sure the QuadraturePointMultiapp works OK in parallel and then think about including them.\nHere are the contents of my main model if you would like to look at.\n# Model at macro scale used to analyse larger components\n# Uniaxial tension with finite strain elasticity\n\n[GlobalParams]\n  displacements = 'disp_x disp_y disp_z'\n[]\n\n[Mesh]\n    type = GeneratedMesh\n    dim = 3\n    nx = 1\n    ny = 1\n    nz = 1\n[]\n\n[Modules/TensorMechanics/Master]\n  [./block1]\n    strain = FINITE\n    add_variables = true\n#    use_automatic_differentiation = true\n  [../]\n[]\n\n[Materials]\n  [./elasticity_tensor]\n    type = ComputeIsotropicElasticityTensor\n    youngs_modulus = 2.1e5\n    poissons_ratio = 0.3\n  [../]\n  [./stress]\n    type = ComputeFiniteStrainElasticStress\n  [../]\n[]\n\n[BCs]\n  [./left_x]\n    type = DirichletBC\n    variable = disp_x\n    boundary = 'left'\n    value = 0.0\n  [../]\n  [./left_y]\n    type = DirichletBC\n    variable = disp_y\n    boundary = 'left'\n    value = 0.0\n  [../]\n  [./left_z]\n    type = DirichletBC\n    variable = disp_z\n    boundary = 'left'\n    value = 0.0\n  [../]\n\n  [./right]\n    type = FunctionDirichletBC\n    variable = disp_x\n    boundary = 'right'\n    function = '0.01*t'\n  [../]\n[]\n\n[AuxVariables]\n  [./stress_xx_av_qp1]\n    order = CONSTANT\n    family = MONOMIAL\n  [../]\n[]\n\n[AuxKernels]\n  [./stress_xx_qp1]\n    type = RankTwoAux\n    rank_two_tensor = stress\n    variable = stress_xx_av_qp1\n    index_i = 0\n    index_j = 0\n    selected_qp = 0\n  [../]\n[]\n\n[Preconditioning]\n  [./SMP]\n    type = SMP\n    full = true\n  [../]\n[]\n\n[Executioner]\n  type = Transient\n  num_steps = 5\n  dt = 0.01\n  solve_type = 'PJFNK'\n  petsc_options = '-snes_ksp_ew'\n  petsc_options_iname = '-pc_type -sub_pc_type -pc_asm_overlap -ksp_gmres_restart'\n  petsc_options_value = 'asm lu 1 101'\n[]\n\n[Outputs]\n   file_base = main\n   type = Exodus\n[]\n\n[MultiApps]\n  [sub]\n    type = QuadraturePointMultiapp\n    input_files = 'sub_gs_uniaxial_noCPFE.i'\n    execute_on = timestep_end\n    reset_time = '0.02 0.03 0.04 0.05'\n  []\n[]\n\n\nKind regards,\nArun",
+                          "url": "https://github.com/idaholab/moose/discussions/20749#discussioncomment-2568958",
+                          "updatedAt": "2022-06-02T14:51:16Z",
+                          "publishedAt": "2022-04-14T18:42:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nCan we see the log for the divergence of the subapps?\nDo they converge when run outside of the multiapp setup?\nAlso please keep n_mpi > n_elements. MOOSE isnt built for these edge cases.\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/20749#discussioncomment-2569542",
+                          "updatedAt": "2022-06-02T14:51:28Z",
+                          "publishedAt": "2022-04-14T20:45:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "abarun22"
+                          },
+                          "bodyText": "Hi Guillaume,\nSorry about that. Here is the log for the divergence of sub-model. It does converge OK when executed in parallel and independently of the multi-app set-up. That's fine keeping n_mpi > n_elements, which was the case originally.\nrun.log",
+                          "url": "https://github.com/idaholab/moose/discussions/20749#discussioncomment-2573730",
+                          "updatedAt": "2022-06-02T14:51:30Z",
+                          "publishedAt": "2022-04-15T12:42:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "so this isnt a real divergence. A residual of 1e-12 is good enough for most physics. It's just struggling to get any lower because the system is ill-conditioned, or because of other sources of numerical precision losses\nYou can see if you get lower by setting automatic_scaling=true in [Executioner]\nbut otherwise I would just set\nnl_abs_tol = 1e-11 in that same block",
+                          "url": "https://github.com/idaholab/moose/discussions/20749#discussioncomment-2574276",
+                          "updatedAt": "2022-06-10T15:09:05Z",
+                          "publishedAt": "2022-04-15T13:57:43Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "abarun22"
+                          },
+                          "bodyText": "Yes, its just a matter of setting the right tolerance. With automatic_scaling=true the sub-app runs fine and converges. My another query is on the selection of number of apps to execute this problem. Being a single element 3D model, i expect the multiapp system to create 8 sub-apps, each one dedicated for one quadrature point, which is OK for a serial run. The parallel execution shows only creation of 4 sub-apps which is quite strange. Any thoughts on this?",
+                          "url": "https://github.com/idaholab/moose/discussions/20749#discussioncomment-2575091",
+                          "updatedAt": "2022-06-10T15:09:01Z",
+                          "publishedAt": "2022-04-15T16:10:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "the logging might be simply hiding them. We only output to console for rank 0\nAdd --keep-cout to the command line arguments if you want logs from all MPI processes",
+                          "url": "https://github.com/idaholab/moose/discussions/20749#discussioncomment-2575135",
+                          "updatedAt": "2022-06-10T15:08:59Z",
+                          "publishedAt": "2022-04-15T16:18:39Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "abarun22"
+                  },
+                  "bodyText": "With this CL option i could able to see the log for all processes, but only first 4 of them producing results, while other's showing as converged but does not actually undergoes any solution iterations. I believe these might've run correctly, but the outputting may not always be a true representation of actual. Attached the log for your reference.\nrun.log",
+                  "url": "https://github.com/idaholab/moose/discussions/20749#discussioncomment-2575807",
+                  "updatedAt": "2022-06-02T14:51:36Z",
+                  "publishedAt": "2022-04-15T17:11:05Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I think we can trust the output here.\nThe subapps on rank 2 start with 0 residual. Any reason for that? What makes the apps have a non zero residual on rank 1?",
+                          "url": "https://github.com/idaholab/moose/discussions/20749#discussioncomment-2575861",
+                          "updatedAt": "2022-06-02T14:51:38Z",
+                          "publishedAt": "2022-04-15T17:26:44Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "abarun22"
+                  },
+                  "bodyText": "What timestep are you referring to? The first two timesteps seems ok as we observe non-zero residuals for all the sub-apps. For the subsequent timesteps sub-apps with rank 0-3 shows a non-zero residual while for the rest zero residuals were calculated. Its hard to interpret these print outputs as it shows differently for each selection of number of cores. When executed with 8 cores you get a different mode of output as attached.\nrun.log\nThe right way to check the validity of the results would be to look at the exodus output and see if they make sense. I am not pretty sure you agree with me here.",
+                  "url": "https://github.com/idaholab/moose/discussions/20749#discussioncomment-2585890",
+                  "updatedAt": "2022-06-02T14:51:39Z",
+                  "publishedAt": "2022-04-18T13:22:00Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "yes that's a good idea and that should work.\nIf you are not transferring any quantity, I would expect all 8 subapps to behave exactly the same",
+                          "url": "https://github.com/idaholab/moose/discussions/20749#discussioncomment-2585901",
+                          "updatedAt": "2022-06-02T14:51:41Z",
+                          "publishedAt": "2022-04-18T13:26:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "abarun22"
+                          },
+                          "bodyText": "Yes that's right",
+                          "url": "https://github.com/idaholab/moose/discussions/20749#discussioncomment-2586342",
+                          "updatedAt": "2022-06-02T14:51:41Z",
+                          "publishedAt": "2022-04-18T14:48:34Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@abarun22 could you confirm the results make sense here?\n\nAll 8 subapps give the same results without transfers\nThe time dependence of the solves without transfers are as expected (eg converges to something then doesnt move from timestep to timestep)",
+                          "url": "https://github.com/idaholab/moose/discussions/20749#discussioncomment-2755130",
+                          "updatedAt": "2022-06-02T14:51:41Z",
+                          "publishedAt": "2022-05-15T19:17:57Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@abarun22 any update on this?",
+                          "url": "https://github.com/idaholab/moose/discussions/20749#discussioncomment-2909744",
+                          "updatedAt": "2022-06-09T01:20:37Z",
+                          "publishedAt": "2022-06-09T01:20:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "btw I'd love the QuadratureMultiApp to make it into the framework if it's working satisfactorily",
+                          "url": "https://github.com/idaholab/moose/discussions/20749#discussioncomment-2909745",
+                          "updatedAt": "2022-06-09T01:21:05Z",
+                          "publishedAt": "2022-06-09T01:21:04Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "abarun22"
+                          },
+                          "bodyText": "Hi Guillaume,\nYes, absolutely. Without the transfers all the sub-apps produce the same set of results and these are observed to be consistent between the time steps. The attached execution log will tell you the story.\nLet me know if you need further clarification.\nKind regards,\nArun\nrun.log",
+                          "url": "https://github.com/idaholab/moose/discussions/20749#discussioncomment-2921390",
+                          "updatedAt": "2022-06-10T09:42:06Z",
+                          "publishedAt": "2022-06-10T09:42:05Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "ok so what is the current issue?\nActually looking at the log I m a little confused. Why are the outputs for the app initializations staggered with the solves?\nAll the initializations should happen at the beggining then all the solves.\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/20749#discussioncomment-2925283",
+                          "updatedAt": "2022-06-10T18:30:43Z",
+                          "publishedAt": "2022-06-10T18:30:43Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "abarun22"
+                          },
+                          "bodyText": "Well i do not see any problems here. The output sub-app initializations seems to be in order i.e., the initializations followed by the solves.  A staggered outpput is possible only if you forcibly try to output the log for all processors. Currently it only outputs the log for zeroth rank and rest of them are suppressed and so you get an ordered output. Are there any other concerns with this work before it gets merged with the framework code?",
+                          "url": "https://github.com/idaholab/moose/discussions/20749#discussioncomment-2947281",
+                          "updatedAt": "2022-06-14T13:36:51Z",
+                          "publishedAt": "2022-06-14T13:36:48Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Ok all good. I was asking you if you were having issues.\nIf you have time to make a pull request with the QuadraturePointMultiapp, some docs and testing then we can review it and consider merging it in the framework",
+                          "url": "https://github.com/idaholab/moose/discussions/20749#discussioncomment-2948913",
+                          "updatedAt": "2022-06-14T16:26:48Z",
+                          "publishedAt": "2022-06-14T16:26:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "abarun22"
+                          },
+                          "bodyText": "I think this one is a pretty straight forward work to be added in to the framework. All it does is the creation of sub-apps at the main app quadrature point locations and execute them. The only issue i was facing earlier is the non-convergence of sub models for a parallel execution which was corrected with the automatic_scaling option. Otherwise it should be good to go. I shall create a PR very soon and let you know.",
+                          "url": "https://github.com/idaholab/moose/discussions/20749#discussioncomment-2949117",
+                          "updatedAt": "2022-06-14T16:54:38Z",
+                          "publishedAt": "2022-06-14T16:54:37Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "elem_arg??",
+          "author": {
+            "login": "joe61vette"
+          },
+          "bodyText": "Hello:\nIn fvkernels, two forms are used for elem_arg in gatherRCData.  Namely:\nconst auto elem_arg = makeElemArg(&elem);\nor\nconst auto & elem_arg = makeElemArg(&elem);\nIs there any advantage to using this as a reference?\nThanks,\nJoe Kelly",
+          "url": "https://github.com/idaholab/moose/discussions/21300",
+          "updatedAt": "2022-06-14T15:43:54Z",
+          "publishedAt": "2022-06-14T15:26:40Z",
+          "category": {
+            "name": "Q&A Modules: Navier-Stokes"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nSo when using a reference you avoid copying it, so it's technically more efficient.\nBUT it's unlikely to matter right now. We have other performance sinks to get to first.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21300#discussioncomment-2948533",
+                  "updatedAt": "2022-06-14T15:42:52Z",
+                  "publishedAt": "2022-06-14T15:42:51Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Calculation interrupt",
+          "author": {
+            "login": "Salma-Mao"
+          },
+          "bodyText": "Hello everyone,\nWhen a case reaches 12000 steps, the computer is suddenly restarted and interrupted. How to calculate from 12000 steps\uff1f\nThanks,\nMS",
+          "url": "https://github.com/idaholab/moose/discussions/21263",
+          "updatedAt": "2022-06-14T02:48:15Z",
+          "publishedAt": "2022-06-10T09:42:39Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nIf it s the computer it has nothing to do with us.\nIf it s the simulation then please paste the Executioner block here so we can take a look\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21263#discussioncomment-2925248",
+                  "updatedAt": "2022-06-10T18:25:15Z",
+                  "publishedAt": "2022-06-10T18:25:14Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Salma-Mao"
+                          },
+                          "bodyText": "Hello,\nIt is computer. I want to  if there is a way to make this case continue to calculate, because recalculation takes a lot of time.\nThanks,\nMS",
+                          "url": "https://github.com/idaholab/moose/discussions/21263#discussioncomment-2936068",
+                          "updatedAt": "2022-06-13T07:17:07Z",
+                          "publishedAt": "2022-06-13T07:17:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "they you may use the checkpoint system to restart from where the computer shut down:\nhttps://mooseframework.inl.gov/source/outputs/Checkpoint.html\nhttps://mooseframework.inl.gov/application_usage/restart_recover.html",
+                          "url": "https://github.com/idaholab/moose/discussions/21263#discussioncomment-2939506",
+                          "updatedAt": "2022-06-13T15:09:01Z",
+                          "publishedAt": "2022-06-13T15:09:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Salma-Mao"
+                          },
+                          "bodyText": "Thanks for your help.\nMS",
+                          "url": "https://github.com/idaholab/moose/discussions/21263#discussioncomment-2943351",
+                          "updatedAt": "2022-06-14T02:47:39Z",
+                          "publishedAt": "2022-06-14T02:47:38Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Moose-based application capabilities",
+          "author": {
+            "login": "robfairh"
+          },
+          "bodyText": "Hi all,\nI have a few questions about moose in general and its applications.\nI am looking for a module/tool/suite of tools with the following capabilities:\n\nIrradiation/Depletion/Burnup\nDelayed gamma heating (gamma transport + gamma heat deposition)\nActivation heating (heating from proton/beta/alpha decays)\nConjugate heat transfer with natural circulation (not-Boussinesq)\nTurbulence modeling (for the moment, RANS should suffice)\nRadiation heat transfer\nMachine learning algorithms for reduced order modeling, such as feed-forward neural networks and LSTMs.\n\nThank you for your time.",
+          "url": "https://github.com/idaholab/moose/discussions/21290",
+          "updatedAt": "2022-06-25T05:47:35Z",
+          "publishedAt": "2022-06-13T20:17:17Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nI wont comment extensively on 1-2-3, but you should request access to Griffin for some of these capabilities.\nhttps://inl.gov/ncrc/\n4-5 if you can wait a couple months and plan to model something reasonable the MOOSE navier stokes module will be able to do it. If you plan to model large systems or go beyond RANS you should check out Nek and its moose wrapping Cardinal\nhttps://github.com/neams-th-coe/cardinal\n6 we have this capability in the heat_transfer module, using ray tracing in MOOSE\n7 we can now build moose with libtorch so we can do more and more of this every day\n@grmnptr can we do FFNN and LSTMs already?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21290#discussioncomment-2941774",
+                  "updatedAt": "2022-06-25T05:47:34Z",
+                  "publishedAt": "2022-06-13T20:42:42Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "grmnptr"
+                  },
+                  "bodyText": "Hey!\nYes, we can definitely do simple ANNs, especially for ROMs.Here is a little example:\nhttps://mooseframework.inl.gov/source/utils/LibtorchArtificialNeuralNet.html\nWe utilize the C++ frontend of pytorch (libtorch). At the moment, we don't have recurrent neural nets coded up but it should be easy to do. We know of people who already use these tools for deep reinforcement learning within MOOSE.",
+                  "url": "https://github.com/idaholab/moose/discussions/21290#discussioncomment-2942051",
+                  "updatedAt": "2022-06-13T21:26:40Z",
+                  "publishedAt": "2022-06-13T21:26:39Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "grmnptr"
+                          },
+                          "bodyText": "Another example on how to train a neural-net-based surrogate (ROM) from input files alone:\nhttps://mooseframework.inl.gov/source/surrogates/LibtorchANNTrainer.html",
+                          "url": "https://github.com/idaholab/moose/discussions/21290#discussioncomment-2942061",
+                          "updatedAt": "2022-06-13T21:28:16Z",
+                          "publishedAt": "2022-06-13T21:28:14Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Compilation terminated",
+          "author": {
+            "login": "Qisir4179"
+          },
+          "bodyText": "Hello,\nWhen I install the moose on Linux, there is a fatal error: killed signal terminated program cc1plus\ncompilation terminated.\nmake: ***[/home/u/projects/moose/framework/build.me:144:/home/u/projects/moose/framework/build/unity_src/materials_unity.x86_64-conda-linux-gnu.opt.lo]\nWhat should I do next? Thank you everyone.",
+          "url": "https://github.com/idaholab/moose/discussions/21289",
+          "updatedAt": "2022-06-25T05:47:45Z",
+          "publishedAt": "2022-06-13T20:09:28Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nTypically this is because you are running out of memory.\nAre you running this compilation on a virtual machine? How much memory do you have?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21289#discussioncomment-2941751",
+                  "updatedAt": "2022-06-13T20:37:42Z",
+                  "publishedAt": "2022-06-13T20:37:41Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "Qisir4179"
+                  },
+                  "bodyText": "Hello,\nYes, I am running it on a virtual machine, there are 4 GB memory.\nThen I will adjust it to larger and try it again.\nThank you.\nBest,\nQi\n\n\n| |\n\u5f20\u742a\n|\n|\n***@***.***\n|\n\u7b7e\u540d\u7531\u7f51\u6613\u90ae\u7bb1\u5927\u5e08\u5b9a\u5236\nOn 6/13/2022 16:37\uff0cGuillaume ***@***.***> wrote\uff1a\n\nHello\n\nTypically this is because you are running out of memory.\nAre you running this compilation on a virtual machine? How much memory do you have?\n\nGuillaume\n\n\u2014\nReply to this email directly, view it on GitHub, or unsubscribe.\nYou are receiving this because you authored the thread.Message ID: ***@***.***>",
+                  "url": "https://github.com/idaholab/moose/discussions/21289#discussioncomment-2941782",
+                  "updatedAt": "2022-06-13T20:43:35Z",
+                  "publishedAt": "2022-06-13T20:43:34Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "array material",
+          "author": {
+            "login": "mortezaaesmaeilpour"
+          },
+          "bodyText": "Dear all\nDo you have any idea how can I define an array of material properties (like concentrations of different components)? As far as I know, material type can be real, vector, and rank2 tensor.\nThanks",
+          "url": "https://github.com/idaholab/moose/discussions/21281",
+          "updatedAt": "2022-06-13T15:16:49Z",
+          "publishedAt": "2022-06-13T09:32:41Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYou can have a look at this one:\nhttps://mooseframework.inl.gov/source/materials/GenericConstantArray.html\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21281#discussioncomment-2939491",
+                  "updatedAt": "2022-06-13T15:07:36Z",
+                  "publishedAt": "2022-06-13T15:07:35Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mortezaaesmaeilpour"
+                          },
+                          "bodyText": "Unfortunately, my material properties are not constant values. They are calculated through complicated functions of pressure, enthalpy, ...",
+                          "url": "https://github.com/idaholab/moose/discussions/21281#discussioncomment-2939532",
+                          "updatedAt": "2022-06-13T15:10:11Z",
+                          "publishedAt": "2022-06-13T15:10:09Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "You ll have to use this as a template to make a new array material property that has the dependencies you need.\nWe wont have the exact formula you need pre-implemented even for Real / Vector / RankTwoTensor materials.",
+                          "url": "https://github.com/idaholab/moose/discussions/21281#discussioncomment-2939556",
+                          "updatedAt": "2022-06-13T15:12:14Z",
+                          "publishedAt": "2022-06-13T15:12:13Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Refine mesh within a subdomain",
+          "author": {
+            "login": "patte103"
+          },
+          "bodyText": "Hello!\nI am trying to refine my mesh within a subdomain while the rest of the mesh remains coarse. I am currently using the mesh generators within moose and have been referencing the #19047 discussion. From the documentation, the RefineMeshGenerator seemed to only apply to CartesianMeshGenerator, and whenever I coupled it with my SubdomainBoundingBoxGenerator it resulted in this error:\nYour MeshGenerator tree contains multiple possible generator outputs :\n\"subdomain and one or more of the following from an independent set: \"refine\"\n\nThis may be due to a missing dependency or may be intentional. Please select the final MeshGenerator in\nthe [Mesh] block with the \"final_generator\" parameter or add additional dependencies to remove the ambiguity.\n\n\nIs there a way to refine my mesh in the subdomain specified region only? Or, which combination of mesh generators will yield the ideal result?\nMy current Mesh coupled with RefineMeshGenerator:\n[Mesh]\n[gen]\n    type = GeneratedMeshGenerator\n    dim = 2\n    nx = 80\n    ny = 40\n    xmin = 0.0\n    ymin = 0.0\n    xmax = 8000.0\n    ymax = 4000.0\n    elem_type = QUAD4\n  []\n  [./subdomain]\n    type = SubdomainBoundingBoxGenerator\n    input = gen\n    bottom_left = '0 1500 0'\n    top_right = '8000 2500 0'\n    block_id = 1\n   [../]\n [refine]\n   type = RefineBlockGenerator\n   input = gen\n    block = '1'\n    refinement = '4'\n    show_info = true\n  []\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/21272",
+          "updatedAt": "2022-06-25T05:47:51Z",
+          "publishedAt": "2022-06-10T19:36:29Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYour tree of MGs is wrong. The inputs to these two cannot both be 'gen'. They need to be chained.\nMaybe try input = subdomain for the refine MG\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21272#discussioncomment-2925760",
+                  "updatedAt": "2022-06-10T20:14:04Z",
+                  "publishedAt": "2022-06-10T20:14:04Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "patte103"
+                          },
+                          "bodyText": "That worked! Thanks so much Guillaume!",
+                          "url": "https://github.com/idaholab/moose/discussions/21272#discussioncomment-2939332",
+                          "updatedAt": "2022-06-13T14:55:25Z",
+                          "publishedAt": "2022-06-13T14:55:24Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to set a variable field of \"Yield Stress\" in the J2 plasticity model",
+          "author": {
+            "login": "sSajjad90"
+          },
+          "bodyText": "Hi everyone,\nIn a phase calculation, the yield stress is calculated in material and is not constant. Now, I am going to add this yield stress to the J2 plasticity model, although available userobjects, TensorMechanicsHardeningConstant.C for instance, take constant values.\n[Materials]\n  [./Hardening]\n    type = PrecipitationHardening\n\n    Delta_Sigma_p = 'Sigma_p'          //Declared Yeild Stress\n\n    Time_step = 'time_step'\n    BurgursVec = 'b_V'\n    ShearModule = 'Mu'\n    PoisionRatio = 'Nu'\n    TaylorFactor = 'M_Taylor'\n    Gama = 'Gama_TDP'\n    PhaseNumber = 3\n    q_exponent = 2\n  [../]\n\n[UserObjects]\n  [./str]\n    type = TensorMechanicsHardeningConstant\n\n    value =         **//  hope to use 'Sigma_p' (material property) instead  of constant value**\n  [../]\n  [./j2]\n    type = TensorMechanicsPlasticJ2\n    yield_strength = str\n    yield_function_tolerance = 1E-3\n    internal_constraint_tolerance = 1E-9\n  [../]\n[]\n\nIn this way, I tried to change the type of parameter inside the TensorMechanicsHardeningConstant.C  and  ***.h files and got errors. (I tried getMaterialProperty<Real> and adCoupledValue and I got error)\nThis problem has already been discussed in #19454, but I could not realize how to figure it out.\nWould you please let me know the proper parameters to use the mentioned 'Sigma_p'  from the material calculation in the userobject?\nSincerely,\nSajjad",
+          "url": "https://github.com/idaholab/moose/discussions/21261",
+          "updatedAt": "2022-06-25T05:48:30Z",
+          "publishedAt": "2022-06-10T02:17:51Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "so you want to use a material property?\nOr a variable? or a function?\nThere are plenty of examples for using each of these.",
+                  "url": "https://github.com/idaholab/moose/discussions/21261#discussioncomment-2925510",
+                  "updatedAt": "2022-06-10T19:17:07Z",
+                  "publishedAt": "2022-06-10T19:17:04Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sSajjad90"
+                          },
+                          "bodyText": "I am going to use a material property which is not constant and would be changed via time",
+                          "url": "https://github.com/idaholab/moose/discussions/21261#discussioncomment-2929986",
+                          "updatedAt": "2022-06-11T22:03:30Z",
+                          "publishedAt": "2022-06-11T20:10:59Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "You can have a look at ADMatDiffusion for how to work with those",
+                          "url": "https://github.com/idaholab/moose/discussions/21261#discussioncomment-2930335",
+                          "updatedAt": "2022-06-11T22:35:31Z",
+                          "publishedAt": "2022-06-11T22:35:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sSajjad90"
+                          },
+                          "bodyText": "Please look at the below codes, derived from TensorMechanicsHardeningModel, providing yield_strength for the TensorMechanicsPlasticJ2 userobject.\nI understand that _qp is defined for regular materials using the computeQpProperties routine. But what exactly I want is that material property that is calculated each time (and will update next time). Now, I am wondering how I could use this material property in the userobject.\n#include \"YieldStressofBainaryPrecipitationHardening.h\"\n\nregisterMooseObject(\"microstructureApp\", YieldStressofBainaryPrecipitationHardening);\n\nInputParameters\nYieldStressofBainaryPrecipitationHardening::validParams()\n{\n  InputParameters params = TensorMechanicsHardeningModel::validParams();\n  params.addRequiredParam<MaterialPropertyName>(\"value_0\", \"The yield strength when internal variable = 0\");\n\n  params.addClassDescription(\"Hardening defined by Percipitation\");\n\n  return params;\n}\n\nYieldStressofBainaryPrecipitationHardening::YieldStressofBainaryPrecipitationHardening(\n    const InputParameters & parameters)\n  : TensorMechanicsHardeningModel(parameters),\n    _value_0(getMaterialProperty<Real>(\"value_0\"))\n{\n}\nReal\nYieldStressofBainaryPrecipitationHardening::value(Real intnl) const\n{\n  return _value_0[_qp];\n}\nReal\nYieldStressofBainaryPrecipitationHardening::derivative(Real intnl)  const\n{\n  return 0;\n}\nstd::string\nYieldStressofBainaryPrecipitationHardening::modelName() const\n{\n  return \"PrecipitationHardening\";\n}\n\n#pragma once\n\n#include \"TensorMechanicsHardeningModel.h\"\n\n\nclass YieldStressofBainaryPrecipitationHardening : public TensorMechanicsHardeningModel\n{\npublic:\n  static InputParameters validParams();\n\n  YieldStressofBainaryPrecipitationHardening(const InputParameters & parameters);\n\n  virtual Real value(Real intnl) const override;\n\n  virtual Real derivative(Real intnl) const override;\n\n  virtual std::string modelName() const override;\n\n\nprivate:\n  const MaterialProperty<Real> & _value_0;\n};\n\n\nAnd in the assembly file, Sigma_p is calculated in material properties and will be used in the ./str useobject at each time step.\n[Materials]\n  [./Hardening]\n    type = PrecipitationHardening\n\n    Delta_Sigma_p = 'Sigma_p'          //Declared Yeild Stress\n\n    Time_step = 'time_step'\n    BurgursVec = 'b_V'\n    ShearModule = 'Mu'\n    PoisionRatio = 'Nu'\n    TaylorFactor = 'M_Taylor'\n    Gama = 'Gama_TDP'\n    PhaseNumber = 3\n    q_exponent = 2\n  [../]\n[]\n\n[UserObjects]\n  [./str]\n    type = YieldStressofBainaryPrecipitationHardening\n    value = Sigma_p        \n  [../]\n  [./j2]\n    type = TensorMechanicsPlasticJ2\n    yield_strength = str\n    yield_function_tolerance = 1E-3\n    internal_constraint_tolerance = 1E-9\n  [../]\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/21261#discussioncomment-2930417",
+                          "updatedAt": "2022-06-11T23:26:49Z",
+                          "publishedAt": "2022-06-11T23:26:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nMaterial properties are updated on every linear iteration, so as often as possible, so you do not need to worry about when it is updated.\nI'm not sure about your implementation though, it seems you are not replacing what was previously a constant with a material property?\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/21261#discussioncomment-2930953",
+                          "updatedAt": "2022-06-12T04:23:13Z",
+                          "publishedAt": "2022-06-12T04:23:12Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sSajjad90"
+                          },
+                          "bodyText": "Hi,\nI tried to replace the constant value taking in the TensorMechanicsHardeningConstant with a material property, but it does not work.\nLet me explain my problem with a simple example. Imagine yield strengthening depends on time_step and calculated by a ParsedMaterial, which changes based on the time t, like below.\nThis Yiled_Stress must be used in TensorMechanicsPlasticJ2. For this matter, another userobject is required to get the value from the material block and provide it for the plasticity model. ([./str] block)\nAvailable userobjects that provide yield_strength like TensorMechanicsHardeningConstant, TensorMechanicsHardeningPowerRule, etc., can not get this type of property. I tried rewriting the TensorMechanicsHardeningPowerRule code to get material property; however, it does not work.\nMy problem is to define a proper useruoject in the [./str] block to get the Yiled_Stress.\n[Materials]\n [./Hardening]\n   type = ParsedMaterial\n   f_name = 'Yiled_Stress'\n   material_property_names =  '75 + t * 0.3'\n   function = 't'\n [../]\n[]\n\n[UserObjects]\n  [./str]\n    type = \n    value = 'Yiled_Stress'        \n  [../]\n  [./j2]\n    type = TensorMechanicsPlasticJ2\n    yield_strength = str\n    yield_function_tolerance = 1E-3\n    internal_constraint_tolerance = 1E-9\n  [../]\n[]\n\nMany thanks for your kind support,",
+                          "url": "https://github.com/idaholab/moose/discussions/21261#discussioncomment-2933051",
+                          "updatedAt": "2022-06-12T15:22:38Z",
+                          "publishedAt": "2022-06-12T15:22:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "What do you mean by \"it does not work\" ?\nDoes it not compile?\nIs it not retrieving the right value?\nIs it not converging?",
+                          "url": "https://github.com/idaholab/moose/discussions/21261#discussioncomment-2933520",
+                          "updatedAt": "2022-06-12T17:08:55Z",
+                          "publishedAt": "2022-06-12T17:08:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sSajjad90"
+                          },
+                          "bodyText": "It did not compile.  And the error is in the picture for the following  YieldStressofBainaryPrecipitationHardening userobject.\n\n\n#include \"YieldStressofBainaryPrecipitationHardening.h\"\n\nregisterMooseObject(\"microstructureApp\", YieldStressofBainaryPrecipitationHardening);\n\nInputParameters\nYieldStressofBainaryPrecipitationHardening::validParams()\n{\n  InputParameters params = TensorMechanicsHardeningModel::validParams();\n  params.addRequiredParam<MaterialPropertyName>(\"value_0\", \"The yield strength when internal variable = 0\");\n\n  params.addClassDescription(\"Hardening defined by Percipitation\");\n\n  return params;\n}\n\nYieldStressofBainaryPrecipitationHardening::YieldStressofBainaryPrecipitationHardening(\n    const InputParameters & parameters)\n  : TensorMechanicsHardeningModel(parameters),\n    _value_0(getMaterialProperty<Real>(\"value_0\"))\n{\n}\nReal\nYieldStressofBainaryPrecipitationHardening::value(Real intnl) const\n{\n  return _value_0[_qp];\n}\nReal\nYieldStressofBainaryPrecipitationHardening::derivative(Real intnl)  const\n{\n  return 0;\n}\nstd::string\nYieldStressofBainaryPrecipitationHardening::modelName() const\n{\n  return \"PrecipitationHardening\";\n}\n\n\n#pragma once\n\n#include \"TensorMechanicsHardeningModel.h\"\n\n\nclass YieldStressofBainaryPrecipitationHardening : public TensorMechanicsHardeningModel\n{\npublic:\n  static InputParameters validParams();\n\n  YieldStressofBainaryPrecipitationHardening(const InputParameters & parameters);\n\n  virtual Real value(Real intnl) const override;\n\n  virtual Real derivative(Real intnl) const override;\n\n  virtual std::string modelName() const override;\n\n\nprivate:\n  const MaterialProperty<Real> & _value_0;\n};",
+                          "url": "https://github.com/idaholab/moose/discussions/21261#discussioncomment-2933567",
+                          "updatedAt": "2022-06-12T17:21:32Z",
+                          "publishedAt": "2022-06-12T17:21:31Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "So is this code trying to\n\ndefine the material property you want to use\nOR\nuse that material property in the tensor mechanics model\n\nSeems to me like there is a confusion here",
+                          "url": "https://github.com/idaholab/moose/discussions/21261#discussioncomment-2933670",
+                          "updatedAt": "2022-06-12T17:51:17Z",
+                          "publishedAt": "2022-06-12T17:51:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sSajjad90"
+                          },
+                          "bodyText": "Sorry for my bad explanation.\nuse that material property in the tensor mechanics model",
+                          "url": "https://github.com/idaholab/moose/discussions/21261#discussioncomment-2933762",
+                          "updatedAt": "2022-06-12T18:19:33Z",
+                          "publishedAt": "2022-06-12T18:19:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Ok I dived a little bit into this code and it doesnt look like it is set up to use a material at all.\nDo you need both spatial and time dependence? Or just time dependence?\nIf time dependence only you should use a Function.",
+                          "url": "https://github.com/idaholab/moose/discussions/21261#discussioncomment-2934116",
+                          "updatedAt": "2022-06-12T20:16:26Z",
+                          "publishedAt": "2022-06-12T20:16:26Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Impose a solution of block 1 onto block 2",
+          "author": {
+            "login": "TLWise"
+          },
+          "bodyText": "I am solving a heat transfer problem in MOOSE. The problem domain solves for the temperature on two separate meshes(two blocks same file). I am imposing a constant temperature on a small circular domain. I am solving convective heat in the other mesh domain which is square and much larger than the circular domain. I would like to impose the solution of the constant temperature domain into the convective solution domain in order to determine the effect of the imposed constant solution on that of the convective solve. Is it possible to translate a nearest neighbor (meshes overlap) solution from one mesh domain into another without using MultiApp, since the meshes are contained in the same mesh file and are solved for in the same Kernel block?",
+          "url": "https://github.com/idaholab/moose/discussions/20884",
+          "updatedAt": "2022-06-25T05:49:02Z",
+          "publishedAt": "2022-04-27T03:48:25Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nI dont know of a way to exactly do that currently.\nIf the 'nearest-neighbor' transformation (eg you are happy with that mapping of the square onto the circle) works for you, you could use a MultiApp to use that transfer.\nElse if there's a 1-1 relationship between nodes in the circle and square boundaries you could try using the Constraints system.\nFinally you could write your own user object to do this.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20884#discussioncomment-2643985",
+                  "updatedAt": "2022-06-05T05:33:03Z",
+                  "publishedAt": "2022-04-27T06:23:00Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "TLWise"
+                          },
+                          "bodyText": "I have implemented MultiAppNearestNodeTransfer where I have defined the physics and boundary conditions for each mesh (block) in separate solver files. Each solutions is a transient solution. The controlling app appears to progress as a time based solution. The multi app input file appears to restart for each data push and is not time varying. Is it possible preserve the transient solution of all files and observe the progression of the solution in the controlling app?",
+                          "url": "https://github.com/idaholab/moose/discussions/20884#discussioncomment-2651402",
+                          "updatedAt": "2022-06-05T05:33:35Z",
+                          "publishedAt": "2022-04-28T02:52:09Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "So in a MultiApp set up?\nDid you use a FullSolveMultiApp or a TransientMultiApp ? Because the former is resetting every time step currently.\nThe latter is the one to use to get parallel time evolution of the two solves.",
+                          "url": "https://github.com/idaholab/moose/discussions/20884#discussioncomment-2656377",
+                          "updatedAt": "2022-06-05T05:33:35Z",
+                          "publishedAt": "2022-04-28T16:58:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "TLWise"
+                          },
+                          "bodyText": "I am using the TransientMultiApp, with the following format:\n[MultiApps]\n  [sub_app]\n    type = TransientMultiApp\n    positions = '0.1 0.1 0  0.4 0.4 0  0.7 0.7 0'\n     input_files = '2D_Move_Fluid_Ball.i'\n    execute_on = timestep_end\n    output_in_position = true\n  []",
+                          "url": "https://github.com/idaholab/moose/discussions/20884#discussioncomment-2658950",
+                          "updatedAt": "2022-06-05T05:33:48Z",
+                          "publishedAt": "2022-04-29T03:50:45Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "the exodus output if turned on in the subapp should include the solution of the subapp at all times in the transient",
+                          "url": "https://github.com/idaholab/moose/discussions/20884#discussioncomment-2659014",
+                          "updatedAt": "2022-06-10T13:48:17Z",
+                          "publishedAt": "2022-04-29T04:01:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "TLWise"
+                          },
+                          "bodyText": "When I solve the problem,I am only seeing the main output and not the subapp. Exodus is true for both.",
+                          "url": "https://github.com/idaholab/moose/discussions/20884#discussioncomment-2659027",
+                          "updatedAt": "2022-06-10T13:48:17Z",
+                          "publishedAt": "2022-04-29T04:05:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "what does ls give in the directory?",
+                          "url": "https://github.com/idaholab/moose/discussions/20884#discussioncomment-2659052",
+                          "updatedAt": "2022-06-10T13:48:17Z",
+                          "publishedAt": "2022-04-29T04:15:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "TLWise"
+                          },
+                          "bodyText": "peacock_run_exe_tmp_2D_Move_Ball_All_MultiApp.i\npeacock_run_exe_tmp_2D_Move_Ball_All_MultiApp_out.e\npeacock_run_exe_tmp_2D_Move_Ball_All_MultiApp_out_sub_app0.e\npeacock_run_exe_tmp_2D_Move_Ball_All_MultiApp_out_sub_app1.e\npeacock_run_exe_tmp_2D_Move_Ball_All_MultiApp_out_sub_app2.e\npeacock_run_exe_tmp_2D_Move_Fluid_Ball.i\npeacock_run_exe_tmp_2D_Move_Fluid_Ball_out.e\npeacock_run_mesh_tmp_2D_Move_Ball_All_MultiApp.e",
+                          "url": "https://github.com/idaholab/moose/discussions/20884#discussioncomment-2659057",
+                          "updatedAt": "2022-06-10T13:48:17Z",
+                          "publishedAt": "2022-04-29T04:17:56Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "TLWise"
+                          },
+                          "bodyText": "I am seeing what I expect in the subapp_out, but that solution does not seem to translate back into the MultiApp_out.",
+                          "url": "https://github.com/idaholab/moose/discussions/20884#discussioncomment-2659090",
+                          "updatedAt": "2022-06-10T13:48:19Z",
+                          "publishedAt": "2022-04-29T04:30:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "these ones:\npeacock_run_exe_tmp_2D_Move_Ball_All_MultiApp_out_sub_app0.e\npeacock_run_exe_tmp_2D_Move_Ball_All_MultiApp_out_sub_app1.e\npeacock_run_exe_tmp_2D_Move_Ball_All_MultiApp_out_sub_app2.e\n\nthese are the outputs of the subapp.\nWhat do you mean by translate back? As in have the solutions in the same file?",
+                          "url": "https://github.com/idaholab/moose/discussions/20884#discussioncomment-2659125",
+                          "updatedAt": "2022-06-10T13:48:33Z",
+                          "publishedAt": "2022-04-29T04:36:31Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "TLWise"
+                          },
+                          "bodyText": "Here are my files:\n2D_Move_Ball_All_MultiApp_i.txt\n2D_Move_Fluid_Ball_i.txt\nFallingBall_e.txt",
+                          "url": "https://github.com/idaholab/moose/discussions/20884#discussioncomment-2659129",
+                          "updatedAt": "2022-06-10T13:48:34Z",
+                          "publishedAt": "2022-04-29T04:37:29Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "how to use MetaPhysicL::raw_value",
+          "author": {
+            "login": "saturn00000"
+          },
+          "bodyText": "Hi MOOSEers,\nWhen I try to  find the direction angle for _grad_u[_qp], must I use \"raw_value\"?,\n ADReal theta= std::atan2(raw_value(_grad_u[_qp](1)), raw_value(_grad_u[_qp](0)));\nor  without \"raw_value\"\n ADReal theta = std::atan2(_grad_u[_qp](1), _grad_u[_qp](0));\nI appreciate any suggestions and help.Thank you.\nRef: #20312",
+          "url": "https://github.com/idaholab/moose/discussions/21276",
+          "updatedAt": "2022-06-12T22:26:54Z",
+          "publishedAt": "2022-06-11T13:26:59Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nraw_value is used to remove the derivatives, so to create a Real out of an ADReal.\nSo it depends. If you are contributing to the residual with an ADKernel you want to use ADReal. If you are building an auxkernel or a postprocessor you can use Real.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21276#discussioncomment-2929290",
+                  "updatedAt": "2022-06-11T16:25:53Z",
+                  "publishedAt": "2022-06-11T16:25:52Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "saturn00000"
+                          },
+                          "bodyText": "can we direct use std::atan2(_grad_u_qp, _grad_u_qp)?  or",
+                          "url": "https://github.com/idaholab/moose/discussions/21276#discussioncomment-2929499",
+                          "updatedAt": "2022-06-11T17:25:27Z",
+                          "publishedAt": "2022-06-11T17:25:27Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "saturn00000"
+                  },
+                  "bodyText": "Hello @GiudGiud,\nif we use  std::atan2(_grad_u_qp, _grad_u_qp)  to the residual with an ADKernel , then we will have the error:\nLinear solve did not converge due to DIVERGED_NANORINF iterations 0\nNonlinear solve did not converge due to DIVERGED_LINEAR_SOLVE iterations 0\nSolve Did NOT Converge!\nFinished Solving",
+                  "url": "https://github.com/idaholab/moose/discussions/21276#discussioncomment-2929562",
+                  "updatedAt": "2022-06-11T17:51:42Z",
+                  "publishedAt": "2022-06-11T17:40:21Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nThis can happen if the function derivative is not defined everywhere, especially if the function's derivative has a pole where its value is undefined.\nHowever, atan's derivative is fairly well behaved so I'm not sure.\nWhile it is preferred to use ADReal everywhere and preserve all derivatives, if a term is difficult to handle you may remove its derivatives and have an imperfect Jacobian. You may also use an if condition to isolate the problematic area.\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/21276#discussioncomment-2930965",
+                          "updatedAt": "2022-06-12T04:26:55Z",
+                          "publishedAt": "2022-06-12T04:26:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "saturn00000"
+                          },
+                          "bodyText": "Hello @GiudGiud\nthanks a lot for your reply!\nI think the reason may be that that the (AD) derivative of  the function atan2 is not defined in \"MetaPhysicL\".\nP.S.  the (AD) derivative of  the function atan can be used in MOOSE, but not atan2 ...",
+                          "url": "https://github.com/idaholab/moose/discussions/21276#discussioncomment-2934454",
+                          "updatedAt": "2022-06-12T22:26:24Z",
+                          "publishedAt": "2022-06-12T22:26:23Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

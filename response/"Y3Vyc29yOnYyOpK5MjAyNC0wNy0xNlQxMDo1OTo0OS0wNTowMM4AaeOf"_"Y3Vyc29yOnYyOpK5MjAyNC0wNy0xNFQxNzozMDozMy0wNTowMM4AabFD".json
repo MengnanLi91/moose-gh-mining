@@ -1,0 +1,976 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyNC0wNy0xNFQxNzozMDozMy0wNTowMM4AabFD"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "MOOSE WebControl doesn't work as expected",
+          "author": {
+            "login": "huaianking"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nHi MOOSE WebControl Developer,\nI tried to use MOOSE WebControl to increase my input Temperature at each time step using ex02 in the Thermal Hydraulics Module's tutorial. The control input file is listed below. I was able to run it without any error messages, but it doesn't get the job done. The T input value at each time step remains unchanged.\nI know there are other ways I can use to change T at each time step, but my main goal is to get webServerControl working so I can do coupling with other applications.\nI checked the source file and T in the InletMassFlowRateTemperature1Phase is already set as controllable.\nCan someone point out what I might have done wrong? Much appreciated!\nfrom MooseControl import MooseControl\ncommand = '../../thermal_hydraulics-opt -i 02_coreWebControl.i'\ncommand_list = command.split()\ncontrol = MooseControl(moose_command=command_list, moose_control_name='web_server')\ncontrol.initialize()\nnum_steps = 10\nfor t in range(num_steps):\n    control.wait('TIMESTEP_BEGIN')\n    pp_value = control.getPostprocessor('core_T_in')\n    control.setContinue()\n    control.wait('TIMESTEP_END')\n    control.setControllableReal('Components/inlet/T',pp_value+100)\n    control.setContinue()\ncontrol.finalize()",
+          "url": "https://github.com/idaholab/moose/discussions/28071",
+          "updatedAt": "2024-07-16T03:46:19Z",
+          "publishedAt": "2024-07-05T19:06:38Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "loganharbour"
+                  },
+                  "bodyText": "Can you share the output from the MooseControl?\nThis isn't necessary.",
+                  "url": "https://github.com/idaholab/moose/discussions/28071#discussioncomment-9982078",
+                  "updatedAt": "2024-07-08T01:37:09Z",
+                  "publishedAt": "2024-07-08T01:18:28Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "loganharbour"
+                  },
+                  "bodyText": "@joshuahansel can you comment on controlling values with the InletMassFlowRateTemperature1Phase? T is definitely controllable but isn't the value of T used in the underlying ADBoundaryFlux3EqnGhostMassFlowRateTemperature object.\nHow do you guys deal with this kind of control with THM?\n@huaianking the problem is that T is actually not controllable within that object.",
+                  "url": "https://github.com/idaholab/moose/discussions/28071#discussioncomment-9982139",
+                  "updatedAt": "2024-07-08T01:37:34Z",
+                  "publishedAt": "2024-07-08T01:35:50Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "joshuahansel"
+                          },
+                          "bodyText": "T should be controllable. It gets associated with ADBoundaryFlux3EqnGhostMassFlowRateTemperature via connectObject(params, _boundary_uo_name, \"T\"). We have a test for controlling this parameter:\nmoose/modules/thermal_hydraulics/test/tests/components/inlet_mass_flow_rate_1phase/clg.ctrl_T_3eqn_rdg.i.",
+                          "url": "https://github.com/idaholab/moose/discussions/28071#discussioncomment-10000371",
+                          "updatedAt": "2024-07-09T15:55:51Z",
+                          "publishedAt": "2024-07-09T15:55:50Z",
+                          "isAnswer": true
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "huaianking"
+                          },
+                          "bodyText": "Thanks for the quick reply! Did I do something wrong here when I set up my input file? The T_in still doesn't seem to be controlled by the webControlServer when I run it for the testing case. But I run the test case you listed and it works just fine.\nT_in = 300. # K\nm_dot_in = 1e-2 # kg/s\npress = 10e5 # Pa\n\n# core parameters\ncore_length = 1. # m\ncore_n_elems = 25\ncore_dia = '${units 2. cm -> m}'\ncore_pitch = '${units 8.7 cm -> m}'\nA_core = '${fparse core_pitch^2 - 0.25 *pi * core_dia^2}'\nP_wet_core = '${fparse 4*core_pitch + pi * core_dia}'\nDh_core = '${fparse 4 * A_core / P_wet_core}'\n\ntot_power = 2000 # W\n\n[GlobalParams]\n  initial_p = ${press}\n  initial_vel = 0.0001\n  initial_T = ${T_in}\n  gravity_vector = '0 0 0'\n\n  rdg_slope_reconstruction = minmod\n  scaling_factor_1phase = '1 1e-2 1e-4'\n  closures = thm_closures\n  fp = he\n[]\n\n\n[FluidProperties]\n  [he]\n    type = IdealGasFluidProperties\n    molar_mass = 4e-3\n    gamma = 1.67\n    k = 0.2556\n    mu = 3.22639e-5\n  []\n[]\n\n\n[Closures]\n  [thm_closures]\n    type = Closures1PhaseTHM\n  []\n[]\n\n[SolidProperties]\n  [steel]\n    type = ThermalFunctionSolidProperties\n    rho = 8050\n    k = 45\n    cp = 466\n  []\n[]\n\n[Components]\n  [total_power]\n    type = TotalPower\n    power = ${tot_power}\n  []\n  [inlet]\n    type = InletMassFlowRateTemperature1Phase\n    input = 'core_chan:in'\n    m_dot = ${m_dot_in}\n    T = ${T_in}\n  []\n\n  [core_chan]\n    type = FlowChannel1Phase\n    position = '0 0 0'\n    orientation = '0 0 1'\n    length = ${core_length}\n    n_elems = ${core_n_elems}\n    roughness = .0001\n    A = '${A_core}'\n    D_h = ${Dh_core}\n  []\n\n  [core_hs]\n    type = HeatStructureCylindrical\n    position = '0 0 0'\n    orientation = '0 0 1'\n    length = ${core_length}\n    n_elems = ${core_n_elems}\n    names = 'block'\n    widths = '${fparse core_dia / 2.}'\n    solid_properties = 'steel'\n    solid_properties_T_ref = '300'\n    n_part_elems = 3\n  []\n\n  [core_heating]\n    type = HeatSourceFromTotalPower\n    hs = core_hs\n    regions = block\n    power = total_power\n  []\n\n  [core_ht]\n    type = HeatTransferFromHeatStructure1Phase\n    flow_channel = core_chan\n    hs = core_hs\n    hs_side = outer\n    P_hf = '${fparse pi * core_dia}'\n  []\n\n  [outlet]\n    type = Outlet1Phase\n    input = 'core_chan:out'\n    p = ${press}\n  []\n[]\n\n[Postprocessors]\n  [power_to_coolant]\n    type = ADHeatRateConvection1Phase\n    block = core_chan\n    P_hf = '${fparse pi *core_dia}'\n  []\n  \n  [core_T_in]\n    type = SideAverageValue\n    boundary = core_chan:in\n    variable = T\n  []\n\n  [core_T_out]\n    type = SideAverageValue\n    boundary = core_chan:out\n    variable = T\n  []\n\n  [core_p_in]\n    type = SideAverageValue\n    boundary = core_chan:in\n    variable = p\n  []\n\n  [core_p_out]\n    type = SideAverageValue\n    boundary = core_chan:out\n    variable = p\n  []\n\n  [core_delta_p]\n    type = ParsedPostprocessor\n    pp_names = 'core_p_in core_p_out'\n    expression = 'core_p_in - core_p_out'\n  []\n[]\n\n[Preconditioning]\n  [pc]\n    type = SMP\n    full = true\n  []\n[]\n\n[Controls]\n  [web_server]\n  type = WebServerControl\n  execute_on='TIMESTEP_BEGIN TIMESTEP_END'\n  []\n[]\n\n[Executioner]\n  type=Transient\n  solve_type = 'PJFNK'\n  dt=10\n  num_steps = 10\n[]\n\n#[Executioner]\n # type = Transient\n  #start_time = 0\n\n  #[TimeStepper]\n   # type = IterationAdaptiveDT\n   # dt = 10\n  #[]\n # end_time = 5000\n\n  #line_search = basic\n  #solve_type = NEWTON\n\n  #petsc_options_iname = '-pc_type'\n  #petsc_options_value = 'lu'\n\n  #nl_rel_tol = 1e-8\n  #nl_abs_tol = 1e-8\n  #nl_max_its = 25\n\n#[]\n\n[Outputs]\n  csv=true\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/28071#discussioncomment-10021249",
+                          "updatedAt": "2024-07-11T13:23:20Z",
+                          "publishedAt": "2024-07-11T13:22:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "loganharbour"
+                          },
+                          "bodyText": "Can you share the output that you get when running the python script that runs the MooseControl?",
+                          "url": "https://github.com/idaholab/moose/discussions/28071#discussioncomment-10057590",
+                          "updatedAt": "2024-07-16T03:46:20Z",
+                          "publishedAt": "2024-07-16T03:46:19Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "The interface thickness changes during the simulation",
+          "author": {
+            "login": "Yudonggggg"
+          },
+          "bodyText": "I've run a simple heterogeneous nucleation with 90 degree contact angle at the wall. The initial condition I used is SmoothCircleIC with tanh profile. I notice that the tanh profile is 0.5 * (1 + tanh(pi/widthx), so the relation between model parameters and physical parameters from my calculation are kappa = 3/piinterfacial_energywidth and w (for double-well potential w/4eta^2*(1-eta)^2) = 24piinterfacial_energy/width. But from the animation I got, the interface thickness would become thinner at the first step of simulation. That's wired to me because I've checked the parameter for multiple times and there was no errors in it. So I am wondering if there is anything I could do to get a more reasonable simulation. Below here I attached the simulation.\n\n  \n    \n    \n\n    animation.mp4",
+          "url": "https://github.com/idaholab/moose/discussions/28136",
+          "updatedAt": "2024-07-15T19:19:31Z",
+          "publishedAt": "2024-07-15T19:19:31Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": []
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "GeneratedMeshGenerator Error",
+          "author": {
+            "login": "navier-rgb"
+          },
+          "bodyText": "Hello,\nI\u2019m trying to define an inlet and outlet sideset on a domain within a layer in my model (shown below). I\u2019m, however, getting the following error:\n*** ERROR ***\nYour MeshGenerator tree contains multiple possible generator outputs :\n\"rename and one or more of the following from an independent set: \"outlet, rename\"\n\nThis may be due to a missing dependency or may be intentional. Please either\n- check that all the mesh generators are connected as a tree and culminate in a single final mesh. Having one wrong 'input=mg' parameter is the most common error\n- add additional dependencies to remove the ambiguity if you are using a user-built MeshGenerator\n- if you intend to execute a subset of the defined generators (uncommon), select the final MeshGenerator in the [Mesh] block with the \"final_generator\" parameter.\n\n\nHere is my input:\n[Mesh]\n  [gen]\n    type = GeneratedMeshGenerator\n    dim = 2\n    xmin = 0.0\n    xmax = 4000\n    nx = 100\n    bias_x = 1.4\n    ymin = 0\n    ymax = 2000\n    ny = 20\n  []\n  [layer1]\n    input = gen\n    type = SubdomainBoundingBoxGenerator\n    block_id = 1\n    bottom_left = '0 1875 0'\n    top_right = '4000 2000 0'\n  []\n  [layer2]\n    input = layer1\n    type = SubdomainBoundingBoxGenerator\n    block_id = 2\n    bottom_left = '0 1740 0'\n    top_right = '4000 1875 0'\n  []\n  [layer3]\n    input = layer2\n    type = SubdomainBoundingBoxGenerator\n    block_id = 3\n    bottom_left = '0 1510 0'\n    top_right = '4000 1740 0'\n  []\n  [layer4]\n    input = layer3\n    type = SubdomainBoundingBoxGenerator\n    block_id = 4\n    bottom_left = '0 1590 0'\n    top_right = '4000 1510 0'\n  []\n  [layer5]\n    input = layer4\n    type = SubdomainBoundingBoxGenerator\n    block_id = 5\n    bottom_left = '0 1255 0'\n    top_right = '4000 1495 0'\n  []\n  [layer6]\n    input = layer5\n    type = SubdomainBoundingBoxGenerator\n    block_id = 6\n    bottom_left = '0 1130 0'\n    top_right = '4000 1255 0'\n  []\n  [layer7]\n    input = layer6\n    type = SubdomainBoundingBoxGenerator\n    block_id = 7\n    bottom_left = '0 917 0'\n    top_right = '4000 1130 0'\n  []\n  [layer8]\n    input = layer7\n    type = SubdomainBoundingBoxGenerator\n    block_id = 8\n    bottom_left = '0 834 0'\n    top_right = '4000 917 0'\n  []\n  [layer9]\n    input = layer8\n    type = SubdomainBoundingBoxGenerator\n    block_id = 9\n    bottom_left = '0 734 0'\n    top_right = '4000 834 0'\n  []\n  [layer10]\n    input = layer9\n    type = SubdomainBoundingBoxGenerator\n    block_id = 10\n    bottom_left = '0 492 0'\n    top_right = '4000 734 0'\n  []\n  [layer11]\n    input = layer10\n    type = SubdomainBoundingBoxGenerator\n    block_id = 11\n    bottom_left = '0 244 0'\n    top_right = '4000 492 0'\n  []\n  [reservoir]\n    input = layer11\n    type = SubdomainBoundingBoxGenerator\n    block_id = 12\n    bottom_left = '1334 834 0'\n    top_right = '2666 917 0'\n  []\n  [inlet]\n    type = ParsedGenerateSideset\n    input = 'reservoir'\n    included_subdomain_ids = 12\n    combinatorial_geometry = '800< y < 900'  \n    new_sideset_name = 'inlet'\n  []\n  [outlet]\n    type = ParsedGenerateSideset\n    input = 'inlet'\n    included_subdomain_ids = 12\n    combinatorial_geometry = '800< y < 900'  \n    new_sideset_name = 'outlet'\n  []\n  [rename]\n    type = RenameBlockGenerator\n    old_block = '1 2 3 4 5 6 7 8 9 10 11 12 0'\n    new_block = 'layer1 layer2 layer3 layer4 layer5 layer6 layer7 layer8 layer9 layer10 layer11 reservoir layer12'\n    input = 'inlet'\n  []\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/28133",
+          "updatedAt": "2024-07-16T03:25:08Z",
+          "publishedAt": "2024-07-15T17:21:18Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "For the last generator\ninstead of\n\ninput = 'inlet'\n\n\nuse\n\ninput = 'outlet'",
+                  "url": "https://github.com/idaholab/moose/discussions/28133#discussioncomment-10053851",
+                  "updatedAt": "2024-07-15T17:24:26Z",
+                  "publishedAt": "2024-07-15T17:24:25Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "you need to have only one output to this tree of mesh generators",
+                          "url": "https://github.com/idaholab/moose/discussions/28133#discussioncomment-10053853",
+                          "updatedAt": "2024-07-15T17:24:40Z",
+                          "publishedAt": "2024-07-15T17:24:40Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "navier-rgb"
+                          },
+                          "bodyText": "awesome. Thanks @GiudGiud. It works. Could you let me know if my combinatorial_geometry = '800< y < 900' is correct for both the inlet and outlet? Here is my --mesh-only info (I'm using subdomain 12):\n Mesh Information:\n  elem_dimensions()={2}\n  spatial_dimension()=2\n  n_nodes()=2121\n    n_local_nodes()=2121\n  n_elem()=2000\n    n_local_elem()=2000\n    n_active_elem()=2000\n  n_subdomains()=13\n  n_elemsets()=0\n  n_partitions()=1\n  n_processors()=1\n  n_threads()=1\n  processor_id()=0\n  is_prepared()=true\n  is_replicated()=true\n\n Mesh Bounding Box:\n  Minimum: (x,y,z)=(       0,        0,        0)\n  Maximum: (x,y,z)=(    4000,     2000,        0)\n  Delta:   (x,y,z)=(    4000,     2000,        0)\n\n Mesh Element Type(s):\n  QUAD4\n\n Mesh Nodesets:\n  Nodeset 0 (bottom), 101 nodes\n   Bounding box minimum: (x,y,z)=(       0,        0,        0)\n   Bounding box maximum: (x,y,z)=(    4000,        0,        0)\n   Bounding box delta: (x,y,z)=(    4000,        0,        0)\n  Nodeset 1 (right), 21 nodes\n   Bounding box minimum: (x,y,z)=(    4000,        0,        0)\n   Bounding box maximum: (x,y,z)=(    4000,     2000,        0)\n   Bounding box delta: (x,y,z)=(       0,     2000,        0)\n  Nodeset 2 (top), 101 nodes\n   Bounding box minimum: (x,y,z)=(       0,     2000,        0)\n   Bounding box maximum: (x,y,z)=(    4000,     2000,        0)\n   Bounding box delta: (x,y,z)=(    4000,        0,        0)\n  Nodeset 3 (left), 21 nodes\n   Bounding box minimum: (x,y,z)=(       0,        0,        0)\n   Bounding box maximum: (x,y,z)=(       0,     2000,        0)\n   Bounding box delta: (x,y,z)=(       0,     2000,        0)\n  Nodeset 4, 6 nodes\n   Bounding box minimum: (x,y,z)=( 1457.73,      800,        0)\n   Bounding box maximum: (x,y,z)=( 2857.14,      900,        0)\n   Bounding box delta: (x,y,z)=( 1399.42,      100,        0)\n\n Mesh Sidesets:\n  Sideset 0 (bottom), 100 sides (EDGE2), 100 elems (QUAD4), 101 nodes\n   Side volume: 4000\n   Bounding box minimum: (x,y,z)=(       0,        0,        0)\n   Bounding box maximum: (x,y,z)=(    4000,        0,        0)\n   Bounding box delta: (x,y,z)=(    4000,        0,        0)\n  Sideset 1 (right), 20 sides (EDGE2), 20 elems (QUAD4), 21 nodes\n   Side volume: 2000\n   Bounding box minimum: (x,y,z)=(    4000,        0,        0)\n   Bounding box maximum: (x,y,z)=(    4000,     2000,        0)\n   Bounding box delta: (x,y,z)=(       0,     2000,        0)\n  Sideset 2 (top), 100 sides (EDGE2), 100 elems (QUAD4), 101 nodes\n   Side volume: 4000\n   Bounding box minimum: (x,y,z)=(       0,     2000,        0)\n   Bounding box maximum: (x,y,z)=(    4000,     2000,        0)\n   Bounding box delta: (x,y,z)=(    4000,        0,        0)\n  Sideset 3 (left), 20 sides (EDGE2), 20 elems (QUAD4), 21 nodes\n   Side volume: 2000\n   Bounding box minimum: (x,y,z)=(       0,        0,        0)\n   Bounding box maximum: (x,y,z)=(       0,     2000,        0)\n   Bounding box delta: (x,y,z)=(       0,     2000,        0)\n  Sideset 4 (inlet), 8 sides (EDGE2), 2 elems (QUAD4), 6 nodes\n   Side volume: 3198.83\n   Bounding box minimum: (x,y,z)=( 1457.73,      800,        0)\n   Bounding box maximum: (x,y,z)=( 2857.14,      900,        0)\n   Bounding box delta: (x,y,z)=( 1399.42,      100,        0)\n\n Mesh Edgesets:\n  None\n\n Mesh Subdomains:\n  Subdomain 0 (layer12): 200 elems (QUAD4, 200 active), 303 active nodes\n   Volume: 800000\n   Bounding box minimum: (x,y,z)=(       0,        0,        0)\n   Bounding box maximum: (x,y,z)=(    4000,      200,        0)\n   Bounding box delta: (x,y,z)=(    4000,      200,        0)\n  Subdomain 1 (layer1): 100 elems (QUAD4, 100 active), 202 active nodes\n   Volume: 400000\n   Bounding box minimum: (x,y,z)=(       0,     1900,        0)\n   Bounding box maximum: (x,y,z)=(    4000,     2000,        0)\n   Bounding box delta: (x,y,z)=(    4000,      100,        0)\n  Subdomain 2 (layer2): 200 elems (QUAD4, 200 active), 303 active nodes\n   Volume: 800000\n   Bounding box minimum: (x,y,z)=(       0,     1700,        0)\n   Bounding box maximum: (x,y,z)=(    4000,     1900,        0)\n   Bounding box delta: (x,y,z)=(    4000,      200,        0)\n  Subdomain 3 (layer3): 100 elems (QUAD4, 100 active), 202 active nodes\n   Volume: 400000\n   Bounding box minimum: (x,y,z)=(       0,     1600,        0)\n   Bounding box maximum: (x,y,z)=(    4000,     1700,        0)\n   Bounding box delta: (x,y,z)=(    4000,      100,        0)\n  Subdomain 4 (layer4): 100 elems (QUAD4, 100 active), 202 active nodes\n   Volume: 400000\n   Bounding box minimum: (x,y,z)=(       0,     1500,        0)\n   Bounding box maximum: (x,y,z)=(    4000,     1600,        0)\n   Bounding box delta: (x,y,z)=(    4000,      100,        0)\n  Subdomain 5 (layer5): 200 elems (QUAD4, 200 active), 303 active nodes\n   Volume: 800000\n   Bounding box minimum: (x,y,z)=(       0,     1300,        0)\n   Bounding box maximum: (x,y,z)=(    4000,     1500,        0)\n   Bounding box delta: (x,y,z)=(    4000,      200,        0)\n  Subdomain 6 (layer6): 200 elems (QUAD4, 200 active), 303 active nodes\n   Volume: 800000\n   Bounding box minimum: (x,y,z)=(       0,     1100,        0)\n   Bounding box maximum: (x,y,z)=(    4000,     1300,        0)\n   Bounding box delta: (x,y,z)=(    4000,      200,        0)\n  Subdomain 7 (layer7): 200 elems (QUAD4, 200 active), 303 active nodes\n   Volume: 800000\n   Bounding box minimum: (x,y,z)=(       0,      900,        0)\n   Bounding box maximum: (x,y,z)=(    4000,     1100,        0)\n   Bounding box delta: (x,y,z)=(    4000,      200,        0)\n  Subdomain 8 (layer8): 98 elems (QUAD4, 98 active), 200 active nodes\n   Volume: 260058\n   Bounding box minimum: (x,y,z)=(       0,      800,        0)\n   Bounding box maximum: (x,y,z)=(    4000,      900,        0)\n   Bounding box delta: (x,y,z)=(    4000,      100,        0)\n  Subdomain 9 (layer9): 100 elems (QUAD4, 100 active), 202 active nodes\n   Volume: 400000\n   Bounding box minimum: (x,y,z)=(       0,      700,        0)\n   Bounding box maximum: (x,y,z)=(    4000,      800,        0)\n   Bounding box delta: (x,y,z)=(    4000,      100,        0)\n  Subdomain 10 (layer10): 200 elems (QUAD4, 200 active), 303 active nodes\n   Volume: 800000\n   Bounding box minimum: (x,y,z)=(       0,      500,        0)\n   Bounding box maximum: (x,y,z)=(    4000,      700,        0)\n   Bounding box delta: (x,y,z)=(    4000,      200,        0)\n  Subdomain 11 (layer11): 300 elems (QUAD4, 300 active), 404 active nodes\n   Volume: 1.2e+06\n   Bounding box minimum: (x,y,z)=(       0,      200,        0)\n   Bounding box maximum: (x,y,z)=(    4000,      500,        0)\n   Bounding box delta: (x,y,z)=(    4000,      300,        0)\n  Subdomain 12 (reservoir): 2 elems (QUAD4, 2 active), 6 active nodes\n   Volume: 139942\n   Bounding box minimum: (x,y,z)=( 1457.73,      800,        0)\n   Bounding box maximum: (x,y,z)=( 2857.14,      900,        0)\n   Bounding box delta: (x,y,z)=( 1399.42,      100,        0)\n  Global mesh volume = 8e+06",
+                          "url": "https://github.com/idaholab/moose/discussions/28133#discussioncomment-10053959",
+                          "updatedAt": "2024-07-15T17:38:02Z",
+                          "publishedAt": "2024-07-15T17:38:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I dont think you need \"100\" width in y to select a sideset? are the elements really not aligned with the X axis normal ?",
+                          "url": "https://github.com/idaholab/moose/discussions/28133#discussioncomment-10054004",
+                          "updatedAt": "2024-07-15T17:44:31Z",
+                          "publishedAt": "2024-07-15T17:44:31Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "navier-rgb"
+                  },
+                  "bodyText": "Hello, yes they're aligned with the X axis normal. How about this?\n  [inlet]\n    type = ParsedGenerateSideset\n    input = 'reservoir'\n    included_subdomain_ids = 12\n    combinatorial_geometry = 'x<1457.73'  \n    new_sideset_name = 'inlet'\n  []\n  [outlet]\n    type = ParsedGenerateSideset\n    input = 'inlet'\n    included_subdomain_ids = 12\n    combinatorial_geometry = 'x<2857.14'  \n    new_sideset_name = 'outlet'\n  []",
+                  "url": "https://github.com/idaholab/moose/discussions/28133#discussioncomment-10054091",
+                  "updatedAt": "2024-07-15T17:54:38Z",
+                  "publishedAt": "2024-07-15T17:54:37Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Implementing a set of boundary conditions",
+          "author": {
+            "login": "Meghasemi-96"
+          },
+          "bodyText": "Hi,\nHope you are doing well.\nI have a question regarding applying boundary conditions. I am dealing with two variables, namely p1 and p2 (pressure for Fick's law). When it comes to the inlet boundary condition, I have the equality of p1=p2=4, and the values are already set accordingly with DirichletBC. On the other hand, for the outlet, two different conditions apply. Firstly, p1+p2=1 , and I have the condition J1/J2=p1/p2, indicating that the ratio of fluxes is equal to the ratio of pressures. It's important to note that p1 and p2 are coupled, and I'm looking for a way to properly incorporate these conditions for the outlet. I am wondering how I can implement these by MOOSE. Is there any availabe BCs or should I write my own?\nThanks a lot.\nBests,\nMehdi",
+          "url": "https://github.com/idaholab/moose/discussions/25296",
+          "updatedAt": "2024-07-15T17:33:36Z",
+          "publishedAt": "2023-08-24T18:19:34Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nI think you could have a Dirichlet boundary condition for p1 that is simply: p1 = p2 J1 / J2 with p1 being the boundary condition variable and all the others being coupled variables.\nAre J1 and J2 nonlinear variables? (in the system, being solved for) or are they postprocessed quantities?\nI have not seen this anywhere else, you will probably have to write your own.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/25296#discussioncomment-6817211",
+                  "updatedAt": "2023-08-24T21:13:55Z",
+                  "publishedAt": "2023-08-24T21:13:54Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Meghasemi-96"
+                          },
+                          "bodyText": "Hello Guillaume,\nThanks for your response. The governing equation for my case is J = -D(dp/dx), where J represents flux, D stands for diffusion, and p refers to pressure. The solvation is in a steady state. I am dealing with a binary gas (single phase, two components) transport process in a 2D structure along the x-direction.\nI don't encounter any challenges with the inlet boundary condition since the values of pressure for both components are determined. However, at the outlet, I need to apply two boundary conditions where the exact values of the pressure for each component are not determined. Instead, I must satisfy the conditions p1 + p2 = 1 and J1/J2 = p1/p2. It appears that one of these conditions should be applied as a constraint, but I'm uncertain about the appropriate way to implement them.\nAs you mentioned, J is a post-processed quantity. In each step of the solvation process, first, values should be assigned to p1 and p2 to accurately satisfy the condition p1 + p2 = 1. Afterward, J should be calculated as a post-processed quantity to verify whether the chosen p1 and p2 values for the outlet meet this condition J1/J2 = p1/p2. If the condition J1/J2 = p1/p2 is not fulfilled, it is needed to make new guesses for p1 or p2. An iterative solvation approach should be employed, where the values of p1 and p2 should be adjusted until the condition J1/J2 = p1/p2 is satisfied.\nThanks.\nBests,\nMehdi",
+                          "url": "https://github.com/idaholab/moose/discussions/25296#discussioncomment-6821134",
+                          "updatedAt": "2023-08-25T09:05:57Z",
+                          "publishedAt": "2023-08-25T09:05:28Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Could you compute J in the boundary conditions object?\nThat would make things simple, you could impose p1+p2=1 in the p1 equation and J1/J2 = p1/p2 in the boundary condition for p2\nboth could be Dirichlet boundary conditions",
+                          "url": "https://github.com/idaholab/moose/discussions/25296#discussioncomment-6823538",
+                          "updatedAt": "2023-08-25T13:58:19Z",
+                          "publishedAt": "2023-08-25T13:58:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "maxnezdyur"
+                          },
+                          "bodyText": "I am unsure if I understand what you need to do, but after solving the system of equations for your BCs, you could apply the BCs below for p1 and p2, and you wouldn't have to use an iterative approach.\n\n$p_1 = \\frac{J_1}{J_1 + J_2} $\n$p_2 = \\frac{J_2}{J_1 + J_2} $",
+                          "url": "https://github.com/idaholab/moose/discussions/25296#discussioncomment-6825045",
+                          "updatedAt": "2023-08-25T16:44:50Z",
+                          "publishedAt": "2023-08-25T16:44:49Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "Meghasemi-96"
+                  },
+                  "bodyText": "Hello,\nThanks for your help. I followed this idea by calculating the flux (J) with a postprocessor (SideDiffusiveFluxAverage) and imposing the values for each variable on boundary with CoupledDirichletBC, and it worked. However, this only works if the diffusivity values are constant numbers (J = -D(dp/dx), and D=const). If I make diffusivity values a function of variables, I kind of face a mass balance problem and the input and output flux are not the same anymore (they are for constant diffusivity case).\nIn more details, I want to simulate binary gas transport where only Fickian diffusion (J = -D(dp/dx)) exists. Here, for each gas, diffusion is a function of its partial pressure: D1 = f(p1)  and D2= f(p2) . The BC of inlet is p1=p2=5 and the outlet BC is p1+p2=1 and J1/J2 = p1/p2. The problem is solved but at the end the fluxes are not the same in the inlet and outlet for each variable as it should be like the constant diffusivity case (see below).\n| time                  | uoutppl           | uoutppr                | voutppl        | voutppr        |\n+----------------+----------------+----------------+----------------+----------------+\n|   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |\n|  1.000000e+00  |  -6.600876e-01 |   6.600876e-01   |  -3.754483e-01 |   3.754483e-01 |\nWhich uoutppl, uoutppr, voutppl, voutppr are left and right boundary postprocessor (fluxes) values for variables u and v, respectively. So I was wondering if you could help me understand how this discrepancy happens in variable dependent case. I set the execute_on parameter for postprocessor to after each linear iteration as well, to keep it update. Please let me know your thoughts. Thanks.",
+                  "url": "https://github.com/idaholab/moose/discussions/25296#discussioncomment-10017702",
+                  "updatedAt": "2024-07-11T07:18:46Z",
+                  "publishedAt": "2024-07-11T07:18:45Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nu = p1 and v=p2?\nSo you are imposing J1/J2 = p1/p2 but the postprocessing is not showing this is working?\np1=p2 on the inlet is working and shown to work by a SideAveragePP right?\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/25296#discussioncomment-10021976",
+                          "updatedAt": "2024-07-11T14:27:14Z",
+                          "publishedAt": "2024-07-11T14:27:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Meghasemi-96"
+                          },
+                          "bodyText": "Dear Guillaume,\nThanks for your reply.\nYes u and v are pressure variables p1 and p2. As I mentioned we imposed the two boundary conditions with CoupledDirichletBC and using postprocessors. The first condition is p1+p2=1 which is implemented as follow:\n#include \"CoupledDirichletBC.h\"\nregisterMooseObject(\"MOOSE_MMMApp\", CoupledDirichletBC);\n \nInputParameters\nCoupledDirichletBC::validParams()\n{\n  InputParameters params = NodalBC::validParams();\n \n  // Specify input parameters that we want users to be able to set:\n  params.addParam<Real>(\"alpha\", 1.0, \"Value multiplied by the coupled value on the boundary\");\n  params.addRequiredCoupledVar(\"some_var\", \"Value on the boundary\");\n  return params;\n}\n \nCoupledDirichletBC::CoupledDirichletBC(const InputParameters & parameters)\n  : NodalBC(parameters),\n    // store the user-specified parameters from the input file...\n    _alpha(getParam<Real>(\"alpha\")),        // for the multiplier\n    _some_var_val(coupledValue(\"some_var\")) // for the coupled variable\n{\n}\n \nReal\nCoupledDirichletBC::computeQpResidual()\n{\n  // For dirichlet BCS, u=BC at the boundary, so the residual includes _u and the desired BC value:\n  return _u[_qp] - (_alpha - _some_var_val[_qp]);\n}\n\nand is called in the input file like this:\n    [r3]\n      type = CoupledDirichletBC\n      variable = u\n      boundary = 'front'\n      some_var = v\n      alpha = 1\n    []\n\nThe other condition is J1/J2 = p1/p2 which is written and used as follows:\n#include \"Mehdi.h\"\n \nregisterMooseObject(\"MOOSE_MMMApp\", Mehdi);\n \nInputParameters\nMehdi::validParams()\n{\n  InputParameters params = NodalBC::validParams();\n \n  // Specify input parameters that we want users to be able to set:\n  // params.addParam<Real>(\"alpha\", 1.0, \"Value multiplied by the coupled value on the boundary\");\n  params.addRequiredCoupledVar(\"some_var\", \"Value on the boundary\");\n  params.addRequiredParam<PostprocessorName>(\n      \"postprocessor1\", \"The postprocessor to set the value to on the boundary.\");\n  params.addRequiredParam<PostprocessorName>(\n      \"postprocessor2\", \"The postprocessor to set the value to on the boundary.\");\n  return params;\n}\n \nMehdi::Mehdi(const InputParameters & parameters)\n  : NodalBC(parameters),\n    // store the user-specified parameters from the input file...\n    // _alpha(getParam<Real>(\"alpha\")),        // for the multiplier\n    _some_var_val(coupledValue(\"some_var\")), // for the coupled variable\n    _postprocessor_value1(getPostprocessorValue(\"postprocessor1\")),\n    _postprocessor_value2(getPostprocessorValue(\"postprocessor2\"))\n{\n}\n \nReal\nMehdi::computeQpResidual()\n{\n  // For dirichlet BCS, u=BC at the boundary, so the residual includes _u and the desired BC value:\n  if (_postprocessor_value2==0)\n  {\n  return _u[_qp] - ((_postprocessor_value1) * _some_var_val[_qp]);\n  }\n  else\n  return _u[_qp] - ((_postprocessor_value1/_postprocessor_value2) * _some_var_val[_qp]);\n}\n\n    [r4]\n      type = Mehdi\n      variable = v\n      boundary = 'front'\n      some_var = u\n      postprocessor1 = voutppr\n      postprocessor2 = uoutppr\n    []\n\nand hence the postprocessors voutppr and uoutppr for right (front in 3D) boundary voutppl and uoutppl for left (back in 3D) boundary are defined as:\n  [Postprocessors]\n    [uoutppr]\n      type = SideFluxAverage\n      variable = u\n      boundary = front\n      diffusivity = D1\n      execute_on = 'INITIAL LINEAR'\n      outputs = console\n    []\n    [voutppr]\n      type = SideFluxAverage\n      variable = v\n      boundary = front\n      diffusivity = D2\n      execute_on = 'INITIAL LINEAR'\n      outputs = console\n    []\n    [uoutppl]\n      type = SideFluxAverage\n      variable = u\n      boundary = back\n      diffusivity = D1\n      outputs = console\n      execute_on = 'INITIAL LINEAR'\n    []\n    [voutppl]\n      type = SideFluxAverage\n      variable = v\n      boundary = back\n      diffusivity = D2\n      outputs = console\n      execute_on = 'INITIAL LINEAR'\n    []\n  []\n\nThe code has been benchmarked in constant diffusivity cases and as showed in the previous comment the flux values are equal for each variable in two boundaries:\n  [Materials]\n    [diffu0]\n      type = ParsedMaterial\n      property_name = D1\n    expression = '1e+5'\n    coupled_variables = 'u v'\n    block = 0\n    []\n    [diffv0]\n        type = ParsedMaterial\n        property_name = D2\n        expression = '1.667e+3'\n        coupled_variables = 'u v'\n        block = 0\n    []\n    [diffu1]\n      type = ParsedMaterial\n      property_name = D1\n      expression = '1e+3'\n      coupled_variables = 'u v'\n      block = 1\n    []\n    [diffv1]\n        type = ParsedMaterial\n        property_name = D2\n        expression = '6.667'\n        coupled_variables = 'u v'\n        block = 1\n    []\n  []\n\n| time | uoutppl | uoutppr | voutppl | voutppr |\n+----------------+----------------+----------------+----------------+----------------+\n| 0.000000e+00 | 0.000000e+00 | 0.000000e+00 | 0.000000e+00 | 0.000000e+00 |\n| 1.000000e+00 | -6.600876e-01 | 6.600876e-01 | -3.754483e-01 | 3.754483e-01 |\n\nBut as diffusivity becomes a function of variables u and v, then the problem is solved but flux values are not equal for each variable which is not correct. So I was wondering where the issue comes from to solve it, is it because of using postprocessors or something else. Please let me know if you need further information. Thanks.",
+                          "url": "https://github.com/idaholab/moose/discussions/25296#discussioncomment-10049714",
+                          "updatedAt": "2024-07-15T10:48:29Z",
+                          "publishedAt": "2024-07-15T10:48:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "so these two constraints are imposed both with nodal BCs on the same boundary?\nUsing postprocessors should not affect the result. It will slow down convergence as contributions to the Jacobian are lost when the numbers are passed through a postprocessor.\nThe nodal bcs/constraints are being imposed on every node. Should this entail that the integration over all nodes on the boundaries has this equality as well?\nWhat I mean is that imposing a ratio of J1/J2 = p1/p2 on every node will get:\nintegral(J1/J2) = integral(p1/p2)\nit wont get\nintegral(J1) = intgral(J2) * Integral(p1/p2)",
+                          "url": "https://github.com/idaholab/moose/discussions/25296#discussioncomment-10053496",
+                          "updatedAt": "2024-07-15T16:45:54Z",
+                          "publishedAt": "2024-07-15T16:45:53Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Meghasemi-96"
+                          },
+                          "bodyText": "Dear Guillaume,\nThanks for your reply.\nYes, you are correct. I believe we are looking for the first scenario where integral (J1/J2) = integral(p1/p2), however, as I cannot think of other reason for this problem. I can check the other way as well. Would you please advise how I can implement the second boundary condition where integral(J1) = integral(J2) * Integral(p1/p2)?",
+                          "url": "https://github.com/idaholab/moose/discussions/25296#discussioncomment-10053641",
+                          "updatedAt": "2024-07-15T17:00:01Z",
+                          "publishedAt": "2024-07-15T17:00:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I think you may already be in the second case, since you compute J1 and J2 in a global way then impose it in a local manner to p1 and p2.\nThis was just an example. my intuition is that something similar is happening when D_1/2 are not constant",
+                          "url": "https://github.com/idaholab/moose/discussions/25296#discussioncomment-10053842",
+                          "updatedAt": "2024-07-15T17:23:53Z",
+                          "publishedAt": "2024-07-15T17:23:52Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Meghasemi-96"
+                          },
+                          "bodyText": "Dear Guillaume,\nThanks for your prompt response. I see. I was wondering how this constraint can be imposed locally? Should J1 and J2 be calculated directly in BCs locally instead of using postprocessors?",
+                          "url": "https://github.com/idaholab/moose/discussions/25296#discussioncomment-10053895",
+                          "updatedAt": "2024-07-15T17:29:35Z",
+                          "publishedAt": "2024-07-15T17:29:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "You could try that but it will likely not be straightforward inside a nodal bc to compute the current which is integrated on sides instead\nYou could store the diffusive current in an auxiliary variable and use that to get the local value of the current",
+                          "url": "https://github.com/idaholab/moose/discussions/25296#discussioncomment-10053921",
+                          "updatedAt": "2024-07-15T17:34:50Z",
+                          "publishedAt": "2024-07-15T17:33:36Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Source and sink terms in Cahn-Hilliard equation",
+          "author": {
+            "login": "mdh23rct"
+          },
+          "bodyText": "Dear MOOSE experts,\nWould you be kind to let me know the way of adding sink and source terms in the Cahn-Hilliard equation, to be specific in MOOSE!\nI would also appreciate if you could provide me a step-by-step guideline to do so, if possible!\nThanks for your support and time.\nRegards.",
+          "url": "https://github.com/idaholab/moose/discussions/25511",
+          "updatedAt": "2024-07-15T16:51:49Z",
+          "publishedAt": "2023-09-19T12:58:34Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nHow is the source or sink term calculated?\nWhat does it depend on?\nI would recommend looking through the phase field module for examples with such terms\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/25511#discussioncomment-7046623",
+                  "updatedAt": "2023-09-19T13:49:54Z",
+                  "publishedAt": "2023-09-19T13:49:54Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mdh23rct"
+                          },
+                          "bodyText": "Dear Dr. Guillaume,\nI appreciate your reply.\n\nThe source term is probabilistic. looks like:\n\nPk(r,t) = B*Pi(r, t); where Pi is the probability of generation of species i.\n\nThe sink term is deterministic, depends on parameters, and is given by:\n\nRik(r,t) = RrCkCi; where Rr is a rate parameter, Ck and Ci are the concentration of species k and i, respectively.\nI have looked at the phase field module, but not finding examples that elaborate on the way of adding source and sink terms in Cahn-Allen equation.\nWould you be kind to point me to the right direction! If there is a particular example that explains this, I would appreciate if you could mention.\nThanks and Best regards.",
+                          "url": "https://github.com/idaholab/moose/discussions/25511#discussioncomment-7047646",
+                          "updatedAt": "2023-09-19T15:09:52Z",
+                          "publishedAt": "2023-09-19T15:09:51Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I think you could write these terms as ADParsedMaterial\nhttps://mooseframework.inl.gov/source/materials/ParsedMaterial.html\nand then use this kernel to add the sink or source to the equation\nhttps://mooseframework.inl.gov/source/kernels/ADMatCoupledForce.html",
+                          "url": "https://github.com/idaholab/moose/discussions/25511#discussioncomment-7047861",
+                          "updatedAt": "2023-09-19T15:29:28Z",
+                          "publishedAt": "2023-09-19T15:29:27Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mdh23rct"
+                          },
+                          "bodyText": "Dear Dr. Guillaume,\nI appreciate your reply. I have other questions.\n\nI need to add a stochastic function as a source term to the Cahn-Hilliard equation. The stochastic function should generate random numbers scaled by a chosen parameter. Would you be kind to let me know, how I could do so in MOOSE?\nI have tried to use ParsedElementDeletionGenerator. However, it shows an error:\nA 'ParsedElementDeletionGenerator' is not a registered object.\nIf you are trying to find this object in a dynamically loaded library, make sure that\nthe library can be found either in your \"Problem/library_path\" parameter or in the\nMOOSE_LIBRARY_PATH environment variable.\n\nPlease be aware that I have turned on all the modules (including tensor mechanics and phase field) in the Makefile. Still I am getting this problem. Is there any other issue!\nThanks,",
+                          "url": "https://github.com/idaholab/moose/discussions/25511#discussioncomment-7062670",
+                          "updatedAt": "2023-09-20T20:23:22Z",
+                          "publishedAt": "2023-09-20T20:23:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nso 1) you can use the RandomInterface when coding in MOOSE\nsee all the APIs you get from this:\nhttps://mooseframework.inl.gov/docs/doxygen/moose/classRandomInterface.html\n\nThis mesh generator was added recently. you ll need to update moose to use it\n\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/25511#discussioncomment-7062752",
+                          "updatedAt": "2023-09-20T20:35:46Z",
+                          "publishedAt": "2023-09-20T20:35:45Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mdh23rct"
+                          },
+                          "bodyText": "Dear Dr. Guillaume,\nThank you for your prompt reply. One question. I looked at the input parameters of ParsedElementDeletionGenerator. It allows using volume or co-ordinates of elements as a deletion criteria. However, I was planning to use the non-conserved order parameter as a element deletion criteria after each time step of a transient analysis. Is it allowed though?? My code looks like:\n[Mesh]\n    [gmg]\n    type = GeneratedMeshGenerator\n    dim = 2\n    nx = 10\n    ny = 10\n    xmax = 500\n    ymax = 500\n    elem_type = QUAD\n    []\n    [delete]\n    type = ParsedElementDeletionGenerator\n    input = gmg\n    expression = 'psi > 0.9'\n    []\n[]\n\nThanks.",
+                          "url": "https://github.com/idaholab/moose/discussions/25511#discussioncomment-7062810",
+                          "updatedAt": "2023-09-20T20:47:04Z",
+                          "publishedAt": "2023-09-20T20:43:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "hello\nno that s not allowed. Variables are not created when the mesh is being generated.\nYou ll have to work with this object instead:\nhttps://mooseframework.inl.gov/source/userobjects/CutElementSubdomainModifier.html\nand move these elements to a subdomain where no physics is active",
+                          "url": "https://github.com/idaholab/moose/discussions/25511#discussioncomment-7062837",
+                          "updatedAt": "2023-09-20T20:48:44Z",
+                          "publishedAt": "2023-09-20T20:48:43Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mdh23rct"
+                          },
+                          "bodyText": "Dear Dr. Guillaume,\nAs you instructed, I tried to implement the CutElementSubdomainModifier. My code looks like:\n[Mesh]\n    use_displaced_mesh = true\n    [./gmg]\n    type = GeneratedMeshGenerator\n    dim = 2\n    nx = 10\n    ny = 10\n    xmax = 500\n    ymax = 500\n    elem_type = QUAD\n    [../]\n[]\n\n [Modules]\n [./PhaseField]\n       [./Nonconserved]\n        [./psi]\n          free_energy = F\n          mobility = L\n          kappa = kappa_c\n          coupled_variables = c\n        [../]\n       [../]\n      [../]\n    []\n\n    [XFEM]\n      output_cut_plane = true\n    []\n\n[UserObjects]\n  [./level_set_cut_uo]\n    type = LevelSetCutUserObject\n    level_set_var = psi\n    heal_always = true\n  [../]\n  [./esm]\n    type = CutElementSubdomainModifier\n    geometric_cut_userobject = level_set_cut_uo\n    apply_initial_conditions = false\n  [../]\n[]\n\n[Functions]\n  [./psi_func]\n    type = ParsedFunction\n    expression = 'psi>0.8'\n  [../]\n[]\n\n#[AuxVariables]\n  #[./psi]\n # [../]\n#[] \n\n[Variables]\n    [./psi]\n      order = FIRST\n     family = LAGRANGE\n    [../]\n  []\n\n[AuxKernels]\n  [./psi_function]\n    type = FunctionAux\n    variable = psi\n    function = psi_func\n  [../]\n[]\n\n[ICs]\n[./psi_IC]\n      type = ConstantIC\n      variable = psi\n      value = 0\n    [../]\n  []\n\nHowever, when I run the code, it shows Variable 'psi' does not exist in this system. Next, if I try to make psi an auxiliary variable, it shows psi cannot be an auxiliary or non-linear variable at the same time. What I could do under this circumstance? Would you be kind to let me know!\nThe main objective is to remove elements from the calculation after each time step of a transient analysis, when the non-conserved order parameter (psi) of these elements reaches 0.8.\nThanks for your support.",
+                          "url": "https://github.com/idaholab/moose/discussions/25511#discussioncomment-7069916",
+                          "updatedAt": "2023-09-21T18:12:53Z",
+                          "publishedAt": "2023-09-21T12:23:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "psi_func is missing parameters i think.\nYou need to be declairing the coupled_variables of a parsed expression.\nso add\ncoupled_variables = psi\nthis might not be the only problem let me try to run it",
+                          "url": "https://github.com/idaholab/moose/discussions/25511#discussioncomment-7073459",
+                          "updatedAt": "2023-09-21T18:14:06Z",
+                          "publishedAt": "2023-09-21T18:14:05Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "this is also invalid\n[AuxKernels]\n  [psi_function]\n    type = FunctionAux\n    variable = psi\n    function = psi_func\n  []\n[]\n\nbecause psi is a nonlinear variable rn.\n\ndo you want to solve for psi?\nwhat do you need this psi_function for?",
+                          "url": "https://github.com/idaholab/moose/discussions/25511#discussioncomment-7073475",
+                          "updatedAt": "2023-09-21T18:17:34Z",
+                          "publishedAt": "2023-09-21T18:17:33Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mdh23rct"
+                          },
+                          "bodyText": "Dear Dr. Guillaume,\nThank you for your reply.\n\nYes, I need to solve the psi at each time step. For that I am using\n\n[Modules]\n     [./PhaseField]\n       [./Conserved]\n         [./c]\n           free_energy = F\n           mobility = M\n           kappa = kappa_c\n           solve_type = REVERSE_SPLIT\n           coupled_variables = psi\n         [../]\n       [../]\n      [../]\n     [./PhaseField]\n       [./Nonconserved]\n        [./psi]\n          free_energy = F\n          mobility = L\n          kappa = kappa_c\n          coupled_variables = c\n        [../]\n       [../]\n      [../]\n    []\n\n\nThe psi_function I am using to choose the deletion threshold for elements. In this case\n\n[Functions]\n  [./psi_func]\n    type = ParsedFunction\n    expression = 'psi>0.8'\n  [../]\n[]\n\nI don't know if I could clarify properly.\nThanks.",
+                          "url": "https://github.com/idaholab/moose/discussions/25511#discussioncomment-7073591",
+                          "updatedAt": "2023-09-22T03:01:05Z",
+                          "publishedAt": "2023-09-21T18:32:54Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "I think this is the object to use\nhttps://mooseframework.inl.gov/source/userobjects/CoupledVarThresholdElementSubdomainModifier.html\nit works with a threshold on a variable, so you can use psi as the variable directly",
+                  "url": "https://github.com/idaholab/moose/discussions/25511#discussioncomment-7091515",
+                  "updatedAt": "2023-09-24T01:41:46Z",
+                  "publishedAt": "2023-09-24T01:41:39Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mdh23rct"
+                          },
+                          "bodyText": "Dear Dr. Guillaume,\nThank you for your time. I have coded using the SubdomainModifier you have suggested.\n[Mesh]\n  [gen]\n    type = GeneratedMesh\n    dim = 2\n    nx = 10\n    ny = 10\n    xmax = 500\n    ymax = 500\n    elem_type = QUAD\n  []\n  [left]\n    type = SubdomainBoundingBoxGenerator\n    input = 'gen'\n    block_id = 1\n    bottom_left = '0 0 0'\n    top_right = '500 500 0'\n  []\n  [file]\n    type = FileMeshGenerator\n    file = '../mesh/deletion.e'\n  [] \n[]\n\n[UserObjects]\n   [./moving_element]\n      type = CoupledVarThresholdElementSubdomainModifier\n      coupled_var = 'psi'\n      criterion_type = ABOVE\n      threshold = 0.80\n      subdomain_id = 1\n      moving_boundary_name = moving_boundary\n      execute_on = 'TIMESTEP_END'\n    [../]\n  []\n\nHowever, when I run the file it shows the error:\nTask add_mesh_generator is not registered to build MooseMesh derived objects.\nAm I missing anything in the code??\nThanks.",
+                          "url": "https://github.com/idaholab/moose/discussions/25511#discussioncomment-7094069",
+                          "updatedAt": "2024-06-18T15:40:32Z",
+                          "publishedAt": "2023-09-24T14:52:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mdh23rct"
+                          },
+                          "bodyText": "Dear Dr. Guillaume,\nPlease be aware that I am using the module:\n[Modules]\n  [./PhaseField]\n      [./Conserved]\n        [./c]\n          free_energy = F\n          mobility = M\n          kappa = kappa_c\n          solve_type = REVERSE_SPLIT\n        [../]\n      [../]\n  [../]\n[] \n\nwith this element deletion procedure.\nThanks.",
+                          "url": "https://github.com/idaholab/moose/discussions/25511#discussioncomment-7094678",
+                          "updatedAt": "2024-06-18T15:40:14Z",
+                          "publishedAt": "2023-09-24T17:01:48Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mdh23rct"
+                          },
+                          "bodyText": "Dear Dr. Guillaume,\nHave solved the error. Had to change type = GeneratedMesh to GeneratedMeshGenerator.\nNo worries.",
+                          "url": "https://github.com/idaholab/moose/discussions/25511#discussioncomment-7094767",
+                          "updatedAt": "2023-09-24T17:18:08Z",
+                          "publishedAt": "2023-09-24T17:18:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jackeggemeyer"
+                          },
+                          "bodyText": "@mdh23rct were you ever able to get sink and recombination working?",
+                          "url": "https://github.com/idaholab/moose/discussions/25511#discussioncomment-9766183",
+                          "updatedAt": "2024-06-13T17:38:37Z",
+                          "publishedAt": "2024-06-13T17:38:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "DanoLV"
+                          },
+                          "bodyText": "Hello @mdh23rct. I am trying to do add sink and recombination terms to a phase field problem too. Did you manage to make it work?",
+                          "url": "https://github.com/idaholab/moose/discussions/25511#discussioncomment-9807972",
+                          "updatedAt": "2024-06-18T15:38:22Z",
+                          "publishedAt": "2024-06-18T15:38:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@laagesen do you know of an example of sink / recombination for CH? This does not seem like a complicated problem",
+                          "url": "https://github.com/idaholab/moose/discussions/25511#discussioncomment-9808022",
+                          "updatedAt": "2024-06-18T15:42:29Z",
+                          "publishedAt": "2024-06-18T15:42:28Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "laagesen"
+                          },
+                          "bodyText": "A sink term can be added with the BodyForce or MaskedBodyForce kernel. We don't have a recombination kernel in MOOSE, because that is radiation-specific it is in Marmot.",
+                          "url": "https://github.com/idaholab/moose/discussions/25511#discussioncomment-9808663",
+                          "updatedAt": "2024-06-18T16:43:50Z",
+                          "publishedAt": "2024-06-18T16:43:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jackeggemeyer"
+                          },
+                          "bodyText": "@laagesen Thank you so much! I am trying to recreate your paper: https://www.sciencedirect.com/science/article/pii/S0927025622004839#!\nI want to add the recombination part to my phase field code. How difficult would it be to code my own kernel that takes care of the recombination of vacancies and interstitials? I have made some progress after watching the MOOSE dev seminar but I haven't made much progress due to my lack of C++ coding skill.",
+                          "url": "https://github.com/idaholab/moose/discussions/25511#discussioncomment-9808739",
+                          "updatedAt": "2024-06-18T16:53:40Z",
+                          "publishedAt": "2024-06-18T16:51:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@jackeggemeyer you could request access to marmot. No guarantees and it will take some time, but best start early.\nhttps://ncrcaims.inl.gov/Identity/Account/Login",
+                          "url": "https://github.com/idaholab/moose/discussions/25511#discussioncomment-9808772",
+                          "updatedAt": "2024-06-18T16:54:50Z",
+                          "publishedAt": "2024-06-18T16:54:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jackeggemeyer"
+                          },
+                          "bodyText": "@GiudGiud Thanks! I applied a little bit ago, and my application is in review. My advisor wants me to recreate some kernels for practice. Would remaking this kernel be that difficult?\nP.S.\nI imagine you guys also can't give me much assistance due the kernel Im trying to recreate is restricted.",
+                          "url": "https://github.com/idaholab/moose/discussions/25511#discussioncomment-9808847",
+                          "updatedAt": "2024-06-18T17:06:24Z",
+                          "publishedAt": "2024-06-18T17:01:44Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "jackeggemeyer"
+                  },
+                  "bodyText": "@zahidhasan83 I was unable to contact you in any other way or tag you on a new thread so apologies for continuing this here if you are still able to help. I am still working on my Phase Field Model with sink and recombination. I have added source and sink using MaskedBodyForce however I can only get them to sink away from each other as seen in the images below.\n\n\n\nDo you hyave any idea on why this occurs? I have swapped the signs, values and many other constants but I can only get sink to work in the opposite. Any suggestions to fix this? My input file that creates this is provided below\nAlso once I add recombination I can validate that recombination \"works\" from this paper https://www.sciencedirect.com/science/article/pii/S0927025622004839. However outside of the desnity of vacaccnies converging to a value of 0.01 which it should, the behavior of the system is poor. Convergnace at the begining of the simution also becomes really bad and gets better later in the simulation. This often creating cubes which really confuse me, or diffusing into the interface creating just one phase than randomly spindollaly decomposes multiple time steps later. It also likes to decompose into a mystery -1 phase which i cant control and happens very randomly. I have added my .c and .h files if that helps.\nI understand this is a really loaded question but I am lost messing around with constants trying to get the correct behevior to happen. Do you guys have any suggestions that keep that phases more stable so they can sink arond the lattice instead of diffusing?\nsinkandrecomEggemeyer.txt\nGrandPotentialRecombinationHFILE.txt\nGrandPotentialRecombinationCFILE.txt",
+                  "url": "https://github.com/idaholab/moose/discussions/25511#discussioncomment-10052863",
+                  "updatedAt": "2024-07-15T15:39:25Z",
+                  "publishedAt": "2024-07-15T15:39:25Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "zahidhasan83"
+                          },
+                          "bodyText": "@jackeggemeyer Dear Jack, please have my personal e-mail address: md.zahidhasan83@yahoo.de\nI will break down the problem in small steps first. Before approaching the cluster problem, I would address a single void.\n\nuse the source term of vacancies and let the vacancies diffuse to the void. If the void grows in size, good.\nnext, do the opposite. if the void shrinks, its great.\nFinally, introduce the recombination term in the model. I mean interstitial and vacancy recombination along with their source terms. Now see what happens.\n\nThe images you have attached look like redistribution of vacancies within the voids if I am correct. Larger voids are gowing at the expense of the small one. They are not all growing alltogether due to vacancy supersaturation.\nFor convergence, use automatic_scaling. Cube maybe related to the mesh resolution. I once had such a problem, mesh refinement solved the issue.\nI will have a look at the files you have forwarded. Will come back as soon as I can.\nCheers,\nZahid",
+                          "url": "https://github.com/idaholab/moose/discussions/25511#discussioncomment-10053556",
+                          "updatedAt": "2024-07-15T16:51:49Z",
+                          "publishedAt": "2024-07-15T16:51:49Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Units in MOOSE",
+          "author": {
+            "login": "agniksr"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nSo I am trying to solve the heat conduction equation on an annular cylinder made out of zircaloy-2. I have in SI units the various parameters required, such as specific heat, density, thermal expansion coefficient and thermal conductivity. However, my mesh dimensions are in centimeters and not meters, so should i change all my parameters in CGS units or should i just convert the length part, or is there something else i should do",
+          "url": "https://github.com/idaholab/moose/discussions/28128",
+          "updatedAt": "2024-07-15T15:38:23Z",
+          "publishedAt": "2024-07-14T07:39:24Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYou can use a transformMeshGenerator to scale your mesh back to meters\nUse the FileMeshGenerator to read your original mesh and set it as the input to the transformMeshGenerator\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/28128#discussioncomment-10045655",
+                  "updatedAt": "2024-07-14T22:16:07Z",
+                  "publishedAt": "2024-07-14T22:16:07Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "agniksr"
+                          },
+                          "bodyText": "Hey\nWhat I meant was that my mesh is a annular pipe which needs to be in centimeters (like 7.5cm inner radius and 10cm outer radius).\nSo do i need to modify the values of the constants like converting them or something like that",
+                          "url": "https://github.com/idaholab/moose/discussions/28128#discussioncomment-10047191",
+                          "updatedAt": "2024-07-15T05:41:35Z",
+                          "publishedAt": "2024-07-15T05:41:34Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "You need to be consistent between the mesh units and the units in use in the simulation\nEither scale the mesh or scale the constants.",
+                          "url": "https://github.com/idaholab/moose/discussions/28128#discussioncomment-10052853",
+                          "updatedAt": "2024-07-15T15:38:24Z",
+                          "publishedAt": "2024-07-15T15:38:23Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "MPI vs serial displacement results",
+          "author": {
+            "login": "Flolaffel"
+          },
+          "bodyText": "Hello,\nI recently added MPI communication to my app and ran a few tests to ensure that my MPI runs deliver the same results as my serial runs. But they didn't. So I started debugging and what I found was that my MPI communication works as intended but MOOSE delivers slightly differing nodal displacements for serial and MPI.\nTake the follwing input as an example and run it in serial and then with MPI. The nodal displacements will be very close but not equal. This seems like a minor difference but for my application this error adds up over time which leads to significant differences in my end result.\nnx = 2\nny = 2\nE0 = 1\nnu = 0.3\n\n[GlobalParams]\n  displacements = 'disp_x disp_y'\n[]\n\n[Mesh]\n  [domain]\n    type = GeneratedMeshGenerator\n    dim = 2\n    xmin = -5\n    xmax = 5\n    ymin = -5\n    ymax = 5\n    nx = ${nx}\n    ny = ${ny}\n  []\n  [top_right]\n    type = ExtraNodesetGenerator\n    input = domain\n    new_boundary = tr\n    coord = '5 5 0'\n  []\n  [bottom_right]\n    type = ExtraNodesetGenerator\n    input = top_right\n    new_boundary = br\n    coord = '5 -5 0'\n  []\n  [top_left]\n    type = ExtraNodesetGenerator\n    input = bottom_right\n    new_boundary = tl\n    coord = '-5 5 0'\n  []\n  [bottom_left]\n    type = ExtraNodesetGenerator\n    input = top_left\n    new_boundary = bl\n    coord = '-5 -5 0'\n  []\n[]\n\n[Physics]\n  [SolidMechanics]\n    [QuasiStatic]\n      [all]\n        strain = SMALL\n        add_variables = true\n        incremental = false\n        generate_output = 'stress_xx stress_yy stress_xy strain_xx strain_yy strain_xy vonmises_stress'\n      []\n    []\n  []\n[]\n\n[BCs]\n  [no_y]\n    type = DirichletBC\n    variable = disp_y\n    boundary = 'bl br tl'\n    value = 0\n  []\n  [no_x]\n    type = DirichletBC\n    variable = disp_x\n    boundary = 'bl'\n    value = 0\n  []\n  [disp]\n    type = DirichletBC\n    variable = disp_x\n    boundary = 'tl'\n    value = 0.5\n  []\n[]\n\n[Materials]\n  [elasticity_tensor]\n    type = ComputeIsotropicElasticityTensor\n    youngs_modulus = ${E0}\n    poissons_ratio = ${nu}\n  []\n  [compute_stress]\n    type = ComputeLinearElasticStress\n  []\n[]\n\n[Preconditioning]\n  [SMP]\n    type = SMP\n    full = true\n  []\n[]\n\n[Executioner]\n  type = Steady\n  solve_type = Newton\n[]\n\n[VectorPostprocessors]\n  [disp_x]\n    type = NodalValueSampler\n    sort_by = id\n    variable = disp_x\n    contains_complete_history = true\n    execution_order_group = 10\n  []\n[]\n\n[Outputs]\n  csv = true\n[]\n\nSo my question is: Is this a known effect and if yes what is the reason for the differing displacement results in serial vs MPI?",
+          "url": "https://github.com/idaholab/moose/discussions/28120",
+          "updatedAt": "2024-07-15T15:13:50Z",
+          "publishedAt": "2024-07-12T11:45:35Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThe solutions are not exactly the same in serial and parallel because the linear solvers use different preconditioners by default in serial and parallel. The effect is within the solver tolerances (both solutions are converged to tolerances, and the solution should be unique if the problem is well-posed).\nIf you want the solution to be exactly the same you can look in the PETSc documentation for serial preconditioners like some LU.\nI don't know if there are scalable solvers that also give the exact same results in serial\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/28120#discussioncomment-10032542",
+                  "updatedAt": "2024-07-12T14:35:31Z",
+                  "publishedAt": "2024-07-12T14:32:24Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "Flolaffel"
+                  },
+                  "bodyText": "Thank you for your answer.\n\nand the solution should be unique if the problem is well-posed\n\nWhat do you mean by unique here? What are the criteria to call a solution \"unique\"? Indentical to the tolerance or completely indentical even at the n-th decimal outside the tolerance?\n\nIf you want the solution to be exactly the same you can look in the PETSc documentation for serial preconditioners like some LU.\n\nI'm not sure if understand that correctly. Should the serial and parallel solution be exactly the same when using LU? Because it isn't.",
+                  "url": "https://github.com/idaholab/moose/discussions/28120#discussioncomment-10050312",
+                  "updatedAt": "2024-07-15T12:03:57Z",
+                  "publishedAt": "2024-07-15T11:44:34Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "What do you mean by unique here?\n\nUnique in a mathematical way. The finite element approximation of the true solution should be unique with the discretization parameters chosen.\n\nIndentical to the tolerance or completely indentical even at the n-th decimal outside the tolerance?\n\nClose to identical to the tolerance. But there are many caveats. The relative and absolute tolerances behave differently, and the tolerance is in terms of residuals not in terms of how converged each DOFs is.\n\nShould the serial and parallel solution be exactly the same when using LU? Because it isn't.\n\nShould be close given that the preconditioning is supposed to be serial. Maybe not all implementations are serial. You need to look at the PETSc documentation, I don't have all the specs of all PCs in mind",
+                          "url": "https://github.com/idaholab/moose/discussions/28120#discussioncomment-10052566",
+                          "updatedAt": "2024-07-15T15:13:51Z",
+                          "publishedAt": "2024-07-15T15:13:50Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Error during compiling  Dbg version of MOOSE APP for manual offiline Installation of MOOSE",
+          "author": {
+            "login": "vikramroybarc"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n I have consulted the Posting Guidelines.\n I have searched the Discussions Forum and MOOSE Framework Troubleshooting and have not found what I was looking for\n Q&A Getting Started is the most appropriate category for my question (trouble installing, beginner user, ...)\n\nIssue or question about MOOSE\nHi MOOSE TEAM,\nI am a new user of MOOSE.\nI have installed MOOSE on my system using the offline method described here since my system does not have internet access.\nI am able to compile and run the optimized (opt) versions of MOOSEAPP without any issues. However, when I try to compile the debug version of MOOSEAPP, I encounter errors related to -lmesh_dbg and -ltimpi_dbg.\nCould you please assist me in resolving these errors so that I can successfully create the debug version of MOOSEAPP on my system?\nThank you.\nvikramr@ws10:~/projects/rhocp-main$ METHOD=dbg make -j 10\nfatal: not a git repository (or any parent up to mount point /)\nStopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).\ncut: /usr/bin/git/.git: Not a directory\n/home/vikramr/projects/moose/modules/modules.mk:86: The tensor mechanics module was renamed to the solid mechanics module. Please update your Makefile and replace TENSOR_MECHANICS with SOLID_MECHANICS\nfatal: not a git repository (or any parent up to mount point /)\nStopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).\ncut: /usr/bin/git/.git: Not a directory\nfatal: not a git repository (or any parent up to mount point /)\nStopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).\ncut: /usr/bin/git/.git: Not a directory\nfatal: not a git repository (or any parent up to mount point /)\nStopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).\ncut: /usr/bin/git/.git: Not a directory\nfatal: not a git repository (or any parent up to mount point /)\nStopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).\ncut: /usr/bin/git/.git: Not a directory\nLinking Library /home/vikramr/projects/moose/framework/contrib/pcre/libpcre-dbg.la...\nLinking Library /home/vikramr/projects/moose/framework/contrib/hit/libhit-dbg.la...\nLinking Executable /home/vikramr/projects/moose/framework/contrib/exodiff/exodiff...\nLinking Library /home/vikramr/projects/moose/modules/phase_field/lib/libphase_field-dbg.la...\nCreating Unity Directory /home/vikramr/projects/rhocp-main/build/unity_src\nRebuilding symlinks in /home/vikramr/projects/rhocp-main/build/header_symlinks\nCreating Unity /home/vikramr/projects/rhocp-main/build/unity_src/userobjects_Unity.C\nCreating Unity /home/vikramr/projects/rhocp-main/build/unity_src/postprocessors_Unity.C\nCreating Unity /home/vikramr/projects/rhocp-main/build/unity_src/materials_Unity.C\nCreating Unity /home/vikramr/projects/rhocp-main/build/unity_src/auxkernels_Unity.C\nCreating Unity /home/vikramr/projects/rhocp-main/build/unity_src/base_Unity.C\nCreating Unity /home/vikramr/projects/rhocp-main/build/unity_src/meshgenerators_Unity.C\nCompiling C++ (in dbg mode) /home/vikramr/projects/rhocp-main/src/main.C...\n/usr/bin/ld: cannot find -lmesh_dbg: No such file or directory\n/usr/bin/ld: cannot find -ltimpi_dbg: No such file or directory\n/usr/bin/ld: cannot find -lmesh_dbg: No such file or directory\n/usr/bin/ld: cannot find -ltimpi_dbg: No such file or directory\ncollect2: error: ld returned 1 exit status\nmake: *** [/home/vikramr/projects/moose/framework/moose.mk:397: /home/vikramr/projects/moose/framework/contrib/pcre/libpcre-dbg.la] Error 1\nmake: *** Waiting for unfinished jobs....\ncollect2: error: ld returned 1 exit status\nmake: *** [/home/vikramr/projects/moose/framework/moose.mk:409: /home/vikramr/projects/moose/framework/contrib/hit/libhit-dbg.la] Error 1\n/usr/bin/ld: cannot find -lmesh_dbg: No such file or directory\n/usr/bin/ld: cannot find -ltimpi_dbg: No such file or directory\ncollect2: error: ld returned 1 exit status\nmake: *** [/home/vikramr/projects/moose/framework/moose.mk:464: /home/vikramr/projects/moose/framework/contrib/exodiff/exodiff] Error 1\n(Optional) code in question / simulation log / errors\nNo response\nEncountering Errors? Please include diagnostic output\nvikramr@ws10:~/projects/moose/scripts$ ./diagnostics.sh \n\n##################################################################################################\nInfluential Environment Variables\n\nCONDA_CHANNEL=https://conda.software.inl.gov/public\nCURL_CA_BUNDLE=\nLD_LIBRARY_PATH=/home/vikramr/projects/moose/libmesh/installed/lib/:/usr/local/cuda-12.4/lib64\nMOOSE_JOBS=6\nPATH=/home/vikramr/projects/modelbuilder/bin:/home/vikramr/Softwares/Paraview/ParaView-5.9.1/bin:/home/vikramr/projects/moose/python/peacock:/home/vikramr/.local/bin:/home/vikramr/ParaDis/KGParadis/bin:/home/vikramr/ParaDis/visit/visit3_4_1.linux-x86_64/bin:/usr/local/cuda-12.4/bin:/home/vikramr/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin\nREQUESTS_CA_BUNDLE=\nSSL_CERT_FILE=\n\n##################################################################################################\nCompiler(s) (CC CXX FC F77 F90):\n\nCC\t\tnot set\nCXX\t\tnot set\nFC\t\tnot set\nF77\t\tnot set\nF90\t\tnot set\n\nFAIL: One or more compiler environment variables not set\n\n##################################################################################################\nPython Sanity Checks\n\nVerify `/usr/bin/env python3 --version` (reporting as: Python 3.10.12),\nmatches versions for: `which python3 && which python`\n\n\nWARNING: `python` does not exist\nThis does not mean there will be a failure, but some shebangs in some python\nfiles may still be relying on calling: `/usr/bin/env python` (Python 2.x era)\nOK\n\n##################################################################################################\nPython Modules (TestHarness, run-ability)\n\nOK",
+          "url": "https://github.com/idaholab/moose/discussions/28129",
+          "updatedAt": "2024-07-15T14:18:04Z",
+          "publishedAt": "2024-07-15T09:41:18Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "vikramroybarc"
+                  },
+                  "bodyText": "For those which are reading this question. I did it by recompling PetSc, libmesh and wasp but this time id didn't specify the METHODS variable.",
+                  "url": "https://github.com/idaholab/moose/discussions/28129#discussioncomment-10050123",
+                  "updatedAt": "2024-07-15T11:24:23Z",
+                  "publishedAt": "2024-07-15T11:24:22Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "I am guessing PETSc built using its own MPI, and libMesh built without MPI, seeing that CC, CXX, etc variables are not set in the diagnostic log.\nIf you plan on not using our Conda packages, you'll want to satisfy all \"FAIL\" messages when running ./diagnostic.sh. In your case, you need to specify an MPI wrapper/stack. This normally means setting these variables to mpicc, mpicxx, etc;\nexport CC=mpicc CXX=mpicxx FC=mpif90 F90=mpif90 F77=mpif77\n./diagnostics.sh\n# see if the above worked\nThis will also mean you'll need to start over (starting with PETSc): All libraries must be compiled using the same compiler stack. e.g everything must be built again after setting CC= CXX= to something it was not beforehand.",
+                          "url": "https://github.com/idaholab/moose/discussions/28129#discussioncomment-10051778",
+                          "updatedAt": "2024-07-15T14:18:05Z",
+                          "publishedAt": "2024-07-15T14:18:04Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Transferring Temperature data over Time in CSV Using Piecewise Multilinear",
+          "author": {
+            "login": "tt1me8"
+          },
+          "bodyText": "Trying to transfer temperature data for a surface over to MOOSE using Piecewise Multilinear. What values do I use for the nodes for which I do not have temperature data when I'm stepping through the gridded data that I need to write into the data file?",
+          "url": "https://github.com/idaholab/moose/discussions/28121",
+          "updatedAt": "2024-07-14T22:38:24Z",
+          "publishedAt": "2024-07-12T12:51:46Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nWhichever value you choose to use you ll have to be careful not to use this part of the domain in your simulation.\nIf would recommend using a \"nearest-valid-value\" approach, in which the linear interpolation becomes a constant outside of the known domain\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/28121#discussioncomment-10032592",
+                  "updatedAt": "2024-07-12T14:37:18Z",
+                  "publishedAt": "2024-07-12T14:37:17Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "tt1me8"
+                          },
+                          "bodyText": "Hmm, so there's no null value that I can throw in there as a placeholder then?",
+                          "url": "https://github.com/idaholab/moose/discussions/28121#discussioncomment-10032863",
+                          "updatedAt": "2024-07-12T15:01:51Z",
+                          "publishedAt": "2024-07-12T15:01:50Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "You can try putting a very big number there. I m sure we have some support for NaN too but for this kind of custom behavior you should code your own object",
+                          "url": "https://github.com/idaholab/moose/discussions/28121#discussioncomment-10045748",
+                          "updatedAt": "2024-07-14T22:38:24Z",
+                          "publishedAt": "2024-07-14T22:38:23Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Clarification on NeckAreaPostprocessor",
+          "author": {
+            "login": "StoGitzo"
+          },
+          "bodyText": "Hello MOOSE users!\nI ran two-particle sintering simulations in a 2D domain and I tried to extend it to a 3D domain. For computational power issues, I considered 2 x 1/32 of particle without modifying any geometric or material-related parameter.\nThe simulation was successful and, on a graphic level in Paraview, the 2D and 3D solutions coincide. However, when I plotted geometric and energy-related graphs, these are very different from the corresponding case in 2D.\nI tried to do some debugging and among the Postprocessors I used, I cannot figure out how NeckAreaPostprocessor operates (and so ElementIntegralVariablePostprocessor), because I don't have much experience.\nThanks!\nSimone",
+          "url": "https://github.com/idaholab/moose/discussions/28119",
+          "updatedAt": "2024-07-14T22:30:33Z",
+          "publishedAt": "2024-07-12T10:43:25Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nI dont see this object in moose. Are you using the phase field module or are you using an application? if so which one?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/28119#discussioncomment-10032635",
+                  "updatedAt": "2024-07-12T14:41:13Z",
+                  "publishedAt": "2024-07-12T14:41:12Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "StoGitzo"
+                          },
+                          "bodyText": "It comes from an old version of CrowApp by @SudiptaBiswas. The header and the .C are the following\n#ifndef NECKAREAPOSTPROCESSOR_H\n#define NECKAREAPOSTPROCESSOR_H\n\n#include \"ElementIntegralVariablePostprocessor.h\"\n\n//Forward Declarations\nclass NeckAreaPostprocessor;\n\n/**\n * This postprocessor computes a volume integral of the specified variable.\n *\n * Note that specializations of this integral are possible by deriving from this\n * class and overriding computeQpIntegral().\n */\nclass NeckAreaPostprocessor :\n  public ElementIntegralPostprocessor\n{\npublic:\n  static InputParameters validParams();\n  NeckAreaPostprocessor(const InputParameters & parameters);\n\nprotected:\n  virtual Real computeQpIntegral() override;\n\n  const unsigned int _op_num;\n  std::vector<const VariableValue *> _vals;\n};\n\n#endif //NECKAREAPOSTPROCESSOR_H\n\n#include \"NeckAreaPostprocessor.h\"\n\nregisterMooseObject(\"ParrotApp\", NeckAreaPostprocessor);\n\nInputParameters\nNeckAreaPostprocessor::validParams()\n{\n  InputParameters params = ElementIntegralVariablePostprocessor::validParams();\n  params.addRequiredCoupledVarWithAutoBuild(\"v\", \"var_name_base\", \"op_num\",\n                                            \"Array of coupled variables\");\n  return params;\n}\n\nNeckAreaPostprocessor::NeckAreaPostprocessor(const InputParameters &parameters)\n    : ElementIntegralPostprocessor(parameters), _op_num(coupledComponents(\"v\")),\n      _vals(_op_num) {\n  for (unsigned int i = 0; i < _op_num; ++i)\n    _vals[i] = &coupledValue(\"v\", i);\n}\n\nReal NeckAreaPostprocessor::computeQpIntegral() {\n  Real gb = 0.0;\n  for (unsigned int i = 0; i < _op_num; ++i)\n    for (unsigned int j = 0; j < _op_num; ++j)\n      if (i != j)\n        gb = (*_vals[i])[_qp] * (*_vals[j])[_qp];\n\n  // if (gb > 0.5 && _u[_qp] < 0.95)\n  //   gb = 1.0;\n  return gb;\n}",
+                          "url": "https://github.com/idaholab/moose/discussions/28119#discussioncomment-10033462",
+                          "updatedAt": "2024-07-12T15:58:04Z",
+                          "publishedAt": "2024-07-12T15:58:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nOn every Qp it computes this gb quantity.\nIt looks weird to me, the gb number gets overwritten multiple times in the for loop and only the last value is returned.\n@SudiptaBiswas was this intended?",
+                          "url": "https://github.com/idaholab/moose/discussions/28119#discussioncomment-10045728",
+                          "updatedAt": "2024-07-14T22:30:34Z",
+                          "publishedAt": "2024-07-14T22:30:33Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

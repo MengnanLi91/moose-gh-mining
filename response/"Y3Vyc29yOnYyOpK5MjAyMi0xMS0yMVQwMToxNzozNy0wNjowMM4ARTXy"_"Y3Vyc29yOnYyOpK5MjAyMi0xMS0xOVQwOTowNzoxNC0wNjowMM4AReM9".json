@@ -1,0 +1,606 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMi0xMS0xOVQwOTowNzoxNC0wNjowMM4AReM9"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "converting two phase field problem with aux variable",
+          "author": {
+            "login": "vermaprk"
+          },
+          "bodyText": "I am trying to convert my two phase problem where order parameter eta serves for both phases as eta and (1-eta).  For this i am using DerivativeTwoPhaseMaterial and BarrierFunctionMaterial and  I am getting a good convergence.\nHowever, when i convert the same code with eta1 as auxvaribale and eta2 as variable and DerivativeMultiPhaseMaterial and MultiBarrierFunctionMaterial with the lagrangeconstraint for eta1+eta2=1. There is a convergence issue. I have changed the epsilon parameter in SwitchingFunctionConstraintLagrange. Still the issue persists.\nthe code is attached for the auxvariable case\n# input file.\n# Define mesh. 2-D system, simulation size 20*5.\n[Mesh]\n  type = GeneratedMesh\n  dim = 2\n  nx = 40\n  xmax =20\n  ny=5\n  ymax=5\n[]\n# Creating functions for initial conditions.\n[Functions]\n[./ic_func_eta1]\n  type = ParsedFunction\n  value = 0.5*(1.0+1.0*tanh((x-5)*2))\n[../]\n[./ic_func_eta2]\n  type = ParsedFunction\n  value = 0.5*(1.0-1.0*tanh((x-5)*2))\n[../]\n[./ic_func_w]\n  type = ParsedFunction\n  value = 0\n[../]\n[./ic_func_pot]\ntype = ParsedFunction\nvalue = -0.225*(1.0-tanh((x-5)*2))\n[../]\n[]\n# Aux Variable.\n[AuxVariables]\n  [./eta1]\n    order = FIRST\n    family = LAGRANGE\n    [./InitialCondition]\n      type = FunctionIC\n      function = ic_func_eta1\n    [../]\n  [../]\n[]\n# variables. w: chemical potential, eta: order parameter, pot: applied overpotential.\n[Variables]\n  [./w]\n  [../]\n  [./eta2]\n  [../]\n  [./pot]\n  [../]\n  [./lambda]\n    order = FIRST\n    family = LAGRANGE\n    initial_condition = 1.0\n  [../]\n[]\n\n# Initial conditions.\n[ICs]\n  [./eta2]\n    variable = eta2\n    type = FunctionIC\n    function = ic_func_eta2\n  [../]\n  [./w]\n    variable = w\n     type = FunctionIC\n     function = ic_func_w\n  [../]\n  [./pot]\n    variable = pot\n    type = FunctionIC\n    function = ic_func_pot\n  [../]\n[]\n# Boundary conditions.\n[BCs]\n[./bottom_eta2]\n  type = NeumannBC\n  variable = 'eta2'\n  boundary = 'bottom'\n  value = 0\n[../]\n[./top_eta2]\n  type = NeumannBC\n  variable = 'eta2'\n  boundary = 'top'\n  value = 0\n[../]\n[./left_eta2]\n  type = DirichletBC\n  variable = 'eta2'\n  boundary = 'left'\n  value = 1\n[../]\n[./right_eta2]\n  type = DirichletBC\n  variable = 'eta2'\n  boundary = 'right'\n  value = 0\n[../]\n [./bottom_w]\n  type = NeumannBC\n  variable = 'w'\n  boundary = 'bottom'\n  value = 0\n[../]\n[./top_w]\n  type = NeumannBC\n  variable = 'w'\n  boundary = 'top'\n  value = 0.0\n[../]\n [./left_w]\n  type = NeumannBC\n  variable = 'w'\n  boundary = 'left'\n  value = 0\n[../]\n[./right_w]\n  type = DirichletBC\n  variable = 'w'\n  boundary = 'right'\n  value = 0.0\n[../]\n[./left_pot]\ntype = DirichletBC\nvariable = 'pot'\nboundary = 'left'\nvalue = -0.45\n[../]\n[./right_pot]\ntype = DirichletBC\nvariable = 'pot'\nboundary = 'right'\nvalue = 0\n[../]\n[]\n[Kernels]\n# First part of equation 3 in main text . chi*dw/dt\n  [./w_dot]\n    type = SusceptibilityTimeDerivative\n    variable = w\n    f_name = chi\n    args = 'w'\n  [../]\n  # Intrinsic diffusion part of equation 3 in main text.\n   [./Diffusion1]\n    type = MatDiffusion\n    variable=w\n    diffusivity=D\n   [../]\n   # Migration.\n  [./Diffusion2]\n    type = Migration\n    variable = w\n    cv=eta2\n    Q_name = 0.\n    QM_name = DN\n    cp=pot\n  [../]\n  # Coupling between w and eta2.\n  [./coupled_eta2dot]\n    type = CoupledSusceptibilityTimeDerivative\n    variable = w\n    v = eta2\n    f_name = ft\n    args = 'eta1 eta2'\n  [../]\n\n  # Conduction, left handside of equation 4 in main text.\n [./Cond]\n   type = Conduction\n   variable = pot\n   cp=eta2\n   cv =w\n   Q_name = Le1\n   QM_name=0.\n  [../]\n# Source term for Equation 4 in main text.\n [./coupled_pos]\n    type = CoupledSusceptibilityTimeDerivative\n    variable = pot\n    v = eta2\n    f_name = ft2\n    args = 'eta1 eta2'\n  [../]\n\n  # Bulter-volmer equation, right hand side of Equation 1 in main text.\n  [./BV]\n    type = Kinetics\n    variable = eta2\n    f_name = G\n    cp=pot\n    cv=eta2\n  [../]\n  # Driving force from switching barrier, right hand side of Equation 1 in main text.\n  [./AC_bulk]\n    type = AllenCahn\n    variable = eta2\n    args = w\n    f_name = F\n  [../]\n\n  # interfacial energy\n  [./AC_int]\n    type = ACInterface\n    variable = eta2\n  [../]\n# deta/dt\n  [./e_dot]\n    type = TimeDerivative\n    variable = eta2\n  [../]\n  [./lagrange2]\n    type = SwitchingFunctionConstraintEta\n    variable = eta2\n    h_name   = h2\n    lambda = lambda\n  [../]\n\n  [./lagrange]\n    type = SwitchingFunctionConstraintLagrange\n    variable = lambda\n    etas    = 'eta1 eta2'\n    h_names = 'h1   h2'\n    # epsilon = 0.01\n  [../]\n[]\n\n[Materials]\n[./constants]\n  type = GenericConstantMaterial\n# kappa_op: gradient coefficient;  M0:diffucion coefficient of Li+ in electrolyte\n#  S1, S2 conductivity of electrode and electrolyte; L: kinetic coefficient; Ls: electrochemical kinetic coefficient; B: Barrier height;\n#  es, el: difference in the chemical potential of lithium and neutral components on the electrode/electrolyte phase at initial equilibrium state;\n# us, ul: free energy density of the electrode/electrolyte phases. Defined in Ref. 20 and 26 of the main text; A: prefactor; AA: nF/(R*T);\n# dv is the ratio of site density for the electrode/electrolyte phases; ft2: normalized used in Equation 4.\n\n  prop_names  = 'kappa_op  M0     S1      S2     L      Ls     B     es    el        A     ul     us     AA    dv  ft2'\n  prop_values = '0.3      317.9   1000000 1.19   6.25   0.0002  2.4  -13.8  2.631   1.0   0.0695 13.8   38.69 5.5 0.0074'\n[../]\n# grand potential of electrolyte phase\n  [./liquid_GrandPotential]\n    type = DerivativeParsedMaterial\n    function = 'ul-A*log(1+exp((w-el)/A))'\n    args = 'w'\n    f_name = f1\n    material_property_names = 'A ul el'\n  [../]\n  # grand potential of electrode phase\n  [./solid_GrandPotential]\n    type = DerivativeParsedMaterial\n    function = 'us-A*log(1+exp((w-es)/A))'\n    args = 'w'\n    f_name = f2\n    material_property_names = 'A us es'\n  [../]\n  #interpolation function h\n  [./switching_function1]\n    type = SwitchingFunctionMaterial\n    function_name = h1\n    eta ='eta1'\n    h_order = HIGH\n  [../]\n  [./switching_function2]\n    type = SwitchingFunctionMaterial\n    function_name = h2\n    eta ='eta2'\n    h_order = HIGH\n  [../]\n  # Barrier function g\n  [./barrier_function]\n    type = MultiBarrierFunctionMaterial\n    etas = 'eta1 eta2'\n  [../]\n  [./total_GrandPotential]\n    type = DerivativeMultiPhaseMaterial\n    args = 'w'\n    etas = 'eta1 eta2'\n    fi_names = 'f1 f2'\n    hi_names = 'h1 h2'\n    f_name = F\n    derivative_order = 2\n    W = 2.4\n  [../]\n # Coupling between eta and w\n  [./coupled_eta_function]\n    type = DerivativeParsedMaterial\n    function = '-(cs*dv-cl)*dh'  # in this code cs=-cs h=eta dh=1\n    args = ' w eta1 eta2'\n    f_name = ft\n    material_property_names = 'dh:=D[h2,eta2] h2 dv cs:=D[f2,w] cl:=D[f1,w]'\n    derivative_order = 1\n  [../]\n  [./susceptibility]\n      type = DerivativeParsedMaterial\n      function = '-d2F1*h1-d2F2*h2*dv'\n      args = 'w'\n      f_name = chi\n      derivative_order = 1\n      material_property_names = 'h1 h2 dv d2F1:=D[f1,w,w] d2F2:=D[f2,w,w]'\n    [../]\n    # Mobility defined by D*c/(R*T), whereR*T is normalized by the chemical potential\n    # M0*(1-h) is the effective diffusion coefficient; cl*(1-h) is the ion concentration\n   [./Mobility_coefficient]\n    type = DerivativeParsedMaterial\n    function = '-M0*h1*cl*h1'  #c is -c\n    f_name = D\n     args = 'eta1 eta2 w'\n    derivative_order = 1\n    material_property_names = ' M0 cl:=D[f1,w] h1'\n  [../]\n  # Migration coefficient.\n  [./Migration_coefficient]\n    type = DerivativeParsedMaterial\n    function = '-cl*h1*AA*M0*h1'\n    args = 'eta1 eta2 w'\n    f_name = DN\n    derivative_order = 1\n    material_property_names = 'M0 AA cl:=D[f1,w] h1'\n  [../]\n  [./Bultervolmer]\n      type = DerivativeParsedMaterial\n      function = 'Ls*(exp(pot*AA/2.)+14.89*cl*h1*exp(-pot*AA/2.))*dh2'\n      args = 'pot eta1 eta2 w'\n      f_name = G\n     derivative_order = 1\n      material_property_names = 'Ls dh2:=D[h2,eta2] h1 h2 cl:=D[f1,w] AA'\n      outputs = exodus\n    [../]\n # output the ion concentration\n  [./concentration]\n    type = ParsedMaterial\n    f_name = c\n    args='eta1 eta2 w'\n    material_property_names = 'h1 dFl:=D[f1,w]'\n    function = '-dFl*h1'\n   outputs = exodus\n  [../]\n  # Effective conductivity\n  [./Le1]\n  type = DerivativeParsedMaterial\n  f_name = Le1\n  args = 'eta1 eta2'\n  material_property_names = 'S1 S2 h1 h2'\n  function = 'S1*h2+S2*h1'\n   derivative_order = 1\n [../]\n []\n\n\n [GlobalParams]\n   enable_jit = false           # Disable JIT\n []\n\n [Preconditioning]\n   [./SMP]\n     type = SMP\n     full = true\n     petsc_options_iname = '-pc_type -ksp_grmres_restart -sub_ksp_type -sub_pc_type -pc_asm_overlap'\n     petsc_options_value = 'asm      121                  preonly       lu           8'\n   [../]\n []\n\n [Executioner]\n   type = Transient\n   scheme = bdf2\n   #solve_type =Newton\n   l_max_its = 50\n   l_tol = 1e-4\n   nl_max_its = 20\n   nl_rel_tol = 1e-6\n   nl_abs_tol = 1e-6\n     dt=0.02\n     end_time = 3\n []\n\n [Outputs]\n   exodus = true\n   csv = true\n   execute_on = 'TIMESTEP_END'\n []",
+          "url": "https://github.com/idaholab/moose/discussions/22745",
+          "updatedAt": "2022-12-10T07:26:53Z",
+          "publishedAt": "2022-11-18T06:25:25Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nWhen you use an auxiliary variable, you loose all the information about the derivative. If the derivative material are used to construct the Jacobian, then removing the derivatives with regards to eta for all (1-eta) terms will lower the quality of your Jacobian, likely creating convergence issues\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22745#discussioncomment-4179129",
+                  "updatedAt": "2022-11-18T17:20:05Z",
+                  "publishedAt": "2022-11-18T17:20:04Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Another reason this could break down is if the auxvariable equal to 1-eta is not up to date often enough.\nThis would result in a lagging of the variable value in one or more steps of the solve.\nBy default we execute auxkernels as often as possible.",
+                          "url": "https://github.com/idaholab/moose/discussions/22745#discussioncomment-4180763",
+                          "updatedAt": "2022-11-18T21:16:26Z",
+                          "publishedAt": "2022-11-18T21:16:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "vermaprk"
+                          },
+                          "bodyText": "ok Thanks",
+                          "url": "https://github.com/idaholab/moose/discussions/22745#discussioncomment-4192099",
+                          "updatedAt": "2022-11-21T05:19:16Z",
+                          "publishedAt": "2022-11-21T05:19:15Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Diffusion Only Displaying in 1st Node",
+          "author": {
+            "login": "water984"
+          },
+          "bodyText": "I followed a very similar setup to the first tutorial with the differing values, but for some reason the simulation gets squished into the first node. Any ideas for a fix?\nDifConstants.h:\n#pragma once\n\n#include \"ADKernel.h\"\n\nclass DifConstants : public ADKernel\n{\npublic:\n  static InputParameters validParams();\n\n  DifConstants(const InputParameters & parameters);\n\nprotected:\n  virtual ADReal computeQpResidual() override;\n\n  const Real & _diffcoeff;\n  const Real & _sigA;\n};\n\n\nDifConstants.C:\n#include \"DifConstants.h\"\n\nregisterMooseObject(\"difApp\", DifConstants);\n\nInputParameters\nDifConstants::validParams()\n{\n  InputParameters params = ADKernel::validParams();\n  params.addClassDescription(\"Compute the diffusion term for diffusion equation: \"\n                             \"$-\\\\nabla \\\\cdot \\\\frac{\\\\mathbf{D}} \\\\nabla p = 0$\");\n  return params;\n}\n\nDifConstants::DifConstants(const InputParameters & parameters)\n  : ADKernel(parameters),\n\n    _diffcoeff(0.142),\n    _sigA(0.022)\n{\n}\n\nADReal\nDifConstants::computeQpResidual()\n{\n  return (_diffcoeff) * _grad_test[_i][_qp] * _grad_u[_qp];\n}\n\nNeutronDiffusion.i:\n[Mesh]\n  [gmg]\n    type = GeneratedMeshGenerator # Can generate simple lines, rectangles and rectangular prisms\n    dim = 2 # Dimension of the mesh\n    nx = 100 # Number of elements in the x direction\n    ny = 10 # Number of elements in the y direction\n    xmax = 0.304 # Length of test chamber\n    ymax = 0.0257 # Test chamber radius\n  []\n[]\n\n[Kernels]\n  [dif]\n    type = DifConstants\n    variable = phi # Operate on the \"phi\" variable from above\n  []\n[]\n\n[Problem]\n  type = FEProblem # This is the \"normal\" type of Finite Element Problem in MOOSE\n  coord_type = RZ # Axisymmetric RZ\n  rz_coord_axis = X # Which axis the symmetry is around\n[]\n\n[Variables]\n  [phi]\n    order = FIRST\n    family = LAGRANGE\n  []\n[]\n\n\n[BCs]\n  [left]\n    type = ADDirichletBC # Simple u=value BC\n    variable = phi # Variable to be set\n    boundary = left # Name of a sideset in the mesh\n    value = 10E+10 # (Neutrons/cm/sec)\n  []\n  [right]\n    type = VacuumBC\n    variable = phi\n    boundary = right  \n  []\n[]\n\n[Executioner]\n  type = Steady # Steady state problem\n  solve_type = PJFNK\n\n  petsc_options_iname = '-pc_type -pc_hypre_type' # PETSc option pairs with values below\n  petsc_options_value = ' hypre    boomeramg'\n[]\n\n[Outputs]\n  exodus = true # Output Exodus format\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/22601",
+          "updatedAt": "2022-12-10T07:29:16Z",
+          "publishedAt": "2022-11-04T14:35:11Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nI ran your case with the CoefDiffusion kernel since it's basically the same as it's the same as your DifConstants currently.\nThe issue is that with the DirichletBC at 1e11, the solver struggles to solve the problem in a single time step with the default relative tolerances. The errors starts very large because of the large value of the BC, and converging it down by a few orders of magnitude in the linear solve is not enough.\nYou should tighten l_tol down by a few orders of magnitude.\nPlease also note that given that your problem is linear, you may use the linear solve_type instead of PJFNK or Newton.\nGuillaume\nPS: note that 10e10 is 1e11. I m sure you know, it's just that 10e10 is odd to see.",
+                  "url": "https://github.com/idaholab/moose/discussions/22601#discussioncomment-4191319",
+                  "updatedAt": "2022-11-21T01:48:23Z",
+                  "publishedAt": "2022-11-21T01:48:22Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Contact thermal conductance convergence issue",
+          "author": {
+            "login": "BoZeng1997"
+          },
+          "bodyText": "Hi,\nI am trying to simulate a 3D thermal mechanical problem between two parts with contact conductance. With GapFluxModelPressureDependentConduction the simulation failed to converge. Illustration of the system is shown below.\n\nContact of mortar formulation had proven to work well on avoiding penetration on its own. But when GapFluxModelPressureDependentConduction is enabled, simulation failed to converge. Whenever the residual interface_normal_lm does not equal to zero, no more nonlinear iteration occurred and executioner straight to smaller dt. A clip of the console output is shown below.\n...\nTime Step 6, time = 0.05125, dt = 0.000125\n 0 Nonlinear |R| = 2.631244e+03\n    |residual|_2 of individual variables:\n        disp_x:              4.91887e-19\n        disp_y:              1.35333e-18\n        disp_z:              1.90408e-19\n        T_K:                 2631.24\n        lm:                  0\n        interface_normal_lm: 0\n 1 Nonlinear |R| = 3.575491e+01\n    |residual|_2 of individual variables:\n        disp_x:              1.89764e-09\n        disp_y:              2.15038e-09\n        disp_z:              3.55831e-09\n        T_K:                 35.7549\n        lm:                  0\n        interface_normal_lm: 3.80056e-10\n Solve Did NOT Converge!\n  Finished Solving                                                                       [ 27.20 s] [    1 MB]\nAborting as solve did not converge\n\nTime Step 6, time = 0.0511875, dt = 6.25e-05\n...",
+          "url": "https://github.com/idaholab/moose/discussions/22700",
+          "updatedAt": "2023-01-03T23:18:31Z",
+          "publishedAt": "2022-11-15T00:49:39Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "BoZeng1997"
+                  },
+                  "bodyText": "This is a short version of my input file. The usual tensor mechanics and thermal diffusion settings are not listed.\n[GlobalParams]\n  displacements = 'disp_x disp_y disp_z'\n  temperature = T_K\n[]\n\n[Mesh]\n  patch_update_strategy=iteration\n  [ori]\n    type = FileMeshGenerator\n    file = 'mesh/radiation_3d_half_thin_nbrot_transft.e'\n  []\n[]\n\n[Variables]\n  [disp_x]\n  []\n  [disp_y]\n  []\n  [disp_z]\n  []\n  [T_K]\n    [InitialCondition]\n      type = ConstantIC\n      value = 300.0\n    []\n  []\n  [lm]\n    block = 'interface_secondary_subdomain'\n  []\n[]\n\n[Contact]\n  [interface]\n    primary = void_0\n    secondary = void_1\n    model = frictionless\n    penalty = 1e6\n    formulation = mortar\n    c_normal = 1e6 #balancing the size of the gap and contact pressure\n    correct_edge_dropping = true\n  []\n[]\n\n[UserObjects]\n  [closed]\n    type = GapFluxModelPressureDependentConduction\n    primary_conductivity = 34.0 # thermal_conductivity\n    secondary_conductivity = 81.98 # thermal_conductivity\n    temperature = T_K\n    contact_pressure = interface_normal_lm\n    primary_hardness = 1.0 # aluminum_hardness \n    secondary_hardness = 1.0 # steel_hardness\n    boundary = void_0\n    use_displaced_mesh = true\n  []\n[]\n\n[Constraints]\n  [gap_nb]\n    type = ModularGapConductanceConstraint\n    variable = lm\n    secondary_variable = T_K\n    primary_boundary = 'void_0'\n    primary_subdomain = interface_primary_subdomain\n    secondary_boundary = 'void_1'\n    secondary_subdomain = interface_secondary_subdomain\n    gap_flux_models = 'closed ' \n    gap_geometry_type = 'CYLINDER'\n    cylinder_axis_point_1 = '0 0 0'\n    cylinder_axis_point_2 = '0 0 1'\n    use_displaced_mesh = true\n    quadrature = SECOND\n  []\n[]\n\n[Executioner]\n  type = Transient\n  solve_type = NEWTON\n  petsc_options_iname = '-pc_type -pc_factor_mat_solver_package -pc_factor_shift_type -pc_factor_shift_amount '\n  petsc_options_value = 'lu      superlu_dist NONZERO 1e-14' \n  automatic_scaling = true\n  line_search = bt\n  compute_scaling_once = true \n  scaling_group_variables = 'disp_x disp_y disp_z; T_K; interface_normal_lm; lm'\n  \n  nl_rel_tol = 1e-9\n  nl_abs_tol = 1e-5\n  nl_max_its = 500\n  dtmin = 1e-6\n  dt = 1e-3\n  start_time = 47e-3\n  end_time = 63e-3\n[]",
+                  "url": "https://github.com/idaholab/moose/discussions/22700#discussioncomment-4141916",
+                  "updatedAt": "2022-11-15T00:59:20Z",
+                  "publishedAt": "2022-11-15T00:58:33Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nCan you pass -snes_view to the petsc_options so we can have more information about why it does not converge\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/22700#discussioncomment-4149423",
+                          "updatedAt": "2022-11-15T18:20:14Z",
+                          "publishedAt": "2022-11-15T18:20:14Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "BoZeng1997"
+                          },
+                          "bodyText": "HI,\nThis is the step that start to have convergence issue\nTime Step 4, time = 0.051, dt = 0.001\n 0 Nonlinear |R| = 3.019544e+03\n    |residual|_2 of individual variables:\n        disp_x:              4.91907e-19\n        disp_y:              1.30281e-18\n        disp_z:              1.84853e-19\n        T_K:                 3019.54\n        lm:                  0\n        interface_normal_lm: 0\n 1 Nonlinear |R| = 4.806744e+02\n    |residual|_2 of individual variables:\n        disp_x:              1.68227e-07\n        disp_y:              2.00317e-07\n        disp_z:              3.64272e-07\n        T_K:                 480.674\n        lm:                  0\n        interface_normal_lm: 1.31985e-07\nSNES Object: 4 MPI processes\n  type: newtonls\n  maximum iterations=500, maximum function evaluations=10000\n  tolerances: relative=1e-09, absolute=1e-05, solution=0.\n  total number of linear solver iterations=2\n  total number of function evaluations=16\n  norm schedule ALWAYS\n  SNESLineSearch Object: 4 MPI processes\n    type: bt\n      interpolation: cubic\n      alpha=1.000000e-04\n    maxstep=1.000000e+08, minlambda=1.000000e-12\n    tolerances: relative=1.000000e-08, absolute=1.000000e-15, lambda=1.000000e-08\n    maximum iterations=40\n  KSP Object: 4 MPI processes\n    type: gmres\n      restart=30, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement\n      happy breakdown tolerance 1e-30\n    maximum iterations=10000, initial guess is zero\n    tolerances:  relative=1e-05, absolute=1e-50, divergence=1e+100\n    right preconditioning\n    using UNPRECONDITIONED norm type for convergence test\n  PC Object: 4 MPI processes\n    type: lu\n      out-of-place factorization\n      tolerance for zero pivot 2.22045e-14\n      using diagonal shift to prevent zero pivot [NONZERO]\n      matrix ordering: external\n      factor fill ratio given 0., needed 0.\n        Factored matrix follows:\n          Mat Object: 4 MPI processes\n            type: superlu_dist\n            rows=20766, cols=20766\n            package used to perform factorization: superlu_dist\n            total: nonzeros=0, allocated nonzeros=0\n              SuperLU_DIST run parameters:\n                Process grid nprow 0 x npcol 0 \n                Equilibrate matrix TRUE \n                Replace tiny pivots TRUE \n                Use iterative refinement FALSE \n                Processors in row 0 col partition 0 \n                Row permutation LargeDiag_MC64\n                Column permutation METIS_AT_PLUS_A\n                Parallel symbolic factorization FALSE \n                Repeated factorization SamePattern\n    linear system matrix = precond matrix:\n    Mat Object: () 4 MPI processes\n      type: mpiaij\n      rows=20766, cols=20766\n      total: nonzeros=1568501, allocated nonzeros=2020640\n      total number of mallocs used during MatSetValues calls=23\n        using I-node (on process 0) routines: found 1231 nodes, limit used is 5\n Solve Did NOT Converge!\n  Finished Solving                                                                       [ 19.07 s] [    0 MB]\nAborting as solve did not converge\n\nThis is the step before that converged\n 4 Nonlinear |R| = 2.456882e-11\n    |residual|_2 of individual variables:\n        disp_x:              4.91907e-19\n        disp_y:              1.30281e-18\n        disp_z:              1.84853e-19\n        T_K:                 2.45688e-11\n        lm:                  0\n        interface_normal_lm: 0\nSNES Object: 4 MPI processes\n  type: newtonls\n  maximum iterations=500, maximum function evaluations=10000\n  tolerances: relative=1e-09, absolute=1e-05, solution=0.\n  total number of linear solver iterations=4\n  total number of function evaluations=5\n  norm schedule ALWAYS\n  SNESLineSearch Object: 4 MPI processes\n    type: bt\n      interpolation: cubic\n      alpha=1.000000e-04\n    maxstep=1.000000e+08, minlambda=1.000000e-12\n    tolerances: relative=1.000000e-08, absolute=1.000000e-15, lambda=1.000000e-08\n    maximum iterations=40\n  KSP Object: 4 MPI processes\n    type: gmres\n      restart=30, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement\n      happy breakdown tolerance 1e-30\n    maximum iterations=10000, initial guess is zero\n    tolerances:  relative=1e-05, absolute=1e-50, divergence=1e+100\n    right preconditioning\n    using UNPRECONDITIONED norm type for convergence test\n  PC Object: 4 MPI processes\n    type: lu\n      out-of-place factorization\n      tolerance for zero pivot 2.22045e-14\n      using diagonal shift to prevent zero pivot [NONZERO]\n      matrix ordering: external\n      factor fill ratio given 0., needed 0.\n        Factored matrix follows:\n          Mat Object: 4 MPI processes\n            type: superlu_dist\n            rows=20766, cols=20766\n            package used to perform factorization: superlu_dist\n            total: nonzeros=0, allocated nonzeros=0\n              SuperLU_DIST run parameters:\n                Process grid nprow 0 x npcol 0 \n                Equilibrate matrix TRUE \n                Replace tiny pivots TRUE \n                Use iterative refinement FALSE \n                Processors in row 0 col partition 0 \n                Row permutation LargeDiag_MC64\n                Column permutation METIS_AT_PLUS_A\n                Parallel symbolic factorization FALSE \n                Repeated factorization SamePattern\n    linear system matrix = precond matrix:\n    Mat Object: () 4 MPI processes\n      type: mpiaij\n      rows=20766, cols=20766\n      total: nonzeros=1571448, allocated nonzeros=4529961\n      total number of mallocs used during MatSetValues calls=35\n        using I-node (on process 0) routines: found 1231 nodes, limit used is 5\n Solve Converged!\n  Finished Solving                                                                       [ 16.13 s] [    1 MB]\n\nOutlier Variable Residual Norms:\n  T_K: 2.456882e-11",
+                          "url": "https://github.com/idaholab/moose/discussions/22700#discussioncomment-4149577",
+                          "updatedAt": "2022-11-15T18:42:30Z",
+                          "publishedAt": "2022-11-15T18:42:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I dont see what went wrong.\nCan you try turning off the line_search?\nCan you please also try to recompile in debug mode and re-run the analysis, see if we hit a debug clause",
+                          "url": "https://github.com/idaholab/moose/discussions/22700#discussioncomment-4149815",
+                          "updatedAt": "2022-11-15T19:16:09Z",
+                          "publishedAt": "2022-11-15T19:16:08Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "BoZeng1997"
+                          },
+                          "bodyText": "Hi,\nAfter turning off line_search there is no more convergence issue.\nI wonder why bt line search does not work well on thermal contact. It worked when there is only mechanical contact (avoiding penetration). But with thermal contact it does not work well.",
+                          "url": "https://github.com/idaholab/moose/discussions/22700#discussioncomment-4159987",
+                          "updatedAt": "2022-11-16T18:25:27Z",
+                          "publishedAt": "2022-11-16T18:25:26Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "BoZeng1997"
+                  },
+                  "bodyText": "Also, although not related to this issue but I would like some advice. What do you recommend me to do with the executioner settings?\nThe complete system is a module consists tensor mechanics, heat conduction, contact and phase field. It will have multiple contact pairs and mesh will be huge. The mortar contact constraints will have GapFluxModelConduction, GapFluxModelRadiation, and GapFluxModelPressureDependentConduction. For the first few time steps there will be no contact with pressure. In this case, should I scale the variables separately as scaling_group_variables = 'disp_x disp_y disp_z; T_K' with ignore_variables_for_autoscaling = 'interface_normal_lm lm' and compute_scaling_once = true ?\nI also noticed there is a contact line_search. Is that the line search I should use?",
+                  "url": "https://github.com/idaholab/moose/discussions/22700#discussioncomment-4160105",
+                  "updatedAt": "2022-11-16T18:40:48Z",
+                  "publishedAt": "2022-11-16T18:40:47Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nI m not familiar with the contact line search but yes, it s the one to use.\nThe most robust will be:\n\nautomatic scaling (in executioner)\ncompute-scaling_once = false\n\nIs the linear solve performance satisfactory? How many iterations? (all we're talking about is nonlinear so far, just checking)\nSame questions for non linear.\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/22700#discussioncomment-4180981",
+                          "updatedAt": "2022-11-20T18:17:46Z",
+                          "publishedAt": "2022-11-18T21:59:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "I don't recommend using compute_scaling_once = false. It often gives unconverged result. I hope we can just deprecate that parameter.",
+                          "url": "https://github.com/idaholab/moose/discussions/22700#discussioncomment-4181620",
+                          "updatedAt": "2022-11-19T00:22:51Z",
+                          "publishedAt": "2022-11-19T00:22:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I could see it lead to difficulties in accepting a converged answer but why would it lead to unconverged results?\nas for a lot of these solver parameters, my opinion is that we ought to be able to modify them at any point in the simulation",
+                          "url": "https://github.com/idaholab/moose/discussions/22700#discussioncomment-4189679",
+                          "updatedAt": "2022-11-20T18:19:12Z",
+                          "publishedAt": "2022-11-20T18:19:11Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to use the rotateXyPlane() member function from RankTwoTensorTempl to rotate a vector",
+          "author": {
+            "login": "batodon"
+          },
+          "bodyText": "Hello,\nThe documentation of RankTwoTensorTempl indicates that rotateXyPlane() can rotate a tensor about the Z-axis (x-y-plane). I\u2019m looking to rotate a (unit) vector (i.e., _n) instead. I used the following lines of code below, but none seems to work.\nrotN_xy = RankTwoTensor::rotateXyPlane(_r);\nrotN_xy = _n.rotateXyPlane(_r);\nCould someone help me with the appropriate line of code that rotate the vector using the rotateXyPlane() function? Thanks.",
+          "url": "https://github.com/idaholab/moose/discussions/22761",
+          "updatedAt": "2023-01-03T23:10:02Z",
+          "publishedAt": "2022-11-19T17:54:25Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "souravmat-git"
+                  },
+                  "bodyText": "Hi,\nI am unsure if the rotateXyPlane() function can rotate a vector.\nI will do this in the following way:\nReal theta = _the_angle_of_rotation;\nRankTwoTensor _transformation_matrix;\n\n_transformation_matrix(0, 0) = std::cos(theta);\n_transformation_matrix(0, 1) = std::sin(theta);\n_transformation_matrix(1, 0) = -std::sin(theta);\n_transformation_matrix(1, 1) = std::cos(theta);\n\nRealVectorValue _r;\nRealVectorValue rotN_xy = _transformation_matrix * _r;",
+                  "url": "https://github.com/idaholab/moose/discussions/22761#discussioncomment-4185510",
+                  "updatedAt": "2022-11-19T19:38:03Z",
+                  "publishedAt": "2022-11-19T19:38:03Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "batodon"
+                          },
+                          "bodyText": "Hello! Thanks a million! The code compiles successfully. How about rotation around the X-axis (y-z plane)? I\u2019m assuming I need to change my cosine and sine functions. How do I go about it? Or should I use the same code? Thanks.",
+                          "url": "https://github.com/idaholab/moose/discussions/22761#discussioncomment-4185707",
+                          "updatedAt": "2022-11-19T20:41:06Z",
+                          "publishedAt": "2022-11-19T20:41:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "batodon"
+                          },
+                          "bodyText": "Hello @souravmat-git ,\nFor some reason, I don\u2019t know why the previous code compiled successfully because my vector (i.e., RealVectorValue _r)  is 3x1. I\u2019m rotating in 3D, not 2D. I made a few changes to the transformation matrix (shown below) and the code compiles (for rotation in the x-y plane). I\u2019m a bit doubtful about my transformation matrix. Could you help? Thanks.\n    _transformation_matrix(0, 0) = std::cos(theta);\n    _transformation_matrix(0, 1) = std::sin(theta);\n    _transformation_matrix(0, 2) = 0;\n    _transformation_matrix(1, 0) = -std::sin(theta);\n    _transformation_matrix(1, 1) = std::cos(theta);\n    _transformation_matrix(1, 2) = 0;\n    _transformation_matrix(2, 0) = 0;\n    _transformation_matrix(2, 1) = 0;\n    _transformation_matrix(2, 2) = 1;",
+                          "url": "https://github.com/idaholab/moose/discussions/22761#discussioncomment-4186332",
+                          "updatedAt": "2022-11-20T00:18:43Z",
+                          "publishedAt": "2022-11-20T00:17:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "this looks fine for rotating in the XY plane\nsee wikipedia they have it written down\nhttps://en.wikipedia.org/wiki/Rotation_matrix",
+                          "url": "https://github.com/idaholab/moose/discussions/22761#discussioncomment-4189204",
+                          "updatedAt": "2022-11-20T16:28:44Z",
+                          "publishedAt": "2022-11-20T16:28:44Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "batodon"
+                          },
+                          "bodyText": "sure!. Thanks a lot @GiudGiud.",
+                          "url": "https://github.com/idaholab/moose/discussions/22761#discussioncomment-4189547",
+                          "updatedAt": "2022-11-20T17:50:31Z",
+                          "publishedAt": "2022-11-20T17:50:30Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Questions about thermal hydraulics module",
+          "author": {
+            "login": "Raven-pro"
+          },
+          "bodyText": "Hello developers!\nI am using the TH module to simulate the conjugate heat transfer process of the 1-D single-phase flow in vertical pipes.\nAs in tutorial 02, when implementing the conjugate heat transfer, the power is set to be constant everywhere (I also want to ask about what tot_power means in the input file by the way, does that mean power of the whole rod or just of that single element of the rod)\nBut I want to make the power distribution different, like individually setting the power of each node, Is there any way to achieve that?",
+          "url": "https://github.com/idaholab/moose/discussions/22763",
+          "updatedAt": "2022-11-24T12:41:31Z",
+          "publishedAt": "2022-11-20T16:01:14Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYou may specify the \"power_shape_function\" parameter in the HeatSourceFromTotalPower to have a shape.\nThis should be the name of a Function, which may have any spatial and time dependence.\nThe total power is specified in a TotalPower component\nthe heat source component uses this TotalPower component to know how much power to generate\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22763#discussioncomment-4189150",
+                  "updatedAt": "2022-11-20T16:24:31Z",
+                  "publishedAt": "2022-11-20T16:24:30Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "recover",
+          "author": {
+            "login": "heinono1"
+          },
+          "bodyText": "If I use --recover (checkpoints and split mesh), how does the recover read the input file? Specifically, I read a file using PiecewiseMultilinear in the input file. If I change the file that is read by PiecewiseMultilinear, will the values from the new file be read in on the recover, or are the old values stored and be used? What this really getting to is trying to use a previously equilibrated run (using split-mesh) as a starting point for a new run, but with changed driving function read by PiecewiseMultilinear.\nIt will be awesome to get a restart capability with using Nemesis split files as starting point....",
+          "url": "https://github.com/idaholab/moose/discussions/22656",
+          "updatedAt": "2022-11-20T15:44:19Z",
+          "publishedAt": "2022-11-10T20:50:51Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThe input file is not saved to the recover checkpoint. It is read again. The checkpoint provides solution vectors, which if the input file is compatible with, will be used to recover the solution.\nRecover is really meant to start the same exact simulation, except it crashed for X reason the first time.\nI think you may want to look into checkpoint restart, by specifying the restart_file_base in the Problem.\nYou may change the data file from PiecewiseMultilinear when performing any kind of restart or recover.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22656#discussioncomment-4184555",
+                  "updatedAt": "2022-11-19T15:17:50Z",
+                  "publishedAt": "2022-11-19T15:17:50Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "heinono1"
+                          },
+                          "bodyText": "Thanks, Guillaume!",
+                          "url": "https://github.com/idaholab/moose/discussions/22656#discussioncomment-4188960",
+                          "updatedAt": "2022-11-20T15:44:18Z",
+                          "publishedAt": "2022-11-20T15:44:17Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Error writing coordinates to Exodus file.",
+          "author": {
+            "login": "KangChenRui"
+          },
+          "bodyText": "Hello everyone!\nI first encountered the following error yesterday.\n\nThe output module I set is shown in the figure below\uff1a\n\nThanks for your help!\nChenRui",
+          "url": "https://github.com/idaholab/moose/discussions/22727",
+          "updatedAt": "2022-11-20T04:53:29Z",
+          "publishedAt": "2022-11-17T01:07:21Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nDid anything else happened?\nDid you run out of disk space?\nWas the file modified during the simulation?\nPS: please avoid screenshots in the future, this could all have been copy pasted as text\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22727#discussioncomment-4179234",
+                  "updatedAt": "2022-11-18T17:33:20Z",
+                  "publishedAt": "2022-11-18T17:33:19Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "do you consistently get this error?",
+                          "url": "https://github.com/idaholab/moose/discussions/22727#discussioncomment-4179237",
+                          "updatedAt": "2022-11-18T17:33:37Z",
+                          "publishedAt": "2022-11-18T17:33:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "KangChenRui"
+                          },
+                          "bodyText": "Hello!\nI ran out of disk space.\nThanks a lot!",
+                          "url": "https://github.com/idaholab/moose/discussions/22727#discussioncomment-4186827",
+                          "updatedAt": "2022-11-20T04:53:29Z",
+                          "publishedAt": "2022-11-20T04:53:28Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to plot negative axis in Paraview",
+          "author": {
+            "login": "salaudeen-ya"
+          },
+          "bodyText": "Hello,\nMy question is:\n\nConsider the attached input file and the paraview result, how do i get the result to plot from [-1,1] instead of the attached output result of [0,2] that paraview gave me?\n\n----Paraview result plotting [0,2]-----------------\n\n---------Desired output is over [-1,1]----------------\n[Mesh]\n  type = GeneratedMesh\n  dim = 1\n  nx = 64\n  xmin = -1\n  xmax = 1\n\n[]\n\n[Variables]\n  [v]\n    order = FIRST\n    family = LAGRANGE\n  []\n[]\n\n[AuxVariables]\n  [flux_v]\n    order = CONSTANT\n    family = MONOMIAL\n  []\n[]\n\n[Kernels]\n  [diffusion]\n    type = MatDiffusion\n    variable = v\n    diffusivity = 1\n  []\n[]\n\n[AuxKernels]\n  [fluxKernel]\n    type = DiffusionFluxAux\n    diffusivity = 1\n    variable = flux_v\n    diffusion_variable = v\n    component = x\n  []\n[]\n\n[BCs]\n   [leftBC] \n    type = DirichletBC\n    variable = v\n    boundary = 'left'\n    value = 0\n  []\n\n  [rightBC] \n    type = NeumannBC\n    variable = v\n    boundary = 'right'\n    value = 3\n  []\n[]\n\n\n[Executioner]\n  type = Steady\n  solve_type = 'PJFNK'\n[]\n\n[Outputs]\n  exodus = true\n  #csv = true\n  console = true\n[]\n\n\n\nThank you!",
+          "url": "https://github.com/idaholab/moose/discussions/22609",
+          "updatedAt": "2023-01-03T23:10:11Z",
+          "publishedAt": "2022-11-07T17:09:27Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThis is more of a paraview topic than MOOSE.\nThe axis settings in paraview may be modified, the coordinates may be transformed as well, there isnt a single solution\nOn the left properties panel when you have the plot up, you may select a different X-axis, which could be data modified in any way you want. make sure the 'use index as x-axis' in not checked\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22609#discussioncomment-4184568",
+                  "updatedAt": "2022-11-19T15:22:39Z",
+                  "publishedAt": "2022-11-19T15:22:22Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to parse AuxVariables to a vector?",
+          "author": {
+            "login": "Minjiang-Zhu"
+          },
+          "bodyText": "As described above.",
+          "url": "https://github.com/idaholab/moose/discussions/22753",
+          "updatedAt": "2022-11-19T15:08:18Z",
+          "publishedAt": "2022-11-18T19:33:34Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nwhat do you mean?\nUse it in a parsed expression? That\u2019s possible for the ParsedMaterial or the ParsedAux\nguillaum",
+                  "url": "https://github.com/idaholab/moose/discussions/22753#discussioncomment-4181231",
+                  "updatedAt": "2022-11-18T22:55:58Z",
+                  "publishedAt": "2022-11-18T22:55:58Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "Minjiang-Zhu"
+                  },
+                  "bodyText": "I use a vector function and apply ParsedVectorFunction to fix it.",
+                  "url": "https://github.com/idaholab/moose/discussions/22753#discussioncomment-4182523",
+                  "updatedAt": "2022-11-19T04:14:00Z",
+                  "publishedAt": "2022-11-19T04:13:59Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "ok I saw the other post. Please consolidate on a single post in the future.",
+                          "url": "https://github.com/idaholab/moose/discussions/22753#discussioncomment-4184519",
+                          "updatedAt": "2022-11-19T15:08:18Z",
+                          "publishedAt": "2022-11-19T15:08:18Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Apply functions to a vector auxvariable",
+          "author": {
+            "login": "Minjiang-Zhu"
+          },
+          "bodyText": "I have two scalar functions and I want to apply them to the components of a vector auxvariable, what should I do? Please notice the functions are not simply functions of x, y, z, and t (they are read from the solution file of the previous step and then are modified a bit).",
+          "url": "https://github.com/idaholab/moose/discussions/22752",
+          "updatedAt": "2023-01-20T18:53:25Z",
+          "publishedAt": "2022-11-18T19:05:13Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "Minjiang-Zhu"
+                  },
+                  "bodyText": "I know there is an auxkernal called 'VectorFunctionAux' which can assign a vector-function to a vector auxvariable. If someone knows how to combine two scalar functions into a vector function, that will also help.",
+                  "url": "https://github.com/idaholab/moose/discussions/22752#discussioncomment-4179908",
+                  "updatedAt": "2022-11-18T19:13:51Z",
+                  "publishedAt": "2022-11-18T19:13:50Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nVectorFunctionAux will let you set the auxiliary variable using a Function that has a vectorValue() routine. It does NOT parse postprocessor names or scalar variables directly. A MooseParsedVectorFunction can do that upstream of the auxkernel.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22752#discussioncomment-4184516",
+                  "updatedAt": "2022-11-19T15:07:15Z",
+                  "publishedAt": "2022-11-19T15:07:14Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

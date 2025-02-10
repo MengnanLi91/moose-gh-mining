@@ -1,0 +1,942 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMi0wOC0xN1QwOToxMTo0NS0wNTowMM4AQMiH"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Crystal Plasticity with Grain Tracker",
+          "author": {
+            "login": "FHilty"
+          },
+          "bodyText": "Me and @jbair34 would like to combine crystal plasticity with the grain trackers capabilities for discrete nucleation. However, we are stuck as the ComputeElasticityTensorCP material is needed to create the necessary material properties for the crystal plasticity kernels, but there isn't a \"grain_tracker\" parameter for this material as there is with other ComputeElasticityTensor options.  As a result the crystal plasticity kernels isn't interacting with the grain structure from grain tracker. Is there currently a way to make this work?",
+          "url": "https://github.com/idaholab/moose/discussions/21484",
+          "updatedAt": "2022-08-22T21:56:30Z",
+          "publishedAt": "2022-07-01T18:56:49Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@permcody @dschwen who else may I tag on grain tracking",
+                  "url": "https://github.com/idaholab/moose/discussions/21484#discussioncomment-3104746",
+                  "updatedAt": "2022-07-08T04:07:02Z",
+                  "publishedAt": "2022-07-08T04:07:02Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "FHilty"
+                          },
+                          "bodyText": "Just poking this thread to see if there are any updates.",
+                          "url": "https://github.com/idaholab/moose/discussions/21484#discussioncomment-3150108",
+                          "updatedAt": "2022-07-14T20:19:42Z",
+                          "publishedAt": "2022-07-14T20:19:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "permcody"
+                          },
+                          "bodyText": "The GrainTracker can certainly be added to that material. I don\u2019t have any resources that can work on this but we can advise somebody who would be willing to do the work.",
+                          "url": "https://github.com/idaholab/moose/discussions/21484#discussioncomment-3151259",
+                          "updatedAt": "2022-07-15T01:08:26Z",
+                          "publishedAt": "2022-07-15T01:08:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "FHilty"
+                          },
+                          "bodyText": "Hi Cody, thank you for the information. In a few week I will have the time to work on the changes, I will touch base again when I can get started. Thanks again.",
+                          "url": "https://github.com/idaholab/moose/discussions/21484#discussioncomment-3158831",
+                          "updatedAt": "2022-07-15T18:25:22Z",
+                          "publishedAt": "2022-07-15T18:25:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "FHilty"
+                          },
+                          "bodyText": "My schedule cleared up to where i can work on this and have been reading through the crystal plasticity and grain tracker files.\nThere are three material objects used ComputeElasticityTensorCP, ComputeMultipleCrystalPlasticityStress, and (in our case) CrystalPlasticityKalidindiUpdate. I don't believe the latter two will need modification, however they do utilize the material property crysrot that is provided from ComputeElasticityTensorCP so that is the first object that I will need to modify. From looking at the material ComputePolycrystalElasticityTensor I have a fair idea of how to give a material access to the grain tracker and retrieve the correct grain ID at an element.\nMy first question is what does the command _grain_tracker.getData(grain_id) actually return? That exact command seems to be used to retrieve both the Euler angles and elasticity tensor in different places. I think modifying ComputeElasticityTensorCP to (optionally) utilize the grain tracker will be straight forward once I understand how to get those specific pieces of information. This update would mean that the correct crysrot material property is provided to the other material objects.\nMy second question is much more open ended, what other objects would need modification to couple crystal plasticity with the grain tracker? I have not seen any other places in the kernel/material objects I need which require access grain trackers information.\n\nReduced version of the input script (extension changed from .i to .txt):\nGT_DN_XP_Simple.txt\nEBSD data for structure (extension changed from .ebsd to .txt):\nMCPC_20Grain_ebsd.txt\nEuler angle file that has correct inital 20 grain orientations and random angles for nucleated grains:\nMCPC_Random_Euler_1000.txt\nSlip system text file:\ninput_slip_sys.txt",
+                          "url": "https://github.com/idaholab/moose/discussions/21484#discussioncomment-3319198",
+                          "updatedAt": "2022-08-03T19:01:11Z",
+                          "publishedAt": "2022-08-03T19:01:10Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "permcody"
+                  },
+                  "bodyText": "First Answer: .getData(grain_id) is a templated interface function. It can return just about anything we define. It's setup to return various attributes for a given grain (things like Euler Angles, volumes, proximity to the boundary, etc). To see what methods are available you'll need to dig through the functor interface classes in the PhaseField module. I'm most familiar with EBSDAccessorFunctors, but as you've seen there are others. Just look at what interfaces the class you are interested in inherits from and look at the associated methods in those classes.\nSecond Answer: The whole point of the GrainTracker is to maintain a stable ID with a reduced number of order parameters so you'll likely need several attributes of each Grain to perform your calculations and this is where the GrainTracker can help you. I'm fairly certain that we are pulling unique grain information in the material system already, which feeds into the residual calculations for some of these models.",
+                  "url": "https://github.com/idaholab/moose/discussions/21484#discussioncomment-3353179",
+                  "updatedAt": "2022-08-08T21:56:31Z",
+                  "publishedAt": "2022-08-08T21:56:30Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "FHilty"
+                          },
+                          "bodyText": "Thank you for the assistance and sorry for the long silence, I had not heard of functors before so it was a learning experience. Once I started to understand what exactly was happening in other MOOSE objects I found that the solution was much simpler than I thought.\nFor anyone finding this thread the solution I settled on was to start with the ComputeElasticityTensorCP material and replaced the body of assignEulerAngles() with 2 steps. First retrieve the grain ID from grain tracker, then look up the Euler angles directly from the file using the Euler angle provider. As it turns out, this is exactly what OutputEulerAngles does in the precalculateValue() function. I performed a few tests and, so far as I can tell, the rest of the crystal plasticity framework is working correctly, it just hinged on getting the correct Euler angles. Now when the grain tracker inserts a new grain nucleus with discrete nucleation it is reflected in the stress/strain fields from the crystal plasticity modules.",
+                          "url": "https://github.com/idaholab/moose/discussions/21484#discussioncomment-3449449",
+                          "updatedAt": "2022-08-22T16:42:52Z",
+                          "publishedAt": "2022-08-22T16:42:51Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "permcody"
+                          },
+                          "bodyText": "Grea, glad you are working! The Euler Angle provider caches values so it doesn't have to do a file lookup each time you call it. There is a lot of nifty, but complex machinery making all this work. Let us know if you need any further assistance.",
+                          "url": "https://github.com/idaholab/moose/discussions/21484#discussioncomment-3451332",
+                          "updatedAt": "2022-08-22T21:56:19Z",
+                          "publishedAt": "2022-08-22T21:56:18Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "dynamic tensor mechanics axisymmetric RZ",
+          "author": {
+            "login": "Alirezarei"
+          },
+          "bodyText": "Hello,\nI have been trying to use the Dynamic Tensor Mechanics action to solve an axisymmetric RZ problem, but I always get an error saying the coordinate system is not supported. I have tried the following approaches to solve the issue, but nothing has worked so far.\n\nI made two ADDynamicStressDivergenceTensors in different directions, but I get an error saying: \"The coordinate system in the problem block must be set to XYZ for cartesian geometries\"\nI used Tensor mechanics master action and added two ADInertialForce kernels in different directions but the solve does not converge in this case!\nI used the Dynamic Master action without specifying the coord_type and set the cylindrical_axis_point1 and cylindrical_axis_point2 to proper vectors but it still solves in cartesian coordinate system!\n\nCould you help me with this please?\nI appreciate your time.\nRegards,\nAlireza",
+          "url": "https://github.com/idaholab/moose/discussions/21893",
+          "updatedAt": "2022-08-20T04:21:42Z",
+          "publishedAt": "2022-08-19T00:13:06Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "You are probably missing the following block in the input file\n[Mesh]\n  coord_type = RZ\n[]",
+                  "url": "https://github.com/idaholab/moose/discussions/21893#discussioncomment-3427886",
+                  "updatedAt": "2022-08-19T02:20:53Z",
+                  "publishedAt": "2022-08-19T02:20:52Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Alirezarei"
+                          },
+                          "bodyText": "Thanks for your reply. When I add coord_type = RZ and I'm using dynamic master action, it throws an error saying: \"unsupported coordinate system\". The problem is that Dynamic Master action seems not to support axisymmetric RZ problems or I'm missing something!",
+                          "url": "https://github.com/idaholab/moose/discussions/21893#discussioncomment-3428217",
+                          "updatedAt": "2022-08-19T04:04:32Z",
+                          "publishedAt": "2022-08-19T04:04:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "recuero"
+                          },
+                          "bodyText": "Yeah, we don't have RZ in dynamics. I recommend you use the following input: https://github.com/idaholab/moose/blob/436a787585e17c3901eb7de29dbd43a80d9a881a/modules/tensor_mechanics/test/tests/dynamics/rayleigh_damping/rayleigh_hht.i where inertia is already included in the latest action.\nYou mention the parameters cylindrical_axis_point1 and cylindrical_axis_point2: Aren't those gap heat transfer parameters? In any case, if you want to use dynamics, unfortunately for now, you'll have to stick to Cartesian systems.",
+                          "url": "https://github.com/idaholab/moose/discussions/21893#discussioncomment-3434989",
+                          "updatedAt": "2022-08-19T22:20:33Z",
+                          "publishedAt": "2022-08-19T22:20:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Alirezarei"
+                          },
+                          "bodyText": "I see. Thanks for your help.\nI really need to perform a dynamic analysis in RZ coordinate system. Are you planning to add this feature to Tensor Mechanics Dynamic Master action any time soon? If not, how can I do it myself?\nAlso, I'm using Tensor Mechanics Master action that supports RZ coordinate system but the linear solver does not converge due to DIVERGED_PC_FAILED; PC failed due to FACTOR_NUMERIC_ZEROPIVOT. The same input works for XYZ coordinate system. Is there any way that I can solve this issue?",
+                          "url": "https://github.com/idaholab/moose/discussions/21893#discussioncomment-3435068",
+                          "updatedAt": "2022-08-19T22:45:17Z",
+                          "publishedAt": "2022-08-19T22:45:16Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "recuero"
+                  },
+                  "bodyText": "Are you planning to add this feature to Tensor Mechanics Dynamic Master action any time soon? If not, how can I do it myself?\n\nI don't believe we can work on that soon. If you are interested in looking at it, I'd review DynamicStressDivergenceTensors which does the Cartesian definition of stresses within a dynamic integrator and then also at StressDivergenceRZTensors which does the axisymmetric work for quasi-statics. To successfully implement the RZ problem in dynamics you'd need to derive the expressions including _alpha, _dt, and _zeta.\n\nI'm using Tensor Mechanics Master action that supports RZ coordinate system but the linear solver does not converge due to DIVERGED_PC_FAILED; PC failed due to FACTOR_NUMERIC_ZEROPIVOT\n\nIt's hard to know what's going on there. I recommend you look at quasistatic RZ problems in the repository and see if you are missing something. Wonder if your BCs are correct since you mentioned you used the same input for XYZ.",
+                  "url": "https://github.com/idaholab/moose/discussions/21893#discussioncomment-3435143",
+                  "updatedAt": "2022-08-19T23:12:10Z",
+                  "publishedAt": "2022-08-19T23:12:09Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Alirezarei"
+                          },
+                          "bodyText": "Thank you very much for your prompt responses. I really appreciate it. I will check them out and see if I can do it myself.",
+                          "url": "https://github.com/idaholab/moose/discussions/21893#discussioncomment-3435767",
+                          "updatedAt": "2022-08-20T04:20:17Z",
+                          "publishedAt": "2022-08-20T04:20:16Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "The results of parallel and serial calculations in MOOSE are different in the thermo-mechanical coupling calculation",
+          "author": {
+            "login": "js-jixu"
+          },
+          "bodyText": "Hi, everyone.\nI want to do some thermomechanical coupling problems with MOOSE. and I want to set the model to have no displacement in the Z direction, so I set the boundary condition of displacements like this\uff1a\n  [./top_and_bottom]\n    type = DirichletBC\n    variable = disp_z\n    boundary = 'outer_bottom outer_top inner_bottom inner_top'\n    value = 0\n  [../]\n\nThere are two problems. The first one is that when I calculate with different numbers of cores, I get different results. For example, when I use one core, 4 cores and 8 cores for calculation, the results obtained are very different. It seems that the serial computation results is reasonable. The second one is that the distributions of disp_x and disp_y are not symmetrical to the x and y axes. But they are supposed to be symmetrical. If I want to make disp_x and disp_y symmetrical, should I set some boundary conditions for them?\nThe calculation results of using 1 core, 4 cores, and 8 cores are as follows:\n\n\n\nThere are output files and mesh file.\nattached files.zip\nThere is complete input file:\nini_temp = 593 # K\n\n[GlobalParams]\n  displacements = 'disp_x disp_y disp_z'\n[]\n\n[Mesh]\n  file = '2layers_3d_4parts.msh'\n[]\n\n[Variables]\n  [./T]\n    initial_condition = ${ini_temp}\n  [../]\n[]\n\n[AuxVariables]\n  [./heat]\n    family = MONOMIAL\n    order = FIRST\n    block = 'inner'\n  [../]\n[]\n\n[Kernels]\n  [./outer_inner_temperature_time]\n    type = ADHeatConductionTimeDerivative\n    variable = T\n    block = 'outer inner'\n    density_name = 'rho'\n    specific_heat = 'cp'\n  [../]\n  [./outer_inner_temperature_conduction]\n    type = ADHeatConduction\n    variable = T\n    block = 'outer inner'\n    thermal_conductivity = 'k'\n  [../]\n  [./heat_source]\n    type = HeatSource\n    variable = T\n    block = 'inner'\n    value = 1e5\n  [../]\n[]\n\n[Modules/TensorMechanics/Master]\n  [all]\n    add_variables = true\n    strain = FINITE\n    automatic_eigenstrain_names = true\n    generate_output = 'vonmises_stress'\n    block = 'outer inner'\n  []\n[]\n\n[Materials]\n  [elasticity]\n    type = ComputeIsotropicElasticityTensor\n    youngs_modulus = 2e11\n    poissons_ratio = 0.32\n    block = 'outer inner'\n  []\n  [thermal_expansion]\n    type = ComputeThermalExpansionEigenstrain\n    temperature = T\n    thermal_expansion_coeff = 1.0358e-5\n    stress_free_temperature = 273\n    eigenstrain_name = thermal_expansion\n    block = 'outer inner'\n  []\n  [stress]\n    type = ComputeFiniteStrainElasticStress\n    block = 'outer inner'\n  []\n\n  [./rho_inner]\n    type = ADParsedMaterial\n    f_name = rho\n    function = '0.0110876 * pow(9.9672e-1 + 1.179e-5 * T - 2.429e-9 * pow(T,2) + 1.219e-12 * pow(T,3),-3)'\n    args = 'T'\n    block = 'inner'\n  [../]\n  [./cp_inner]\n    type = ADParsedMaterial\n    f_name = cp\n    function = '0.76 * ((302.27 * pow((548.68/T),2) * exp(548.68 / T)) / pow((exp(548.68 / T) - 1),2) + 2 * 8.463e-3 * T + 8.741e7 * 18531.7 * exp(-18531.7 / T) / pow(T,2)) + 0.24 * ((322.49 * pow((587.41/T),2) * exp(587.41 / T)) / pow((exp(587.41 / T) - 1),2) + 2 * 1.4679e-2 * T)'\n    args = 'T'\n    block = 'inner'\n  [../]\n  [./k_inner]\n    type = ADParsedMaterial\n    f_name = k\n    function = '1.158/(7.5408 + 17.692 * (T / 1000) + 3.6142 * pow((T/1000),2)) + 74.105 * pow((T / 1000),-2.5) * exp(-16.35 / (T / 1000))'\n    args = 'T'\n    block = 'inner'\n  [../]\n\n  [./rho_outer]\n    type = ADParsedMaterial\n    f_name = rho\n    function = '1e-6 * (7830.853 - 0.212046 * T - 1.011373e-4 * pow(T,2))'\n    args = 'T'\n    block = 'outer'\n  [../]\n  [./cp_outer]\n    type = ADParsedMaterial\n    f_name = cp\n    function = '5863.9 - 32.563 * T + 0.072564 * pow(T,2) - 7.045375e-5 * pow(T,3) + 2.585336e-8 * pow(T,4)'\n    args = 'T'\n    block = 'outer'\n  [../]\n  [./k_outer]\n    type = ADParsedMaterial\n    f_name = k\n    function = '0.3'\n    args = 'T'\n    block = 'outer'\n  [../]\n[]\n\n[BCs]\n  [./top_and_bottom]\n    type = DirichletBC\n    variable = disp_z\n    boundary = 'outer_bottom outer_top inner_bottom inner_top'\n    value = 0\n  [../]\n  [./outer_wall_T]\n    type = DirichletBC\n    variable = T\n    value = ${ini_temp}\n    boundary = 'outer_wall'\n  [../]\n[]\n\n[Preconditioning]\n  [./smp]\n    type = SMP\n    full = true\n  [../]\n[]\n\n[Executioner]\n  type = Transient\n  num_steps = 25\n  dt = 0.001\n  #end_time = 100\n\n  nl_rel_tol = 1e-10\n  nl_abs_tol = 1e-10\n\n  solve_type = 'NEWTON'\n  petsc_options = '-snes_converged_reason -ksp_converged_reason -snes_linesearch_monitor'\n  petsc_options_iname = '-pc_type -pc_factor_shift_type'\n  petsc_options_value = 'lu       NONZERO'\n  line_search = 'none'\n   # petsc_options_iname = '-snes_type'\n  # petsc_options_value = 'test'\n\n  nl_max_its = 30\n  l_max_its = 100\n  automatic_scaling = true\n[]\n\n[Outputs]\n  exodus = true\n[]\n\nThanks a lot.",
+          "url": "https://github.com/idaholab/moose/discussions/21878",
+          "updatedAt": "2022-08-20T01:33:56Z",
+          "publishedAt": "2022-08-18T14:43:27Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "For the difference you see with different processors, that's very likely due to rigid body modes in the xy plane. You can still solve the system because you are using mumps with multiple processors plus a nonzero diagonal shift, but you lose the uniqueness of the solution.",
+                  "url": "https://github.com/idaholab/moose/discussions/21878#discussioncomment-3431044",
+                  "updatedAt": "2022-08-19T12:20:47Z",
+                  "publishedAt": "2022-08-19T12:20:46Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Same reason for the asymmetry. There are two ways to resolve both issues:\n\nRemove the rigid body modes by fixing a point in the domain. Any point should do.\nAdd an inertia term in the momentum balance.",
+                          "url": "https://github.com/idaholab/moose/discussions/21878#discussioncomment-3431067",
+                          "updatedAt": "2022-08-19T12:24:50Z",
+                          "publishedAt": "2022-08-19T12:24:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "js-jixu"
+                          },
+                          "bodyText": "Do you mean that I should set boundary conditions on a point in the domain? I set new bundary conditions like this;\n  [./bottom_point_z]\n    type = DirichletBC\n    variable = disp_z\n    boundary = 'bottom_point'\n    value = 0\n  [../]\n  [./bottom_point_y]\n    type = DirichletBC\n    variable = disp_y\n    boundary = 'bottom_point'\n    value = 0\n  [../]\n  [./bottom_point_x]\n    type = DirichletBC\n    variable = disp_x\n    boundary = 'bottom_point'\n    value = 0\n  [../]\n\nThe bottom_point is the point in the middle of the bottom of the cylinder with coordinates (0, 0, 0). I think if the input file is correct, the result will be the same whether it is a quad-core or an octa-core calculation. So I computed the input file with the new boundary conditions with four and eight cores respectively. . But the results calculated by different numbers of cores are still different and  asymmetry. Here are outputs screenshots and files:\n\n\nfiles.zip\nIf I want to set the model to have constraints at the top and bottom. In antoher word, the model cannot expand in the axial direction, only in the radial direction, how should I set the boundary conditions?",
+                          "url": "https://github.com/idaholab/moose/discussions/21878#discussioncomment-3431945",
+                          "updatedAt": "2022-08-19T14:28:36Z",
+                          "publishedAt": "2022-08-19T14:28:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Remove the rigid body modes by fixing a point in the domain. Any point should do.\n\nUhh I guess I didn't make it clear, my bad. The way you are fixing the point removes the in-plane translational motion, but the body could still rotate. You'd want to pick two points, fix x and y at the first point, and fix x or y at the second point. You'd want to keep the original BC in the z direction.",
+                          "url": "https://github.com/idaholab/moose/discussions/21878#discussioncomment-3433812",
+                          "updatedAt": "2022-08-19T18:19:41Z",
+                          "publishedAt": "2022-08-19T18:19:40Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "js-jixu"
+                          },
+                          "bodyText": "I've set boundary conditions on top_point and bottom_point, which are the midpoints of the top and bottom of the model, the new BCs block is here:\n[BCs]\n  [./bottom_point_y]\n    type = DirichletBC\n    variable = disp_y\n    boundary = 'bottom_point'\n    value = 0\n  [../]\n  [./bottom_point_x]\n    type = DirichletBC\n    variable = disp_x\n    boundary = 'bottom_point'\n    value = 0\n  [../]\n  [./top_point_x]\n    type = DirichletBC\n    variable = disp_x\n    boundary = 'top_point'\n    value = 0\n  [../]\n  [./top_and_bottom_z]\n    type = DirichletBC\n    variable = disp_z\n    boundary = 'outer_bottom outer_top inner_bottom inner_top'\n    value = 0\n  [../]\n  [./outer_wall_T]\n    type = DirichletBC\n    variable = T\n    value = ${ini_temp}\n    boundary = 'outer_wall'\n  [../]\n[]\n\nBut different numbers of cores still compute different results. The following are the results of the calculations for quad-core and octa-core:\n\n\nnew_files.zip\nThe new_files folder has a mesh file which has a coarser mesh in the axial direction.",
+                          "url": "https://github.com/idaholab/moose/discussions/21878#discussioncomment-3435213",
+                          "updatedAt": "2022-08-19T23:42:43Z",
+                          "publishedAt": "2022-08-19T23:42:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Think about it: the \"top_point\" and the \"bottom_point\" you picked happen to align with the center axis. So the cylinder could still rotate (about the center axis).\nTry this: say the radius of the cylinder is R, and the bottom of the cylinder has origin (0, 0, 0), then pick point 1 at (0, 0, 0) and point 2 at (R, 0, 0). Fix the x and y displacements at point 1, and fix the y displacement at point 2.",
+                          "url": "https://github.com/idaholab/moose/discussions/21878#discussioncomment-3435414",
+                          "updatedAt": "2022-08-20T01:11:39Z",
+                          "publishedAt": "2022-08-20T01:11:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "js-jixu"
+                          },
+                          "bodyText": "Amazing idea! You are totally correct, Gary! I've got reasonable results after taking your advice. Sincere thanks to your patience and wisdom.",
+                          "url": "https://github.com/idaholab/moose/discussions/21878#discussioncomment-3435446",
+                          "updatedAt": "2022-08-20T01:27:19Z",
+                          "publishedAt": "2022-08-20T01:27:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "So I just tested with your coarse mesh, and the results are consistent using different number of processors. My mesh block and BCs are\n[Mesh]\n  [fmg]\n    type = FileMeshGenerator\n    file = '2layers_3d_4parts_coarse.msh'\n  []\n  [pin]\n    type = ExtraNodesetGenerator\n    input = fmg\n    new_boundary = 'pin'\n    nodes = 4566\n  []\n[]\n\n[BCs]\n  [bottom_point_y]\n    type = DirichletBC\n    variable = disp_y\n    boundary = 'bottom_point'\n    value = 0\n  []\n  [bottom_point_x]\n    type = DirichletBC\n    variable = disp_x\n    boundary = 'bottom_point'\n    value = 0\n  []\n  [pin_y]\n    type = DirichletBC\n    variable = disp_y\n    boundary = 'pin'\n    value = 0\n  []\n  [bottom_z]\n    type = DirichletBC\n    variable = disp_z\n    boundary = 'outer_bottom inner_bottom'\n    value = 0\n  []\n  [outer_wall_T]\n    type = DirichletBC\n    variable = T\n    value = ${ini_temp}\n    boundary = 'outer_wall'\n  []\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/21878#discussioncomment-3435449",
+                          "updatedAt": "2022-08-20T01:27:39Z",
+                          "publishedAt": "2022-08-20T01:27:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "js-jixu"
+                          },
+                          "bodyText": "Yeah, the results is absolutely correct! Thanks again!",
+                          "url": "https://github.com/idaholab/moose/discussions/21878#discussioncomment-3435454",
+                          "updatedAt": "2022-08-20T01:30:11Z",
+                          "publishedAt": "2022-08-20T01:30:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "If you want the body to expand/shrink in the z-direction (due to thermal expansion for example), you probably don't want to constrain both top and bottom. Just constrain the z displacements on the bottom surface should suffice. You may want to constrain the top surface to have the same z-displacement, in which case you could use an EqualValueBoundaryConstraint on the top surface.",
+                          "url": "https://github.com/idaholab/moose/discussions/21878#discussioncomment-3435460",
+                          "updatedAt": "2022-08-20T01:31:13Z",
+                          "publishedAt": "2022-08-20T01:31:12Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "js-jixu"
+                          },
+                          "bodyText": "Okay, I'll learn to use this object carefully. Your advice really helps a lot to me!",
+                          "url": "https://github.com/idaholab/moose/discussions/21878#discussioncomment-3435464",
+                          "updatedAt": "2022-08-20T01:33:56Z",
+                          "publishedAt": "2022-08-20T01:33:55Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "UMATHT in MOOSE",
+          "author": {
+            "login": "sidharthsarmah"
+          },
+          "bodyText": "Hi,\nI wanted to use this UMATHT.f subroutine in MOOSE.\nThis is the code I use in the moose file in section materials, but there is error popping out, please help, I am new to moose, thanks!\n# Testing the UMAT Interface - creep linear strain hardening model using the finite strain formulation - visco-plastic material.\n\n[GlobalParams]\n  displacements = 'disp_x disp_y'\n[]\n\n[Mesh]\n  file = BLP.inp\n[]\n\n[Functions]\n  [top_pull]\n    type = ParsedFunction\n    value = '0.1*t'\n  []\n[]\n\n[Modules/TensorMechanics/Master]\n  [all]\n    add_variables = true\n    strain = small\n    incremental = true\n    generate_output = 'stress_xx stress_xy stress_yy strain_xx strain_xy strain_yy'\n  []\n[]\n\n[BCs]\n  [x_pull_function]\n    type = FunctionDirichletBC\n    variable = disp_x\n    boundary = Outer\n    function = 'top_pull'\n  []\n\n   [y_pull_function]\n    type = FunctionDirichletBC\n    variable = disp_y\n    boundary = Outer\n    function = 'top_pull'\n  []\n[]\n\n[Materials]\n [umatht]\n    type = AbaqusUMATStress\n    constant_properties = '0.0127 2'\n    plugin = '../../../../tensor_mechanics/test/plugins/UMATHT'\n    num_state_vars = 3\n    concentration = concentration\n    use_one_based_indexing = true\n  []\n  [constant]\n    type = AbaqusUMATStress\n    #                      Young's modulus,  Poisson's Ratio, Yield, Hardening\n    constant_properties = '201880 0.3 595 0.059'\n    plugin = ../../../plugins/UMATHT\n[UMATHT.txt](https://github.com/idaholab/moose/files/9332177/UMATHT.txt)\n\n    num_state_vars = 3\n    use_one_based_indexing = true\n  []\n[]\n\n[Executioner]\n  type = Transient\n  solve_type = 'PJFNK'\n\n  petsc_options = '-snes_ksp_ew'\n  petsc_options_iname = '-ksp_gmres_restart'\n  petsc_options_value = '101'\n\n  line_search = 'none'\n\n  l_max_its = 100\n  nl_max_its = 100\n  nl_rel_tol = 1e-12\n  nl_abs_tol = 1e-10\n  l_tol = 1e-9\n  start_time = 0.0\n  num_steps = 10\n  dt = 0.1\n[]\n\n[Preconditioning]\n  [smp]\n    type = SMP\n    full = true\n  []\n[]\n\n[Outputs]\n  [out]\n    type = Exodus\n  []\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/21844",
+          "updatedAt": "2022-09-02T19:57:10Z",
+          "publishedAt": "2022-08-13T21:10:15Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "hello\nThe two paths are different\n    plugin = '../../../../tensor_mechanics/test/plugins/UMATHT'\n    plugin = ../../../plugins/UMATHT\n\nare the paths correct?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21844#discussioncomment-3398860",
+                  "updatedAt": "2022-08-15T14:32:07Z",
+                  "publishedAt": "2022-08-15T14:32:07Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sidharthsarmah"
+                          },
+                          "bodyText": "Yeah but the UMATHT subroutine is mentioned to not b registered, can you help me with this?",
+                          "url": "https://github.com/idaholab/moose/discussions/21844#discussioncomment-3402571",
+                          "updatedAt": "2022-08-16T01:16:59Z",
+                          "publishedAt": "2022-08-16T01:16:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sidharthsarmah"
+                          },
+                          "bodyText": "The paths are the same, let me explain the problem, it's basically a coupled problem.\nThe UMATHT subroutine is for the calculation of the temperature, which takes various inputs such as diffusion etc.\nThe UMAT subroutine is for stress calculation\nThe DISP subroutine is for insert loading conditions which are K1 type loading.\nCan you help on how do I implement this, thanks!\n\n! User material and thermal subroutine for hydrogen transport\n! The code is distributed under a BSD license\n! If using this code for research or industrial purposes, please cite:\n! R. Fernandez-Sousa, C. Betegon, E. Martinez-Paneda. Analysis of the\n! influence of microstructural traps on hydrogen assisted fatigue.\n! Acta Materialia 199, pp. 253-263 (2020).\n! doi: 10.1016/j.actamat.2020.08.030\n! Emilio Martinez-Paneda (e.martinez-paneda@imperial.ac.uk)\n! Imperial College London\n  module ktransfer\n  implicit none\n  real*8 coorT(50000,4,2),grad(50000,8),ShT(50000,4)\n  save\n  end module   \n\n!***********************************************************************\nsubroutine uexternaldb(lop,lrestart,time,dtime,kstep,kinc)\nuse ktransfer\ninclude 'aba_param.inc' !implicit real(a-h o-z)\ndimension time(2)\n  if (lop.eq.0) then ! start of the analysis\n   coorT=0.d0\n   grad=0.d0\n   ShT=0.d0\n  end if\n  \n  return\n  end\n\n!***********************************************************************\nsubroutine umatht(u,dudt,dudg,flux,dfdt,dfdg,statev,temp,dtemp,\n1 dtemdx,time,dtime,predef,dpred,cmname,ntgrd,nstatv,props,nprops,\n2 coords,pnewdt,noel,npt,layer,kspt,kstep,kinc)\n  use ktransfer\n  include 'aba_param.inc'\n\n  character*80 cmname\n  dimension dudg(ntgrd),flux(ntgrd),dfdt(ntgrd),dfdg(ntgrd,ntgrd),\n 1 statev(nstatv),dtemdx(ntgrd),time(2),predef(1),dpred(1),\n 2 props(nprops),coords(3)\n\n  dimension Wb(nprops/2-1),xK(nprops/2-1),xNt(nprops/2-1),sig(ntgrd)\n\n  ! Step-1: Read input data & Initialize\n  dfdg=0.d0\n  ntens=ntgrd*2\n  cL=temp+dtemp\n\n  D=props(1)\n  kflag=props(2)\n  xNl=5.1d20 ! [sites/mm^3]\n  Vh=2000.d0 ! [mm^3/mol]\n  R=8314.5d0 ! [N*mm/(mol*K)]\n  T=300.d0   ! [K]\n  b=0.2725d-6 ! bcc [mm]\n  sig(1)=grad(noel,2*npt-1)\n  sig(2)=grad(noel,2*npt)\n  ntraps=nprops/2-1\n  \n  do k1=1,ntraps\n   Wb(k1)=props(2+2*k1-1)\n   xNt(k1)=props(2+2*k1)\n   xK(k1)=exp(Wb(k1)/(R*T))\n  end do\n  \n  du2=0.d0\n  if (kflag.eq.0) then ! Lattice H only\n   xNt(1)=0.d0\n  elseif (kflag.eq.1) then ! No dislocations: Wb(1) and xNt(1) irrelevant\n   xNt(1)=0.d0\n  elseif (kflag.eq.2) then ! Kumnick & Johnson / Sofronis & McMeeking (in sites/mm^3)\n   xNt(1)=10.d0**(23.26d0-2.33d0*exp(-5.5d0*statev(1+2*ntens)))/1e9\n  elseif (kflag.eq.3) then ! Kumnick & Johnson / Krom et al. \n   xNt(1)=10.d0**(23.26d0-2.33d0*exp(-5.5d0*statev(1+2*ntens)))/1e9\n   du2=(xK(1)*cL/(xK(1)*cL+xNl))*29.5d0\n & *dexp(-5.5d0*statev(1+2*ntens))*xNt(1)*statev(2+2*ntens)\n  elseif (kflag.eq.4) then ! Gilman / Dadfarnia et al.\n    if (statev(1+2*ntens).lt.0.5) then\n     xNt(1)=(1.d10+statev(1+2*ntens)*2.d16)/(b*1e6)\n     du2=(xK(1)*cL/(xK(1)*cL+xNl))*(statev(2+2*ntens)*2e16)/(b*1e6)\n    elseif (statev(1+2*ntens).ge.0.5) then\n     xNt(1)=(1e16)/(b*1e6)\n    endif\n  elseif (kflag.eq.5) then ! Taylor / Fernandez-Sousa et al.\n   xNt(1)=statev(3+2*ntens)/b\n  endif\n  \n  dudt2=0.d0\n  do k1=1,ntraps\n   dudt2=dudt2+xNt(k1)*xK(k1)*xNl/((xK(k1)*cL+xNl)**2.d0)\n  end do \n  dudt=1.d0+dudt2\t   \n  u=u+dudt*dtemp+du2\n  do i=1,ntgrd\n   dudg(i)=0.d0\n   flux(i)=-D*dtemdx(i)+D*cL*Vh*sig(i)/(R*T)\n   dfdt(i)=D*Vh*sig(i)/(R*T)\n   dfdg(i,i)=-D\n  end do\n\n!     store the concentration in each trap, in all traps and in traps and lattice\nid=3+2*ntens\nstatev(ntraps+1+id)=0\ndo k1=1,ntraps\nstatev(k1+id)=xNt(k1)*xK(k1)*cL/(xK(k1)*cL+xNl)\nstatev(ntraps+1+id)=statev(ntraps+1+id)+statev(k1+id)\nend do\nstatev(ntraps+2+id)=cL+statev(ntraps+1+id)\n  return\n  end\n\n! User material subroutine for power law conventional plasticity\n! The code is distributed under a BSD license\n! If using this code for research or industrial purposes, please cite:\n! E. Martinez-Paneda, S. Fuentes-Alonso, C. Betegon.\n! Gradient-enhanced statistical analysis of cleavage fracture\n! European Journal of Mechanics - A/Solids 77, 103785 (2019)\n! doi: 10.1016/j.euromechsol.2019.05.002\n! Emilio Martinez-Paneda (mail@empaneda.com)\n! Imperial College London\n  subroutine umat(stress,statev,ddsdde,sse,spd,scd,rpl,ddsddt,\n 1 drplde,drpldt,stran,dstran,time,dtime,temp2,dtemp,predef,dpred,\n 2 cmname,ndi,nshr,ntens,nstatv,props,nprops,coords,drot,pnewdt,\n 3 celent,dfgrd0,dfgrd1,noel,npt,layer,kspt,jstep,kinc)\n\n  use ktransfer\n  include 'aba_param.inc'\n\n  character*8 cmname\n  dimension stress(ntens),statev(nstatv),ddsdde(ntens,ntens),\n 1 ddsddt(ntens),drplde(ntens),stran(ntens),dstran(ntens),\n 2 time(2),predef(1),dpred(1),props(nprops),coords(3),drot(3,3),\n 3 dfgrd0(3,3),dfgrd1(3,3),jstep(4)\n  \n  dimension eelas(ntens),eplas(ntens),flow(ntens),olds(ntens),\n + oldpl(ntens),deriv(2,4),xjacm(2,2),xjaci(2,2)\n       \n  parameter(toler=1.d-6,newton=20)\n\n!     Initialization\nddsdde=0.d0\nE=props(1) ! Young's modulus\nxnu=props(2) ! Poisson's ratio\nSy=props(3) ! Yield stress\nxn=props(4) ! Strain hardening exponent\n  call rotsig(statev(1),drot,eelas,2,ndi,nshr)\n  call rotsig(statev(ntens+1),drot,eplas,2,ndi,nshr)\n  eqplas=statev(1+2*ntens)\n  olds=stress\n  oldpl=eplas\n\n!     Compute the gradient of the hydrostatic stress\nif (npt==1 .and. time(1).gt.0) then\ndo k1=1,4 ! Hard coded for 4 integration points\nif (k1==1) then\ns=-1.d0\nt=-1.d0\nelseif (k1==2) then\ns=1.d0\nt=-1.d0\nelseif (k1==3) then\ns=-1.d0\nt=1.d0\nelseif (k1==4) then\ns=1.d0\nt=1.d0\nend if\n    deriv(1,1)=-(1.d0/4.0)*(1-t)\n    deriv(1,2)=(1.d0/4.0)*(1-t)\n    deriv(1,3)=-(1.d0/4.0)*(1+t)\n    deriv(1,4)=(1.d0/4.0)*(1+t)\n    deriv(2,1)=-(1.d0/4.0)*(1-s)\n    deriv(2,2)=-(1.d0/4.0)*(1+s)\n    deriv(2,3)=(1.d0/4.0)*(1-s)\n    deriv(2,4)=(1.d0/4.0)*(1+s)\n\n    xjacm(1,1)=deriv(1,1)*coorT(noel,1,1)+deriv(1,2)*coorT(noel,2,1)\n 1 +deriv(1,3)*coorT(noel,3,1)+deriv(1,4)*coorT(noel,4,1)\n\n    xjacm(1,2)=deriv(1,1)*coorT(noel,1,2)+deriv(1,2)*coorT(noel,2,2)\n 1 +deriv(1,3)*coorT(noel,3,2)+deriv(1,4)*coorT(noel,4,2)\n \n    xjacm(2,1)=deriv(2,1)*coorT(noel,1,1)+deriv(2,2)*coorT(noel,2,1)\n 1 +deriv(2,3)*coorT(noel,3,1)+deriv(2,4)*coorT(noel,4,1)\n  \n    xjacm(2,2)=deriv(2,1)*coorT(noel,1,2)+deriv(2,2)*coorT(noel,2,2)\n 1 +deriv(2,3)*coorT(noel,3,2)+deriv(2,4)*coorT(noel,4,2)\n\n    djacb=xjacm(1,1)*xjacm(2,2)-xjacm(1,2)*xjacm(2,1) \n  \n    xjaci(1,1)=xjacm(2,2)/djacb \n    xjaci(1,2)=-xjacm(1,2)/djacb  \n    xjaci(2,1)=-xjacm(2,1)/djacb   \n    xjaci(2,2)=xjacm(1,1)/djacb\n\n    a1=xjaci(1,1)*deriv(1,1)+xjaci(1,2)*deriv(2,1) \n    a2=xjaci(1,1)*deriv(1,2)+xjaci(1,2)*deriv(2,2) \n    a3=xjaci(1,1)*deriv(1,3)+xjaci(1,2)*deriv(2,3) \n    a4=xjaci(1,1)*deriv(1,4)+xjaci(1,2)*deriv(2,4) \n    b1=xjaci(2,1)*deriv(1,1)+xjaci(2,2)*deriv(2,1) \n    b2=xjaci(2,1)*deriv(1,2)+xjaci(2,2)*deriv(2,2) \n    b3=xjaci(2,1)*deriv(1,3)+xjaci(2,2)*deriv(2,3) \n    b4=xjaci(2,1)*deriv(1,4)+xjaci(2,2)*deriv(2,4)  \n  \n    grad(noel,2*k1-1)=a1*ShT(noel,1)+a2*ShT(noel,2)+a3*ShT(noel,3)\n 1 +a4*ShT(noel,4)\n    grad(noel,2*k1)=b1*ShT(noel,1)+b2*ShT(noel,2)+b3*ShT(noel,3)\n 1 +b4*ShT(noel,4)\n   end do \n  end if     \n\n!     Build elastic stiffness matrix\neg=E/(1.d0+xnu)/2.d0\nelam=(E/(1.d0-2.d0xnu)-2.d0eg)/3.d0\n  do i=1,3\n   do j=1,3\n    ddsdde(j,i)=elam\n   end do\n   ddsdde(i,i)=2.d0*eg+elam\n  end do\n  do i=4,ntens\n   ddsdde(i,i)=eg\n  end do\n\n!     Calculate predictor stress and elastic strain\nstress=stress+matmul(ddsdde,dstran)\neelas=eelas+dstran\n!     Calculate equivalent von Mises stress\nSmises=(stress(1)-stress(2))**2+(stress(2)-stress(3))**2\n1 +(stress(3)-stress(1))**2\ndo i=4,ntens\nSmises=Smises+6.d0*stress(i)**2\nend do\nSmises=sqrt(Smises/2.d0)\n!     Get yield stress from the specified hardening curve\nSf=Sy*(1.d0+E*eqplas/Sy)**xn\n!     Determine if active yielding\nif (Smises.gt.(1.d0+toler)*Sf) then\n!     Calculate the flow direction\nSh=(stress(1)+stress(2)+stress(3))/3.d0\nflow(1:3)=(stress(1:3)-Sh)/Smises\nflow(4:ntens)=stress(4:ntens)/Smises\n!     Solve for Smises and deqpl using Newton's method\ndeqpl=0.d0\nEt=Exn(1.d0+Eeqplas/Sy)**(xn-1)\ndo kewton=1,newton\nrhs=Smises-(3.d0eg)deqpl-Sf\ndeqpl=deqpl+rhs/((3.d0eg)+Et)\nSf=Sy*(1.d0+E*(eqplas+deqpl)/Sy)xn\nEt=Exn(1.d0+E*(eqplas+deqpl)/Sy)(xn-1)\nif(abs(rhs).lt.tolerSy) exit\nend do\nif (kewton.eq.newton) write(7,)'WARNING: plasticity loop failed'\n!     Update stresses and strains\nstress(1:3)=flow(1:3)Sf+Sh\neplas(1:3)=eplas(1:3)+3.d0/2.d0flow(1:3)deqpl\neelas(1:3)=eelas(1:3)-3.d0/2.d0flow(1:3)*deqpl\nstress(4:ntens)=flow(4:ntens)Sf\neplas(4:ntens)=eplas(4:ntens)+3.d0flow(4:ntens)deqpl\neelas(4:ntens)=eelas(4:ntens)-3.d0flow(4:ntens)*deqpl\neqplas=eqplas+deqpl\n!     Calculate the plastic strain energy density\ndo i=1,ntens\nspd=spd+(stress(i)+olds(i))*(eplas(i)-oldpl(i))/2.d0\nend do\n!     Formulate the jacobian (material tangent)\neffg=egSf/Smises\nefflam=(E/(1.d0-2.d0xnu)-2.d0effg)/3.d0\neffhrd=3.d0egEt/(3.d0eg+Et)-3.d0effg\ndo i=1,3\ndo j=1,3\nddsdde(j,i)=efflam\nenddo\nddsdde(i,i)=2.d0effg+efflam\nend do\ndo i=4,ntens\nddsdde(i,i)=effg\nend do\n   do i=1,ntens\n    do j=1,ntens\n     ddsdde(j,i)=ddsdde(j,i)+effhrd*flow(j)*flow(i)\n    end do\n   end do\n  endif\n\n!     Store strains in state variable array\nstatev(1:ntens)=eelas\nstatev((ntens+1):2ntens)=eplas\nstatev(1+2ntens)=eqplas\nstatev(2+2*ntens)=deqpl\n!     Statistically stored dislocations (bcc)\nxm=2.9d0\nb=0.2725d-6\nssd=((Sy*(E/Sy)*xn(eqplas+Sy/E)**xn)/(xm0.5d0egb))**2\nstatev(3+2ntens)=ssd\n!     Store information for computing the Sh gradient\nShT(noel,npt)=(stress(1)+stress(2)+stress(3))/3.d0\ncoorT(noel,npt,1)=coords(1)\ncoorT(noel,npt,2)=coords(2)\n  return\n  end\n\n! User subroutine for prescribing a remote amplitude load\n! The code is distributed under a BSD license\n! If using this code for research or industrial purposes, please cite:\n! S. del Busto, C. Beteg\u00f3n, E. Mart\u00ednez-Pa\u00f1eda. A cohesive zone\n! framework for environmentally assisted fatigue. Engineering Fracture\n! Mechanics 185: 210-226 (2017). doi:10.1016/j.engfracmech.2017.05.021\n! Emilio Mart\u00ednez-Pa\u00f1eda (mail@empaneda.com)\n! Technical University of Denmark\n  subroutine  disp(u,kstep,kinc,time,node,noel,jdof,coords)\n\n  include 'aba_param.inc'\n\n  dimension u(3),time(2),coords(3)\n\n! Introduce manually\nxk=30dsqrt(1000.d0)time(2) ! MPam^1/2 to MPamm^1/2\ne=201880.d0\nxnu=0.3d0\npi=3.14159265359d0\n!user coding to define U\nr=dsqrt(coords(1)**2+coords(2)**2)\ntheta=atan2(coords(2),coords(1))\nif (jdof.eq.1) then\nu(1)=(1+xnu)(xk/e)sqrt(r/(2pi))(3-4xnu-cos(theta))\n& cos(theta/2)\nelseif (jdof.eq.2) then\nu(1)=(1+xnu)(xk/e)sqrt(r/(2pi))(3-4xnu-cos(theta))\n& sin(theta/2)\nendif\n  RETURN\n  END",
+                          "url": "https://github.com/idaholab/moose/discussions/21844#discussioncomment-3402591",
+                          "updatedAt": "2022-08-16T01:22:17Z",
+                          "publishedAt": "2022-08-16T01:22:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "recuero"
+                          },
+                          "bodyText": "We currently only support stress calculation user subroutines and external database utility subroutines. User heat transfer subroutines aren't supported yet. You can, however, use the temperature variable in your stress routine if you define MOOSE heat transfer kernels.",
+                          "url": "https://github.com/idaholab/moose/discussions/21844#discussioncomment-3402797",
+                          "updatedAt": "2022-08-16T02:16:53Z",
+                          "publishedAt": "2022-08-16T02:16:53Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sidharthsarmah"
+                          },
+                          "bodyText": "Does it mean we cannot perform diffusion process where the driving force is the stress gradient using the UMATHT subroutine?\nOr can we make any changes to the UMAT subroutine available in Moose to obtain the desired heat transfer distribution? By incorporating say the space and time derivative of Temperature?\nPlease assist!",
+                          "url": "https://github.com/idaholab/moose/discussions/21844#discussioncomment-3403677",
+                          "updatedAt": "2022-08-16T06:19:42Z",
+                          "publishedAt": "2022-08-16T06:19:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "recuero"
+                          },
+                          "bodyText": "Does it mean we cannot perform diffusion process where the driving force is the stress gradient using the UMATHT subroutine?\n\nCorrect. You could use MOOSE native capabilities to do that if you so choose.",
+                          "url": "https://github.com/idaholab/moose/discussions/21844#discussioncomment-3434994",
+                          "updatedAt": "2022-08-19T22:22:01Z",
+                          "publishedAt": "2022-08-19T22:22:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sidharthsarmah"
+                          },
+                          "bodyText": "By native capability, it means, I need to modify the Kernels?",
+                          "url": "https://github.com/idaholab/moose/discussions/21844#discussioncomment-3435227",
+                          "updatedAt": "2022-08-19T23:48:10Z",
+                          "publishedAt": "2022-08-19T23:48:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "recuero"
+                          },
+                          "bodyText": "You may or may not need to modify kernels depending on your use case. There are options for users that want to define materials in the input files, such as parsed materials (https://mooseframework.inl.gov/source/materials/ParsedMaterial.html), which avoid the need to code. This is the doc for the heat transfer module: https://mooseframework.inl.gov/modules/heat_conduction/index.html.",
+                          "url": "https://github.com/idaholab/moose/discussions/21844#discussioncomment-3435283",
+                          "updatedAt": "2022-08-20T00:11:52Z",
+                          "publishedAt": "2022-08-20T00:11:52Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sidharthsarmah"
+                          },
+                          "bodyText": "Thanks a lot",
+                          "url": "https://github.com/idaholab/moose/discussions/21844#discussioncomment-3435425",
+                          "updatedAt": "2022-08-20T01:16:28Z",
+                          "publishedAt": "2022-08-20T01:16:28Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Conda Apple Silicon (libgfortran issue)",
+          "author": {
+            "login": "milljm"
+          },
+          "bodyText": "There is an issue with our ARM Conda packages (not being strict enough... again).\nThe change (mamba list):\n-    libgfortran:                 5.0.0.dev0-11_0_1_hf114ba7_23 conda-forge     < good version\n+    libgfortran:                 5.0.0-11_3_0_hd922786_24      conda-forge\n-    libgfortran5:                11.0.1.dev0-hf114ba7_23       conda-forge     < good version\n+    libgfortran5:                11.3.0-hdaf2cc0_24            conda-forge\nIf you perform an update, or install from scratch, you will receive these problematic packages. The fix is to supply the correct version of libgfortran when installing. Like so:\nmamba create -n moose moose-libmesh moose-tools libgfortran=5.0.0.dev0",
+          "url": "https://github.com/idaholab/moose/discussions/21902",
+          "updatedAt": "2022-08-19T20:09:56Z",
+          "publishedAt": "2022-08-19T20:06:56Z",
+          "category": {
+            "name": "News"
+          },
+          "comments": {
+            "edges": []
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Minimizer in MOOSE?",
+          "author": {
+            "login": "heinono1"
+          },
+          "bodyText": "Does MOOSE have a tool or utility for direct minimization? In many problems, the static solution (or asymptotic solution) of the governing equation is an energy minimum, in particular for a large class of problems in which the energy of the system is strictly monotonically non-increasing. If one is interested in the asymptotic stationary solution, one can either time-integrate until the energy does not decrease any more, or do a direct energy minimization. Is there such a direct energy minimization path implemented in MOOSE?",
+          "url": "https://github.com/idaholab/moose/discussions/21880",
+          "updatedAt": "2022-09-02T20:02:02Z",
+          "publishedAt": "2022-08-18T15:10:31Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@lynnmunday might have something for you in isopod",
+                  "url": "https://github.com/idaholab/moose/discussions/21880#discussioncomment-3424017",
+                  "updatedAt": "2022-08-18T15:23:15Z",
+                  "publishedAt": "2022-08-18T15:23:13Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "heinono1"
+                  },
+                  "bodyText": "Cool - thanks! I'll look into Isopod.\n\nCheers,\nOlle\n\u2026\nOn Thu, Aug 18, 2022 at 10:23 AM Guillaume Giudicelli < ***@***.***> wrote:\n @lynnmunday <https://github.com/lynnmunday> might have something for you\n in isopod\n\n \u2014\n Reply to this email directly, view it on GitHub\n <#21880 (comment)>,\n or unsubscribe\n <https://github.com/notifications/unsubscribe-auth/AEKZEF4DSIULJW6K7DKFUMLVZZIO3ANCNFSM565RXSYA>\n .\n You are receiving this because you authored the thread.Message ID:\n ***@***.***>\n\n\n-- \nOlle Heinonen\n***@***.***",
+                  "url": "https://github.com/idaholab/moose/discussions/21880#discussioncomment-3424201",
+                  "updatedAt": "2022-08-18T15:46:05Z",
+                  "publishedAt": "2022-08-18T15:46:04Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Isopod essentially interfaces with PETSc/TAO. You could also use trilinos's ROL.",
+                          "url": "https://github.com/idaholab/moose/discussions/21880#discussioncomment-3426036",
+                          "updatedAt": "2022-08-18T18:50:44Z",
+                          "publishedAt": "2022-08-18T18:50:43Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "It's coming to MOOSE\n#21887",
+                  "url": "https://github.com/idaholab/moose/discussions/21880#discussioncomment-3426767",
+                  "updatedAt": "2022-08-18T21:10:47Z",
+                  "publishedAt": "2022-08-18T21:10:46Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "heinono1"
+                  },
+                  "bodyText": "Super!\n\u2026\nOn Thu, Aug 18, 2022 at 4:10 PM Guillaume Giudicelli < ***@***.***> wrote:\n It's coming to MOOSE\n #21887 <#21887>\n\n \u2014\n Reply to this email directly, view it on GitHub\n <#21880 (comment)>,\n or unsubscribe\n <https://github.com/notifications/unsubscribe-auth/AEKZEF7R3FGN2TJJ3NOGGT3VZ2RGBANCNFSM565RXSYA>\n .\n You are receiving this because you authored the thread.Message ID:\n ***@***.***>\n\n\n-- \nOlle Heinonen\n***@***.***",
+                  "url": "https://github.com/idaholab/moose/discussions/21880#discussioncomment-3426785",
+                  "updatedAt": "2022-08-18T21:14:18Z",
+                  "publishedAt": "2022-08-18T21:14:17Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How the Jacobian is defined in Moose",
+          "author": {
+            "login": "Oops-Qiao"
+          },
+          "bodyText": "Hello,\nToday I just read something in the following link\nhttps://mooseframework.inl.gov/syntax/Kernels/index.html#824e4ebf-e857-4e31-9fbf-290950ee3314\nwhere it mentioned:  The Jacobian, which is the derivative of [Eq. (2)] ...\nI am curious if this is the same way as we studied finite element method course. Or this is just a special way for Jacobian in Moose.\nThanks for your answers.\nBest regards,\nQiao",
+          "url": "https://github.com/idaholab/moose/discussions/21876",
+          "updatedAt": "2022-09-02T20:02:14Z",
+          "publishedAt": "2022-08-18T08:50:39Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "Oops-Qiao"
+                  },
+                  "bodyText": "If I remember correctly, Jacobian is defined as the derivative of physical domain coordinates with respect to the reference domain.\nWhy the derivative of Eq 2 is equivalent to this Jacobian mapping?",
+                  "url": "https://github.com/idaholab/moose/discussions/21876#discussioncomment-3422083",
+                  "updatedAt": "2022-08-18T11:24:51Z",
+                  "publishedAt": "2022-08-18T11:24:51Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "Yeah, I think this confuses many people.\nWikipedia says this: https://en.wikipedia.org/wiki/Jacobian_matrix_and_determinant\nSo Jacobian is a general definition. The three most common \"specializations\" you may find in MOOSE or any FEM packages are\n\nThe derivative of the residual vector w.r.t. all dofs\nThe derivative of the element coordinates w.r.t. the reference element, in the context of parametric mapping.\nThe derivative of the coordinates in the current/deformed configuration (after applying displacements) w.r.t. the coordinates in the reference configuration, in the context of mechanics.",
+                  "url": "https://github.com/idaholab/moose/discussions/21876#discussioncomment-3422894",
+                  "updatedAt": "2022-08-18T13:20:42Z",
+                  "publishedAt": "2022-08-18T13:20:41Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Yeah, sorry I don't check my school emails very often. I just updated my github profile.",
+                          "url": "https://github.com/idaholab/moose/discussions/21876#discussioncomment-3423044",
+                          "updatedAt": "2022-08-18T13:37:45Z",
+                          "publishedAt": "2022-08-18T13:37:45Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Error message on HPC but no error on local machine",
+          "author": {
+            "login": "xueyang94"
+          },
+          "bodyText": "I have a remote branch that I have checked out on both local machine and on HPC (of my University). On the local machine, I can compile and run simulations without issue. On HPC, compiling phase_field-opt receives a warning:\n\n/usr/bin/ld: warning: libpmi.so.0, needed by /apps/mpi/gcc/9.3.0/openmpi/4.1.1/lib64/libmpi_usempif08.so, may conflict with libpmi.so.1\n\nWhen running simulations on HPC, I receive an error below. No error on local machine. Any suggestions on how to remove this error? Thanks.\n\n[c0701a-s3:6130 :0:6130] Caught signal 11 (Segmentation fault: address not mapped to object at address (nil))\n==== backtrace (tid:   6130) ====\n0 0x000000000004ee05 ucs_debug_print_backtrace()  ???:0\n1 0x000000000016ab91 __memcmp_sse4_1()  :0\n2 0x0000000000325208 std::_Rb_tree<std::__cxx11::basic_string<char, std::char_traits, std::allocator >, std::pair<std::__cxx11::basic_string<char, std::char_traits, std::allocator > const, std::unique_ptr<libMesh::Parameters::Value, std::default_deletelibMesh::Parameters::Value > >, std::_Select1st<std::pair<std::__cxx11::basic_string<char, std::char_traits, std::allocator > const, std::unique_ptr<libMesh::Parameters::Value, std::default_deletelibMesh::Parameters::Value > > >, std::less, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits, std::allocator > const, std::unique_ptr<libMesh::Parameters::Value, std::default_deletelibMesh::Parameters::Value > > > >::_M_find_tr<std::basic_string_view<char, std::char_traits >, void>()  ???:0\n3 0x00000000005ac051 libMesh::Parameters::have_parameter()  ???:0\n4 0x0000000000a38077 MaterialPropertyInterface::deducePropertyName()  ???:0\n5 0x00000000005f11f4 DerivativeMaterialInterface<JvarMapKernelInterface >::getMaterialPropertyDerivative<double, false>()  ???:0\n6 0x00000000005d5a2f NestKKSSplitCHCRes::NestKKSSplitCHCRes()  ???:0\n7 0x00000000006b2349 Registry::build<NestKKSSplitCHCRes, MooseObject>()  ???:0\n8 0x0000000001b0e4ea Factory::create()  ???:0\n9 0x00000000011c3c5e NonlinearSystemBase::addKernel()  ???:0\n10 0x0000000000de1c8e FEProblemBase::addKernel()  ???:0\n11 0x000000000140056a AddKernelAction::act()  ???:0\n12 0x00000000013f899d Action::timedAct()  ???:0\n13 0x0000000001404ed1 ActionWarehouse::executeActionsWithAction()  ???:0\n14 0x000000000140534f ActionWarehouse::executeAllActions()  ???:0\n15 0x0000000001b1c812 MooseApp::runInputFile()  ???:0\n16 0x0000000001b1feef MooseApp::run()  ???:0\n17 0x0000000000402a0a main()  ???:0\n18 0x0000000000022545 __libc_start_main()  ???:0\n19 0x0000000000402c80 _start()  ???:0\n=================================\nsalloc: Relinquishing job allocation 45222753\nsalloc: Job allocation 45222753 has been revoked.",
+          "url": "https://github.com/idaholab/moose/discussions/21866",
+          "updatedAt": "2022-08-18T12:50:16Z",
+          "publishedAt": "2022-08-17T13:08:08Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "The warning seems unrelated to the backtrace.",
+                  "url": "https://github.com/idaholab/moose/discussions/21866#discussioncomment-3415052",
+                  "updatedAt": "2022-08-17T13:43:20Z",
+                  "publishedAt": "2022-08-17T13:43:19Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "I agree.\nCan you try the following:\n\nrun in debug mode see if you hit an assert\nrun in debug mode with a debugger active and get a full backtrace with line numbers\nreplace this ParsedMaterial with a dummy material and see if it runs ok. If so, we should try to modify the JIT parameters of this material\n\nare you running this in parallel?",
+                  "url": "https://github.com/idaholab/moose/discussions/21866#discussioncomment-3417648",
+                  "updatedAt": "2022-08-17T20:13:09Z",
+                  "publishedAt": "2022-08-17T20:13:08Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xueyang94"
+                          },
+                          "bodyText": "I found out that I had a syntax error in a kernel I wrote (NestKKSSplitCHCRes). The problem is solved. Thanks for the debugging info!",
+                          "url": "https://github.com/idaholab/moose/discussions/21866#discussioncomment-3422660",
+                          "updatedAt": "2022-08-18T12:50:15Z",
+                          "publishedAt": "2022-08-18T12:50:14Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "ODE stepper",
+          "author": {
+            "login": "heinono1"
+          },
+          "bodyText": "I am using the BDF2 and AB2PredictorCorrector set for time-stepping. I also use postprocessors to monitor values of variables and energies etc. I noted something weird in the Postprocessors. Here is what I have in relevnt blocks:\n[Executioner]\n  type = Transient\n  solve_type = ''PJFNK'\n  scheme = 'BDF2'\n [./TimeStepper]\n   type = AB2PredictorCorrector\n  e_max = 5.e-3\n  e_tol = 5.e-3\n ....\n[../]\n[]\n\nBut the postprocessors return 0 for any execute_on other than 'nonlinear', eg\n[Postprocessors]\n  [./<mx>]\n  type = ElementAverageValue\n  variable = mag_y\n  evaluate_on = 'nonlinear'\n  [../]\n[]\n\nAny other value for evaluate_on gives me zero. This seems to be related to the BDF2/AB2PredictorCorrector. Am I doing something wrong here or missing something?\nThanks,\nOlle",
+          "url": "https://github.com/idaholab/moose/discussions/21870",
+          "updatedAt": "2022-09-02T20:04:43Z",
+          "publishedAt": "2022-08-17T15:35:48Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nShould be execute_on not evaluate_on.\nIs mag_y a nonlinear variable or an auxvariable?\nTime stepping and time integration schemes are independent, you should be able to swap them out almost freely. Could you please see if BDF2 or AB2PC is the problem?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21870#discussioncomment-3417293",
+                  "updatedAt": "2022-08-17T19:10:48Z",
+                  "publishedAt": "2022-08-17T19:10:47Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "heinono1"
+                          },
+                          "bodyText": "Thanks, Guillaume. I did have the correct 'execute_on' in the input file - I incorrectly typed 'evaluate_on' in the posting.\nSwapping crank-nicolson or nothing (default implicit euler) for BDF2 gives errors (unknown time integrator) even though I follow the syntax in https://mooseframework.inl.gov/source/timesteppers/AB2PredictorCorrector.html. So not sure what is going on.\nCheers,\nOlle",
+                          "url": "https://github.com/idaholab/moose/discussions/21870#discussioncomment-3418175",
+                          "updatedAt": "2022-08-17T22:02:35Z",
+                          "publishedAt": "2022-08-17T22:02:34Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "heinono1"
+                          },
+                          "bodyText": "Oh, mag_y is a nonlinear variable.",
+                          "url": "https://github.com/idaholab/moose/discussions/21870#discussioncomment-3418179",
+                          "updatedAt": "2022-08-17T22:03:36Z",
+                          "publishedAt": "2022-08-17T22:03:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "You should be able to remove the AB2 and use BDF2 on its own.\nTbh I think AB2 is going to be the problem here",
+                          "url": "https://github.com/idaholab/moose/discussions/21870#discussioncomment-3419695",
+                          "updatedAt": "2022-08-18T04:44:19Z",
+                          "publishedAt": "2022-08-18T04:44:19Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Correctness of ComputeLagrangianWrappedStress",
+          "author": {
+            "login": "Flolaffel"
+          },
+          "bodyText": "Hello,\nI recently experimented with ComputeLagrangianWrappedStress and expected that I'd be able to replicate the results I get when using the StressDivergenceTensors-System exactly. But that wasn't the case. I used the standard material model of ComputeFiniteStrain and ComputeFiniteStrainElasticStress. The input is as follows\n[Mesh]\n  type = GeneratedMesh\n  dim = 3\n  nx = 3\n  ny = 3\n  nz = 3\n  elem_type = HEX8\n[]\n\n[GlobalParams]\n  displacements = 'disp_x disp_y disp_z'\n[]\n\n[Modules/TensorMechanics/Master]\n  [all]\n    strain = FINITE\n    add_variables = true\n    generate_output = 'stress_xx stress_yy stress_zz stress_xy'\n  []\n[]\n\n[Functions]\n  [tdisp]\n    type = ParsedFunction\n    value = '0.5 * t' \n  []\n  [tdisp_quer]\n    type = ParsedFunction\n    value = '0.5 * y * t' \n  []\n[]\n\n[BCs]\n  [bottom_y]\n    type = DirichletBC\n    variable = disp_y\n    boundary = bottom\n    value = 0\n  []\n  [bottom_x]\n    type = DirichletBC\n    variable = disp_x\n    boundary = bottom\n    value = 0\n  []\n  [bottom_z]\n    type = DirichletBC\n    variable = disp_z\n    boundary = bottom\n    value = 0\n  []\n  [left_x]\n    type = DirichletBC\n    variable = disp_x\n    boundary = left\n    value = 0\n  []\n  [right_x]\n    type = DirichletBC\n    variable = disp_x\n    boundary = right\n    value = 0\n  []\n  [front_z]\n    type = DirichletBC\n    variable = disp_z\n    boundary = front\n    value = 0\n  []\n  [back_z]\n    type = DirichletBC\n    variable = disp_z\n    boundary = back\n    value = 0\n  []\n  [tdisp]\n    type = FunctionDirichletBC\n    variable = disp_y\n    boundary = top\n    function = tdisp\n  []\n[]\n\n[Materials]\n  [elasticity]\n    type = ComputeIsotropicElasticityTensor\n    youngs_modulus = 30\n    poissons_ratio = 0.4\n  []\n  [stress]\n    type = ComputeFiniteStrainElasticStress\n  []\n[]\n\n[Preconditioning]\n  [smp]\n    type = SMP\n    full = true\n    petsc_options_iname = '-pc_type'\n    petsc_options_value = 'lu'\n  []\n[]\n\n[Executioner]\n  type = Transient\n  solve_type = Newton\n  end_time = 1\n  dt = 0.25\n[]\n\n[Outputs]\n  exodus = true\n  csv = true\n[]\n\n[Postprocessors]\n  [cauchy_xx]\n    type = ElementAverageValue\n    variable = stress_xx\n    execute_on = 'initial timestep_end'\n  []\n  [cauchy_yy]\n    type = ElementAverageValue\n    variable = stress_yy\n    execute_on = 'initial timestep_end'\n  []\n  [cauchy_xy]\n    type = ElementAverageValue\n    variable = stress_xy\n    execute_on = 'initial timestep_end'\n  []\n  [cauchy_zz]\n    type = ElementAverageValue\n    variable = stress_zz\n    execute_on = 'initial timestep_end'\n  []\n[]\n\nThe corresponding input with lagrangian kernel system is\n[Mesh]\n  type = GeneratedMesh\n  dim = 3\n  nx = 3\n  ny = 3\n  nz = 3\n  elem_type = HEX8\n[]\n\n[GlobalParams]\n  displacements = 'disp_x disp_y disp_z'\n  #large_kinematics = true\n[]\n\n[Modules/TensorMechanics/Master]\n  [all]\n    new_system = true\n    formulation = TOTAL\n    strain = FINITE\n    add_variables = true\n    generate_output = 'cauchy_stress_xx cauchy_stress_yy cauchy_stress_zz cauchy_stress_xy'\n  []\n[]\n\n[Functions]\n  [tdisp]\n    type = ParsedFunction\n    value = '0.5 * t' \n  []\n  [tdisp_quer]\n    type = ParsedFunction\n    value = '0.5 * y * t' \n  []\n[]\n\n[BCs]\n  [bottom_y]\n    type = DirichletBC\n    variable = disp_y\n    boundary = bottom\n    value = 0\n  []\n  [bottom_x]\n    type = DirichletBC\n    variable = disp_x\n    boundary = bottom\n    value = 0\n  []\n  [bottom_z]\n    type = DirichletBC\n    variable = disp_z\n    boundary = bottom\n    value = 0\n  []\n  [left_x]\n    type = DirichletBC\n    variable = disp_x\n    boundary = left\n    value = 0\n  []\n  [right_x]\n    type = DirichletBC\n    variable = disp_x\n    boundary = right\n    value = 0\n  []\n  [front_z]\n    type = DirichletBC\n    variable = disp_z\n    boundary = front\n    value = 0\n  []\n  [back_z]\n    type = DirichletBC\n    variable = disp_z\n    boundary = back\n    value = 0\n  []\n  [tdisp]\n    type = FunctionDirichletBC\n    variable = disp_y\n    boundary = top\n    function = tdisp\n  []\n[]\n\n[Materials]\n  [elasticity]\n    type = ComputeIsotropicElasticityTensor\n    youngs_modulus = 30\n    poissons_ratio = 0.4\n  []\n  [stress]\n    type = ComputeLagrangianWrappedStress\n  []\n  [stress_base]\n    type = ComputeFiniteStrainElasticStress\n  []\n[]\n\n[Preconditioning]\n  [smp]\n    type = SMP\n    full = true\n    petsc_options_iname = '-pc_type'\n    petsc_options_value = 'lu'\n  []\n[]\n\n[Executioner]\n  type = Transient\n  solve_type = Newton\n  end_time = 1\n  dt = 0.25\n[]\n\n[Outputs]\n  exodus = true\n  csv = true\n[]\n\n[Postprocessors]\n  [cauchy_xx]\n    type = ElementAverageValue\n    variable = cauchy_stress_xx\n    execute_on = 'initial timestep_end'\n  []\n  [cauchy_yy]\n    type = ElementAverageValue\n    variable = cauchy_stress_yy\n    execute_on = 'initial timestep_end'\n  []\n  [cauchy_xy]\n    type = ElementAverageValue\n    variable = cauchy_stress_xy\n    execute_on = 'initial timestep_end'\n  []\n  [cauchy_zz]\n    type = ElementAverageValue\n    variable = cauchy_stress_zz\n    execute_on = 'initial timestep_end'\n  []\n[]\n\nNot using large_kinematics in the GlobalParams yields results that are closer to the previous input but still not quite equal. Is the behaviour of not being able to replicate results exactly expected?\nFurthermore I noticed that both inputs seem to react to the timestep size. Changing the timestep size changes the stresses in the output. I feel like that shouldn't be the case. What am I missing?",
+          "url": "https://github.com/idaholab/moose/discussions/21684",
+          "updatedAt": "2022-09-02T20:04:57Z",
+          "publishedAt": "2022-07-26T04:50:27Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "reverendbedford"
+                  },
+                  "bodyText": "When using the ComputeLagrangianWrappedStress class you should always use a small deformation MOOSE material model.  So in your case you should use ComputeLinearElasticStress.  The ComputeLagrangianWrappedStress \"takes care\" of making the small deformation model respond in a large deformations context by advecting the response with an objective stress rate.\nYou should always have the stress calculator use large_kinematics when you're using finite strain, as the Jacobian won't be correct otherwise.\nEven with these changes you won't get an exact match between the old and new models, as we are using a different objective rate.\nThere is a PR to add the Green-Naghdi objective rate.  If you use that rate (instead of the default Truesdell rate) and take small time steps you should closely match the old formulation.",
+                  "url": "https://github.com/idaholab/moose/discussions/21684#discussioncomment-3231120",
+                  "updatedAt": "2022-07-26T13:18:05Z",
+                  "publishedAt": "2022-07-26T13:18:04Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Flolaffel"
+                          },
+                          "bodyText": "Thanks for your reply. Right now I can say:\n\nWhen using ComputeLinearElasticStress instead of ComputeFiniteStrainElasticStress in my second input I just get an error that tells me to use  ComputeFiniteStrainElasticStress instead. What else do I have to do?\nOk, that's what I initially thought too.\nand 4. I will read into that, thank you.",
+                          "url": "https://github.com/idaholab/moose/discussions/21684#discussioncomment-3250980",
+                          "updatedAt": "2022-07-26T19:33:50Z",
+                          "publishedAt": "2022-07-26T19:33:50Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "reverendbedford"
+                          },
+                          "bodyText": "For the second input file?\nTo be clear: \"Lagrangian\" kernels need small deformation (ComputeLinearElasticStress) + ComputeLagrangianWrappedStress.  Old kernels need  ComputeFiniteStrainElasticStress.",
+                          "url": "https://github.com/idaholab/moose/discussions/21684#discussioncomment-3251526",
+                          "updatedAt": "2022-07-26T19:37:04Z",
+                          "publishedAt": "2022-07-26T19:37:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "reverendbedford"
+                          },
+                          "bodyText": "Nevermind this seems to be a bug.  I'll fix it.",
+                          "url": "https://github.com/idaholab/moose/discussions/21684#discussioncomment-3251713",
+                          "updatedAt": "2022-07-26T19:38:44Z",
+                          "publishedAt": "2022-07-26T19:38:44Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "reverendbedford"
+                          },
+                          "bodyText": "I partly lied: you can use ComputeFiniteStrainElasticStress because we zero out the rotations being fed into the original moose material update.  However you should be able to use ComputeLinearElasticStress both practically and logically.",
+                          "url": "https://github.com/idaholab/moose/discussions/21684#discussioncomment-3273470",
+                          "updatedAt": "2022-07-28T20:36:36Z",
+                          "publishedAt": "2022-07-28T20:36:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "reverendbedford"
+                          },
+                          "bodyText": "Okay, fix is here, #21721",
+                          "url": "https://github.com/idaholab/moose/discussions/21684#discussioncomment-3274867",
+                          "updatedAt": "2022-07-28T21:05:26Z",
+                          "publishedAt": "2022-07-28T21:05:26Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Flolaffel"
+                          },
+                          "bodyText": "Thanks, now ComputeLinearElasticStress works and delivers the same results as ComputeFiniteStrainElasticStress.\nI have a follow-up question though: In you earlier comment you said to use the Green-Naghdi rate to match the results from the StressDivergenceTensors-System closely. But upon reading Rashid (1993) that is referenced in your ComputeFiniteStrain documentation it seems to me that the StressDivergenceTensors-System should use the Jaumann rate. Am I wrong?",
+                          "url": "https://github.com/idaholab/moose/discussions/21684#discussioncomment-3378104",
+                          "updatedAt": "2022-08-11T18:23:04Z",
+                          "publishedAt": "2022-08-11T18:23:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "reverendbedford"
+                          },
+                          "bodyText": "My understanding is they advect with the rotation (R).  But I see the paper claims it's an implementation of the Jaumann rate.\nI guess one solution is to run the same model with the \"old\" and \"new\" systems, using both rates for the \"new\" system and see which one is closest.",
+                          "url": "https://github.com/idaholab/moose/discussions/21684#discussioncomment-3415249",
+                          "updatedAt": "2022-08-17T14:11:45Z",
+                          "publishedAt": "2022-08-17T14:11:45Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

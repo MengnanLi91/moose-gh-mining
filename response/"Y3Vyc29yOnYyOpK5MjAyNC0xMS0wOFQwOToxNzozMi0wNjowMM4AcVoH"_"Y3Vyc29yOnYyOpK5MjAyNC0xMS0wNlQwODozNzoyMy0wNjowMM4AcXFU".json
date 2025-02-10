@@ -1,0 +1,948 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyNC0xMS0wNlQwODozNzoyMy0wNjowMM4AcXFU"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Student needs help with Explicit contact: Dynamics",
+          "author": {
+            "login": "Rkmoffat"
+          },
+          "bodyText": "Hello,\nI am working on a model where a particle impacts a thin film. When running implicit, the film deforms around the particle, as I would expect. But upon switching to explicit, there's a strange gap that is created between the two surfaces. Followed by element deformation on the particle that leads to failure. The particle is very stiff and should not be deforming.  Changing the primary face causes the issue to occur on the other face.\nThank you for any and all advice.\n\n\n[GlobalParams] displacements = 'disp_x disp_y disp_z' []\n[Mesh]\n  [plate_file] type = FileMeshGenerator  file = '7_PLATE_QuartFlyerThick_50K.msh' []\n  [flyer_file] type = FileMeshGenerator  file = '7_FLYER_QuartFlyerThick_50K.msh' []\n  [plate]\n    type = SubdomainIDGenerator\n    input = plate_file\n    subdomain_id = 1\n  []\n  [flyer]\n    type = SubdomainIDGenerator\n    input = flyer_file\n    subdomain_id = 2\n  []\n  [mesh]    type   = CombinerGenerator    inputs = 'plate flyer'  []\n  [flyer_surface]\n    type   = SideSetsAroundSubdomainGenerator \n    input = mesh\n    new_boundary = 'flyer_surface'\n    normal = '0 0 -1'\n    normal_tol = 1\n    block = 2\n  []\n[]\n\n[ExplicitDynamicsContact]\n    [my_contact]\n        model = frictionless_balance\n    \tprimary = 'flyer_surface'\n   \tsecondary = '1002'\n        vel_x = 'vel_x'\n        vel_y = 'vel_y'\n        vel_z = 'vel_z'\n    []\n[]\n[Variables]\n  [./disp_x]  order = FIRST family = LAGRANGE [../]\n  [./disp_y]  order = FIRST family = LAGRANGE [../]\n  [./disp_z]  order = FIRST family = LAGRANGE [../]\n[]\n[Kernels]\n  ##Mechanics##\n    [./inertia_x]  type = InertialForce  variable = disp_x [../]\n    [./inertia_y]  type = InertialForce  variable = disp_y [../]\n    [./inertia_z]  type = InertialForce  variable = disp_z [../]\n    [./DynamicTensorMechanics]\n      displacements = 'disp_x disp_y disp_z'\n      use_displaced_mesh = true\n    [../]\n    [gravity]\n        type = Gravity\n        variable = disp_z\n        value = 1\n\tfunction = VeloWant\n        block = '2' #Flyer\n        use_displaced_mesh=true\n        implicit=false\n    []\n[]\n[Functions]\n  [VeloWant]    type = ParsedFunction    expression = 'if(t=0,1,0)*-0.35/(0.0001)'  []\n[]\n[AuxVariables]\n #Calculating\n #Reporting\n  [./min]            order = CONSTANT family = MONOMIAL [../]\n  [./vel_x]          order = FIRST    family = LAGRANGE [../]\n  [./accel_x]        order = FIRST    family = LAGRANGE [../]\n  [./vel_y]          order = FIRST    family = LAGRANGE [../]\n  [./accel_y]        order = FIRST    family = LAGRANGE [../]\n  [./vel_z]          order = FIRST    family = LAGRANGE [../]\n  [./accel_z]        order = FIRST    family = LAGRANGE [../]\n  [./stressxx]       order = CONSTANT family = MONOMIAL [../]\n  [./stressyy]       order = CONSTANT family = MONOMIAL [../]\n  [./stresszz]       order = CONSTANT family = MONOMIAL [../]\n  [./stressxy]       order = CONSTANT family = MONOMIAL [../]\n  [./stressyz]       order = CONSTANT family = MONOMIAL [../]\n  [./stressxz]       order = CONSTANT family = MONOMIAL [../]\n  [./mechstrainxx]   order = CONSTANT family = MONOMIAL [../]\n  [./mechstrainyy]   order = CONSTANT family = MONOMIAL [../]\n  [./mechstrainzz]   order = CONSTANT family = MONOMIAL [../]\n  [./mechstrainxy]   order = CONSTANT family = MONOMIAL [../]\n  [./mechstrainyz]   order = CONSTANT family = MONOMIAL [../]\n  [./mechstrainxz]   order = CONSTANT family = MONOMIAL [../]\n  [./totstrainxx]    order = CONSTANT family = MONOMIAL [../]\n  [./totstrainyy]    order = CONSTANT family = MONOMIAL [../]\n  [./totstrainzz]    order = CONSTANT family = MONOMIAL [../]\n  [./totstrainxy]    order = CONSTANT family = MONOMIAL [../]\n  [./totstrainyz]    order = CONSTANT family = MONOMIAL [../]\n  [./totstrainxz]    order = CONSTANT family = MONOMIAL [../]\n  [./thstrainxx]     order = CONSTANT family = MONOMIAL [../]\n  [./thstrainyy]     order = CONSTANT family = MONOMIAL [../]\n  [./thstrainzz]     order = CONSTANT family = MONOMIAL [../]\n  [./thstrainxy]     order = CONSTANT family = MONOMIAL [../]\n  [./thstrainyz]     order = CONSTANT family = MONOMIAL [../]\n  [./thstrainxz]     order = CONSTANT family = MONOMIAL [../]\n  [./volstress]      order = CONSTANT family = MONOMIAL [../]\n  [./volmechstrain]  order = CONSTANT family = MONOMIAL [../]\n  [./vonmisesstress] order = CONSTANT family = MONOMIAL [../]\n[]\n[AuxKernels] \n ##Reporting## \n  [min]            type = ElementLengthAux  variable = min    method = min    execute_on = initial  [../]\n  [vel_x]          type = TestNewmarkTI     variable = vel_x        displacement = disp_x        execute_on = 'LINEAR TIMESTEP_BEGIN TIMESTEP_END'    []\n  [vel_y]          type = TestNewmarkTI     variable = vel_y        displacement = disp_x        execute_on = 'LINEAR TIMESTEP_BEGIN TIMESTEP_END'    []\n  [vel_z]          type = TestNewmarkTI     variable = vel_z        displacement = disp_z        execute_on = 'LINEAR TIMESTEP_BEGIN TIMESTEP_END'    []\n  [accel_x]        type = TestNewmarkTI     variable = accel_x        displacement = disp_x        first = false        execute_on = 'LINEAR TIMESTEP_BEGIN TIMESTEP_END'    []\n  [accel_y]        type = TestNewmarkTI     variable = accel_y        displacement = disp_y        first = false        execute_on = 'LINEAR TIMESTEP_BEGIN TIMESTEP_END'    []\n  [accel_z]        type = TestNewmarkTI     variable = accel_z        displacement = disp_z        first = false        execute_on = 'LINEAR TIMESTEP_BEGIN TIMESTEP_END'    []\n  [volstress]      type = RankTwoScalarAux  block = '1' variable = volstress      rank_two_tensor = stress            scalar_type = Hydrostatic      []\n  [volmechstrain]  type = RankTwoScalarAux  block = '1' variable = volmechstrain  rank_two_tensor = mechanical_strain scalar_type = VolumetricStrain []\n  [vonmisesstress] type = RankTwoScalarAux  block = '1' variable = vonmisesstress rank_two_tensor = stress            scalar_type = VonMisesStress   []\n  [stressxx]       type = RankTwoAux        block = '1' variable = stressxx       rank_two_tensor = stress            index_j = 0    index_i = 0     []\n  [stressyy]       type = RankTwoAux        block = '1' variable = stressyy       rank_two_tensor = stress            index_j = 1    index_i = 1     []\n  [stresszz]       type = RankTwoAux        block = '1' variable = stresszz       rank_two_tensor = stress            index_j = 2    index_i = 2     []\n  [stressxy]       type = RankTwoAux        block = '1' variable = stressxy       rank_two_tensor = stress            index_j = 1    index_i = 0     []\n  [stressyz]       type = RankTwoAux        block = '1' variable = stressyz       rank_two_tensor = stress            index_j = 2    index_i = 1     []\n  [stressxz]       type = RankTwoAux        block = '1' variable = stressxz       rank_two_tensor = stress            index_j = 2    index_i = 0     []\n  [mechstrainxx]   type = RankTwoAux        block = '1' variable = mechstrainxx   rank_two_tensor = mechanical_strain index_j = 0    index_i = 0     []\n  [mechstrainyy]   type = RankTwoAux        block = '1' variable = mechstrainyy   rank_two_tensor = mechanical_strain index_j = 1    index_i = 1     []\n  [mechstrainzz]   type = RankTwoAux        block = '1' variable = mechstrainzz   rank_two_tensor = mechanical_strain index_j = 2    index_i = 2     []\n  [mechstrainxy]   type = RankTwoAux        block = '1' variable = mechstrainxy   rank_two_tensor = mechanical_strain index_j = 1    index_i = 0     []\n  [mechstrainyz]   type = RankTwoAux        block = '1' variable = mechstrainyz   rank_two_tensor = mechanical_strain index_j = 2    index_i = 1     []\n  [mechstrainxz]   type = RankTwoAux        block = '1' variable = mechstrainxz   rank_two_tensor = mechanical_strain index_j = 2    index_i = 0     []\n  [totstrainxx]    type = RankTwoAux        block = '1' variable = totstrainxx    rank_two_tensor = total_strain      index_j = 0    index_i = 0     []\n  [totstrainyy]    type = RankTwoAux        block = '1' variable = totstrainyy    rank_two_tensor = total_strain      index_j = 1    index_i = 1     []\n  [totstrainzz]    type = RankTwoAux        block = '1' variable = totstrainzz    rank_two_tensor = total_strain      index_j = 2    index_i = 2     []\n  [totstrainxy]    type = RankTwoAux        block = '1' variable = totstrainxy    rank_two_tensor = total_strain      index_j = 1    index_i = 0     []\n  [totstrainyz]    type = RankTwoAux        block = '1' variable = totstrainyz    rank_two_tensor = total_strain      index_j = 2    index_i = 1     []\n  [totstrainxz]    type = RankTwoAux        block = '1' variable = totstrainxz    rank_two_tensor = total_strain      index_j = 2    index_i = 0     []\n[]\n################################################################################\n[BCs]\n  [Plate_Ends_x]\n    type = DirichletBC\n    variable = disp_x\n    boundary = '1001'\n    value = 0\n  []\n  [Plate_Ends_y]\n    type = DirichletBC\n    variable = disp_y\n    boundary = '1001'\n    value = 0\n  []\n  [Plate_Ends_z]\n    type = DirichletBC\n    variable = disp_z\n    boundary = '1001'\n    value = 0\n  []\n[]\n[Materials]\n  [./material_prop_plate] #Polystyrene\n    type = GenericConstantMaterial\n    block = '1'\n    prop_names  = 'density gc_prop     l  visco'\n    prop_values = '  1.050  0.033   0.5    100'\n  [../]\n  [./material_prop_flyer] #Silica\n    type = GenericConstantMaterial\n    block = '2'\n    prop_names  = 'density'#  gc_prop   l'\n    prop_values = '  2.650'#  0.002   0.7 '\n  [../]\n  [elasticity_tensor_plate]\n    type = ComputeIsotropicElasticityTensor\n    block= '1'\n    youngs_modulus = 3.40#GPa\n    poissons_ratio = 0.33  \n  []\n  [elasticity_tensor_flyer]\n    type = ComputeIsotropicElasticityTensor\n    block= '2'\n    youngs_modulus = 74.8 #GPa\n    poissons_ratio = 0.19   \n  []\n  [./stress_plate] type = ComputeFiniteStrainElasticStress    block = '1'  [../]\n  [./stress_flyer] type = ComputeFiniteStrainElasticStress    block = '2'  [../]\n  [./strain]       type = ComputeIncrementalSmallStrain  [../]\n  [wave_speed]     type = WaveSpeed  []\n[]\n[Preconditioning]\n  [./smp]\n    type = SMP\n    full = true\n  [../]\n[]\n[Executioner]\n  type = Transient\n  start_time = 0.0\n  dt      = 0.0005\n  end_time = 100 #200\n  [TimeIntegrator]\n      type = CentralDifference #ActuallyExplicitEuler #CentralDifference #ActuallyExplicitTimeIntergrator  #CentralDifference\n      solve_type = consistent#lumped\n  []\n[]\n[Outputs]\n  interval = 20\n  exodus = true\n  #checkpoint = true\n  [Csv]    \n    type = CSV\n    interval = 1  \n  []\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/29020",
+          "updatedAt": "2024-11-08T14:32:19Z",
+          "publishedAt": "2024-11-06T17:41:32Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nAre these results converged in the time step?\n@dschwen @recuero  Do you know if anyone worked on contact+explicit?",
+                  "url": "https://github.com/idaholab/moose/discussions/29020#discussioncomment-11169448",
+                  "updatedAt": "2024-11-06T17:50:29Z",
+                  "publishedAt": "2024-11-06T17:50:28Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Rkmoffat"
+                          },
+                          "bodyText": "It should be, I've tried timesteps many orders of magnitude smaller than what worked with my implicit implementation.",
+                          "url": "https://github.com/idaholab/moose/discussions/29020#discussioncomment-11169515",
+                          "updatedAt": "2024-11-06T17:57:37Z",
+                          "publishedAt": "2024-11-06T17:57:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "recuero"
+                          },
+                          "bodyText": "This is WIP. The formulation is being updated in #28373 (there was also some critical changes in the framework along these lines) so I wouldn't use the implementation as it is in the repository right now. I believe there was a warning message about that in the object or action.\n@TheGreatCid",
+                          "url": "https://github.com/idaholab/moose/discussions/29020#discussioncomment-11169554",
+                          "updatedAt": "2024-11-06T18:01:38Z",
+                          "publishedAt": "2024-11-06T18:01:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Rkmoffat"
+                          },
+                          "bodyText": "That's what I was afraid of. Thank you for your time.",
+                          "url": "https://github.com/idaholab/moose/discussions/29020#discussioncomment-11169602",
+                          "updatedAt": "2024-11-06T18:06:26Z",
+                          "publishedAt": "2024-11-06T18:06:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "TheGreatCid"
+                          },
+                          "bodyText": "This update is an improvement, though results will still be dependent on the primary/secondary surface selection.\nAdditionally, there are still some issues when the contacting bodies have vastly different densities and I am unsure of the way around that.\nIf you want to try to use the PR, you'll need to change the time integrator to DirectCentralDifference method. There are examples in the PR\nI need to get back to working on this PR. I've been caught up with PhD things.",
+                          "url": "https://github.com/idaholab/moose/discussions/29020#discussioncomment-11169623",
+                          "updatedAt": "2024-11-06T18:08:27Z",
+                          "publishedAt": "2024-11-06T18:08:26Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "TheGreatCid"
+                          },
+                          "bodyText": "If you could draft up a minimum working example of this I could try it with the update or you could checkout the PR yourself and see if it helps.",
+                          "url": "https://github.com/idaholab/moose/discussions/29020#discussioncomment-11169644",
+                          "updatedAt": "2024-11-06T18:11:09Z",
+                          "publishedAt": "2024-11-06T18:11:09Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Rkmoffat"
+                          },
+                          "bodyText": "I'm new to Github/MOOSE coding. What is meant by PR?",
+                          "url": "https://github.com/idaholab/moose/discussions/29020#discussioncomment-11169646",
+                          "updatedAt": "2024-11-06T18:11:11Z",
+                          "publishedAt": "2024-11-06T18:11:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "TheGreatCid"
+                          },
+                          "bodyText": "Ah its a pull request. Its what @recuero linked. Basically a series of changes to the code that yet to be merged into the main branch of MOOSE.",
+                          "url": "https://github.com/idaholab/moose/discussions/29020#discussioncomment-11169654",
+                          "updatedAt": "2024-11-06T18:12:06Z",
+                          "publishedAt": "2024-11-06T18:12:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "TheGreatCid"
+                          },
+                          "bodyText": "If you post the mesh files you used I can try to run this with the updated code and let you know if that is a solution worth using.",
+                          "url": "https://github.com/idaholab/moose/discussions/29020#discussioncomment-11169670",
+                          "updatedAt": "2024-11-06T18:14:16Z",
+                          "publishedAt": "2024-11-06T18:14:15Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Rkmoffat"
+                          },
+                          "bodyText": "Ok, I reduced the mesh some so it wouldn't require some number of elements.\na_reduced.zip",
+                          "url": "https://github.com/idaholab/moose/discussions/29020#discussioncomment-11169769",
+                          "updatedAt": "2024-11-06T18:25:25Z",
+                          "publishedAt": "2024-11-06T18:25:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "TheGreatCid"
+                          },
+                          "bodyText": "Ok so the issue you provided did go away, however there is an issue with a node not being released from contact, shown below as a slice:\nhttps://github.com/user-attachments/assets/a9df3264-9f99-4873-a341-1809d378dda2\nand in 3D:\n\nThis might go away with mesh refinement. It is hard to say",
+                          "url": "https://github.com/idaholab/moose/discussions/29020#discussioncomment-11170040",
+                          "updatedAt": "2024-11-06T18:59:07Z",
+                          "publishedAt": "2024-11-06T18:59:06Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "how to calibrate phase field parameters when coupling with crystal plasticity",
+          "author": {
+            "login": "RWTHLHK"
+          },
+          "bodyText": "I combined phase field fracture with crystal plasticity. But the damage results look weird. When the stress_yy is 2,8GPa, the damage value is almost 0. But I used the parameters from phase_field-fracture test/tests, the results shouldn't seem so different.\n\nstress results:\n\ndamage results:",
+          "url": "https://github.com/idaholab/moose/discussions/29023",
+          "updatedAt": "2024-11-07T18:32:23Z",
+          "publishedAt": "2024-11-07T16:15:53Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThese results do not look converged in the spatial resolution of the mehs.\nPlease use uniform refinement to see if the results imrpove\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/29023#discussioncomment-11179834",
+                  "updatedAt": "2024-11-07T16:18:29Z",
+                  "publishedAt": "2024-11-07T16:18:28Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "RWTHLHK"
+                          },
+                          "bodyText": "I created a finer mesh but the damage still doesn't increase:\n\n\nI used default values for CP part and phase field parameters from test files. The order of parameters magnitude should be the same.",
+                          "url": "https://github.com/idaholab/moose/discussions/29023#discussioncomment-11180338",
+                          "updatedAt": "2024-11-07T17:05:32Z",
+                          "publishedAt": "2024-11-07T17:05:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@dewenyushu do you have insights on this?",
+                          "url": "https://github.com/idaholab/moose/discussions/29023#discussioncomment-11180774",
+                          "updatedAt": "2024-11-07T17:49:18Z",
+                          "publishedAt": "2024-11-07T17:49:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "RWTHLHK"
+                          },
+                          "bodyText": "i found the reason. In material computeCrackedStress, only 2 strain types are supported: mechanical_strain and elastic_strain. But for CP model, the strain is named as total_lagranrian_strain. So the strain computeCrackedStress is always 0.",
+                          "url": "https://github.com/idaholab/moose/discussions/29023#discussioncomment-11181169",
+                          "updatedAt": "2024-11-07T18:32:23Z",
+                          "publishedAt": "2024-11-07T18:32:23Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Is there any example for Mohr-Coulomb yield criterion based perfect plasticity simulations",
+          "author": {
+            "login": "Yulongggggg"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\n<recently I am using 'SolidMechanicsPlasticMohrCoulomb' and 'ComputeMultiPlasticityStress' to simulate the perfect plasticity simulation of tunneling process, but my numerical solution does not fit with the analytical solutions, so I was wonder if there's any example for this problem or I have misused the MOOSE objects? I have attached my code link below>",
+          "url": "https://github.com/idaholab/moose/discussions/28925",
+          "updatedAt": "2025-01-31T23:28:45Z",
+          "publishedAt": "2024-10-24T18:14:07Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "Yulongggggg"
+                  },
+                  "bodyText": "",
+                  "url": "https://github.com/idaholab/moose/discussions/28925#discussioncomment-11044219",
+                  "updatedAt": "2025-01-31T23:28:24Z",
+                  "publishedAt": "2024-10-24T18:18:21Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "You used this\nmaterial_output_family = 'MONOMIAL'\nmaterial_output_order = 'FIRST'\nbut the exodus output of first order monomial is not great (it's a difficult problem). Try constant monomials\ncould you try with this object instead of computeMultiplePlasticity?\nhttps://mooseframework.inl.gov/source/materials/IsotropicPlasticityStressUpdate.html",
+                          "url": "https://github.com/idaholab/moose/discussions/28925#discussioncomment-11081916",
+                          "updatedAt": "2024-10-29T02:57:37Z",
+                          "publishedAt": "2024-10-29T02:57:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Yulongggggg"
+                          },
+                          "bodyText": "Thank you! I was thinking if the constant monomials will decrease my computational accuracy. Because i have used constant monomials before and the precision is not promising. I see that the yield criterion used in [IsotropicPlasticityStressUpdate is von mises, and I am simulating the rock behavior so i'd better use the mohr-coulomb",
+                          "url": "https://github.com/idaholab/moose/discussions/28925#discussioncomment-11179004",
+                          "updatedAt": "2024-11-07T15:02:20Z",
+                          "publishedAt": "2024-11-07T15:02:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "If it's just for output purposes then it does not matter what the precision is?\nIf you are using the material property output for the calculation we ll have to be a little careful",
+                          "url": "https://github.com/idaholab/moose/discussions/28925#discussioncomment-11179178",
+                          "updatedAt": "2024-11-07T15:18:06Z",
+                          "publishedAt": "2024-11-07T15:18:05Z",
+                          "isAnswer": true
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Yulongggggg"
+                          },
+                          "bodyText": "Thank you for helping, yeah, I might use it for further calculation. I have another question: since the mohr-coulomb yield criterion hasn't been documented yet, I was wondering what plastic potential function is used in the mohr-coulomb plasticity calculation, is it identical to the yield function or have different form?",
+                          "url": "https://github.com/idaholab/moose/discussions/28925#discussioncomment-11179261",
+                          "updatedAt": "2024-11-07T15:28:52Z",
+                          "publishedAt": "2024-11-07T15:28:52Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "You are talking about the user objects for Mohr Coulomb?\n@WilkAndy",
+                          "url": "https://github.com/idaholab/moose/discussions/28925#discussioncomment-11179849",
+                          "updatedAt": "2024-11-07T16:20:01Z",
+                          "publishedAt": "2024-11-07T16:20:00Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Installing MOOSE with python 3.10 and Paraview 5.13",
+          "author": {
+            "login": "josebastiase"
+          },
+          "bodyText": "Hi all,\nI\u2019m currently working on setting up an environment to run MOOSE alongside ParaView 5.13.1, the latest version available from the ParaView website, which is compatible with Python 3.10. However, I\u2019m running into issues because MOOSE requires a newer version of Python, and I\u2019m facing dependency conflicts during environment creation.\nEnvironment Details\nMOOSE Version: 2024.10.06\nParaView Version: 5.13.1\nPython Version: 3.10 (for compatibility with ParaView)\nProblem\nWhen I try to create a conda environment that includes both MOOSE and ParaView, I encounter errors indicating that the Python versions required by each are conflicting. ParaView 5.13.1 works with Python 3.10, but MOOSE seems to require a newer version.\nAttempts So Far\nSpecified Python 3.10 in the environment, with MOOSE and ParaView installed together.\nTried alternative versions of MOOSE (e.g., 2022.09.30) that might support Python 3.10.\nConsidered installing ParaView and MOOSE in separate environments but would ideally like to keep them together.\nQuestion\nHas anyone successfully installed MOOSE with ParaView 5.13.1, or does anyone have suggestions for managing these Python version conflicts? Any guidance would be much appreciated!\nThanks in advance!",
+          "url": "https://github.com/idaholab/moose/discussions/29022",
+          "updatedAt": "2024-11-07T14:47:08Z",
+          "publishedAt": "2024-11-07T09:32:03Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nMoose and Paraview have their own requirements and if we followed them as well as ours it would make distributing moose harder. So unfortunately we won't have a solution for what you are trying to do.\nWhat we advise is actually to install paraview in a separate conda environment. That ways the dependencies of both software can be met.\nYou can also install paraview from the website binaries rather than with conda.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/29022#discussioncomment-11177461",
+                  "updatedAt": "2024-11-07T12:35:30Z",
+                  "publishedAt": "2024-11-07T12:35:30Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "It's not a Python version, but probably some dependency that requires Ptyhon 3.10 and something else that conflicts.\nA little unrelated: Our packages support Python 3.7 through 3.11. However, I am working on a PR that drops 3.7 (EOL), and adds 3.12.\nWhat you can do, is drop the installation of the entire moose-*** package suite, and instead install only a subset of it:\nconda create -n testing moose-libmesh=2024.10.17 moose-tools mpich paraview\nThe real conflict comes from moose-peacock. Which requires many of the same dependencies as Paraview (VTK specifically). I am betting it is some library here that is the true source of the conflict.\nWith the above install line, you're getting everything except Peacock.\nEdit: Peacock... it is such a pain. We used to have to instruct folks to create a separate env just for that. So this comes as no surprise.",
+                          "url": "https://github.com/idaholab/moose/discussions/29022#discussioncomment-11177829",
+                          "updatedAt": "2024-11-07T13:18:23Z",
+                          "publishedAt": "2024-11-07T13:15:03Z",
+                          "isAnswer": true
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "josebastiase"
+                          },
+                          "bodyText": "Thank you all for your comments.\n@milljm your are a wizard! I was trying to run a visualization tool that I wrote, and indeed they have vtk libs. That was creating conflict with Peacock. Thank you :)",
+                          "url": "https://github.com/idaholab/moose/discussions/29022#discussioncomment-11178671",
+                          "updatedAt": "2024-11-07T14:32:54Z",
+                          "publishedAt": "2024-11-07T14:32:54Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "oh, sorry... I forgot one:\nconda create -n testing moose-libmesh=2024.10.17 moose-wasp moose-tools mpich paraview\n                                                 ^^^^^^^^^^\nNeeded for running tests, etc.",
+                          "url": "https://github.com/idaholab/moose/discussions/29022#discussioncomment-11178843",
+                          "updatedAt": "2024-11-07T14:47:09Z",
+                          "publishedAt": "2024-11-07T14:47:07Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Reference",
+          "author": {
+            "login": "Rahim-Habibi"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\n Hi all,\nI would like to know more details about the theory you described here (link). Can you please refer me to paper or book you used for?\nThanks",
+          "url": "https://github.com/idaholab/moose/discussions/28940",
+          "updatedAt": "2024-11-07T12:43:41Z",
+          "publishedAt": "2024-10-27T11:52:28Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "loganharbour"
+                  },
+                  "bodyText": "@sapitts looks like you were the one that wrote this; can you comment?",
+                  "url": "https://github.com/idaholab/moose/discussions/28940#discussioncomment-11069514",
+                  "updatedAt": "2024-10-28T00:55:56Z",
+                  "publishedAt": "2024-10-28T00:55:55Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sapitts"
+                          },
+                          "bodyText": "Unfortunately all I did was to transfer this documentation over to MooseDocs from the old system. @WilkAndy is the one who wrote the original text. If he's not monitoring GitHub notifications, maybe @bwspenc can comment?",
+                          "url": "https://github.com/idaholab/moose/discussions/28940#discussioncomment-11075887",
+                          "updatedAt": "2024-10-28T14:59:55Z",
+                          "publishedAt": "2024-10-28T14:59:54Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Rahim-Habibi"
+                          },
+                          "bodyText": "Hi @sapitts\nThanks for your reply.\n@bwspenc any comment?\nRahim",
+                          "url": "https://github.com/idaholab/moose/discussions/28940#discussioncomment-11177538",
+                          "updatedAt": "2024-11-07T12:43:41Z",
+                          "publishedAt": "2024-11-07T12:43:40Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "HPC issue on running MOOSE: obtain different results when using multiple nodes compared with single node",
+          "author": {
+            "login": "chunhuizhao478"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nHi all,\nI encounter a serious issue that obtain different results when running on Expanse cluster. The first case I use single node, 40 cores per node, the second case I use 2 nodes, 40 cores per node (80 cores in total), it appears the results for single node works fine (produce zero velocity field), but for the 2 nodes case, there are weird velocity field observed in the domain, I have a custom stress material object, and I suspect it is due to mesh partition and node communications, and I wonder what I should do to debug such issue, thanks!",
+          "url": "https://github.com/idaholab/moose/discussions/28999",
+          "updatedAt": "2024-11-07T07:29:49Z",
+          "publishedAt": "2024-11-04T22:04:03Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "hello\ncan you please attach the convergence logs for both solves, as well as the Executioner block in use\nthx\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/28999#discussioncomment-11148032",
+                  "updatedAt": "2024-11-04T22:36:33Z",
+                  "publishedAt": "2024-11-04T22:36:33Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "chunhuizhao478"
+                          },
+                          "bodyText": "Thanks @GiudGiud I will update it later and let you know!",
+                          "url": "https://github.com/idaholab/moose/discussions/28999#discussioncomment-11148514",
+                          "updatedAt": "2024-11-05T00:08:07Z",
+                          "publishedAt": "2024-11-05T00:08:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "chunhuizhao478"
+                          },
+                          "bodyText": "multi_nodes.txt\nsingle_node.txt\n[Executioner]\n    type = Transient\n    solve_type = 'NEWTON'\n    # solve_type = 'PJFNK'\n    start_time = -1e-12\n    end_time = 1e100\n    num_steps = 200\n    l_max_its = 200\n    l_tol = 1e-7\n    nl_rel_tol = 1e-6\n    nl_max_its = 10\n    nl_abs_tol = 1e-8\n    petsc_options_iname = '-ksp_type -pc_type -ksp_initial_guess_nonzero'\n    petsc_options_value = 'gmres     hypre True'\n    # petsc_options_iname = '-pc_type -pc_factor_shift_type'\n    # petsc_options_value = 'lu       NONZERO'\n    # petsc_options_iname = '-ksp_type -pc_type -pc_hypre_type  -ksp_initial_guess_nonzero -ksp_pc_side -ksp_max_it -ksp_rtol -ksp_atol'\n    # petsc_options_value = 'gmres        hypre      boomeramg                   True        right       1500        1e-7      1e-9    '\n    # petsc_options_iname = '-ksp_type -pc_type'\n    # petsc_options_value = 'gmres ilu' \n    # petsc_options_iname = '-ksp_type -pc_type'\n    # petsc_options_value = 'preonly lu'    \n    automatic_scaling = true\n    # nl_forced_its = 3\n    # line_search = 'bt'\n    # dt = 1e-2\n    [TimeStepper]\n        type = FarmsIterationAdaptiveDT\n        dt = 0.01\n        cutback_factor_at_failure = 0.5\n        optimal_iterations = 5\n        growth_factor = 1.5\n        max_time_step_bound = 1e10\n    []\n    [./TimeIntegrator]\n        type = NewmarkBeta\n        beta = 0.25\n        gamma = 0.5\n        inactive_tsteps = 1\n    [../]\n[]\n\nHi @GiudGiud, I have attached Muti-cores (2:40) and single-core (1:40) logs, and the execution block. Let me know if you have any suggestions, thanks!",
+                          "url": "https://github.com/idaholab/moose/discussions/28999#discussioncomment-11148675",
+                          "updatedAt": "2024-11-05T00:40:37Z",
+                          "publishedAt": "2024-11-05T00:40:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "do you really need to be running to these insane times? 10^11s is 3000 years\nwhat are you simulating?\nThis is somewhat loose.\nI dont think that's what's biting you on the final time steps but it could be if the results in the first few time steps are wrong.\nAre the results different for the first few time steps?\n    nl_rel_tol = 1e-6",
+                          "url": "https://github.com/idaholab/moose/discussions/28999#discussioncomment-11160359",
+                          "updatedAt": "2024-11-05T23:20:05Z",
+                          "publishedAt": "2024-11-05T23:20:04Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "chunhuizhao478"
+                          },
+                          "bodyText": "Hi @GiudGiud, I think I figure it out, I have a damage region defined in the central domain, if I refine the damage region and adopt a more smooth transition from maximum damage to zero damage, the imbalance of strain can be reduced and eventually gone.",
+                          "url": "https://github.com/idaholab/moose/discussions/28999#discussioncomment-11174388",
+                          "updatedAt": "2024-11-07T07:29:48Z",
+                          "publishedAt": "2024-11-07T07:29:47Z",
+                          "isAnswer": true
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Libmesh error when developing a custom auxkernel to solve for the flux of atoms & defects in a binary alloy",
+          "author": {
+            "login": "swonner"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nI am trying to develop an auxkernel to solve for the following equation & others similarly like it to get JA, JB, JI, and JV:\n\ud835\udc3d\ud835\udc34 = 1/(\ud835\udc58\ud835\udc35 * \ud835\udc47)[\ud835\udc3f\ud835\udc34\ud835\udc34V(\u2207\ud835\udf07\ud835\udc34\u2212\u2207\ud835\udf07\ud835\udc49) + \ud835\udc3f\ud835\udc34\ud835\udc35\ud835\udc49*(\u2207\ud835\udf07\ud835\udc35\u2212\u2207\ud835\udf07\ud835\udc49) + \ud835\udc3f\ud835\udc34\ud835\udc34\ud835\udc3c*(\u2207\ud835\udf07\ud835\udc34+\u2207\ud835\udf07\ud835\udc3c) + \ud835\udc3f\ud835\udc34\ud835\udc35\ud835\udc3c*(\u2207\ud835\udf07\ud835\udc35+ \u2207\ud835\udf07\ud835\udc3c)]\nAll onsager coefficients (L) will be materials properties, and chemical potentials (\ud835\udf07) I plan to solve for with another auxkernel. Fluxes (J) will be input into the kernels block to ultimately solve (\ud835\udf15\ud835\udc4b\ud835\udc34)/\ud835\udf15\ud835\udc61 + \u2207\u2219\ud835\udc3dA = 0, etc.\nI am having issue compiling the custom auxkernel I have developed for J, seemingly based on libMesh issue. Please see below for more details on the custom kernel and error.\nI am quite new to MOOSE and am having trouble finding the solution to this issue. May I please receive some guidance on the origin of this error and how to possibly remedy this issue?\nHeader File\n#pragma once\n#include \"AuxKernel.h\"\n\nclass ADAuxFluxA : public AuxKernel\n{\npublic: \n   static InputParameters validParams();\n\n   ADAuxFluxA(const InputParameters & parameters);\n\nprotected:\n   virtual Real computeValue();\n\n   // Boltzmann Constant\n   const ADMaterialProperty<Real> & _k;\n\n   // Temperature\n   const ADMaterialProperty<Real> & _T;\n\n   // LAAV\n   const ADMaterialProperty<Real> & _LAAV;\n\n   // LABV\n   const ADMaterialProperty<Real> & _LABV;\n\n   // LAAI\n   const ADMaterialProperty<Real> & _LAAI;\n\n   // LABI\n   const ADMaterialProperty<Real> & _LABI;\n\n   //muA\n   const ADVariableGradient & _grad_muA;\n\n   //muB\n   const ADVariableGradient & _grad_muB;\n\n   //muV\n   const ADVariableGradient & _grad_muV;\n\n   //muI\n   const ADVariableGradient & _grad_muI;\n\n}; \n\nSource Code\n\n/**\n* Solving for the flux of A atoms\n* when using the assumption that intersitials are not exchanging with B atoms == (LABI = 0)\n* \ud835\udc3d\ud835\udc34\ud835\udc65 = 1/(\ud835\udc58\ud835\udc35*\ud835\udc47)*[\ud835\udc3f\ud835\udc34\ud835\udc34V*(\u2207\ud835\udf07\ud835\udc34\u2212\u2207\ud835\udf07\ud835\udc49) + \ud835\udc3f\ud835\udc34\ud835\udc35\ud835\udc49*(\u2207\ud835\udf07\ud835\udc35\u2212\u2207\ud835\udf07\ud835\udc49) + \ud835\udc3f\ud835\udc34\ud835\udc34\ud835\udc3c*(\u2207\ud835\udf07\ud835\udc34+\u2207\ud835\udf07\ud835\udc3c) + \ud835\udc3f\ud835\udc34\ud835\udc35\ud835\udc3c*(\u2207\ud835\udf07\ud835\udc35+ \u2207\ud835\udf07\ud835\udc3c)] \n*/\n//\n\n\n#include \"ADAuxFluxA.h\"\n\nregisterMooseObject(\"RadiationInducedSegregation\", ADAuxFluxA);\n\nInputParameters\nADAuxFluxA::validParams()\n{\n   InputParameters params = AuxKernel::validParams();\n   params.addClassDescription(\"Calculates the flux of A atoms\");\n   params.addRequiredParam<MaterialPropertyName>(\"k\", \"boltzmann constant\");\n   params.addRequiredParam<MaterialPropertyName>(\"Temp\", \"Temperature\");\n   params.addParam<MaterialPropertyName>(\"LAAV\", 0.0, \"Onsager Coe for LAA^v\");\n   params.addParam<MaterialPropertyName>(\"LABV\", 0.0, \"Onsager Coe for LAB^v\");\n   params.addParam<MaterialPropertyName>(\"LAAI\", 0.0, \"Onsager Coe for LAA^i\"); \n   params.addParam<MaterialPropertyName>(\"LABI\", 0.0, \"Onsager Coe for LAA^i\"); \n\n   params.addRequiredCoupledVar(\"muA\", \"Chemical Potential for A. The gradient of this variable will be used.\");\n   params.addRequiredCoupledVar(\"muB\", \"Chemical Potential for B. The gradient of this variable will be used.\");\n   params.addRequiredCoupledVar(\"muV\", \"Chemical Potential for V. The gradient of this variable will be used.\");    \n   params.addRequiredCoupledVar(\"muI\", \"Chemical Potential for I. The gradient of this variable will be used.\");\n   return params;\n}\n\nADAuxFluxA::ADAuxFluxA(const InputParameters & parameters)\n : AuxKernel(parameters),\n   _k(getADMaterialProperty<Real>(\"k\")), \n   _T(getADMaterialProperty<Real>(\"Temp\")),\n   _LAAV(getADMaterialProperty<Real>(\"LAAV\")),\n   _LABV(getADMaterialProperty<Real>(\"LABV\")),\n   _LAAI(getADMaterialProperty<Real>(\"LAAI\")),\n   _LABI(getADMaterialProperty<Real>(\"LABI\")),    \n   _grad_muA(adCoupledGradient(\"muA\")),\n   _grad_muB(adCoupledGradient(\"muB\")),\n   _grad_muV(adCoupledGradient(\"muV\")),\n   _grad_muI(adCoupledGradient(\"muI\"))\n{\n   \n}\n\nReal\nADAuxFluxA::computeValue()\n{\n return (1/_k[_qp]*_T[_qp]) * ( _LAAV[_qp]*(_grad_muA[_qp] - _grad_muV[_qp])\n                              + _LABV[_qp]*(_grad_muB[_qp] - _grad_muV[_qp]) \n                              + _LAAI[_qp]*(_grad_muA[_qp] + _grad_muI[_qp])   \n                              + _LABI[_qp]*(_grad_muB[_qp] + _grad_muI[_qp]));\n} \n   \n\nERROR\nADAuxFluxA.C: In member function 'virtual libMesh::Real ADAuxFluxA::computeValue()':\nADAuxFluxA.C:55:30: error: cannot convert 'libMesh::boostcopy::enable_if_c<true, libMesh::TypeVector<MetaPhysicL::DualNumber<double, MetaPhysicL::SemiDynamicSparseNumberArray<double, long unsigned int, MetaPhysicL::NWrapper<50> >, true> > >::type' {aka 'libMesh::TypeVector<MetaPhysicL::DualNumber<double, MetaPhysicL::SemiDynamicSparseNumberArray<double, long unsigned int, MetaPhysicL::NWrapper<50> >, true> >'} to 'libMesh::Real' {aka 'double'} in return\n  55 |   return (1/_k[_qp]*_T[_qp]) * ( _LAAV[_qp]*(_grad_muA[_qp] - _grad_muV[_qp])\n     |          ~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n     |                              |\n     |                              libMesh::boostcopy::enable_if_c<true, libMesh::TypeVector<MetaPhysicL::DualNumber<double, MetaPhysicL::SemiDynamicSparseNumberArray<double, long unsigned int, MetaPhysicL::NWrapper<50> >, true> > >::type {aka libMesh::TypeVector<MetaPhysicL::DualNumber<double, MetaPhysicL::SemiDynamicSparseNumberArray<double, long unsigned int, MetaPhysicL::NWrapper<50> >, true> >}\n  56 |                                + _LABV[_qp]*(_grad_muB[_qp] - _grad_muV[_qp])\n     |                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n  57 |                                + _LAAI[_qp]*(_grad_muA[_qp] + _grad_muI[_qp])\n     |                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n  58 |                                + _LABI[_qp]*(_grad_muB[_qp] + _grad_muI[_qp]));\n     |                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
+          "url": "https://github.com/idaholab/moose/discussions/29003",
+          "updatedAt": "2024-11-06T21:57:40Z",
+          "publishedAt": "2024-11-05T06:37:07Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nSo this expression as a whole seems to evaluate to an ADVector.\nThis makes sense because k, T are ADReal, then the Ls are Real and finially the gradients are vectors.\nSo this makes for an ADVector.\nBut the return type is a Real, so it is both:\n\nnot AD\na scalar not a vector.\n\nTo turn an AD number into a regular number you can use: Real a = MetaPhysicL::raw_value(b);\nto turn a vector into a number, you need to either:\n\ntake a dot product\nchoose a component\nWhich one fits here?",
+                  "url": "https://github.com/idaholab/moose/discussions/29003#discussioncomment-11160328",
+                  "updatedAt": "2024-11-05T23:12:35Z",
+                  "publishedAt": "2024-11-05T23:12:35Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "swonner"
+                          },
+                          "bodyText": "Hello!  Thank you so much for your for your response!\nYou are correct that the expression is evaluating a vector, $\\vec{J}_A$. I now understand based on your answer that I have incorrectly written the auxkernel to calculate a number and that the variable types are currently incompatible as written.\nBased on your response and since what I want to calculate is a vector, I believe I should edit the auxkernel to correctly calculate a RealVectorValue.\nI attempted my revision by changing instances of AuxKernel to VectorAuxKernel and instances Real to RealVectorValue as seen below. I also attempted to utilize MetaPhysicL::raw_value(). However, I am still having trouble with the incompatible variables types. May I please receive some additional guidance on how I might approach this revision?\nHeader File\n\n\n#pragma once\n#include \"AuxKernel.h\"\n\nclass ADAuxFluxA : public VectorAuxKernel // changed AuxKernel to VectorAuxKernel\n{\npublic: \n    static InputParameters validParams();\n\n    ADAuxFluxA(const InputParameters & parameters);\n\nprotected:\n    virtual RealVectorValue computeValue(); // changed Real to RealVectorValue\n\n    // Boltzmann Constant\n    const ADMaterialProperty<Real> & _k;\n\n    // Temperature\n    const ADMaterialProperty<Real> & _T;\n\n    // LAAV\n    const ADMaterialProperty<Real> & _LAAV;\n\n    // LABV\n    const ADMaterialProperty<Real> & _LABV;\n\n    // LAAI\n    const ADMaterialProperty<Real> & _LAAI;\n\n    // LABI\n    const ADMaterialProperty<Real> & _LABI;\n\n    //muA\n    const ADVariableGradient & _grad_muA;\n\n    //muB\n    const ADVariableGradient & _grad_muB;\n\n    //muV\n    const ADVariableGradient & _grad_muV;\n\n    //muI\n    const ADVariableGradient & _grad_muI;\n\n};\n\nSource File\n\n\n#include \"ADAuxFluxA.h\"\n\nregisterMooseObject(\"RadiationInducedSegregation\", ADAuxFluxA);\n\nInputParameters\nADAuxFluxA::validParams()\n{\n    InputParameters params = VectorAuxKernel::validParams(); // changed AuxKernel to VectorAuxKernel\n    params.addClassDescription(\"Calculates the flux of A atoms\");\n    params.addRequiredParam<MaterialPropertyName>(\"k\", \"boltzmann constant\");\n    params.addRequiredParam<MaterialPropertyName>(\"Temp\", \"Temperature\");\n    params.addParam<MaterialPropertyName>(\"LAAV\", 0.0, \"Onsager Coe for LAA^v\");\n    params.addParam<MaterialPropertyName>(\"LABV\", 0.0, \"Onsager Coe for LAB^v\");\n    params.addParam<MaterialPropertyName>(\"LAAI\", 0.0, \"Onsager Coe for LAA^i\"); \n    params.addParam<MaterialPropertyName>(\"LABI\", 0.0, \"Onsager Coe for LAA^i\"); \n\n    params.addRequiredCoupledVar(\"muA\", \"Chemical Potential for A. The gradient of this variable will be used.\");\n    params.addRequiredCoupledVar(\"muB\", \"Chemical Potential for B. The gradient of this variable will be used.\");\n    params.addRequiredCoupledVar(\"muV\", \"Chemical Potential for V. The gradient of this variable will be used.\");    \n    params.addRequiredCoupledVar(\"muI\", \"Chemical Potential for I. The gradient of this variable will be used.\");\n    return params;\n}\n\nADAuxFluxA::ADAuxFluxA(const InputParameters & parameters)\n  : VectorAuxKernel(parameters), // changed AuxKernel to VectorAuxKernel\n    _k(getADMaterialProperty<Real>(\"k\")), \n    _T(getADMaterialProperty<Real>(\"Temp\")),\n    _LAAV(getADMaterialProperty<Real>(\"LAAV\")),\n    _LABV(getADMaterialProperty<Real>(\"LABV\")),\n    _LAAI(getADMaterialProperty<Real>(\"LAAI\")),\n    _LABI(getADMaterialProperty<Real>(\"LABI\")),    \n    _grad_muA(adCoupledGradient(\"muA\")),\n    _grad_muB(adCoupledGradient(\"muB\")),\n    _grad_muV(adCoupledGradient(\"muV\")),\n    _grad_muI(adCoupledGradient(\"muI\"))\n{\n    \n}\n\nRealVectorValue // changed Real to RealVectorValue\nADAuxFluxA::computeValue()\n{\n  return MetaPhysicL::raw_value(1/_k[_qp]*_T[_qp]) * ( MetaPhysicL::raw_value(_LAAV[_qp]) * (_grad_muA[_qp] - _grad_muV[_qp])\n                                                     + MetaPhysicL::raw_value(_LABV[_qp]) * (_grad_muB[_qp] - _grad_muV[_qp]) \n                                                     + MetaPhysicL::raw_value(_LAAI[_qp]) * (_grad_muA[_qp] + _grad_muI[_qp])   \n                                                     + MetaPhysicL::raw_value(_LABI[_qp]) * (_grad_muB[_qp] + _grad_muI[_qp]));\n} \n    \n\nError\nIn file included from /libmesh/point.h:24,\n                 from bounding_box.h:25,\n                 from MooseUtils.h:22,\n                 fromInputParameters.h:13,\n                 from MooseObject.h:13,\n                 fromAuxKernel.h:12,\n                 from ADAuxFluxA.h:7,\n                 from/src/ADAuxFluxA.C:13:\n\\libmesh/type_vector.h: In instantiation of 'libMesh::TypeVector<T>::TypeVector(const libMesh::TypeVector<T2>&) [with T2 = MetaPhysicL::DualNumber<double, MetaPhysicL::SemiDynamicSparseNumberArray<double, long unsigned int, MetaPhysicL::NWrapper<50> >, true>; T = double]':\nvector_value.h:208:19:   required from 'libMesh::VectorValue<T>::VectorValue(const libMesh::TypeVector<T2>&) [with T2 = MetaPhysicL::DualNumber<double, MetaPhysicL::SemiDynamicSparseNumberArray<double, long unsigned int, MetaPhysicL::NWrapper<50> >, true>; T = double]'\nADAuxFluxA.C:58:126:   required from here\nibmesh/type_vector.h:555:27: error: cannot convert 'const MetaPhysicL::DualNumber<double, MetaPhysicL::SemiDynamicSparseNumberArray<double, long unsigned int, MetaPhysicL::NWrapper<50> >, true>' to 'double' in assignment\n  555 |     _coords[i] = p._coords[i];\n      |                  ~~~~~~~~~^\n      |                           |\n      |                           const MetaPhysicL::DualNumber<double, MetaPhysicL::SemiDynamicSparseNumberArray<double, long unsigned int, MetaPhysicL::NWrapper<50> >, true>",
+                          "url": "https://github.com/idaholab/moose/discussions/29003#discussioncomment-11170440",
+                          "updatedAt": "2024-11-06T19:55:07Z",
+                          "publishedAt": "2024-11-06T19:55:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "you need to remote AD form the entire thing\n  return MetaPhysicL::raw_value(1/_k[_qp]*_T[_qp] * ( MetaPhysicL::raw_value(_LAAV[_qp]) * (_grad_muA[_qp] - _grad_muV[_qp])\n                                                     + MetaPhysicL::raw_value(_LABV[_qp]) * (_grad_muB[_qp] - _grad_muV[_qp]) \n                                                     + MetaPhysicL::raw_value(_LAAI[_qp]) * (_grad_muA[_qp] + _grad_muI[_qp])   \n                                                     + MetaPhysicL::raw_value(_LABI[_qp]) * (_grad_muB[_qp] + _grad_muI[_qp])));\n} \n\nif that does not compile, remove AD from the gradients as well",
+                          "url": "https://github.com/idaholab/moose/discussions/29003#discussioncomment-11170473",
+                          "updatedAt": "2024-11-06T20:00:30Z",
+                          "publishedAt": "2024-11-06T20:00:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "swonner"
+                          },
+                          "bodyText": "I see, thank you so much!! This was very helpful.\nConverting the _grad_mu variables in that way did not work, but I was able to make it compile after changing ADVariableGradient to VariableGradient, and adCoupledGradient to coupledGradient - effectively removing the AD from the gradient terms.",
+                          "url": "https://github.com/idaholab/moose/discussions/29003#discussioncomment-11171282",
+                          "updatedAt": "2024-11-06T21:55:46Z",
+                          "publishedAt": "2024-11-06T21:55:45Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Question on Phase Field Fracture simulation results of the first time step",
+          "author": {
+            "login": "Lingfu-Liu"
+          },
+          "bodyText": "I created a model coupled solid mechanics and phase field method to study 1D bar elongation with damage by gradually adding loads (specify strain). I notice a very strange phenomenon that the first time step can not creat any damage no matter how huge strain I specify.\nMy script is attached as below.\n\n[Mesh]\ntype = GeneratedMesh\ndim = 1\nnx = 50\nxmin = 0.0\nxmax = 1.0\n[]\n[GlobalParams]\ndisplacements = 'disp'\n[]\n[Variables]\n[./disp]  # displacement\norder = FIRST\nfamily = LAGRANGE\n[../]\n[./d] # Phase field\norder = FIRST\nfamily = LAGRANGE\n[../]\n[]\n[Physics/SolidMechanics/QuasiStatic]\n[./mech]\nstrain = SMALL\nadd_variables = true\ngenerate_output = stress_xx\nmaterial_output_family = LAGRANGE\nmaterial_output_order = FIRST\n[../]\n[]\n[Modules/PhaseField/Nonconserved]\n[./d]\nfree_energy = F\nkappa = kappa_op\nmobility = L\n[../]\n[]\n[Kernels]\n[./couple]\ntype = PhaseFieldFractureMechanicsOffDiag\nvariable = disp\ncomponent = 0\nc = d\n[../]\n[]\n[BCs]\n[./left_fixed]\ntype = DirichletBC\nboundary = left\nvariable = disp\nvalue = 0.0\n[../]\n[./xdisp]\ntype = FunctionDirichletBC\nvariable = disp\nboundary = right\nfunction = 't'\n[../]\n[]\n[Materials]\n[./elasticity_tensor]\ntype = ComputeIsotropicElasticityTensor\nyoungs_modulus = 100e9  # Pa\npoissons_ratio = 0\n[../]\n[./pfbulkmat]\ntype = GenericConstantMaterial\n# gc_prop: Critical energy release rate (Energy required to create fractures per unit area)\n# l: internal length scale (diffusion leng;pth paramter)\n# visco: damping coefficient of phase field\n# c0: paramter in crack geometrical function (a(d)=d^2 ==> c0 =2)\nprop_names = 'gc_prop l visco c0'\nprop_values = '1 0.1 1e-4 2'\n[../]\n[./define_mobility]\ntype = ParsedMaterial\nproperty_name = L\nmaterial_property_names = 'visco'\nexpression = '1.0/visco'\n[../]\n[./define_kappa]\ntype = ParsedMaterial\nproperty_name = kappa_op\nmaterial_property_names = 'gc_prop l c0'\nexpression = '2 * gc_prop * l / c0'\n[../]\n[./elastic]\ntype = ComputeLinearElasticPFFractureStress\nc = d\nE_name = 'elastic_energy'\nD_name = 'degradation'\nF_name = 'local_fracture_energy'\ndecomposition_type = strain_spectral\n[../]\n[./degradation]\ntype = DerivativeParsedMaterial\nproperty_name = degradation\ncoupled_variables = 'd'\nexpression = (1-d)^p*(1-delta)+delta\nconstant_names       = 'p delta'\nconstant_expressions = '2 1e-6'\nderivative_order = 2\n[../]\n[./local_fracture_energy]\ntype = DerivativeParsedMaterial\nproperty_name = local_fracture_energy\ncoupled_variables = d\nmaterial_property_names = 'gc_prop c0 l'\nexpression = 'gc_prop * d^2 / c0 / l'\nderivative_order = 2\n[../]\n[./fracture_driving_energy]\ntype = DerivativeSumMaterial\nproperty_name = F\ncoupled_variables = d\nsum_materials = 'elastic_energy local_fracture_energy'\nderivative_order = 2\n[../]\n[]\n[Executioner]\ntype = Transient\ndt = 1e-6\nsolve_type = PJFNK\nend_time = 1e-5\n[]\n[Outputs]\nexodus = true\n[./csv]\ntype = CSV\n[../]\n[]\n[Postprocessors]\n[u(end)]\ntype = PointValue\npoint = '1 0 0'\nvariable = disp\nexecute_on = TIMESTEP_END\n[]\n[d_ave]\ntype = ElementAverageValue\nvariable = 'd'\nexecute_on = TIMESTEP_END\n[]\n[sigma_xx_ave]\ntype = ElementAverageValue\nvariable = 'stress_xx'\nexecute_on = TIMESTEP_END\n[]\n[]\n\nPostprocessor Values:\n(Table 1)\n+----------------+----------------+----------------+----------------+\n| time                     | d_ave                  | sigma_xx_ave   | u(end)                |\n+----------------+----------------+----------------+----------------+\n|   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |\n|   1.000000e-06 |   0.000000e+00 |   1.000000e+05 |   1.000000e-06 |\n|   2.000000e-06 |   9.082643e-04 |   1.996369e+05 |   2.000000e-06 |\n|   3.000000e-06 |   4.445888e-03 |   2.973384e+05 |   3.000000e-06 |\n|   4.000000e-06 |   1.212433e-02 |   3.903593e+05 |   4.000000e-06 |\n|   5.000000e-06 |   2.520100e-02 |   4.751166e+05 |   5.000000e-06 |\n|   6.000000e-06 |   4.462309e-02 |   5.476471e+05 |   6.000000e-06 |\n|   7.000000e-06 |   7.097100e-02 |   6.041665e+05 |   7.000000e-06 |\n|   8.000000e-06 |   1.044134e-01 |   6.416605e+05 |   8.000000e-06 |\n|   9.000000e-06 |   1.446850e-01 |   6.584077e+05 |   9.000000e-06 |\n|   1.000000e-05 |   1.910964e-01 |   6.543253e+05 |   1.000000e-05 |\n+----------------+----------------+----------------+----------------+\nIn above table, \"time\" is equavalent to \"strain\" specified to the system. I manually calculate the analitical solution of \"strain\" versus \"d\"(phase filed of damage) with the belowing implicite process.\n\n\nI have the following results.\n(Table 2)\nstrain       | d_analitical\n0.00E+00 | 0\n1.00E-06 | 0.000908265\n2.00E-06 | 0.004445892\n3.00E-06 | 0.012124339\n4.00E-06 | 0.025201021\n5.00E-06 | 0.04462313\n6.00E-06 | 0.070971065\n7.00E-06 | 0.104413459\n8.00E-06 | 0.144685103\n9.00E-06 | 0.191096615\n1.00E-05 | 0.242580513\nBy comparing results in Tables 1 and 2, you may find that if I delete the data of \"d\" at the second row and second column in Table 1, the rest data of \"time\" vs \"d_ave\" in Table 1 matches well with \"strain\" vs \"d_analitical\" in Table 2.\nIn summary, my question is why there is a zero damage (d=0) results at first time step. Even I specify a very huge strain (e.g., 1), \"d\" is always equal to 0 at first time step.",
+          "url": "https://github.com/idaholab/moose/discussions/28858",
+          "updatedAt": "2024-11-06T17:36:19Z",
+          "publishedAt": "2024-10-16T01:30:48Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThe first result in the table (if the table comes from MOOSE console output) in not from the first time step, but rather the INITIAL step.\nAnd by default, no object is computed on INITIAL.\nTo get computations on initial, you need to run the postprocessors / auxkernels / etc (anything involved in computing this value) on INITIAL.\nthis can be done by setting execute_on = 'INITIAL TIMESTEP_END' for example\nNote that at t=0 (=strain = 0 here?), you expect to only see any damage?\nEDIT: my bad. I misread the last table as the output from MOOSE",
+                  "url": "https://github.com/idaholab/moose/discussions/28858#discussioncomment-10962025",
+                  "updatedAt": "2024-10-17T15:24:43Z",
+                  "publishedAt": "2024-10-16T16:17:31Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Lingfu-Liu"
+                          },
+                          "bodyText": "Thank you for your response.\nI included execute_on = TIMESTEP_END in all postprocessors - referring to my scripts.\nI need to clarify that the first time step means t=dt=1e-6=strain. I see the stress becomes none zero at end of the first time step, but the damage (d) keeps zero. Even I set the strain=dt=1, the value of d always keeps zero at the end of first time step. I don't know how it works.\nI am thinking if the problem is about the solving processes. Does MOOSE apply a fully coupled solver, i.e. solve two variables (disp and d in my case) simultaneously with one Jacobin matrix? Or does MOOSE solve \"disp\" first while keeping \"d\" as constant in the [QuasiStatic] Block, then update \"d\" with the new \"disp\" in the [Nonconserved] Block, while keeping the \"disp\" as constant (input) and only solving \"d\"?",
+                          "url": "https://github.com/idaholab/moose/discussions/28858#discussioncomment-10962414",
+                          "updatedAt": "2024-10-16T18:56:26Z",
+                          "publishedAt": "2024-10-16T16:56:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nI dont see anything in the input file that deviates from the fully coupled apprach. So it should solve all variables together",
+                          "url": "https://github.com/idaholab/moose/discussions/28858#discussioncomment-10963493",
+                          "updatedAt": "2024-10-16T19:05:32Z",
+                          "publishedAt": "2024-10-16T19:05:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Lingfu-Liu"
+                          },
+                          "bodyText": "Hi,\nThank you for your answering.\nI created a new test simulation by specifying initial displacement (u_i=1e-6*x) while keeping d_i=0. Then I add loads by specifing u_end = dt+1e-6. I found out the value of \"d\" also keeps at 0 at end of the first time step (as shown in the second row and second column of the following Postprocessor results), which means MOOSE doesn't run with my assumed non-fully coupled method.\nDo you have any idea why phase field variable \"d\" is not updated in the first time step?\nPostprocessor Values:\n+----------------+----------------+----------------+----------------+\n| time           | d_ave          | sigma_xx_ave   | u(end)         |\n+----------------+----------------+----------------+----------------+\n|   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |   1.000000e-06 |\n|   1.000000e-06 |   0.000000e+00 |   2.000000e+05 |   2.000000e-06 |\n|   2.000000e-06 |   3.623185e-03 |   2.978300e+05 |   3.000000e-06 |\n|   3.000000e-06 |   1.138249e-02 |   3.909458e+05 |   4.000000e-06 |\n|   4.000000e-06 |   2.453626e-02 |   4.757648e+05 |   5.000000e-06 |\n|   5.000000e-06 |   4.403221e-02 |   5.483247e+05 |   6.000000e-06 |\n|   6.000000e-06 |   7.045086e-02 |   6.048432e+05 |   7.000000e-06 |\n|   7.000000e-06 |   1.039607e-01 |   6.423093e+05 |   8.000000e-06 |\n|   8.000000e-06 |   1.442961e-01 |   6.590065e+05 |   9.000000e-06 |\n|   9.000000e-06 |   1.907671e-01 |   6.548582e+05 |   1.000000e-05 |\n|   1.000000e-05 |   2.423059e-01 |   6.315109e+05 |   1.100000e-05 |\n+----------------+----------------+----------------+----------------+",
+                          "url": "https://github.com/idaholab/moose/discussions/28858#discussioncomment-10964023",
+                          "updatedAt": "2024-10-16T20:18:32Z",
+                          "publishedAt": "2024-10-16T20:07:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I'm afraid not. @laagesen would you know why?",
+                          "url": "https://github.com/idaholab/moose/discussions/28858#discussioncomment-10973225",
+                          "updatedAt": "2024-10-17T15:24:25Z",
+                          "publishedAt": "2024-10-17T15:24:24Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "laagesen"
+                          },
+                          "bodyText": "sorry I'm afraid not, maybe @SudiptaBiswas or @jiangwen84 ?",
+                          "url": "https://github.com/idaholab/moose/discussions/28858#discussioncomment-10974439",
+                          "updatedAt": "2024-10-17T17:16:46Z",
+                          "publishedAt": "2024-10-17T17:16:44Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Lingfu-Liu"
+                          },
+                          "bodyText": "I recently discovered that I resolved this issue by adding a history variable to prevent crack rehealing.\nThe updated scripts are provided below, with changes highlighted in bold font.\n\n[Mesh]\ntype = GeneratedMesh\ndim = 1\nnx = 50\nxmin = 0.0\nxmax = 1.0\n[]\n[GlobalParams]\ndisplacements = 'disp'\n[]\n[Variables]\n[./disp]\norder = FIRST\nfamily = LAGRANGE\n[../]\n[./d]\norder = FIRST\nfamily = LAGRANGE\n[../]\n[]\n\n[AuxVariables]\n[./bounds_dummy]\norder = FIRST\nfamily = LAGRANGE\n[../]\n[]\n\n[Physics/SolidMechanics/QuasiStatic]\n[./mech]\nstrain = SMALL\nadd_variables = true\ngenerate_output = stress_xx\nmaterial_output_family = LAGRANGE\nmaterial_output_order = FIRST\n[../]\n[]\n[Modules/PhaseField/Nonconserved]\n[./d]\nfree_energy = F\nkappa = kappa_op\nmobility = L\n[../]\n[]\n[Kernels]\n[./couple]\ntype = PhaseFieldFractureMechanicsOffDiag\nvariable = disp\ncomponent = 0\nc = d\n[../]\n[]\n[BCs]\n[./left_fixed]\ntype = DirichletBC\nboundary = left\nvariable = disp\nvalue = 0.0\n[../]\n[./xdisp]\ntype = FunctionDirichletBC\nvariable = disp\nboundary = right\nfunction = 't'\n[../]\n[]\n[Materials]\n[./elasticity_tensor]\ntype = ComputeIsotropicElasticityTensor\nyoungs_modulus = 100e9  # Pa\npoissons_ratio = 0\n[../]\n[./pfbulkmat]\ntype = GenericConstantMaterial\n# gc_prop: Critical energy release rate (Energy required to create fractures per unit area)\n# l: internal length scale (diffusion leng;pth paramter)\n# visco: damping coefficient of phase field\n# c0: paramter in crack geometrical function (a(d)=d^2 ==> c0 =2)\nprop_names = 'gc_prop l visco c0'\nprop_values = '1 0.1 1e-4 2'\n[../]\n[./define_mobility]\ntype = ParsedMaterial\nproperty_name = L\nmaterial_property_names = 'visco'\nexpression = '1.0/visco'\n[../]\n[./define_kappa]\ntype = ParsedMaterial\nproperty_name = kappa_op\nmaterial_property_names = 'gc_prop l c0'\nexpression = '2 * gc_prop * l / c0'\n[../]\n[./elastic]\ntype = ComputeLinearElasticPFFractureStress\nc = d\nE_name = 'elastic_energy'\nD_name = 'degradation'\nF_name = 'local_fracture_energy'\ndecomposition_type = strain_spectral\n\nuse_current_history_variable = true\n\n[../]\n[./degradation]\ntype = DerivativeParsedMaterial\nproperty_name = degradation\ncoupled_variables = 'd'\nexpression = (1-d)^p*(1-delta)+delta\nconstant_names       = 'p delta'\nconstant_expressions = '2 1e-6'\nderivative_order = 2\n[../]\n[./local_fracture_energy]\ntype = DerivativeParsedMaterial\nproperty_name = local_fracture_energy\ncoupled_variables = d\nmaterial_property_names = 'gc_prop c0 l'\nexpression = 'gc_prop * d^2 / c0 / l'\nderivative_order = 2\n[../]\n[./fracture_driving_energy]\ntype = DerivativeSumMaterial\nproperty_name = F\ncoupled_variables = d\nsum_materials = 'elastic_energy local_fracture_energy'\nderivative_order = 2\n[../]\n[]\n[Executioner]\ntype = Transient\ndt = 1e-6\n\npetsc_options_iname = '-pc_type  -snes_type'\npetsc_options_value = 'lu vinewtonrsls'\n\nsolve_type = NEWTON\nnum_steps = 10\n#end_time = 5e-5\n[]\n[Outputs]\nexodus = true\n[./csv]\ntype = CSV\n[../]\n[]\n[Postprocessors]\n[u(end)]\ntype = PointValue\npoint = '1 0 0'\nvariable = disp\n[]\n[d_ave]\ntype = ElementAverageValue\nvariable = 'd'\n[]\n[sigma_xx_ave]\ntype = ElementAverageValue\nvariable = 'stress_xx'\n[]\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/28858#discussioncomment-11156930",
+                          "updatedAt": "2024-11-05T16:19:33Z",
+                          "publishedAt": "2024-11-05T16:13:09Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "laagesen"
+                          },
+                          "bodyText": "Thanks for letting us know!",
+                          "url": "https://github.com/idaholab/moose/discussions/28858#discussioncomment-11169331",
+                          "updatedAt": "2024-11-06T17:36:19Z",
+                          "publishedAt": "2024-11-06T17:36:19Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to speed up polycrystal crystal plasticity simualtion in 3D",
+          "author": {
+            "login": "RWTHLHK"
+          },
+          "bodyText": "Hello experts. I'd like to perform crystal plasticity simulation in 3D, but I find the polycrystal simulation is quite slow. Is there any suggestion to speed up the process.",
+          "url": "https://github.com/idaholab/moose/discussions/29014",
+          "updatedAt": "2024-11-06T15:08:57Z",
+          "publishedAt": "2024-11-05T23:09:36Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nDo you have an example simulation? You could profile it and see where the slow path is\nhttps://mooseframework.inl.gov/moose/application_development/profiling.html\n@dewenyushu  @jiangwen84 do you have advice on this? Were there any future works performance-wise that could be addressed?",
+                  "url": "https://github.com/idaholab/moose/discussions/29014#discussioncomment-11160340",
+                  "updatedAt": "2024-11-05T23:15:24Z",
+                  "publishedAt": "2024-11-05T23:15:23Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "RWTHLHK"
+                          },
+                          "bodyText": "Thanks! I just find the reason is maybe my RVE is kind of too big and contains too many grains.  And I can simply reduce the size of my RVE to a smaller size. My final goal is cross-scale simulation of fracture mechanics, MOOSE is really a convenient tool to achieve this.",
+                          "url": "https://github.com/idaholab/moose/discussions/29014#discussioncomment-11167314",
+                          "updatedAt": "2024-11-06T14:18:00Z",
+                          "publishedAt": "2024-11-06T14:17:59Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "RWTHLHK"
+                          },
+                          "bodyText": "I just found it is also possible to wrap external non-MOOSE codes; this can significantly accelerate my progress. But the relevant tutorial is still not in detail, are there any further instructions?",
+                          "url": "https://github.com/idaholab/moose/discussions/29014#discussioncomment-11167343",
+                          "updatedAt": "2024-11-06T14:20:38Z",
+                          "publishedAt": "2024-11-06T14:20:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "there are examples. Cardinal is the biggest one\nhttps://github.com/neams-th-coe/cardinal",
+                          "url": "https://github.com/idaholab/moose/discussions/29014#discussioncomment-11167449",
+                          "updatedAt": "2024-11-06T14:29:58Z",
+                          "publishedAt": "2024-11-06T14:29:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "RWTHLHK"
+                          },
+                          "bodyText": "OK, thanks. I will learn how Cardinal works.  I want to implement my phase field model coupled with crystal plasticity.  I have used MATLAB's symbolic operations to derive the weak form and Jacobian matrix.  However, the interfacial term of my phase field model is too complex,  it is quite challenging and timeconsuming to code weak form and Jacobian in MOOSE by hand.  Can I externally compute the residual and Jacobian and then pass values to MOOSE?",
+                          "url": "https://github.com/idaholab/moose/discussions/29014#discussioncomment-11167686",
+                          "updatedAt": "2024-11-06T14:53:44Z",
+                          "publishedAt": "2024-11-06T14:53:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "No that's likely going to be too inefficient.\nI would recommend using AD if you think the Jacobian takes too long to implement",
+                          "url": "https://github.com/idaholab/moose/discussions/29014#discussioncomment-11167845",
+                          "updatedAt": "2024-11-06T15:08:57Z",
+                          "publishedAt": "2024-11-06T15:08:57Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to store the historical maximum principal stress?",
+          "author": {
+            "login": "PEI0214"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nHello\uff0c\nI want to create a material model. The elastic tensor of the model is related to the historical maximum compressive stress of the large principal stress. I write a header file and a source file. Is that appropriate? Can the maximum compressive stress be stored?\nComputeElasticityTensor.h.pdf\nComputeElasticityTensor.C.pdf",
+          "url": "https://github.com/idaholab/moose/discussions/29018",
+          "updatedAt": "2024-11-06T14:37:23Z",
+          "publishedAt": "2024-11-06T13:20:16Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThis will keep the local maximum. Do you need this or the global maximum?\nMy only concern here is that Cijkl is set with the old property so it's effectively lagged by a time step. Did you intend to do that?",
+                  "url": "https://github.com/idaholab/moose/discussions/29018#discussioncomment-11166746",
+                  "updatedAt": "2024-11-06T13:24:34Z",
+                  "publishedAt": "2024-11-06T13:24:33Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "PEI0214"
+                          },
+                          "bodyText": "This will keep the local maximum. Do you need this or the global maximum?\n\nWhat I need is the maximum value that occurred before the current calculation step. Can the above be done?\n\nMy only concern here is that Cijkl is set with the old property so it's effectively lagged by a time step.  Did you intend to do that?\n\nIt needs to lag by one time step. The stress is calculated based on strain and Cijkl. When calculating Cijkl, the stress of this time step is not yet obtained, is it not?",
+                          "url": "https://github.com/idaholab/moose/discussions/29018#discussioncomment-11167132",
+                          "updatedAt": "2024-11-06T14:01:56Z",
+                          "publishedAt": "2024-11-06T14:01:54Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "What I need is the maximum value that occurred before the current calculation step. Can the above be done?\n\nso the global spatial maximum? Or the local timestep maximum?",
+                          "url": "https://github.com/idaholab/moose/discussions/29018#discussioncomment-11167189",
+                          "updatedAt": "2024-11-06T14:08:20Z",
+                          "publishedAt": "2024-11-06T14:08:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "PEI0214"
+                          },
+                          "bodyText": "The maximum value of a local time step. Just before the current time step.",
+                          "url": "https://github.com/idaholab/moose/discussions/29018#discussioncomment-11167264",
+                          "updatedAt": "2024-11-06T14:14:04Z",
+                          "publishedAt": "2024-11-06T14:14:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "local is spatial.\nis this the maximum over the entire (spatial) domain, or the local maximum at the quadrature point over the history of the system",
+                          "url": "https://github.com/idaholab/moose/discussions/29018#discussioncomment-11167328",
+                          "updatedAt": "2024-11-06T14:19:22Z",
+                          "publishedAt": "2024-11-06T14:19:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "PEI0214"
+                          },
+                          "bodyText": "The maximum value at each quadrature point.",
+                          "url": "https://github.com/idaholab/moose/discussions/29018#discussioncomment-11167446",
+                          "updatedAt": "2024-11-06T14:29:38Z",
+                          "publishedAt": "2024-11-06T14:29:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "ok then what you have seems good to me",
+                          "url": "https://github.com/idaholab/moose/discussions/29018#discussioncomment-11167451",
+                          "updatedAt": "2024-11-06T14:30:13Z",
+                          "publishedAt": "2024-11-06T14:30:12Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "PEI0214"
+                          },
+                          "bodyText": "Well, thank you for your help.",
+                          "url": "https://github.com/idaholab/moose/discussions/29018#discussioncomment-11167522",
+                          "updatedAt": "2024-11-06T14:37:23Z",
+                          "publishedAt": "2024-11-06T14:37:23Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

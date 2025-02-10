@@ -1,0 +1,830 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMS0wNy0xNVQwNToxNzo1NC0wNTowMM4ANNHi"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "How to calculate the radius of bubble in the MOOSE?",
+          "author": {
+            "login": "wenpeng231024"
+          },
+          "bodyText": "Dear MOOSE group,\nI try to use Laplace's equation (2\u03b3/R) to calculate the pressure produced by the surface tension. \u03b3 is the surface tension. R is the radius of the bubble.\nSurface tension can be obtained using \"ComputeSurfaceTensionKKS\".\nFor a single bubble, we can use the order parameters to obtain the bubble area, then calculate the radius of the bubble.\nBut how can we calculate different radii of multi-bubbles in the MOOSE? Or how can we calculate the curvature of the bubbles?\nThanks,\nPeng",
+          "url": "https://github.com/idaholab/moose/discussions/18379",
+          "updatedAt": "2022-12-20T00:10:00Z",
+          "publishedAt": "2021-07-19T17:16:01Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "SudiptaBiswas"
+                  },
+                  "bodyText": "You can use FeatureVolumeVectorPostprocessor to output the volume/area of the bubbles. https://mooseframework.inl.gov/source/vectorpostprocessors/FeatureVolumeVectorPostprocessor.html",
+                  "url": "https://github.com/idaholab/moose/discussions/18379#discussioncomment-1023128",
+                  "updatedAt": "2022-12-20T00:10:00Z",
+                  "publishedAt": "2021-07-19T17:27:32Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "wenpeng231024"
+                          },
+                          "bodyText": "Great. I will try this. Many thanks!\nPeng",
+                          "url": "https://github.com/idaholab/moose/discussions/18379#discussioncomment-1023153",
+                          "updatedAt": "2022-12-20T00:10:08Z",
+                          "publishedAt": "2021-07-19T17:35:30Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Using Postprocessor on blocks",
+          "author": {
+            "login": "hokonkim"
+          },
+          "bodyText": "While I run several simulations, some conditions gave me values, but some didn't.\nI tried to figure it out what was the difference between those simulations through input file.\nCase 1. Some codes in an input file giving me a value\n[Mesh]\n  [./interface_YSZ_CA]\n    type = SideSetsBetweenSubdomainsGenerator\n    input = meshScale\n    primary_block = 'PT_YSZ_C_TET4'\n    paired_block = 'PT_YSZ_A_TET4'\n    new_boundary = 'interface_CA'\n  [../]\n\n  [./interface_YSZ_AC]\n    type = SideSetsBetweenSubdomainsGenerator\n    input = interface_YSZ_CA\n    primary_block = 'PT_YSZ_A_TET4'\n    paired_block = 'PT_YSZ_C_TET4'\n    new_boundary = 'interface_AC'\n  [../]\n[]\n\n[Materials]\n  [./CounterElectrode_for_C]\n    type  = ParsedMaterial\n    block = 'PT_YSZ_C_TET4 PT_TPB_C_TET4'\n    f_name = 'eff_pO2_A'\n    constant_names        = 'R          T        z     F'        # (J/K/mol), (K),  (# of electron), (C/mol)\n    constant_expressions  = '8.3144598  1073.0   4   96485.3329'\n    postprocessor_names = 'numerical_phi_YSZ_C'\n    function = 'if(numerical_phi_YSZ_C=0, exp(z * F / R / T * (-0.55442)), exp(z * F / R / T * (numerical_phi_YSZ_C)))'\n  [../]\n\n  [./CounterElectrode_for_A]\n    type  = ParsedMaterial\n    block = 'PT_YSZ_A_TET4 PT_TPB_A_TET4'\n    f_name = 'eff_pO2_C'\n    constant_names        = 'R          T        z     F'        # (J/K/mol), (K),  (# of electron), (C/mol)\n    constant_expressions  = '8.3144598  1073.0   4   96485.3329'\n    postprocessor_names = 'numerical_phi_YSZ_A'\n    function = 'if(numerical_phi_YSZ_A=0, exp(z * F / R / T * (-0.55442)), exp(z * F / R / T * (numerical_phi_YSZ_A)))'\n  [../]\n[]\n\n[Postprocessors]\n  [./I_YSZ_bottom_Cathode]\n    type = SideDiffusiveFluxIntegral\n    variable = phi_YSZ_C\n    diffusivity = 'sigma_YSZ'\n    boundary = 'interface_CA'\n    outputs = 'console csv'\n  [../]\n\n  [./numerical_phi_YSZ_C]\n    type = AverageNodalVariableValue\n    boundary = 'interface_CA'\n    variable = phi_YSZ_C\n    execute_on = 'timestep_begin nonlinear timestep_end'\n  [../]\n\n  [./I_YSZ_bottom_Anode]\n    type = SideDiffusiveFluxIntegral\n    variable = phi_YSZ_A\n    diffusivity = 'sigma_YSZ'\n    boundary = 'interface_AC' \n    outputs = 'console csv'\n  [../]\n\n  [./numerical_phi_YSZ_A]\n    type = AverageNodalVariableValue\n    boundary = 'interface_AC'\n    variable = phi_YSZ_A\n    execute_on = 'timestep_begin nonlinear timestep_end'\n  [../]\n[]\n\nCase 2. Some codes in an input file not giving me a value\n[Mesh]\n  [./interface_YSZ_CA]\n    type = SideSetsBetweenSubdomainsGenerator\n    input = meshScale\n    primary_block = 'PT_YSZ_C_TET4'\n    paired_block = 'PT_YSZ_A_TET4'\n    new_boundary = 'interface_CA'\n  [../]\n\n  [./interface_YSZ_AC]\n    type = SideSetsBetweenSubdomainsGenerator\n    input = interface_YSZ_CA\n    primary_block = 'PT_YSZ_A_TET4'\n    paired_block = 'PT_YSZ_C_TET4'\n    new_boundary = 'interface_AC'\n  [../]\n[]\n\n[Materials]\n  [./CounterElectrode]\n    type  = ParsedMaterial\n    block = 'PT_YSZ_C_TET4 PT_TPB_C_TET4 PT_YSZ_A_TET4 PT_TPB_A_TET4'\n    f_name = 'eff_pO2'\n    constant_names        = 'R          T        z     F'        # (J/K/mol), (K),  (# of electron), (C/mol)\n    constant_expressions  = '8.3144598  1073.0   4   96485.3329'\n    postprocessor_names = 'numerical_phi_YSZ'\n    function = 'if(numerical_phi_YSZ=0, exp(z * F / R / T * (-0.55442)), exp(z * F / R / T * (numerical_phi_YSZ)))'\n  [../]\n[]\n\n[Postprocessors]\n  [./I_YSZ_bottom_Cathode]\n    type = SideDiffusiveFluxIntegral\n    variable = phi_YSZ_C\n    diffusivity = 'sigma_YSZ'\n    boundary = 'interface_CA'\n    outputs = 'console csv'\n  [../]\n\n  [./I_YSZ_bottom_Anode]\n    type = SideDiffusiveFluxIntegral\n    variable = phi_YSZ_A\n    diffusivity = 'sigma_YSZ'\n    boundary = 'interface_AC' \n    outputs = 'console csv'\n  [../]\n\n  [./numerical_phi_YSZ]\n    type = AverageNodalVariableValue\n    boundary = 'interface_CA'\n    variable = phi_YSZ_C\n    execute_on = 'timestep_begin nonlinear timestep_end'\n  [../]\n[]\n\nTechnically, I tried to integrate the CounterElectrode by introducing one postprocessor \"numerical_phi_YSZ\" at Case 2 and use the number coming from the postprocessor \"numerical_phi_YSZ\" for calculating CounterElectrode.\nBut, I didn't get values for I_YSZ_bottom_Anode at Case 2.\nI think a postprocessor is entangled with a variable (phi_YSZ_C).\nSo, even if I passed the postprocessor value to CounterElectrode applied on \"TPT_YSZ_A_TET4 PT_TPB_A_TET4\", it would not work.\nThose blocks did not have a variable (phi_YSZ_C), but it had a variable (phi_YSZ_A).\nIn my opinion, if I use still two variables (phi_YSZ_A, phi_YSZ_C), I should use two postprocessors even two functions work the same.\nAlso, if I want to optimize the Case 1, I could use one boundary(interface_CA or interface_AC).\nAm I correct?",
+          "url": "https://github.com/idaholab/moose/discussions/18363",
+          "updatedAt": "2022-06-19T08:02:19Z",
+          "publishedAt": "2021-07-16T22:08:20Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nWhat do you mean you did not get a value? Do you mean you got a 0 output?\nIs there anything that creates a gradient on either side of the anode/cathode interface? What is the connection between the two variables? Is there an interface kernel?\nDo you need to use two variables? Do you expect I_YSZ_bottom_Cathode and I_YSZ_bottom_Anode to be different given that they are on both sides of the same interface (eg is flux supposed to be discontinuous?)\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/18363#discussioncomment-1018871",
+                  "updatedAt": "2022-06-19T08:02:25Z",
+                  "publishedAt": "2021-07-18T16:52:31Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Initialize the material properties at qp",
+          "author": {
+            "login": "cooperliu101"
+          },
+          "bodyText": "Hello, everyone!\nIn my problem I want to calculate the material property at qp only once at the beginning. initQpStatefulProperties seems to be the solution, but I found initQpStatefulProperties is called only when the material is stateful.\nIs there any function like initQpProperties?",
+          "url": "https://github.com/idaholab/moose/discussions/18370",
+          "updatedAt": "2023-03-15T01:19:03Z",
+          "publishedAt": "2021-07-17T12:35:17Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "If you want a material property that persists its value in all time, then it's essentially stateful, right?\nI can think of two easy ways of achieving this in moose:\n\n\nYou can compute its value in initQpStatefulProperties, and in computeQpProproties, assign the old value into the current property.\n\n\nYou can save the value as an AuxVariable and compute it at INITIAL.\n\n\nI'm sure there are other ways.",
+                  "url": "https://github.com/idaholab/moose/discussions/18370#discussioncomment-1016090",
+                  "updatedAt": "2023-03-15T01:19:03Z",
+                  "publishedAt": "2021-07-17T13:11:12Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "BTW, initQpStatefulProperties is always called, not only on stateful properties.",
+                          "url": "https://github.com/idaholab/moose/discussions/18370#discussioncomment-1016091",
+                          "updatedAt": "2023-03-15T01:22:32Z",
+                          "publishedAt": "2021-07-17T13:12:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cooperliu101"
+                          },
+                          "bodyText": "Thanks\uff01\nIn my moose version \uff08around 2021.4\uff09initQpStatefulProperties is not always called.\nI need to update and check.\naccording to the latest\n\n  \n    \n      moose/framework/src/loops/ComputeMaterialsObjectThread.C\n    \n    \n         Line 104\n      in\n      4ee8eed\n    \n  \n  \n    \n\n        \n          \n           if (_has_stateful_props) \n        \n    \n  \n\n\n\n  \n    \n      moose/framework/src/materials/MaterialPropertyStorage.C\n    \n    \n         Line 256\n      in\n      06bc1f7\n    \n  \n  \n    \n\n        \n          \n           mat->initStatefulProperties(n_qpoints); \n        \n    \n  \n\n\n\n  \n    \n      moose/framework/src/materials/MaterialBase.C\n    \n    \n         Line 108\n      in\n      66c7cd4\n    \n  \n  \n    \n\n        \n          \n           MaterialBase::initStatefulProperties(unsigned int n_points) \n        \n    \n  \n\n\ninitQpStatefulProperties seems only called when the material has stateful properties?",
+                          "url": "https://github.com/idaholab/moose/discussions/18370#discussioncomment-1016194",
+                          "updatedAt": "2023-03-15T01:22:32Z",
+                          "publishedAt": "2021-07-17T14:24:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Ah you are absolutely correct. I forget about that.",
+                          "url": "https://github.com/idaholab/moose/discussions/18370#discussioncomment-1016424",
+                          "updatedAt": "2023-03-15T01:23:27Z",
+                          "publishedAt": "2021-07-17T15:40:31Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Help about Moose example for thermal creep behavior",
+          "author": {
+            "login": "xchengood"
+          },
+          "bodyText": "Hi Moose experts or users,\nI know Moose is a powerful tool to study the thermal creep behavior of alloys. Could anyone share the Moose code for this paper (https://link.springer.com/article/10.1007/s11661-017-4011-3) or the relevant Moose examples with me? It would be helpful for me to learn more about how to achieve the constitutive model presented in the paper in Moose.\nI am appreciative of your help.\n@dewenyushu",
+          "url": "https://github.com/idaholab/moose/discussions/18318",
+          "updatedAt": "2022-08-28T18:06:18Z",
+          "publishedAt": "2021-07-13T15:18:48Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "You should contact the corresponding author of that paper insteading of asking here.",
+                  "url": "https://github.com/idaholab/moose/discussions/18318#discussioncomment-1016117",
+                  "updatedAt": "2022-08-28T18:06:18Z",
+                  "publishedAt": "2021-07-17T13:25:22Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How can I create bound for conserved parameter in CH Equation?",
+          "author": {
+            "login": "ashiqueimran9539"
+          },
+          "bodyText": "I am trying to develop a phase-filed based code for sintering and I ran into some convergence issue. The conserved parameter c seems to turn negative at some points when it's suppose to be between 0 and 1. How can I enforce a bound to set the value between that range after each time step? So far I have tried using   BoundingValueNodalDamper,  LowerBoundNodalKernel and  ConstantBoundsAux to implement the bound but none of them worked as I had hoped.\n\nExample input file\n[GlobalParams]\n  op_num = 2\n  var_name_base = gr\n[]\n\n[Mesh]\n  type = GeneratedMesh\n  dim = 2\n  nx = 80\n  ny = 40\n  xmin = 0\n  xmax = 40\n  ymin = 0\n  ymax = 20\n  elem_type = QUAD4\n  uniform_refine=2\n  []\n\n[Variables]\n  [./c]\n  [../]\n  [./w]\n  [../]\n  [./PolycrystalVariables] # Automatically creates order parameter variables\n  [../]\n  []\n\n[AuxVariables]\n  [./bnds]\n  [../]\n  [./force]\n    order = CONSTANT\n    family = MONOMIAL\n  [../]\n  [./free_energy]\n    order = CONSTANT\n    family = MONOMIAL\n  [../]\n  [./unique_grains]\n    order = CONSTANT\n    family = MONOMIAL\n  [../]\n  [./var_indices]\n    order = CONSTANT\n    family = MONOMIAL\n  [../]\n  [./centroids]\n    order = CONSTANT\n    family = MONOMIAL\n  [../]\n  [./mobility]\n    order = CONSTANT\n    family = MONOMIAL\n  [../]\n  [./dt_w_residue]\n    order = FIRST\n    family = LAGRANGE\n  [../]\n  [./ch_rbm_residue]\n    order = FIRST\n    family = LAGRANGE\n  [../]\n  [./ch_wres_residue]\n    order = FIRST\n    family = LAGRANGE\n  [../]\n  [./ch_parsed_residue]\n    order = FIRST\n    family = LAGRANGE\n  [../]\n\n  #eta1_variables\n\n  [./eta1_dot_residue]\n    order = FIRST\n    family = LAGRANGE\n  [../]\n  [./vdv_eta1_residue]\n    order = FIRST\n    family = LAGRANGE\n  [../]\n  [./acint_eta1_residue]\n    order = FIRST\n    family = LAGRANGE\n  [../]\n  [./acbulk_eta1_residue]\n    order = FIRST\n    family = LAGRANGE\n  [../]\n\n  #eta2_variables\n\n  [./eta2_dot_residue]\n    order = FIRST\n    family = LAGRANGE\n  [../]\n  [./vdv_eta2_residue]\n    order = FIRST\n    family = LAGRANGE\n  [../]\n  [./acint_eta2_residue]\n    order = FIRST\n    family = LAGRANGE\n  [../]\n  [./acbulk_eta2_residue]\n    order = FIRST\n    family = LAGRANGE\n  [../]\n\n  [./dummy_upper]\n    order = FIRST\n    family = LAGRANGE\n  [../]\n  [./dummy_lower]\n    order = FIRST\n    family = LAGRANGE\n  [../]\n\n[]\n\n[Kernels]\n\n    #Added for splitting------------------------------------------------------\n\n    #gr0_kernels\n\n    [./eta1_dot]\n      type = TimeDerivative\n      variable = gr0\n      save_in=eta1_dot_residue\n    [../]\n    [./vadv_eta1]\n      # advection kernel corrsponding to AC equation\n      type = SingleGrainRigidBodyMotion\n      variable = gr0\n      c = c\n      v = gr0\n      grain_tracker_object = grain_center\n      grain_force = grain_force\n      grain_volumes = grain_volumes\n      save_in=vdv_eta1_residue\n    [../]\n    [./acint_eta1]\n      type = ACInterface\n      variable = gr0\n      mob_name = L\n      args = c\n      kappa_name = kappa_op\n      save_in=acint_eta1_residue\n    [../]\n    [./acbulk_eta1]\n      type = AllenCahn\n      variable = gr0\n      mob_name = L\n      f_name = f_loc\n      args = c\n      save_in=acbulk_eta1_residue\n    [../]\n\n    #eta2_kernels\n\n    [./eta2_dot]\n      type = TimeDerivative\n      variable = gr1\n      save_in=eta2_dot_residue\n    [../]\n    [./vadv_eta2]\n      # advection kernel corrsponding to AC equation\n      type = SingleGrainRigidBodyMotion\n      variable = gr1\n      c = c\n      v = gr1\n      grain_tracker_object = grain_center\n      grain_force = grain_force\n      grain_volumes = grain_volumes\n      save_in=vdv_eta2_residue\n    [../]\n    [./acint_eta2]\n      type = ACInterface\n      variable = gr1\n      mob_name = L\n      args = c\n      kappa_name = kappa_op\n      save_in=acint_eta2_residue\n    [../]\n    [./acbulk_eta2]\n      type = AllenCahn\n      variable = gr1\n      mob_name = L\n      f_name = f_loc\n      args = c\n      save_in=acbulk_eta2_residue\n    [../]\n\n#spliting-----------------------------------------------------\n\n\n  # Cahn Hilliard kernels\n  [./dt_w]\n    type = CoupledTimeDerivative\n    variable = w\n    v = c\n    save_in=dt_w_residue\n    [../]\n  [./CH_wres]\n    type = SplitCHWRes\n    variable = w\n    mob_name = D\n    save_in=ch_wres_residue\n  [../]\n  [./CH_Parsed]\n    type = SplitCHParsed\n    variable = c\n    f_name = f_loc\n    w = w\n    kappa_name = kappa_c\n    args = 'gr0 gr1' # Must be changed as op_num changes. Copy/paste from line 4\n    save_in=ch_parsed_residue\n    [../]\n  [./CH_RBM]\n    type = MultiGrainRigidBodyMotion\n    variable = w\n    c = c\n    v = 'gr0 gr1'\n    grain_force = grain_force\n    grain_volumes = grain_volumes\n    grain_tracker_object = grain_center\n    save_in=ch_rbm_residue\n  [../]\n[]\n\n[AuxKernels]\n\n  [./unique_grains]\n    type = FeatureFloodCountAux\n    variable = unique_grains\n    flood_counter = grain_center\n    field_display = UNIQUE_REGION\n    execute_on = timestep_begin\n  [../]\n  [./var_indices]\n    type = FeatureFloodCountAux\n    variable = var_indices\n    flood_counter = grain_center\n    field_display = VARIABLE_COLORING\n    execute_on = timestep_begin\n  [../]\n  [./centroids]\n    type = FeatureFloodCountAux\n    variable = centroids\n    execute_on = timestep_begin\n    field_display = CENTROID\n    flood_counter = grain_center\n  [../]\n  [./bnds]\n    type = BndsCalcAux\n    variable = bnds\n  [../]\n  []\n\n  [BCs]\n    [./bcs]\n      #zero flux BC\n      type = NeumannBC\n      value = 0\n      variable = c\n      boundary = '0 1 2 3'\n    [../]\n  []\n\n[Materials]\n\n  [./free_energy]\n    type = DerivativeParsedMaterial\n    f_name = f_loc\n    constant_names = 'A B'\n    constant_expressions = '16 1'\n    args = 'c gr0 gr1' #Must be changed as op_num changes. Copy/paste from line 4\n    function = 'A*c^2*(1-c)^2+B*(c^2+6*(1-c)*(gr0^2+gr1^2)\n                -4*(2-c)*(gr0^3+gr1^3)\n                +3*(gr0^2+gr1^2)^2)'\n                                 #Copy/paste from lines 5-6\n    derivative_order = 2\n    outputs=exodus\n  [../]\n  [./mobility]\n    type = PF_Sintering_Mobility_2\n    block=0\n    c=c\n    eta='gr0 gr1'\n    outputs=exodus\n  [../]\n  [./force_density]\n    type = ForceDensityMaterial\n    c = c\n    etas='gr0 gr1'\n  [../]\n[]\n\n[Postprocessors]\n  [./total_energy]\n    type = ElementIntegralVariablePostprocessor\n    variable = free_energy\n    execute_on = 'initial timestep_end'\n    outputs=exodus\n  [../]\n[]\n\n[VectorPostprocessors]\n  [./forces]\n    type = GrainForcesPostprocessor\n    grain_force = grain_force\n  [../]\n  [./grain_volumes]\n    type = FeatureVolumeVectorPostprocessor\n    flood_counter = grain_center\n    execute_on = 'initial timestep_begin'\n  [../]\n[]\n\n[UserObjects]\n  [./grain_center]\n    type = GrainTracker\n    outputs = none\n    compute_var_to_feature_map = true\n    execute_on = 'initial timestep_begin'\n  [../]\n  [./grain_force]\n    type = ComputeGrainForceAndTorque\n    grain_data = grain_center\n    c = c\n    etas = 'gr0 gr1'\n    force_density = force_density\n    execute_on = 'initial linear nonlinear'\n   [../]\n[]\n\n[Preconditioning]\n[./standard]\n  type = SMP\n  full = true\n  petsc_options = '-snes_converged_reason'\n  petsc_options_iname = '-ksp_type -pc_type -sub_pc_type -sub_pc_factor_shift_type -snes_atol -snes_rtol -snes_max_it -ksp_rtol -ksp_atol'\n  petsc_options_value = 'gmres asm lu NONZERO 1E-10 1E-10 60 1E-20 1E-20'\n[../]\n[]\n\n[Bounds]\n  [./c_upper_bound]\n    type = ConstantBoundsAux\n    variable = dummy_upper\n    bounded_variable = c\n    bound_type = upper\n    bound_value = 1.0\n  [../]\n  [./c_lower_bound]\n    type = ConstantBoundsAux\n    variable = dummy_lower\n    bounded_variable = c\n    bound_type = lower\n    bound_value = 0.0001\n  [../]\n[]\n\n[Executioner]\n  # Preconditioned JFNK (default)\n  type = Transient\n  scheme = BDF2\n  solve_type = NEWTON\n  l_max_its = 35\n  l_tol = 1.0e-3\n  nl_rel_tol = 1.0e-10\n  start_time = 0.0\n  end_time = 100\n  dt = 0.1\n[]\n\n[Outputs]\n  exodus = true\n  perf_graph = true\n  [./display]\n    type = Console\n    max_rows = 12\n  [../]\n[]\n\n[ICs]\n  [./concentration_IC]\n    type = SpecifiedSmoothCircleIC\n    x_positions = '12 28'\n    y_positions = '10 10'\n    z_positions = '0   0  '\n    radii =       '7.5 7.5'\n    variable = c\n    invalue = 1.0\n    outvalue = 0.0\n    int_width = 4\n  [../]\n  [./gr0_IC]\n    type = SmoothCircleIC\n    variable = gr0\n    x1 = 12\n    y1 = 10\n    radius = 7.5\n    invalue = 1.0\n    outvalue = 0.0\n    int_width = 4\n  [../]\n  [./gr1_IC]\n    type = SmoothCircleIC\n    variable = gr1\n    x1 = 28\n    y1 = 10\n    radius = 7.5\n    invalue = 1.0\n    outvalue = 0.0\n    int_width = 4\n  [../]\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/18280",
+          "updatedAt": "2022-06-14T11:50:23Z",
+          "publishedAt": "2021-07-07T18:46:31Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "laagesen"
+                  },
+                  "bodyText": "I'm not sure I fully understand the question- usually when we say \"convergence issue\" we are referring to the solver failing to converge or dropping to impractically small time steps. So did that also happen in addition to the order parameter going outside the range of 0 to 1? Or was it just that the order parameter went outside the range 0 to 1? (If so, that would not normally be referred to as a \"convergence issue\".)",
+                  "url": "https://github.com/idaholab/moose/discussions/18280#discussioncomment-987023",
+                  "updatedAt": "2022-06-14T11:50:24Z",
+                  "publishedAt": "2021-07-09T22:53:29Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ashiqueimran9539"
+                          },
+                          "bodyText": "Yes\nThe solver fails to converge and the time step drops to a very small value(until it reaches the set lower limit and kills the simulation).",
+                          "url": "https://github.com/idaholab/moose/discussions/18280#discussioncomment-1004873",
+                          "updatedAt": "2022-06-14T11:51:57Z",
+                          "publishedAt": "2021-07-14T16:40:00Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "dschwen"
+                  },
+                  "bodyText": "Your free energy should diverge to infinity once you approach 0 (or 1) with a concentration order parameter. That's just the physics, you should not need to add unphysical bounds on concentration parameters. Your model does not exhibit this physical behavior as it is lacking entropy contributions.\nHowever if your system becomes severely nonlinear in these cases you can think about strategies to help the solver. Bounding to (0,1) is not a feasible strategy. Using Taylor expansions in the entropy terms is.\nP.S.: I edited your question to embed the input code. That's more convenient than downloading an attachment.",
+                  "url": "https://github.com/idaholab/moose/discussions/18280#discussioncomment-1004914",
+                  "updatedAt": "2022-06-14T11:51:56Z",
+                  "publishedAt": "2021-07-14T16:47:55Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "I didn't know you can use drop-down in GitHub markdown!",
+                          "url": "https://github.com/idaholab/moose/discussions/18280#discussioncomment-1016107",
+                          "updatedAt": "2022-06-14T11:51:56Z",
+                          "publishedAt": "2021-07-17T13:22:08Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "can MOOSE do Multi-point constraints (MPCs)?",
+          "author": {
+            "login": "Traiwit"
+          },
+          "bodyText": "Hi guys,\nI just wondering if MOOSE can perform Multi-point constraints (MPCs)?\nfrom a quick search, I see MOOSE has EqualValueEmbeddedConstraint https://mooseframework.inl.gov/moose/source/constraints/EqualValueEmbeddedConstraint.html\nBut this might not be what I am looking for\nI want something that can match 2 DOFs as follow\n\nThanks guys\nKind regards,\nTraiwit",
+          "url": "https://github.com/idaholab/moose/discussions/18342",
+          "updatedAt": "2023-11-07T03:11:29Z",
+          "publishedAt": "2021-07-15T07:18:42Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "Traiwit"
+                  },
+                  "bodyText": "I think LinearNodalConstraint is the one\nhttps://mooseframework.inl.gov/source/constraints/LinearNodalConstraint.html\nDoes anyone know how to make a variable of node A = node B?\nwhat should I set the value of penalty and weights to?",
+                  "url": "https://github.com/idaholab/moose/discussions/18342#discussioncomment-1011626",
+                  "updatedAt": "2023-11-07T03:12:01Z",
+                  "publishedAt": "2021-07-16T06:32:42Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "If you are asking \"whether moose can do MPC\", the answer is definitely yes -- the infrastructure is there.\nBut I'm not sure if there are already some classes implemented for MPC. I think you are in the right direction. Classes like LinearNodalConstraint and EqualValueBoundaryConstraint can be a good starting point if you want to implement MPC in your own application.",
+                  "url": "https://github.com/idaholab/moose/discussions/18342#discussioncomment-1015936",
+                  "updatedAt": "2023-11-07T03:12:02Z",
+                  "publishedAt": "2021-07-17T11:28:24Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "The temperature only compute once in thermo-mechanical analysis",
+          "author": {
+            "login": "rh201"
+          },
+          "bodyText": "Hi there,\nI'm trying on a simple thermo-mechanical analysis of a rectangle plate, with the initial temperature 600K and the boundaries temperature as 300K, but the results shows the temperature only compute one time step and don't change anymore. What's missing of the problem? The input file is as follows. Thank you.\n_[GlobalParams]\n  displacements = 'disp_x disp_y'\n[]\n[Mesh]\n  type = FileMesh\n  file = 'plate/plate.msh'\n[]\n[Variables]\n  [disp_x]\n  []\n  [disp_y]\n  []\n  [temperature]\n    initial_condition = 600.0\n  []\n[]\n[Modules/TensorMechanics/Master]\n  [all]\n    add_variables = true\n    strain = SMALL\n    eigenstrain_names = eigenstrain\n    use_automatic_differentiation = true\n    generate_output = 'vonmises_stress elastic_strain_xx elastic_strain_yy strain_xx strain_yy'\n  []\n[]\n[Kernels]\n  [heat_conduction]\n    type = ADHeatConduction\n    variable = temperature\n    thermal_conductivity = k\n  []\n  [heat_conduction_time_derivative]\n    type = ADHeatConductionTimeDerivative\n    variable = temperature\n    density_name = rho\n    specific_heat = c\n  []\n[]\n[BCs]\n  [x_symmetry]\n    type = DirichletBC\n    variable = disp_x\n    boundary = right\n    value = 0\n  []\n  [heatflux_symmetry]\n    type = NeumannBC\n    variable = temperature\n    boundary = right\n    value = 0\n  []\n  [Temperature_fix_left]\n    type = DirichletBC\n    variable = temperature\n    boundary = left\n    value = 300\n  []\n  [Temperature_fix_top]\n    type = DirichletBC\n    variable = temperature\n    boundary = top\n    value = 300\n  []\n  [Temperature_fix_bottom]\n    type = DirichletBC\n    variable = temperature\n    boundary = bottom\n    value = 300\n  []\n[]\n\n[Materials]\n  [bulk]\n    type = ADGenericConstantMaterial\n    prop_names = 'rho c k'\n    prop_values = ' ${rho} ${c} ${k}'\n  []\n  [./elasticity_tensor]\n    type = ADComputeIsotropicElasticityTensor\n    youngs_modulus = 218.4e3\n    poissons_ratio = 0.2\n  [../]\n  [./stress]\n    type = ADComputeLinearElasticStress\n  [../]\n  [thermal_strain]\n    type = ADComputeThermalExpansionEigenstrain\n    stress_free_temperature = 300\n    eigenstrain_name = eigenstrain\n    temperature = temperature\n    thermal_expansion_coeff = 7.5e-6\n  []\n[]\n[Executioner]\n  type = Transient\n  solve_type = PJFNK\n  petsc_options_iname = '-pc_type -pc_factor_mat_solver_package'\n  petsc_options_value = 'lu       superlu_dist                 '\n  automatic_scaling = true\n  dt = 0.1e-6\n  end_time = 200e-6\n  nl_rel_tol = 1e-08\n  nl_abs_tol = 1e-10\n\n  picard_max_its = 100\n  picard_abs_tol = 1e-50\n  picard_rel_tol = 1e-03\n  accept_on_max_picard_iteration = true\n[]\n[Outputs]\n  exodus = true\n[]__",
+          "url": "https://github.com/idaholab/moose/discussions/18326",
+          "updatedAt": "2022-08-13T03:37:20Z",
+          "publishedAt": "2021-07-14T08:36:06Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nyou expect the solution to be slow cooling from 600 to 300K ?\nWhat does it stop at?\nbtw\n\n\nyou have a bunch of deprecated Picard iteration parameters at the bottom of your input. Use fixed_point_ instead of picard_ there.\nIf you dont have a multiapps setup I dont think you need them either.\n\n\nwhen using automatic_differentiation, you want to use Newton to solve the system, not PJFNK, because AD provides you with a good jacobian\n\n\nWe'll tag some mechanics people on this\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/18326#discussioncomment-1004554",
+                  "updatedAt": "2022-08-29T13:59:32Z",
+                  "publishedAt": "2021-07-14T15:38:28Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rh201"
+                          },
+                          "bodyText": "Thank you.\nYes, I want to cool it down, and the simulation continues to the end, but the result shows the temperature only changes from 0 to the first time step and doesn't change in the following steps.\nYes, the code above is part of a multiapps setup, which has problems. I'm trying to figure what's wrong by commenting multiapps part out. Thanks for reminding that.",
+                          "url": "https://github.com/idaholab/moose/discussions/18326#discussioncomment-1004905",
+                          "updatedAt": "2023-11-03T13:16:54Z",
+                          "publishedAt": "2021-07-14T16:46:28Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "The initial condition of the temperature is 600 not 0 though?",
+                          "url": "https://github.com/idaholab/moose/discussions/18326#discussioncomment-1004968",
+                          "updatedAt": "2023-11-03T13:16:54Z",
+                          "publishedAt": "2021-07-14T17:00:27Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rh201"
+                          },
+                          "bodyText": "Yes, the initial conditions of the temperature is set as 600, cooling to 300",
+                          "url": "https://github.com/idaholab/moose/discussions/18326#discussioncomment-1005004",
+                          "updatedAt": "2023-11-03T13:17:11Z",
+                          "publishedAt": "2021-07-14T17:10:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "oh ok I misread 0 as the initial value not the time.\n@hugary1995 any idea what is going wrong here?",
+                          "url": "https://github.com/idaholab/moose/discussions/18326#discussioncomment-1005030",
+                          "updatedAt": "2023-11-03T13:17:14Z",
+                          "publishedAt": "2021-07-14T17:14:15Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ABallisat"
+                          },
+                          "bodyText": "What are your thermal material properties and how long do you expect it to take to cool down? You are only running your model for 200E-6 seconds so for it to get to equilibrium 300 K in that time would require a mean cooling rate of 1.5 million K/s, is that what you are intending? Do you need to run at such a small time step? I suspect your time scales need to be closer to orders of 10s of seconds to see some temperature changes in its current form.",
+                          "url": "https://github.com/idaholab/moose/discussions/18326#discussioncomment-1007683",
+                          "updatedAt": "2023-11-03T13:17:16Z",
+                          "publishedAt": "2021-07-15T08:49:26Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rh201"
+                          },
+                          "bodyText": "Thanks for replying.\nYes, that's a good point, I'll try that. But even though the end time is small, it has 2000 time steps, the question is the temperature only changes in the first time step and keeps the same in the rest.",
+                          "url": "https://github.com/idaholab/moose/discussions/18326#discussioncomment-1009750",
+                          "updatedAt": "2022-08-29T13:59:32Z",
+                          "publishedAt": "2021-07-15T17:31:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Does changing the time step fix it?\nIf not, I dont see the definitions for ${rho} ${c} ${k}' in your input file? What are those values? Extreme values here could affect the solution",
+                          "url": "https://github.com/idaholab/moose/discussions/18326#discussioncomment-1011092",
+                          "updatedAt": "2022-08-29T13:59:33Z",
+                          "publishedAt": "2021-07-16T01:44:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ABallisat"
+                          },
+                          "bodyText": "So the first time step is effectively finding the initial solution that meets your initial conditions (as my understanding works, correct me if I'm wrong). In the rest of your current scenario the temperature will be changing but very insignificantly - have you checked the numbers to see if they are changing at all? The number of time steps does not matter, it is the total time. Think of it like this: if you cook something in the oven at 200 C (so roughly 500 K), when you take it out and serve it at room temperature (roughly 300 K), it will stay warm for a long time (many minutes). How often you check it (equivalent to the number of time steps) does not matter as the physics doesn't care how often you measure it, it is how long you leave it for (the total model time) that matters.",
+                          "url": "https://github.com/idaholab/moose/discussions/18326#discussioncomment-1012311",
+                          "updatedAt": "2022-08-29T13:59:33Z",
+                          "publishedAt": "2021-07-16T09:38:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rh201"
+                          },
+                          "bodyText": "@GiudGiud @ABallisat Yes, it is the matter of time scale. When I set dt=1e-3 and total time = 200e-3, the temperature transfers all the way to the end. But what I do not quite understand is when the total time is smaller, shouldn't the temperature change more dramatically than a longer time scale? Why does it not change anymore in the rest steps of the total time of 200e-6?",
+                          "url": "https://github.com/idaholab/moose/discussions/18326#discussioncomment-1013543",
+                          "updatedAt": "2022-08-29T13:59:33Z",
+                          "publishedAt": "2021-07-16T14:44:27Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "changing how long you simulate the system does not change the way the real system would evolve.\nIf it takes 10 second to cool down by 50K in the real world, then if you only simulate 200 micros you won't see much of that cooling happen.",
+                          "url": "https://github.com/idaholab/moose/discussions/18326#discussioncomment-1013615",
+                          "updatedAt": "2022-08-29T13:59:33Z",
+                          "publishedAt": "2021-07-16T15:01:12Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to deal with \"signal 11\"?",
+          "author": {
+            "login": "dongcongcong606"
+          },
+          "bodyText": "Dear Friends!\nThe following warning appears when I execute the compiled code. And I tried to deal with this problem according to the \"Q&A\", but I failed. Any friends or experts can offer some experience or suggestions to solve this problem? Thank you very much\n\"YOUR APPLICATION TERMINATED WITH THE EXIT STRING: Segmentation fault (signal 11)\"",
+          "url": "https://github.com/idaholab/moose/discussions/18344",
+          "updatedAt": "2022-06-12T09:38:48Z",
+          "publishedAt": "2021-07-15T09:18:45Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "WilkAndy"
+                  },
+                  "bodyText": "You'll probably have to give more details - eg, what executable you're using, what input file you're running and what mesh you're using.  All I see is your text and then the string \"Uploading image.png...\"",
+                  "url": "https://github.com/idaholab/moose/discussions/18344#discussioncomment-1007893",
+                  "updatedAt": "2022-06-12T09:38:49Z",
+                  "publishedAt": "2021-07-15T09:43:38Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Could you please share with us a backtrace generated using a debug-mode executable?\nSee instructions for debugging here\nhttps://mooseframework.inl.gov/application_development/debugging.html",
+                          "url": "https://github.com/idaholab/moose/discussions/18344#discussioncomment-1008833",
+                          "updatedAt": "2022-06-12T09:38:52Z",
+                          "publishedAt": "2021-07-15T14:05:56Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Simulating thermal contraction in fractured systems using MultiApps",
+          "author": {
+            "login": "WilkAndy"
+          },
+          "bodyText": "Hi everyone,\nI'm canvassing ideas on how to simulate thermal contraction in fractured systems using MultiApps.  This extending some work I've been doing with @rpodgorney , @lynnmunday , @cbolisetti and KT on solving non-isothermal flow through fractured porous media.  My question takes a few pictures to understand....\nImagine a solid material (the \"matrix\") that contains a thin plate-like void (the \"fracture\").  Let's just think of the 2D case, where the matrix is a 2D square and the fracture is a 1D line segment:\n\n(fracture is the red line)\nImagine injecting cold fluid into the fracture.  After some time, the cold will diffuse a little way into the matrix.  This cold \"sheath\" around the fracture will thermally contract, leading to an increase in the fracture aperture:\n\nIn the work I've been doing, I've been using a MultiApp approach: one App models the fracture physics and one App models the matrix physics.  One big reason for doing this is that realistic fractures are actually complicated networks that are difficult to mesh, and extremely difficult to mesh as part of a 3D solid system, so keeping the fracture mesh separate from the solid mesh is very advantageous.  Another advantage is computational speed, since the fracture physics is often quite complicated (not just heat flow, even though that's what I'm concentrating on in this Discussion).  In this approach, heat energy from the fracture App appears in the matrix App as a set of Dirac sinks/sources.\n\n(matrix elements are shown as squares, fracture Dirac sinks/sources are red dots)\nMy end game is to accurately predict fracture aperture as a function of temperature in the system.\nHowever, a straightforward thermal contraction in the matrix is exactly the opposite of what I want to see: the cold elements contract, pulling the remaining elements towards them.  This is because the matrix mesh does not contain an explicit fracture:\n\n(matrix elements have contracted due to cold Dirac sources)\nSo, how can I accurately predict fracture aperture using this MultiApp approach?\nI can think of a few not-so-good ways of doing this (using an analytic solution, cutting matrix elements, empirical approach).  Can you think of some potential ways forward?  I'm not asking for \"the one-and-only answer\" (although that'd be great, heheheh) - I'm just hoping someone might initiate a good approach.",
+          "url": "https://github.com/idaholab/moose/discussions/18257",
+          "updatedAt": "2022-06-13T21:59:56Z",
+          "publishedAt": "2021-07-05T06:35:24Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "Here is an easy hack if your domain is symmetric. Utilize symmetry to only model the left half of the domain. The symmetry condition is simply u_x = 0 on the symmetry plane. Now, to represent a discontinuity, just don't prescribe Dirichlet BC on the part of the symmetry plane that overlaps with the fracture -- leave it stress-free. If other physics are modeled correctly, I expect to see crack opening.",
+                  "url": "https://github.com/idaholab/moose/discussions/18257#discussioncomment-965443",
+                  "updatedAt": "2022-06-13T22:00:18Z",
+                  "publishedAt": "2021-07-05T10:59:19Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "If the injecting fluid is pressurized, you can also apply a traction using the same approach.\nIf the fluid is invading into the porous matrix, then I recommend you to use a phase field to model single phase flow into a poroelastic media on the matrix mesh. But it seems to me this isn't something you are considering as of now.",
+                          "url": "https://github.com/idaholab/moose/discussions/18257#discussioncomment-965463",
+                          "updatedAt": "2022-06-13T22:00:19Z",
+                          "publishedAt": "2021-07-05T11:04:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Thanks @hugary1995 - those are great answers.  Unfortunately, the situation is more complicated than the above pictures: there are many elliptical fracture planes intersecting each other all over the place.  I just drew the simple situation to make the problem clearer.  Yes, also we have fluid in the fracture and in the matrix, and those physics are governed by PorousFlow, and geomechanics too, but all those things can be handled easily enough.  The thermal contraction and its impact on the fracture aperture is the difficult bit.  (The same problematic phenomenon also occurs for mechanical deformation from fluid pressure, but i thought thermal contraction/expansion was easier to explain.)",
+                          "url": "https://github.com/idaholab/moose/discussions/18257#discussioncomment-967704",
+                          "updatedAt": "2022-06-13T22:00:19Z",
+                          "publishedAt": "2021-07-05T22:59:14Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Okay, If it's arbitrary smooth cracks then Xfem is probably your best bet.\nIf you know the crack locations a priori and they are not propagating, then the czm capabilities in moose would also be useful.\nIf I were solving this problem from the very beginning, I probably would use phase field. It can handle hydraulic fracture in porous media, with Darcy flow, stokes flow, etc. There are plenty of literature on this subject. Several papers by Mary Wheeler, Chad Landis, and Blaise Bourdin would be a good starting point. But it seems that the commitments so far prevent you from choosing a completely different method.",
+                          "url": "https://github.com/idaholab/moose/discussions/18257#discussioncomment-967871",
+                          "updatedAt": "2022-06-13T22:00:20Z",
+                          "publishedAt": "2021-07-06T00:45:53Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Thanks @hugary1995 - really useful comments.",
+                          "url": "https://github.com/idaholab/moose/discussions/18257#discussioncomment-967955",
+                          "updatedAt": "2022-07-11T12:40:29Z",
+                          "publishedAt": "2021-07-06T01:25:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rpodgorney"
+                          },
+                          "bodyText": "Can't this be done simply by tracking the displacement in the matrix, adjacent and normal to the fracture plane, and then use that displacement to essentially calculate an assumed change in aperture?  Record keeping would likely be messy, but you are already looking at normals for the heat/mass transfers, correct?",
+                          "url": "https://github.com/idaholab/moose/discussions/18257#discussioncomment-970526",
+                          "updatedAt": "2022-07-11T12:40:29Z",
+                          "publishedAt": "2021-07-06T14:42:12Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "I might give the exact the same suggestions as @hugary1995 mentioned. However, I have seen the the examples from @lynnmunday where you have extremely complicated fracture network. At this moment, neither XFEM nor CZM can work nicely.\nIt seems the issue comes from the fact that the matrix does not model the fracture explicitly. Instead of adding the sink source term, could you degrade the matrix stiffness at fracture locations? It is kind of like the smeared damage approach in some sense.",
+                          "url": "https://github.com/idaholab/moose/discussions/18257#discussioncomment-970962",
+                          "updatedAt": "2022-07-11T12:40:35Z",
+                          "publishedAt": "2021-07-06T16:23:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "I might give the exact the same suggestions as @hugary1995 mentioned. However, I have seen the the examples from @lynnmunday where you have extremely complicated fracture network. At this moment, neither XFEM nor CZM can work nicely.\nIt seems the issue comes from the fact that the matrix does not model the fracture explicitly. Instead of adding the sink source term, could you degrade the matrix stiffness at fracture locations? It is kind of like the smeared damage approach in some sense.\n\nHa, it seems we reached the same conclusion about degrading the fracture stiffness, @jiangwen84 (see below - for some reason i didn't see your post until i had written mine).",
+                          "url": "https://github.com/idaholab/moose/discussions/18257#discussioncomment-972225",
+                          "updatedAt": "2022-07-11T12:41:31Z",
+                          "publishedAt": "2021-07-06T21:57:51Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Can't this be done simply by tracking the displacement in the matrix, adjacent and normal to the fracture plane, and then use that displacement to essentially calculate an assumed change in aperture? Record keeping would likely be messy, but you are already looking at normals for the heat/mass transfers, correct?\n\nI'm not sure how that works @rpodgorney .   The matrix deformation is the opposite of what we want - see the last picture above.",
+                          "url": "https://github.com/idaholab/moose/discussions/18257#discussioncomment-972230",
+                          "updatedAt": "2022-07-11T12:41:31Z",
+                          "publishedAt": "2021-07-06T21:58:47Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "WilkAndy"
+                  },
+                  "bodyText": "After mulling over this a little further, I'm wondering whether \"the best\" approach might be to use appropriate elasticity tensor for the matrix elements containing the fractures.  In this case E_{ijxx}=0, or more generally E_{ijmn}P_{mk}{P_{nl}, where P_{mk}=delta_{mk}-n_{m}n_{k}, is the projection operator and n is the normal to the fracture plane.  (Also could use Cosserat with fracture normal stiffness = 0, and suitable fracture shear stiffness.)  This will mean that any heat load will cause zero stress_{xx}, so the element won't contract along the x direction.  As the cool temperature hits the next layer of matrix elements, they will contract, pulling the fracture-containing elements with them, leading to the correct result.  This approach is only spatially accurate to the size of one matrix element, but that's exactly the accuracy we get using the MultiApp approach anyway.",
+                  "url": "https://github.com/idaholab/moose/discussions/18257#discussioncomment-972184",
+                  "updatedAt": "2022-06-13T22:00:23Z",
+                  "publishedAt": "2021-07-06T21:44:17Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Note to future self: If i decide to go down this path then\nE_ijxx = 0 means \"any strain_xx will not generate any stress\"\nE_xxij = 0 means \"any strain will not generate any stress_xx\"\nBoth of these are probably what i want.\nBut perhaps I also want E_ijkx = E_ijxl = 0, meaning \"a shear-strain involving x will generate no stress\", and E_xjkl = E_ixkl = 0, meaning \"any strain will not generate any shear-stress involving x\".  Obviously if the fracture had zero shear strength, 2 of these would be correct (E_ijkx = 0 = E_xjkl), but the other 2 follow only by symmetry of E and are not necessarily physically correct.\nCosserat mechanics gets around this by having non-symmetric stress, strain and E, so can have E_xjkl = 0 but E_ixkl != 0.   But the disadvantage is a considerable increase in compute intensity for little gain: Cosserat is actually only needed in the few matrix elements that contain fractures, and an estimate of fracture shear strength is needed, and Cosserat is only true in the small layer-thickness limit anyway.\nSo I can't see any clear right or wrong in selecting E_ijkx = E_ijxl = E_xjkl = E_ixkl = 0.  (Or more generally E_mnop P_{mi}P_{nj}P_{ok}P_{pl}.)  My intuition tells me it is better to use these because I want to treat these matrix elements like very flexible material.",
+                          "url": "https://github.com/idaholab/moose/discussions/18257#discussioncomment-972449",
+                          "updatedAt": "2022-06-13T22:00:24Z",
+                          "publishedAt": "2021-07-06T23:57:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "I've done this before -- see this writeup:",
+                          "url": "https://github.com/idaholab/moose/discussions/18257#discussioncomment-972570",
+                          "updatedAt": "2022-06-13T22:00:22Z",
+                          "publishedAt": "2021-07-07T00:52:43Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "In your case \\Gamma-convergence follows from h-refinement.",
+                          "url": "https://github.com/idaholab/moose/discussions/18257#discussioncomment-972578",
+                          "updatedAt": "2022-06-13T22:00:21Z",
+                          "publishedAt": "2021-07-07T00:54:14Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Yea, that sort of thing, @hugary1995 .   Interesting that the author of that material agreed with me about setting the shear stresses to \"zero\", but i don't see why that's always correct - where did the above material come from?\nIn my case i won't have to worry about crack closing, i believe.  (Cracks might close, but the whole point of this is to find the crack aperture, and if it becomes negative i'll just say aperture=zero (actually, probably just a small number like the initial crack aperture).)   So i won't have the numerically-annoying discontinuity at strain=0.",
+                          "url": "https://github.com/idaholab/moose/discussions/18257#discussioncomment-972700",
+                          "updatedAt": "2022-07-11T12:43:11Z",
+                          "publishedAt": "2021-07-07T02:03:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "I wrote it just for you :)\nI agree, your case is simpler.",
+                          "url": "https://github.com/idaholab/moose/discussions/18257#discussioncomment-972712",
+                          "updatedAt": "2022-07-11T12:43:11Z",
+                          "publishedAt": "2021-07-07T02:08:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Another node:  have to be aware of potential problems when multiple fractures sit within one matrix element, and when fractures sit in neighbouring matrix elements.",
+                          "url": "https://github.com/idaholab/moose/discussions/18257#discussioncomment-976749",
+                          "updatedAt": "2022-07-11T12:43:11Z",
+                          "publishedAt": "2021-07-07T21:42:45Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "rpodgorney"
+                  },
+                  "bodyText": "I was envisioning using the difference, and only allowing the aperture to increase---but that won\u2019t work.\n\nI like your thoughts on the elasticity approach!\n\u2026\n--\nRobert K. Podgorney\nChief Computational Scientist\nAdvanced Scientific Computing Division\nIdaho National Laboratory\n\nOffice: 208-526-1524<tel:208-526-1524>\nCell: 208-520-9361<tel:208-520-9361>\nemail: ***@***.******@***.***>\nStatement of Confidentiality\nThe contents of this e-mail message and any attachments are confidential and are intended solely for addressee. The information may also be legally privileged. This transmission is sent in trust, for the sole purpose of delivery to the intended recipient. If you have received this transmission in error, any use, reproduction or dissemination of this transmission is strictly prohibited. If you are not the intended recipient, please immediately notify the sender by reply e-mail or phone and delete this message and its attachments, if any.\n\n\nFrom: Andy Wilkins ***@***.***>\nReply-To: idaholab/moose ***@***.***>\nDate: Tuesday, July 6, 2021 at 3:59 PM\nTo: idaholab/moose ***@***.***>\nCc: Robert Podgorney ***@***.***>, Mention ***@***.***>\nSubject: [EXTERNAL] Re: [idaholab/moose] Simulating thermal contraction in fractured systems using MultiApps (#18257)\n\n\nCan't this be done simply by tracking the displacement in the matrix, adjacent and normal to the fracture plane, and then use that displacement to essentially calculate an assumed change in aperture? Record keeping would likely be messy, but you are already looking at normals for the heat/mass transfers, correct?\n\nI'm not sure how that works @rpodgorney<https://gcc02.safelinks.protection.outlook.com/?url=https%3A%2F%2Fgithub.com%2Frpodgorney&data=04%7C01%7Crobert.podgorney%40inl.gov%7C966aaa403d9447481d6808d940c9425e%7C4cf464b7869a42368da2a98566485554%7C0%7C0%7C637612055410784626%7CUnknown%7CTWFpbGZsb3d8eyJWIjoiMC4wLjAwMDAiLCJQIjoiV2luMzIiLCJBTiI6Ik1haWwiLCJXVCI6Mn0%3D%7C1000&sdata=nJXWyOiF%2BWxHacjVGJ2uQdRqg6kia13zaEA3nKIkjn8%3D&reserved=0> . The matrix deformation is the opposite of what we want - see the last picture above.\n\n\u2014\nYou are receiving this because you were mentioned.\nReply to this email directly, view it on GitHub<https://gcc02.safelinks.protection.outlook.com/?url=https%3A%2F%2Fgithub.com%2Fidaholab%2Fmoose%2Fdiscussions%2F18257%23discussioncomment-972230&data=04%7C01%7Crobert.podgorney%40inl.gov%7C966aaa403d9447481d6808d940c9425e%7C4cf464b7869a42368da2a98566485554%7C0%7C0%7C637612055410784626%7CUnknown%7CTWFpbGZsb3d8eyJWIjoiMC4wLjAwMDAiLCJQIjoiV2luMzIiLCJBTiI6Ik1haWwiLCJXVCI6Mn0%3D%7C1000&sdata=8bjcAB5ws7zhi4ZI7D5ga8FAsua1da9gD2g7CNJZzcY%3D&reserved=0>, or unsubscribe<https://gcc02.safelinks.protection.outlook.com/?url=https%3A%2F%2Fgithub.com%2Fnotifications%2Funsubscribe-auth%2FACWGDTYL6ELCHCZETTSRBLDTWN4CHANCNFSM472CJVZA&data=04%7C01%7Crobert.podgorney%40inl.gov%7C966aaa403d9447481d6808d940c9425e%7C4cf464b7869a42368da2a98566485554%7C0%7C0%7C637612055410794582%7CUnknown%7CTWFpbGZsb3d8eyJWIjoiMC4wLjAwMDAiLCJQIjoiV2luMzIiLCJBTiI6Ik1haWwiLCJXVCI6Mn0%3D%7C1000&sdata=dQQ%2FLWXOv2h4Ma0wqEKfID1Y4XcvXTJiTNz3QZPOwds%3D&reserved=0>.",
+                  "url": "https://github.com/idaholab/moose/discussions/18257#discussioncomment-972313",
+                  "updatedAt": "2022-06-13T22:00:22Z",
+                  "publishedAt": "2021-07-06T22:36:04Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lynnmunday"
+                          },
+                          "bodyText": "@WilkAndy I think the fracture planes would be far enough apart that an analytic solution for thermal contraction of a half plane on the fracture sub-app should accurately capture the aperture change.",
+                          "url": "https://github.com/idaholab/moose/discussions/18257#discussioncomment-1006364",
+                          "updatedAt": "2022-06-13T22:00:23Z",
+                          "publishedAt": "2021-07-15T00:14:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Yea, i agree that in many cases that will be true, @lynnmunday",
+                          "url": "https://github.com/idaholab/moose/discussions/18257#discussioncomment-1006395",
+                          "updatedAt": "2022-06-13T22:00:22Z",
+                          "publishedAt": "2021-07-15T00:31:19Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "rpodgorney"
+                  },
+                  "bodyText": "@lynnmunday \u2014 this is probably true, and would be fast\u2014but I would like to explore a full mechanical solve option.  I know we\u2019ll get questions from my technical review board\n\n@WilkAndy \u2014 if you\u2019d like to explore further and have the time we can increase the scope/budget on the contract.\n\nI am really excited to see the progress you guys are making, well done!\n\u2026\n-- sent from my mobile device, please excuse any typos or autocorrect errors\n\n\nRobert K. Podgorney, PhD\n\nChief Computational Scientist\n\nAdvanced Scientific Computing Division\n\nIdaho National Laboratory\n\nOffice: 208-526-1524<tel:208-526-1524>\n\nCell: 208-520-9361<tel:208-520-9361>\n\nemail: ***@***.******@***.***>\n\nStatement of Confidentiality\n\nThe contents of this e-mail message and any attachments are confidential and are intended solely for addressee. The information may also be legally privileged. This transmission is sent in trust, for the sole purpose of delivery to the intended recipient. If you have received this transmission in error, any use, reproduction or dissemination of this transmission is strictly prohibited. If you are not the intended recipient, please immediately notify the sender by reply e-mail or phone and delete this message and its attachments, if any.\n________________________________\nFrom: Lynn Munday ***@***.***>\nSent: Wednesday, July 14, 2021 5:14:31 PM\nTo: idaholab/moose ***@***.***>\nCc: Robert K. Podgorney ***@***.***>; Mention ***@***.***>\nSubject: [EXTERNAL] Re: [idaholab/moose] Simulating thermal contraction in fractured systems using MultiApps (#18257)\n\n\n@WilkAndy<https://gcc02.safelinks.protection.outlook.com/?url=https%3A%2F%2Fgithub.com%2FWilkAndy&data=04%7C01%7Crobert.podgorney%40inl.gov%7Cccc0384eb7594364320c08d9472584ec%7C4cf464b7869a42368da2a98566485554%7C0%7C0%7C637619048752584021%7CUnknown%7CTWFpbGZsb3d8eyJWIjoiMC4wLjAwMDAiLCJQIjoiV2luMzIiLCJBTiI6Ik1haWwiLCJXVCI6Mn0%3D%7C1000&sdata=VqRBPrVo4WY38%2FhNrFzvT%2F%2FivvRPoKQkEXuXuM7Yzn0%3D&reserved=0> I think the fracture planes would be far enough apart that an analytic solution for thermal contraction of a half plane on the fracture sub-app should accurately capture the aperture change.\n\n\u2014\nYou are receiving this because you were mentioned.\nReply to this email directly, view it on GitHub<https://gcc02.safelinks.protection.outlook.com/?url=https%3A%2F%2Fgithub.com%2Fidaholab%2Fmoose%2Fdiscussions%2F18257%23discussioncomment-1006364&data=04%7C01%7Crobert.podgorney%40inl.gov%7Cccc0384eb7594364320c08d9472584ec%7C4cf464b7869a42368da2a98566485554%7C0%7C0%7C637619048752593980%7CUnknown%7CTWFpbGZsb3d8eyJWIjoiMC4wLjAwMDAiLCJQIjoiV2luMzIiLCJBTiI6Ik1haWwiLCJXVCI6Mn0%3D%7C1000&sdata=vrEh9JRREb5kOQpqZeJydr1EjSs%2B%2FlTBD5Ij5Ud1Tws%3D&reserved=0>, or unsubscribe<https://gcc02.safelinks.protection.outlook.com/?url=https%3A%2F%2Fgithub.com%2Fnotifications%2Funsubscribe-auth%2FACWGDT2MWNVSHM42R4NSIWLTXYR6PANCNFSM472CJVZA&data=04%7C01%7Crobert.podgorney%40inl.gov%7Cccc0384eb7594364320c08d9472584ec%7C4cf464b7869a42368da2a98566485554%7C0%7C0%7C637619048752593980%7CUnknown%7CTWFpbGZsb3d8eyJWIjoiMC4wLjAwMDAiLCJQIjoiV2luMzIiLCJBTiI6Ik1haWwiLCJXVCI6Mn0%3D%7C1000&sdata=%2BAtRL%2Fi%2BCdUw3W7VDxtqTFYEOaLVjqVBPJO36PZlJzs%3D&reserved=0>.",
+                  "url": "https://github.com/idaholab/moose/discussions/18257#discussioncomment-1008806",
+                  "updatedAt": "2022-06-13T22:00:23Z",
+                  "publishedAt": "2021-07-15T14:01:00Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "An anisotropic mobility question",
+          "author": {
+            "login": "dongcongcong606"
+          },
+          "bodyText": "Dear Friends!\nHello everyone! I am a beginner to learn MOOSE. I would like to ask you some questions, and I wish you can give me some guidance or advice, even though these questions seem simple to you. I have recently worked to develop a program on mobility anisotropy. I'm going to use the C-H equation. I introduced an anisotropic function about the angle in mobility and defined a corresponding subroutine in the ''Material' module. Next, I defined a subroutine in the kernel that introduced anisotropic functions modeled after \"SplitCHWResBase\". But I met some problems, as follows:\n\u2460Do I also need to copy \"SplitCHParsed\" to create a new subroutine?\n\u2461How to solve the \"Signal 11\" problem? (I have tried to check the problem according to Q&A, but failed)\n\u2462How do I know if a subroutine module I've written is successful?\n\uff08I enclose the associated subroutine defined below\uff09\nANisotropicFirst_C.txt\nANisotropicFirst_h.txt\nSplitCHWResBase2.txt",
+          "url": "https://github.com/idaholab/moose/discussions/18346",
+          "updatedAt": "2022-06-13T03:13:53Z",
+          "publishedAt": "2021-07-15T09:55:02Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "WilkAndy"
+                  },
+                  "bodyText": "I found these pages very helpful when starting to learn C++:  https://mooseframework.inl.gov/getting_started/examples_and_tutorials/index.html",
+                  "url": "https://github.com/idaholab/moose/discussions/18346#discussioncomment-1008012",
+                  "updatedAt": "2022-06-13T03:14:51Z",
+                  "publishedAt": "2021-07-15T10:17:54Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

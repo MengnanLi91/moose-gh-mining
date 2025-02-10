@@ -1,0 +1,1204 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyNS0wMS0wNFQwMzo1MjowOS0wNjowMM4AcZVf"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "how to  improve the efficiency of HPC process?",
+          "author": {
+            "login": "Sun-Liu-Yang"
+          },
+          "bodyText": "I am trying to use MPI functionality for large-scale parallel computing on a supercomputer cluster. The number of solving units is in the tens of millions, and the number of degrees of freedom of nodes is in the billions.\nWhen I was solving a problem with millions of degrees of freedom, I found that the solving efficiency was already very slow. The official suggested a single core degree of freedom of 20000, but currently my single core solving degree of freedom is only about 10000.\nWhat aspects should I improve the calculation settings to significantly increase computational efficiency and meet the demand for solving billions of degrees of freedom?",
+          "url": "https://github.com/idaholab/moose/discussions/29088",
+          "updatedAt": "2025-01-12T13:20:36Z",
+          "publishedAt": "2024-11-18T05:26:49Z",
+          "category": {
+            "name": "Q&A Tools"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThis is a complex problem and the simplest step to take is simply to profile a shorter run to see which step in your simulation is not scaling to tens of millions of cores. The limiting step is likely specific to your problem and to your solver setup.\nhttps://mooseframework.inl.gov/application_development/profiling.html",
+                  "url": "https://github.com/idaholab/moose/discussions/29088#discussioncomment-11292266",
+                  "updatedAt": "2024-11-18T13:50:30Z",
+                  "publishedAt": "2024-11-18T13:50:29Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Sun-Liu-Yang"
+                          },
+                          "bodyText": "how to reduce the memory occupition\uff1f\nwhen I using the MPI funtion, the  memory occupition of the CPU is very, about 30G/CPU  on a supercomputer cluster. But the memory of the cluster is not enough and the effecifency is slow.\nthe elements number of my model is about 30,000,000, and the freedom is almost 100,000,000.\nthe list is my input file of the model.\nthank you very much!\n[Mesh]\n  type = FileMesh\n  file ='2024-11-22.inp'\n[]\n\n[GlobalParams]\n  displacements = 'disp_x disp_y disp_z'\n[]\n\n[Variables]\n  [disp_x]\n  []\n\n  [disp_y]\n  []\n\n  [disp_z]\n  []\n[]\n\n[Physics]\n  [SolidMechanics]\n    [QuasiStatic]\n      [all]\n        strain = FINITE\n        add_variables = false\n        generate_output = 'stress_xx \n                                    stress_yy \n                            stress_zz \n                           min_principal_stress max_principal_stress\n                           volumetric_strain vonmises_stress'\n      []\n    []\n  []\n[]\n\n\n[Functions]\n\n  [axial_pressure_1]\n    type = PiecewiseLinear\n    x = '0  1  2'\n    y = '0  1e6  2e6'\n  []\n \n\n  [confining_pressure]\n    type = PiecewiseLinear\n    x = '0  1   1.5  2'\n    y = '0  1e6 1e6 1e6'\n  []\n[]\n\n[BCs]\n\n  [Pressure]\n\n    [load1]\n      boundary = 'up_to_force'\n      function = 'axial_pressure_1'        # Pa\n    []\n\n    [load2]\n      boundary = 'side_to_confing'\n      function = 'confining_pressure'   # Pa\n    []\n\n  []\n\n  [anchor_x]\n    type = DirichletBC\n    variable = disp_x\n    boundary = '0'\n    value = 0.0\n  []\n\n  [anchor_y]\n    type = DirichletBC\n    variable = disp_y\n    boundary = '0'\n    value = 0.0\n  []\n\n  [anchor_z]\n    type = DirichletBC\n    variable = disp_z\n    boundary = '0'\n    value = 0.0\n  []\n\n[]\n\n[Materials]\n\n  [elasticity_tensor_soil]\n    type = ComputeIsotropicElasticityTensor\n    bulk_modulus = 50e6\n    poissons_ratio = 0.25\n  []\n\n  [stress]\n    type = ComputeFiniteStrainElasticStress\n  []\n\n  [density]\n    type = GenericConstantMaterial\n    prop_names = density\n    prop_values = 1800 # kg/m^3\n  []\n\n[]\n\n\n\n\n[Executioner]\n\n  type = Transient\n  solve_type = JFNK\n  l_max_its = 100000\n  nl_max_its = 100\n  l_tol = 1E-6\n  nl_abs_tol = 1E-4\n  start_time = 0.0\n  end_time = 0.02\n  dt = 0.01\n  dtmin = 0.001\n\n[]\n\n[Outputs]\n  exodus = true\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/29088#discussioncomment-11345193",
+                          "updatedAt": "2024-11-22T16:26:55Z",
+                          "publishedAt": "2024-11-22T06:36:14Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Reducing the number of outputs will reduce the number of fields so i would advise doing that\n        generate_output = 'stress_xx \n                                    stress_yy \n                            stress_zz \n                           min_principal_stress max_principal_stress\n                           volumetric_strain vonmises_stress'\n\nThen are you getting good convergence with JFNK? That's fairly uncommon.\nI would recommend you switch to PJFNK or Newton and use Hypre boomeramg which should scale well for solid mechanics",
+                          "url": "https://github.com/idaholab/moose/discussions/29088#discussioncomment-11351102",
+                          "updatedAt": "2024-11-22T16:29:05Z",
+                          "publishedAt": "2024-11-22T16:29:04Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Sun-Liu-Yang"
+                          },
+                          "bodyText": "Hello there is a new problem I want to request.\nMy test model include over 30,000,000 elements and the total Dofs is over 100,000,000.\nI used the mesh spliting function pre-spliting the mesh into 3072 partitons ,and resubmited  the job using the mesh spilitting configuration .cpr file. But it take several hours to prepare the mesh and cannot continue.\nPreparing Mesh state resisting several hours and cannot continue.\nmesh splitting common\nresubmit commond : mpiexec -n 3072 ./solid_mechanics-opt-intel_2024 -i triaxial/123.i --use-split --split-file 2024-11-22.cpr\nmesh spilitting commond: mpiexec -n 3072  ./solid_mechanics-opt-intel_2024 -i triaxial/123.i   --split-mesh 3072  --split-file 2024-11-22.cpr\ncalculating state \uff1a\n\ufffd[36m\n*** Info ***\nSolidMechanics Action: selecting 'total small strain' formulation. Use incremental = true to select 'incremental small strain' instead.\ufffd[39m\nCurrently Setting Up\nSetting Mesh\nReading Mesh......                                                                   [\ufffd[33m 43.21 s\ufffd[39m] [\ufffd[33m  361 MB\ufffd[39m]\nFinished Setting Mesh                                                                  [\ufffd[33m 43.29 s\ufffd[39m] [\ufffd[33m  361 MB\ufffd[39m]\nSetting Up Undisplaced Mesh\nPreparing Mesh........................................................",
+                          "url": "https://github.com/idaholab/moose/discussions/29088#discussioncomment-11421196",
+                          "updatedAt": "2024-11-30T09:31:08Z",
+                          "publishedAt": "2024-11-30T09:31:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nUsing many parallel processes to split it actually a bad idea, because it's replicated during that phase.\nTry this:\n./solid_mechanics-opt-intel_2024 -i triaxial/123.i --split-mesh 3072 --split-file 2024-11-22.cpr\n\nand if it does not work, use as few mpi processes as possible",
+                          "url": "https://github.com/idaholab/moose/discussions/29088#discussioncomment-11422320",
+                          "updatedAt": "2024-11-30T14:26:00Z",
+                          "publishedAt": "2024-11-30T14:25:50Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Sun-Liu-Yang"
+                          },
+                          "bodyText": "Thanks very much your help on this problem, but there is another problem disturbing me.\nthe case is that following: if the model incldues 20000 elements, about 6000dofs.\ncase1:  the model construcde by moose's mesh generator (type = meshgenerate/meshgenerator)\nI use the pre-split commond to part the model into 8 partitions and sovle the problems  using 2 nodes and 8 processer  on HPC. In this case ,it is very effecient to read and solve the problems.\n [Mesh]\n    type = GeneratedMesh\n    dim = 3\n    nx = 20\n    ny = 20\n    nz = 50\n    xmax = 20\n    xmin = 0\n    ymax = 20\n    ymin = 0\n    zmax = 50\n    zmin = 0\n    [Partitioner]\n      type = PetscExternalPartitioner\n      part_package = parmetis\n   []  \n  [Partitioner]\n      type = PetscExternalPartitioner\n      part_package = parmetis\n  []  \n[]\n..............\n[Executioner]\n\n  type = Transient\n  solve_type = PJFNK\n  petsc_options_iname = '-pc_type  -sub_pc_type'\n  petsc_options_value =  'bjacobi  ilu'\n  l_max_its = 100000\n  nl_max_its = 100\n  l_tol = 1E-6\n  nl_abs_tol = 1E-4\n  start_time = 0.0\n  end_time = 0.1\n  dt = 0.1\n  dtmin = 0.01\n\n[]\n\n[Outputs]\n  [out_Nemesis]\n    type = Nemesis\n  []\n  [perf_out]\n    type = PerfGraphOutput\n    execute_on = 'initial final'\n    level = 3\n  []\n[]\n\nmesh pre-split : mpiexec -n 2  ./solid_mechanics-opt-intel_2024 -i 20250108.i  --split-mesh 8 --split-file 2025cir.cpr\njob submission: mpiexec -n 100 ./solid_mechanics-opt-intel_2024 -i 20250108.i --use-split --split-file 2025cir.cpr\ncase2 :  the model construcde by exported  mesh file (type = meshfile, file = '2345.inp')\n\nFirstly,  I also use the pre-split commond to part the model into 8 partitions. But the troubles comes following.\nIf the problem is solved using 8cpus in only 1 nodes, it is also very effecient to read the pre-split mesh and solve the problems.\nThe problem is If the  problem is solved using 8cpus and 2 nodes (4cpus/1node), it will take very long time in the preparing mesh state and on processing.\n [Mesh]\n    type = FileMesh\n    file ='20250108.inp' \n  [Partitioner]\n      type = PetscExternalPartitioner\n      part_package = parmetis\n  []  \n[]\n..............\n[Executioner]\n\n  type = Transient\n  solve_type = PJFNK\n  petsc_options_iname = '-pc_type  -sub_pc_type'\n  petsc_options_value =  'bjacobi  ilu'\n  l_max_its = 100000\n  nl_max_its = 100\n  l_tol = 1E-6\n  nl_abs_tol = 1E-4\n  start_time = 0.0\n  end_time = 0.1\n  dt = 0.1\n  dtmin = 0.01\n[]\n\n[Outputs]\n  [out_Nemesis]\n    type = Nemesis\n  []\n  [perf_out]\n    type = PerfGraphOutput\n    execute_on = 'initial final'\n    level = 3\n  []\n[]\n\nmesh pre-split : mpiexec -n 2  ./solid_mechanics-opt-intel_2024 -i 20250108.i  --split-mesh 8 --split-file 2025cir.cpr\njob submission: mpiexec -n 100 ./solid_mechanics-opt-intel_2024 -i 20250108.i --use-split --split-file 2025cir.cpr",
+                          "url": "https://github.com/idaholab/moose/discussions/29088#discussioncomment-11792876",
+                          "updatedAt": "2025-01-10T01:51:53Z",
+                          "publishedAt": "2025-01-10T01:39:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "hello\nthis mpiexec -n 100 ./solid_mechanics-opt-intel_2024 -i 20250108.i --use-split --split-file 2025cir.cpr is wanting to use 100 partitions not 8. So my guess is that you are not actually using a split mesh right now, since the split mesh has been generated for 8 partitions",
+                          "url": "https://github.com/idaholab/moose/discussions/29088#discussioncomment-11792973",
+                          "updatedAt": "2025-01-10T01:55:18Z",
+                          "publishedAt": "2025-01-10T01:55:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Sun-Liu-Yang"
+                          },
+                          "bodyText": "when run the problem using 2nodes, the processing state is like this\n\nand when run the proble using 1 node ,the processing state is like this",
+                          "url": "https://github.com/idaholab/moose/discussions/29088#discussioncomment-11792987",
+                          "updatedAt": "2025-01-10T01:56:31Z",
+                          "publishedAt": "2025-01-10T01:56:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Sun-Liu-Yang"
+                          },
+                          "bodyText": "sorry  I spelling wrong the commond in the problem description, but the problem is that when dealing the problem with exported mesh model  on more than 1 HPC nodes, it cannot proceeding.",
+                          "url": "https://github.com/idaholab/moose/discussions/29088#discussioncomment-11793011",
+                          "updatedAt": "2025-01-10T02:00:46Z",
+                          "publishedAt": "2025-01-10T02:00:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "what commands are you running then?\ninter-node communication being slower than intra-node is expected. But not by a lot either",
+                          "url": "https://github.com/idaholab/moose/discussions/29088#discussioncomment-11793068",
+                          "updatedAt": "2025-01-10T02:11:42Z",
+                          "publishedAt": "2025-01-10T02:11:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Sun-Liu-Yang"
+                          },
+                          "bodyText": "In fact, when using the moose's  meshgenerator constructing the model, even the elements over 200milllion, it can also dealing very fast on 4 nodes and 200 cpus.\nbut when the model mesh from the abaqus(the .inp file ), only in one node can dealing fast.\nThe command is right when I submit the jobs.\nFor example:\npre-spit command\n#SBATCH --job-name=moose\n#SBATCH -p intel_expr\n#SBATCH --nodes=2 \n#SBATCH --ntasks=2\n#SBATCH -c 1 \n#SBATCH --ntasks-per-node=1\n#SBATCH --cpus-per-task=1\n#SBATCH --output=moose-%j.out\n#SBATCH --mem=500G\n#SBATCH -o 20250108.log\nmodule load intel/oneapi/2024.2.0\n# export OMP_NUM_THREADS=1\nmpiexec -n 2 ./solid_mechanics-opt-intel_2024  -i  triaxial/2345.i --split-mesh  60\n\nJob submitting command\n#!/bin/sh\n#SBATCH --job-name=moose\n#SBATCH -p intel_expr\n#SBATCH --nodes=2 \n#SBATCH --ntasks=60\n#SBATCH -c 1 \n#SBATCH --ntasks-per-node=30\n#SBATCH --cpus-per-task=1\n#SBATCH --output=moose-%j.out\n#SBATCH --mem=500G\n#SBATCH -o 20250108.log\nmodule load intel/oneapi/2024.2.0\n# export OMP_NUM_THREADS=1\nmpiexec -n 60 ./solid_mechanics-opt-intel_2024  -i  triaxial/2345.i --use-split --split-file 2024-11-14-55.cpa.gz",
+                          "url": "https://github.com/idaholab/moose/discussions/29088#discussioncomment-11793143",
+                          "updatedAt": "2025-01-10T02:40:00Z",
+                          "publishedAt": "2025-01-10T02:27:40Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "Sun-Liu-Yang"
+                  },
+                  "bodyText": "Just now, I comment the [Partitioner] block out both the two step, but it dont woke.",
+                  "url": "https://github.com/idaholab/moose/discussions/29088#discussioncomment-11793491",
+                  "updatedAt": "2025-01-10T03:41:04Z",
+                  "publishedAt": "2025-01-10T03:41:03Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I read the thread again. I think your executable may be hanging as soon as there is internode communication. The mesh preparation is the first step to have such communication.\nYou can try the same 2 node run without a split mesh to double check. You should see the same issue.\nDo runs with just a Cartesian mesh generator solve properly? For them the first communication step will be during the solve",
+                          "url": "https://github.com/idaholab/moose/discussions/29088#discussioncomment-11796812",
+                          "updatedAt": "2025-01-10T11:00:54Z",
+                          "publishedAt": "2025-01-10T11:00:53Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Sun-Liu-Yang"
+                          },
+                          "bodyText": "yes, the problem will be solve properly when the model mesh is constructed by the Moose's mesh geneartor (such as GeneratedMesh object )on more than one nodes.\nyou means that when dealing with the problem using the external mesh (such as .e, .inp file ), I should take more time for node communicatin until the preparing mesh state finshed ?",
+                          "url": "https://github.com/idaholab/moose/discussions/29088#discussioncomment-11798180",
+                          "updatedAt": "2025-01-10T13:26:18Z",
+                          "publishedAt": "2025-01-10T13:26:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "yes, the problem will be solve properly when the model mesh is constructed by the Moose's mesh geneartor (such as GeneratedMesh object )on more than one nodes.\n\nOk that's good to know. So it is the FileMeshGenerator that is slow.\nAt this point it would be good to find out why.\nYou can either use a profiler (make sure to pick a mesh that is not too big so the mesh loading finishes):\nhttps://mooseframework.inl.gov/application_development/profiling.html\nor simply use a debugger and interrupt the code while it is \"preparing\" to see what it is actually is doing\nhttps://mooseframework.inl.gov/application_development/debugging.html",
+                          "url": "https://github.com/idaholab/moose/discussions/29088#discussioncomment-11800915",
+                          "updatedAt": "2025-01-10T17:51:18Z",
+                          "publishedAt": "2025-01-10T17:51:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Sun-Liu-Yang"
+                          },
+                          "bodyText": "Thank you very much , I will try to do this .\nWhether you have met the similar case when dealing with problems using the external mesh (using the filemesh or filemeshgenerator)? I want to know whether is there some error when installing the moose the my HPC?",
+                          "url": "https://github.com/idaholab/moose/discussions/29088#discussioncomment-11810826",
+                          "updatedAt": "2025-01-12T09:03:40Z",
+                          "publishedAt": "2025-01-12T09:03:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Whether you have met the similar case when dealing with problems using the external mesh (using the filemesh or filemeshgenerator)?\n\nNever had this issue. Splitting can be slow if done in parallel but loading splits has always been fine for me\n\nI want to know whether is there some error when installing the moose the my HPC?\n\nI dont know if it's that.",
+                          "url": "https://github.com/idaholab/moose/discussions/29088#discussioncomment-11811799",
+                          "updatedAt": "2025-01-12T13:20:37Z",
+                          "publishedAt": "2025-01-12T13:20:36Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Convergence Issues",
+          "author": {
+            "login": "julianseb"
+          },
+          "bodyText": "Hello everybody,\nim trying to implement a 2-phase flow in my model. Right now im running into some convergence issues. Later on i'm trying to implement a open water body to the right and simulate the thermal influence of burried electrical cables on groundwater and open water bodies.\nI have a groundwaterflow from the left to the right that i implement over a FunctionDirichletBC with the porepressure. The gas pressure i set fixed to atmospheric pressure (101325 Pa). My gradient is 0,1 m/m and my model does have a width of 20 m. So the height difference of the groundwater from left to right border is 2 m.\nFor the groundwater i use the Water97FluidProperties and for the gas phase i planed to use the NitrogenFluidProperties but then the code takes forever to compute the residual, so i use the IdealGasFluidProperties. In hopes to simplify my code and better the convergence i also used the SimpleFluidProperties but they gave worse convergence than the Water97Properties. I also reduced my timestep in order to improve convergence but that didn't have a great impact.\nThis is my first big project and i'm kinda lost on what to do so i hope somebody could help me or point me in the right direction as to what is causing the bad convergence. I added my current state.\ncurrent_state.zip\nThis is my current output:\nTime Step 0, time = 0\n\nTime Step 1, time = 1, dt = 1\n\nPerforming automatic scaling calculation\n\n 0 Nonlinear |R| = 2.709755e+00\n      0 Linear |R| = 2.709755e+00\n      1 Linear |R| = 3.086649e-10\n 1 Nonlinear |R| = 2.709755e+00\n      0 Linear |R| = 2.709755e+00\n      1 Linear |R| = 2.826211e-10\n 2 Nonlinear |R| = 2.709755e+00\n      0 Linear |R| = 2.709755e+00\n      1 Linear |R| = 2.955420e-10\n 3 Nonlinear |R| = 2.709754e+00\n      0 Linear |R| = 2.709754e+00\n      1 Linear |R| = 2.976411e-10\n 4 Nonlinear |R| = 2.709754e+00\n      0 Linear |R| = 2.709754e+00\n      1 Linear |R| = 2.876559e-10\n 5 Nonlinear |R| = 2.709754e+00\n      0 Linear |R| = 2.709754e+00\n      1 Linear |R| = 3.006491e-10\n 6 Nonlinear |R| = 2.709754e+00\n      0 Linear |R| = 2.709754e+00\n      1 Linear |R| = 2.638493e-10\n...\n\n44 Nonlinear |R| = 2.709754e+00\n      0 Linear |R| = 2.709754e+00\n      1 Linear |R| = 2.807103e-10\n45 Nonlinear |R| = 2.709754e+00\n      0 Linear |R| = 2.709754e+00\n      1 Linear |R| = 2.695321e-10\n\nThis is my mesh:\n\nThis is my current code:\n[Mesh]\n  [mesh]\n    type = FileMeshGenerator\n    file = einfach.msh\n  []\n[]\n\n[GlobalParams]\n  gravity = '0 -9.8065 0'\n[]\n\n[Variables]\n  [temperature]\n    initial_condition = 293.15\n  []\n  [pp]\n  []\n  [gp]\n  []\n[]\n\n[ICs]\n  [InitialConditionBoden]\n    type = FunctionIC\n    variable = pp\n    function = gradient\n    block = 'boden'\n  []\n  [ICDampf]\n    type = ConstantIC\n    value = 101325\n    variable = gp\n    block = 'boden'\n  []\n[]\n\n[Functions]\n  [gradient]\n    type = ParsedFunction\n    vars = 'rho g gradient left_head'\n    vals = '1000 9.8065 0.1 10'\n    expression = '101325 + (left_head-y-(x*gradient))*(g*rho)'\n  []\n[]\n\n[BCs]\n    [flow]\n      type = FunctionDirichletBC\n      function = gradient      \n      variable = pp\n      boundary = 'rechts links unten'\n    []\n    [flow_gp]\n      type = PorousFlowOutflowBC \n      flux_type = fluid\n      variable = gp\n      boundary = 'rechts'\n      PorousFlowDictator = dictator_boden\n    []\n    [top]\n      type = DirichletBC\n      boundary = 'oben'\n      value = 101325\n      variable = 'gp'\n    []\n[]\n\n[Kernels]\n  [temperature_dt_boden]\n    type = PorousFlowEnergyTimeDerivative\n    variable = temperature\n    PorousFlowDictator = dictator_boden\n    block = 'boden'\n  []\n  [advectionT_boden]\n    type = PorousFlowHeatAdvection\n    variable = temperature\n    block = 'boden'\n    PorousFlowDictator = dictator_boden\n  []\n  [conductionT_boden]\n    type = PorousFlowHeatConduction\n    variable = temperature\n    block = 'boden'\n    PorousFlowDictator = dictator_boden\n  []\n  [pressure_dt_pp_boden]\n    type = PorousFlowMassTimeDerivative\n    variable = pp\n    block = 'boden'\n    PorousFlowDictator = dictator_boden\n  []\n  [pressure_dt_gp]\n    type = PorousFlowMassTimeDerivative\n    variable = gp\n    PorousFlowDictator = dictator_boden\n    block = 'boden'\n  []\n  [pp_disp_boden]\n    type = PorousFlowDispersiveFlux\n    disp_long = '1E-4 1E-4'\n    disp_trans = '1E-5 1E-5'\n    fluid_component = 0\n    block = 'boden'\n    variable = pp\n    PorousFlowDictator = dictator_boden\n  []\n  [gp_disp_boden]\n    type = PorousFlowDispersiveFlux\n    disp_long = '5E-4 5E-4'\n    disp_trans = '5E-5 5E-5'\n    fluid_component = 1\n    block = 'boden'\n    variable = gp\n    PorousFlowDictator = dictator_boden\n  []\n  [pp_advective_boden]\n    type = PorousFlowAdvectiveFlux\n    variable = pp\n    block = 'boden'\n    PorousFlowDictator = dictator_boden\n  []\n  [gp_advective]\n    type = PorousFlowAdvectiveFlux\n    variable = gp\n    PorousFlowDictator = dictator_boden\n    block = 'boden'\n  []\n[]\n\n[AuxVariables]\n  [darcy_x_p0]\n    family = MONOMIAL\n    order = CONSTANT\n  []\n  [darcy_y_p0]\n    family = MONOMIAL\n    order = CONSTANT\n  []\n  [darcy_x_p1]\n    family = MONOMIAL\n    order = CONSTANT\n  []\n  [darcy_y_p1]\n    family = MONOMIAL\n    order = CONSTANT\n  []\n  [sat_p0]\n    family = MONOMIAL\n    order = CONSTANT\n  []\n  [sat_p1]\n    family = MONOMIAL\n    order = CONSTANT\n  []\n  [cp]\n    family = MONOMIAL\n    order = CONSTANT\n  []\n  [vis]\n    family = MONOMIAL\n    order = CONSTANT\n  []\n  [density]\n    family = MONOMIAL\n    order = CONSTANT\n  []\n[]\n\n[AuxKernels]\n  [d_v_x_boden_p0]\n    type = PorousFlowDarcyVelocityComponent\n    component = x\n    variable = darcy_x_p0\n    block = 'boden'\n    execute_on = 'INITIAL TIMESTEP_END'\n    PorousFlowDictator = dictator_boden\n    fluid_phase = 0\n  []\n  [d_v_y_boden_p0]\n    type = PorousFlowDarcyVelocityComponent\n    component = y\n    variable = darcy_y_p0\n    block = 'boden'\n    execute_on = 'INITIAL TIMESTEP_END'\n    PorousFlowDictator = dictator_boden\n    fluid_phase = 0\n  []\n  [d_v_x_boden_p1]\n    type = PorousFlowDarcyVelocityComponent\n    component = x\n    variable = darcy_x_p1\n    block = 'boden'\n    execute_on = 'INITIAL TIMESTEP_END'\n    PorousFlowDictator = dictator_boden\n    fluid_phase = 1\n  []\n  [d_v_y_boden_p1]\n    type = PorousFlowDarcyVelocityComponent\n    component = y\n    variable = darcy_y_p1\n    block = 'boden'\n    execute_on = 'INITIAL TIMESTEP_END'\n    PorousFlowDictator = dictator_boden\n    fluid_phase = 1\n  []\n  [saturation_boden_p0]\n    type = PorousFlowPropertyAux\n    variable = sat_p0\n    property = saturation\n    block = 'boden'\n    execute_on = 'INITIAL TIMESTEP_END'\n    PorousFlowDictator = dictator_boden\n    phase = 0\n  []\n  [saturation_boden_p1]\n    type = PorousFlowPropertyAux\n    variable = sat_p1\n    property = saturation\n    block = 'boden'\n    execute_on = 'INITIAL TIMESTEP_END'\n    PorousFlowDictator = dictator_boden\n    phase = 1\n  []\n  [capillary_pressure]\n    type = PorousFlowPropertyAux\n    property = capillary_pressure\n    variable = cp\n    block = 'boden'\n    execute_on = 'LINEAR TIMESTEP_END'\n    PorousFlowDictator = dictator_boden\n    liquid_phase = 0\n  []\n  [viscosity_boden]\n    type = PorousFlowPropertyAux\n    variable = vis\n    property = viscosity\n    block = boden\n    execute_on = 'LINEAR TIMESTEP_END'\n    PorousFlowDictator = dictator_boden\n  []\n  [density_boden]\n    type = PorousFlowPropertyAux\n    variable = density\n    property = density\n    block = boden\n    execute_on = 'LINEAR TIMESTEP_END'\n    PorousFlowDictator = dictator_boden\n  []\n[]\n\n[FluidProperties]\n  [wasser]\n    type = Water97FluidProperties\n#    tolerance = 1e-8\n#    type = SimpleFluidProperties\n  []\n  [dampf]\n#    type = NitrogenFluidProperties\n    type = IdealGasFluidProperties\n  []\n[]\n\n\n\n[Materials]\n    [internal_energy_boden]\n      type = PorousFlowMatrixInternalEnergy\n      density = 2600\n      specific_heat_capacity = 1000\n      block = 'boden'\n      PorousFlowDictator = dictator_boden\n    []\n    [thermal_conductivity_boden]\n      type = PorousFlowThermalConductivityIdeal\n      dry_thermal_conductivity = '0.4 0 0  0 0.4 0 0 0 0.4'\n      wet_thermal_conductivity = '1 0 0    0 1 0   0 0 1'\n      block = 'boden'\n      PorousFlowDictator = dictator_boden\n    []\n    [porosity_boden]\n      type = PorousFlowPorosityConst\n      porosity = 0.3\n      block = 'boden'\n      PorousFlowDictator = dictator_boden\n    []\n    [permeablity_boden]\n      type = PorousFlowPermeabilityConst\n      block = 'boden'\n      permeability = '1E-12 0 0    0 1E-12 0    0 0 1E-12'\n      PorousFlowDictator = dictator_boden\n    []\n    [fluid_boden]\n      type = PorousFlowSingleComponentFluid\n      fp = 'wasser'\n      phase = 0\n      PorousFlowDictator = dictator_boden\n      block = 'boden'\n    []\n    [dampf]\n      type = PorousFlowSingleComponentFluid\n      fp = 'dampf'\n      phase = 1\n      PorousFlowDictator = dictator_boden\n      block = 'boden'\n    []\n    [temperature_qp_boden]\n      type = PorousFlowTemperature\n      temperature = temperature\n      PorousFlowDictator = dictator_boden\n      block = 'boden'\n    []\n    [saturation_calculator_boden]\n      type = PorousFlow2PhasePP\n      PorousFlowDictator = dictator_boden\n      phase0_porepressure = pp\n      phase1_porepressure = gp\n      capillary_pressure = capillary_pressure_boden\n      block = 'boden'\n    []\n    [relperm_boden_dampf]\n      type = PorousFlowRelativePermeabilityCorey\n      n = 2\n      phase = 1\n      block = 'boden'\n      PorousFlowDictator = dictator_boden\n    []\n    [relperm_boden_fluid]\n      type = PorousFlowRelativePermeabilityCorey\n      n = 2\n      s_res = 0.1\n      sum_s_res = 0.1\n      phase = 0\n      block = 'boden'\n      PorousFlowDictator = dictator_boden\n    []\n    [mass_frac_boden]\n      type = PorousFlowMassFraction\n      PorousFlowDictator = dictator_boden\n      block = 'boden'\n      mass_fraction_vars = 'pp gp'\n    []\n    [diff_boden]\n      type = PorousFlowDiffusivityConst\n      diffusion_coeff = '1E-6 1E-5 1E-6 1E-5'\n      tortuosity = '0.5 0.5'\n      block = 'boden'\n      PorousFlowDictator = dictator_boden\n    []\n[]\n\n[UserObjects]\n  [dictator_boden]\n    type = PorousFlowDictator\n    number_fluid_components = 2\n    number_fluid_phases = 2\n    porous_flow_vars = 'pp temperature gp'\n  []\n  [capillary_pressure_boden]\n    type = PorousFlowCapillaryPressureVG\n    alpha = 1E-4\n    m = 0.5\n    block = 'boden'\n#    s_scale = 0.9\n  []\n[]\n\n# [Postprocessors]\n#   [heat]\n#     type = PorousFlowHeatEnergy\n#     outputs = csv\n#     PorousFlowDictator = dictator_boden\n#   []\n#   [Fluid]\n#     type = PorousFlowFluidMass\n#     PorousFlowDictator = dictator_boden\n#     outputs = csv\n#     fluid_component = 0\n#   []\n#   [Gas]\n#     type = PorousFlowFluidMass\n#     PorousFlowDictator = dictator_boden\n#     outputs = csv\n#     fluid_component = 1\n#   []\n# []\n\n\n[Preconditioning]\n  [basic]\n    type = SMP\n    full = true\n    petsc_options_iname = '-pc_type -pc_factor_mat_solver_package'\n    petsc_options_value = ' lu       mumps'\n  []\n[]\n\n[Executioner]\n  type = Transient\n  solve_type = NEWTON\n  automatic_scaling = true\n  compute_scaling_once = true\n  end_time = 1E8\n  nl_abs_tol = 1E-6\n  nl_rel_tol = 1E-6\n#  nl_max_its = 20\n  \n  [TimeStepper]\n    type = IterationAdaptiveDT\n    dt = 1\n    growth_factor = 2\n    cutback_factor = 0.5\n  []\n[]\n\n[Outputs]\n    [exodus]\n    type = Exodus\n    []\n    # [csv]\n    #   type = CSV\n    # []\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/29644",
+          "updatedAt": "2025-01-25T15:11:29Z",
+          "publishedAt": "2025-01-05T15:57:59Z",
+          "category": {
+            "name": "Q&A Modules: Porous Flow"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\n\nFor the groundwater i use the Water97FluidProperties and for the gas phase i planed to use the NitrogenFluidProperties but then the code takes forever to compute the residual, so i use the IdealGasFluidProperties. In hopes to simplify my code and better the convergence i also used the SimpleFluidProperties but they gave worse convergence than the Water97Properties. I also reduced my timestep in order to improve convergence but that didn't have a great impact.\n\nThis is good feedback. I think these other properties have been implemented for correctness rather than performance. The trick here to speed it up is either do what you did, or use a TabulatedFluidProperties. This can be used to generate a tabulation (using a different fp object) then load the tabulation and only use that (no need to specify fp anymore)\nWith regards to convergence issues, this page should help:\nhttps://mooseframework.inl.gov/moose/application_usage/failed_solves.html\nnotably it would be good to know (on a small mesh) if the problem is well posed and does have any singular value",
+                  "url": "https://github.com/idaholab/moose/discussions/29644#discussioncomment-11755852",
+                  "updatedAt": "2025-01-07T00:48:27Z",
+                  "publishedAt": "2025-01-07T00:48:26Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cpgr"
+                          },
+                          "bodyText": "Hey @julianseb - have you managed to get a simpler model working (so maybe one with constant temperature or even single phase flow or even a mesh without a hole)? I always find it easiest to get something simple working and then build on that.\nI can't see anything that is jumping out with your input file that is obviously wrong.",
+                          "url": "https://github.com/idaholab/moose/discussions/29644#discussioncomment-11757167",
+                          "updatedAt": "2025-01-07T05:10:12Z",
+                          "publishedAt": "2025-01-07T05:10:12Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cpgr"
+                          },
+                          "bodyText": "Also, interesting that the convergence is worse with Ideal gas and simple fluid properties, as they definitely have the correct derivatives! So it must be something else",
+                          "url": "https://github.com/idaholab/moose/discussions/29644#discussioncomment-11757173",
+                          "updatedAt": "2025-01-07T05:11:10Z",
+                          "publishedAt": "2025-01-07T05:11:09Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "julianseb"
+                          },
+                          "bodyText": "Thanks for your replies.\nI've added the Debug and Outputoptions from the failed solves site. Seems like my gaspressure (gp) is causing the high residual:\nTime Step 0, time = 0\n\nTime Step 1, time = 1, dt = 1\n\nPerforming automatic scaling calculation\n\n    |residual|_2 of individual variables:\n                temperature: 0.000152083\n                pp:          0.0999169\n                gp:          2.70791\n 0 Nonlinear |R| = 2.709755e+00\n      0 Linear |R| = 2.709755e+00\n      1 Linear |R| = 3.086649e-10\n    |residual|_2 of individual variables:\n                temperature: 0.000152083\n                pp:          0.0999167\n                gp:          2.70791\n 1 Nonlinear |R| = 2.709755e+00\n      0 Linear |R| = 2.709755e+00\n      1 Linear |R| = 2.826211e-10\n    |residual|_2 of individual variables:\n                temperature: 0.000152083\n                pp:          0.0999175\n                gp:          2.70791\n 2 Nonlinear |R| = 2.709755e+00\n      0 Linear |R| = 2.709755e+00\n      1 Linear |R| = 2.955420e-10\n    |residual|_2 of individual variables:\n                temperature: 0.000152083\n                pp:          0.0999183\n                gp:          2.70791\n 3 Nonlinear |R| = 2.709754e+00\n      0 Linear |R| = 2.709754e+00\n      1 Linear |R| = 2.976411e-10\n    |residual|_2 of individual variables:\n                temperature: 0.000152083\n                pp:          0.0999185\n                gp:          2.70791\n 4 Nonlinear |R| = 2.709754e+00\n      0 Linear |R| = 2.709754e+00\n      1 Linear |R| = 2.876559e-10\n    |residual|_2 of individual variables:\n                temperature: 0.000152083\n                pp:          0.0999189\n                gp:          2.70791\n 5 Nonlinear |R| = 2.709754e+00\n      0 Linear |R| = 2.709754e+00\n      1 Linear |R| = 3.006491e-10\n    |residual|_2 of individual variables:\n                temperature: 0.000152083\n                pp:          0.0999189\n                gp:          2.70791\n\n...\n\n49 Nonlinear |R| = 2.709754e+00\n      0 Linear |R| = 2.709754e+00\n      1 Linear |R| = 2.981997e-10\n    |residual|_2 of individual variables:\n                temperature: 0.000152083\n                pp:          0.0999282\n                gp:          2.70791\n50 Nonlinear |R| = 2.709754e+00\n  Nonlinear solve did not converge due to DIVERGED_MAX_IT iterations 50\n Solve Did NOT Converge!\n\n\n@GiudGiud I don't care that much about the speed of my calculation. Would the TabulatedFluidProperties be less precise than the Water97FluidProperties? And for the check with a small mesh. Do you mean dimensionwise like 1 x 1 m with nothing in the mesh apart from the block?\n@cpgr Yes i got the same mesh working with PorousFlow1PhaseP and a temperature at the cable.\nIsn't the model i sent with constant temperature? Because i only set an IC for the Temperature so the FluidProperties could be choosen.\nTo the difference with the IdealGasFluidProperties to the NitrogenFluidProperties. They don't really make a difference it just takes longer. So the only difference is with the SimpleFluidProperties. The top output is with IdealGasFluidProperties and the following is with the NitrogenFluidProperties:\nTime Step 1, time = 1, dt = 1\n\nPerforming automatic scaling calculation\n\n    Finished Computing Residual                                                          [  6.30 s] [  186 MB]\n    |residual|_2 of individual variables:\n                temperature: 0.000152083\n                pp:          0.0999172\n                gp:          2.70778\n 0 Nonlinear |R| = 2.709625e+00\n      0 Linear |R| = 2.709625e+00\n      1 Linear |R| = 3.121295e-10\n    Finished Computing Residual                                                          [  6.24 s] [  204 MB]\n    Finished Computing Residual                                                          [  6.17 s] [  204 MB]\n    Finished Computing Residual                                                          [  6.18 s] [  204 MB]\n    Finished Computing Residual                                                          [  6.17 s] [  204 MB]\n    Finished Computing Residual                                                          [  6.35 s] [  204 MB]\n    Finished Computing Residual                                                          [  6.20 s] [  204 MB]\n    Finished Computing Residual                                                          [  6.15 s] [  204 MB]\n    |residual|_2 of individual variables:\n                temperature: 0.000152083\n                pp:          0.0999171\n                gp:          2.70778\n 1 Nonlinear |R| = 2.709624e+00\n      0 Linear |R| = 2.709624e+00\n      1 Linear |R| = 2.919320e-10\n    Finished Computing Residual                                                          [  6.24 s] [  206 MB]\n    Finished Computing Residual                                                          [  6.17 s] [  206 MB]\n    Finished Computing Residual                                                          [  6.17 s] [  206 MB]\n    Finished Computing Residual                                                          [  6.17 s] [  206 MB]\n    Finished Computing Residual                                                          [  6.17 s] [  206 MB]\n    Finished Computing Residual                                                          [  6.17 s] [  206 MB]\n    Finished Computing Residual                                                          [  6.20 s] [  206 MB]\n    |residual|_2 of individual variables:\n                temperature: 0.000152083\n                pp:          0.0999179\n                gp:          2.70778\n 2 Nonlinear |R| = 2.709624e+00\n      0 Linear |R| = 2.709624e+00\n      1 Linear |R| = 2.768339e-10\n    Finished Computing Residual                                                          [  6.37 s] [  206 MB]\n    Finished Computing Residual                                                          [  6.18 s] [  206 MB]\n    Finished Computing Residual                                                          [  6.17 s] [  206 MB]\n    Finished Computing Residual                                                          [  6.16 s] [  206 MB]\n    Finished Computing Residual                                                          [  6.17 s] [  206 MB]\n    Finished Computing Residual                                                          [  6.16 s] [  206 MB]\n    Finished Computing Residual                                                          [  6.16 s] [  206 MB]\n    Finished Computing Residual                                                          [  6.16 s] [  206 MB]\n    |residual|_2 of individual variables:\n                temperature: 0.000152083\n                pp:          0.0999186\n                gp:          2.70778\n\nOn the Troubleshooting page is for failing nonlinear solve at the end this sentence: \"If they are more than an order of magnitude off, then use the scaling parameter in the variables block to scale the smaller variable up.\" I already use the automatic scaling, but the values are several orders of magnitude apart. Would it be better if i do it manually or deactivate the \"compute_scaling_once = true\" ?\nThanks again to you",
+                          "url": "https://github.com/idaholab/moose/discussions/29644#discussioncomment-11761996",
+                          "updatedAt": "2025-01-07T14:40:04Z",
+                          "publishedAt": "2025-01-07T14:40:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lynnmunday"
+                          },
+                          "bodyText": "Why doesn't the nonlinear residual change between nonlinear iterations?  Does that mean one of the kernels is missing a jacobian term?   Maybe using the PJFNK solve type would help if it is missing a jacobian term.",
+                          "url": "https://github.com/idaholab/moose/discussions/29644#discussioncomment-11765479",
+                          "updatedAt": "2025-01-07T20:29:03Z",
+                          "publishedAt": "2025-01-07T20:29:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "julianseb"
+                          },
+                          "bodyText": "Thanks for your message.\nI tested my inputfile with and without the suggestions from @cpgr and the PJFNK solver.\nWithout the suggestions this is the result:\nTime Step 1, time = 1, dt = 1\n\nPerforming automatic scaling calculation\n\n    |residual|_2 of individual variables:\n                temperature: 0.000152083\n                pp:          0.0999169\n                gp:          2.70791\n 0 Nonlinear |R| = 2.709755e+00\n      0 Linear |R| = 2.709755e+00\n      1 Linear |R| = 2.709749e+00\n      2 Linear |R| = 2.709747e+00\n      3 Linear |R| = 2.709746e+00\n      4 Linear |R| = 2.709741e+00\n      5 Linear |R| = 2.709738e+00\n      6 Linear |R| = 2.709734e+00\n      7 Linear |R| = 2.709734e+00\n\nand it just keeps running. An with the suggestions it fails the same way as the Newton solver, but now it is saying, that there is a naN-issue for the temperature of the fluid:\nTime Step 1, time = 1, dt = 1\n\nPerforming automatic scaling calculation\n\n    |residual|_2 of individual variables:\n                temperature: 0.000152083\n                pp:          0.0917713\n                gp:          1218.44\n 0 Nonlinear |R| = 1.218438e+03\n    Linear solve did not converge due to DIVERGED_PC_FAILED iterations 0\n                   PC failed due to FACTOR_OUTMEMORY \n\nTemperature -nan is out of range in wasser: inRegion()\nTo recover, the solution will fail and then be re-attempted with a reduced time step.\n\nA MooseException was raised during FEProblemBase::computeResidualTags\nTemperature -nan is out of range in wasser: inRegion()\nTo recover, the solution will fail and then be re-attempted with a reduced time step.\n\n  Nonlinear solve did not converge due to DIVERGED_LINE_SEARCH iterations 0\n Solve Did NOT Converge!\nAborting as solve did not converge",
+                          "url": "https://github.com/idaholab/moose/discussions/29644#discussioncomment-11773714",
+                          "updatedAt": "2025-01-08T13:43:52Z",
+                          "publishedAt": "2025-01-08T13:43:51Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "cpgr"
+                  },
+                  "bodyText": "I think I have found your main problem. You have\n[mass_frac_boden]\n  type = PorousFlowMassFraction\n  PorousFlowDictator = dictator_boden\n  block = 'boden'\n  mass_fraction_vars = 'pp gp'\n[]\n\nThe mass_fraction_vars parameter expects the mass fraction of species 1 in fluid phase 0 etc, but you are giving it the pressure variables. These are not in the range [0,1] so it is struggling to solve.\nI think that is you have two fluid phases with a single fluid component in each (so only water in liquid phase, only gas in the gas phase) that you can just use mass_fraction_vars = '1 0' (so mass fraction of water in liquid is 1, mass fraction of water in gas is 0, and the others are computed from them).",
+                  "url": "https://github.com/idaholab/moose/discussions/29644#discussioncomment-11766923",
+                  "updatedAt": "2025-01-08T00:13:18Z",
+                  "publishedAt": "2025-01-08T00:13:17Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "julianseb"
+                          },
+                          "bodyText": "Thanks for your message.\nSo i made the changes you suggested:\n    [mass_frac_boden]\n      type = PorousFlowMassFraction\n      PorousFlowDictator = dictator_boden\n      block = 'boden'\n      mass_fraction_vars = '1 0'\n    []\n\nand added the fluid compontent for the Kernels:\n[Kernels]\n  [temperature_dt_boden]\n    type = PorousFlowEnergyTimeDerivative\n    variable = temperature\n    PorousFlowDictator = dictator_boden\n    block = 'boden'\n  []\n  [advectionT_boden]\n    type = PorousFlowHeatAdvection\n    variable = temperature\n    block = 'boden'\n    PorousFlowDictator = dictator_boden\n  []\n  [conductionT_boden]\n    type = PorousFlowHeatConduction\n    variable = temperature\n    block = 'boden'\n    PorousFlowDictator = dictator_boden\n  []\n  [pressure_dt_pp]\n    type = PorousFlowMassTimeDerivative\n    variable = pp\n    block = 'boden'\n    PorousFlowDictator = dictator_boden\n    fluid_component = 0\n  []\n  [pressure_dt_gp]\n    type = PorousFlowMassTimeDerivative\n    variable = gp\n    PorousFlowDictator = dictator_boden\n    block = 'boden'\n    fluid_component = 1\n  []\n  [pp_disp_boden]\n    type = PorousFlowDispersiveFlux\n    disp_long = '1E-4 1E-4'\n    disp_trans = '1E-5 1E-5'\n    fluid_component = 0\n    block = 'boden'\n    variable = pp\n    PorousFlowDictator = dictator_boden\n  []\n  [gp_disp_boden]\n    type = PorousFlowDispersiveFlux\n    disp_long = '5E-4 5E-4'\n    disp_trans = '5E-5 5E-5'\n    fluid_component = 1\n    block = 'boden'\n    variable = gp\n    PorousFlowDictator = dictator_boden\n  []\n  [pp_advective_boden]\n    type = PorousFlowAdvectiveFlux\n    variable = pp\n    block = 'boden'\n    PorousFlowDictator = dictator_boden\n    fluid_component = 0\n  []\n  [gp_advective]\n    type = PorousFlowAdvectiveFlux\n    variable = gp\n    PorousFlowDictator = dictator_boden\n    block = 'boden'\n    fluid_component = 1\n  []\n[]\n\nBut now the Residual is even higher and i get an error message.\nTime Step 1, time = 1, dt = 1\n\nPerforming automatic scaling calculation\n\n    |residual|_2 of individual variables:\n                temperature: 0.000152083\n                pp:          0.0917713\n                gp:          1218.44\n 0 Nonlinear |R| = 1.218438e+03\n    Linear solve did not converge due to DIVERGED_PC_FAILED iterations 0\n                   PC failed due to FACTOR_OUTMEMORY \n    |residual|_2 of individual variables:\n                temperature: 0.000152083\n                pp:          0.0917713\n                gp:          1218.44\n 1 Nonlinear |R| = 1.218438e+03\n    Linear solve did not converge due to DIVERGED_PC_FAILED iterations 0\n                   PC failed due to FACTOR_OUTMEMORY \n    |residual|_2 of individual variables:\n                temperature: 0.000152083\n                pp:          0.0917713\n                gp:          1218.44\n 2 Nonlinear |R| = 1.218438e+03\n    Linear solve did not converge due to DIVERGED_PC_FAILED iterations 0\n                   PC failed due to FACTOR_OUTMEMORY \n    |residual|_2 of individual variables:\n                temperature: 0.000152083\n                pp:          0.0917713\n                gp:          1218.44\n 3 Nonlinear |R| = 1.218438e+03\n    Linear solve did not converge due to DIVERGED_PC_FAILED iterations 0\n                   PC failed due to FACTOR_OUTMEMORY \n    |residual|_2 of individual variables:\n                temperature: 0.000152083\n                pp:          0.0917713\n                gp:          1218.44\n 4 Nonlinear |R| = 1.218438e+03\n    Linear solve did not converge due to DIVERGED_PC_FAILED iterations 0\n                   PC failed due to FACTOR_OUTMEMORY \n    |residual|_2 of individual variables:\n                temperature: 0.000152083\n                pp:          0.0917713\n                gp:          1218.44\n\nDo i understand the error message right, in that the preconditioner is running out of memory so it shuts the linear solve down?\nThanks again :)",
+                          "url": "https://github.com/idaholab/moose/discussions/29644#discussioncomment-11773633",
+                          "updatedAt": "2025-01-08T13:36:35Z",
+                          "publishedAt": "2025-01-08T13:36:34Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lynnmunday"
+                          },
+                          "bodyText": "Your problem doesn't look big enough to be running out of memory with LU, sometimes it reports this if the solve fails: #25820\nBut LU should work if you have under a million dofs.\nCan you simplify the problem by removing the temperatre variable and kernels?  Does it work with a single phase?  Did you create this input file from a prexisting input file that runs.  Can you try a uniform mesh with a square hole so all elements are the same size.  I don't know where the problem is but creating a simpler problem will help you narrow it down.",
+                          "url": "https://github.com/idaholab/moose/discussions/29644#discussioncomment-11776371",
+                          "updatedAt": "2025-01-08T17:19:24Z",
+                          "publishedAt": "2025-01-08T17:18:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "julianseb"
+                          },
+                          "bodyText": "Thanks for your message.\nYes, i got the same mesh from the current_state.zip to work with a single phase. But there i used the SimpleFluidProperties, because initially i didn't plan on modeling two phase flow. My starting point for this file was the one that worked for the single phase and i extended it for two phases.\nThe Inputfile for the single phase is in the zip folder further down.\nUnfortunately i can't remove the temperature variable. After removing the variable from the variable block and the dictator, the Kernels (PorousFlowEnergyTimeDerivative, PorousFlowHeatAdvection, PorousFlowHeatConduction) and the PorousFlowTemperature material i got a missing material property error. So i also excluded the PorousFlowMatrixInternalEnergy material. But still got the missing material property error. Did i miss anything involving the temperature?\nFor the uniform mesh. I made this one. Is it to coarse?\n\nBut then i get this error:\nTime Step 1, time = 1, dt = 1\n\nPerforming automatic scaling calculation\n\n    |residual|_2 of individual variables:\n                temperature: 0.000131056\n                pp:          0.5283\n                gp:          649.651\n 0 Nonlinear |R| = 6.496510e+02\n    Linear solve did not converge due to DIVERGED_PC_FAILED iterations 0\n                   PC failed due to FACTOR_NUMERIC_ZEROPIVOT \n    |residual|_2 of individual variables:\n                temperature: 0.000131056\n                pp:          0.5283\n                gp:          649.651\n 1 Nonlinear |R| = 6.496510e+02\n      0 Linear |R| = 6.496510e+02\n[0]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------\n[0]PETSC ERROR: Error in external library\n[0]PETSC ERROR: MUMPS error in solve: INFOG(1)=-3 (see users manual https://mumps-solver.org/index.php?page=doc \"Error and warning diagnostics\")\n[0]PETSC ERROR: WARNING! There are unused option(s) set! Could be the program crashed before usage or a spelling mistake, etc!\n[0]PETSC ERROR:   Option left: name:-i value: dbg_simple.i source: command line\n[0]PETSC ERROR:   Option left: name:-snes_converged_reason value: ::failed source: code\n[0]PETSC ERROR: See https://petsc.org/release/faq/ for trouble shooting.\n[0]PETSC ERROR: Petsc Release Version 3.21.4, unknown \n[0]PETSC ERROR: ./konzept-opt on a  named f6-ing-ubuntuvm-004 by julian.munz Wed Jan  8 18:49:04 2025\n[0]PETSC ERROR: Configure options --with-64-bit-indices --with-cxx-dialect=C++17 --with-debugging=no --with-fortran-bindings=0 --with-mpi=1 --with-openmp=1 --with-strict-petscerrorcode=1 --with-shared-libraries=1 --with-sowing=0 --download-fblaslapack=1 --download-hpddm=1 --download-hypre=1 --download-metis=1 --download-mumps=1 --download-ptscotch=1 --download-parmetis=1 --download-scalapack=1 --download-slepc=1 --download-strumpack=1 --download-superlu_dist=1 --with-hdf5-dir=/home/julian.munz@anggeo.tu-berlin.de/miniforge/envs/moose --with-make-np=16 --COPTFLAGS=-O3 --CXXOPTFLAGS=-O3 --FOPTFLAGS=-O3 --with-x=0 --with-ssl=0 --with-mpi-dir=/home/julian.munz@anggeo.tu-berlin.de/miniforge/envs/moose AR=/home/julian.munz@anggeo.tu-berlin.de/miniforge/envs/moose/bin/x86_64-conda-linux-gnu-ar RANLIB=/home/julian.munz@anggeo.tu-berlin.de/miniforge/envs/moose/bin/x86_64-conda-linux-gnu-ranlib CFLAGS=\"-march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/julian.munz@anggeo.tu-berlin.de/miniforge/envs/moose/include -fdebug-prefix-map=/data/civet1/build/conda/conda-bld/moose-petsc_1723759504406/work=/usr/local/src/conda/moose-petsc-3.21.4 -fdebug-prefix-map=/home/julian.munz@anggeo.tu-berlin.de/miniforge/envs/moose=/usr/local/src/conda-prefix\" CXXFLAGS=\"-fvisibility-inlines-hidden -fmessage-length=0 -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/julian.munz@anggeo.tu-berlin.de/miniforge/envs/moose/include \" CPPFLAGS=\"-DNDEBUG -D_FORTIFY_SOURCE=2 -O2 -isystem /home/julian.munz@anggeo.tu-berlin.de/miniforge/envs/moose/include\" FFLAGS=\"-march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/julian.munz@anggeo.tu-berlin.de/miniforge/envs/moose/include -fdebug-prefix-map=/data/civet1/build/conda/conda-bld/moose-petsc_1723759504406/work=/usr/local/src/conda/moose-petsc-3.21.4 -fdebug-prefix-map=/home/julian.munz@anggeo.tu-berlin.de/miniforge/envs/moose=/usr/local/src/conda-prefix\" FCFLAGS=\"-march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/julian.munz@anggeo.tu-berlin.de/miniforge/envs/moose/include -fdebug-prefix-map=/data/civet1/build/conda/conda-bld/moose-petsc_1723759504406/work=/usr/local/src/conda/moose-petsc-3.21.4 -fdebug-prefix-map=/home/julian.munz@anggeo.tu-berlin.de/miniforge/envs/moose=/usr/local/src/conda-prefix\" LDFLAGS=\"-Wl,-O2 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now -Wl,--disable-new-dtags -Wl,--gc-sections -Wl,--allow-shlib-undefined -Wl,-rpath,/home/julian.munz@anggeo.tu-berlin.de/miniforge/envs/moose/lib -Wl,-rpath-link,/home/julian.munz@anggeo.tu-berlin.de/miniforge/envs/moose/lib -L/home/julian.munz@anggeo.tu-berlin.de/miniforge/envs/moose/lib\" --prefix=/home/julian.munz@anggeo.tu-berlin.de/miniforge/envs/moose/petsc\n[0]PETSC ERROR: #1 MatSolve_MUMPS() at /data/civet1/build/conda/conda-bld/moose-petsc_1723759504406/work/src/mat/impls/aij/mpi/mumps/mumps.c:1495\n[0]PETSC ERROR: #2 MatSolve() at /data/civet1/build/conda/conda-bld/moose-petsc_1723759504406/work/src/mat/interface/matrix.c:3633\n[0]PETSC ERROR: #3 PCApply_LU() at /data/civet1/build/conda/conda-bld/moose-petsc_1723759504406/work/src/ksp/pc/impls/factor/lu/lu.c:169\n[0]PETSC ERROR: #4 PCApply() at /data/civet1/build/conda/conda-bld/moose-petsc_1723759504406/work/src/ksp/pc/interface/precon.c:497\n[0]PETSC ERROR: #5 PCApplyBAorAB() at /data/civet1/build/conda/conda-bld/moose-petsc_1723759504406/work/src/ksp/pc/interface/precon.c:767\n[0]PETSC ERROR: #6 KSP_PCApplyBAorAB() at /data/civet1/build/conda/conda-bld/moose-petsc_1723759504406/work/include/petsc/private/kspimpl.h:469\n[0]PETSC ERROR: #7 KSPGMRESCycle() at /data/civet1/build/conda/conda-bld/moose-petsc_1723759504406/work/src/ksp/ksp/impls/gmres/gmres.c:146\n[0]PETSC ERROR: #8 KSPSolve_GMRES() at /data/civet1/build/conda/conda-bld/moose-petsc_1723759504406/work/src/ksp/ksp/impls/gmres/gmres.c:227\n[0]PETSC ERROR: #9 KSPSolve_Private() at /data/civet1/build/conda/conda-bld/moose-petsc_1723759504406/work/src/ksp/ksp/interface/itfunc.c:905\n[0]PETSC ERROR: #10 KSPSolve() at /data/civet1/build/conda/conda-bld/moose-petsc_1723759504406/work/src/ksp/ksp/interface/itfunc.c:1078\n[0]PETSC ERROR: #11 SNESSolve_NEWTONLS() at /data/civet1/build/conda/conda-bld/moose-petsc_1723759504406/work/src/snes/impls/ls/ls.c:220\n[0]PETSC ERROR: #12 SNESSolve() at /data/civet1/build/conda/conda-bld/moose-petsc_1723759504406/work/src/snes/interface/snes.c:4753\nlibMesh terminating:\nMUMPS error in solve: INFOG(1)=-3 (see users manual https://mumps-solver.org/index.php?page=doc \"Error and warning diagnostics\")\nAbort(1) on node 0 (rank 0 in comm 0): application called MPI_Abort(MPI_COMM_WORLD, 1) - process 0\n\nI've added my current inputfile and the uniform mesh in this zip:\nlatest.zip",
+                          "url": "https://github.com/idaholab/moose/discussions/29644#discussioncomment-11777949",
+                          "updatedAt": "2025-01-08T20:03:53Z",
+                          "publishedAt": "2025-01-08T20:02:05Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cpgr"
+                          },
+                          "bodyText": "I agree with @lynnmunday that it doesn't look big enough to run out of memory.\nYou could try a different preconditioned option instead of mumps. Another common one used for porous flow is\npetsc_options_iname = '-pc_type -sub_pc_type -sub_pc_factor_shift_type'\npetsc_options_value = ' asm      lu           NONZERO'\n\nOne more thing - your PorousFlowOutflowBC might work better if you specify the parameter\nmass_fraction_component = 1\n\nso it doesn't try and remove non-existant water in the gas phase.",
+                          "url": "https://github.com/idaholab/moose/discussions/29644#discussioncomment-11779346",
+                          "updatedAt": "2025-01-08T21:41:09Z",
+                          "publishedAt": "2025-01-08T21:41:09Z",
+                          "isAnswer": true
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "julianseb"
+                          },
+                          "bodyText": "Thanks for the input.\nThat does seem to work for the beginning, but at higher timesteps it seems to fail again.\nFor example i let it run for the uniform mesh:\nTime Step 1, time = 1, dt = 1\n\nPerforming automatic scaling calculation\n\n    |residual|_2 of individual variables:\n                temperature: 0.000131056\n                pp:          0.5283\n                gp:          0.000235155\n 0 Nonlinear |R| = 5.283001e-01\n      0 Linear |R| = 5.283001e-01\n      1 Linear |R| = 4.155742e-12\n    |residual|_2 of individual variables:\n                temperature: 1.50261e-07\n                pp:          0.00104698\n                gp:          1.49071e-09\n 1 Nonlinear |R| = 1.046983e-03\n      0 Linear |R| = 1.046983e-03\n      1 Linear |R| = 5.446954e-15\n    |residual|_2 of individual variables:\n                temperature: 1.89305e-13\n                pp:          7.07728e-11\n                gp:          1.47879e-10\n 2 Nonlinear |R| = 1.639424e-10\n Solve Converged!\n\nOutlier Variable Residual Norms:\n  gp: 1.478792e-10\n\nTime Step 2, time = 3, dt = 2\n    |residual|_2 of individual variables:\n                temperature: 0.000101855\n                pp:          0.0430427\n                gp:          1.47879e-10\n 0 Nonlinear |R| = 4.304286e-02\n      0 Linear |R| = 4.304286e-02\n      1 Linear |R| = 3.387551e-13\n    |residual|_2 of individual variables:\n                temperature: 2.93435e-10\n                pp:          2.90018e-06\n                gp:          8.97002e-14\n 1 Nonlinear |R| = 2.900179e-06\n      0 Linear |R| = 2.900179e-06\n      1 Linear |R| = 4.826495e-19\n    |residual|_2 of individual variables:\n                temperature: 7.61002e-14\n                pp:          2.61994e-11\n                gp:          0\n 2 Nonlinear |R| = 2.619953e-11\n Solve Converged!\n\nOutlier Variable Residual Norms:\n  pp: 2.619942e-11\n\nTime Step 3, time = 7, dt = 4\n    |residual|_2 of individual variables:\n                temperature: 0.000101047\n                pp:          0.0412823\n                gp:          0\n 0 Nonlinear |R| = 4.128239e-02\n      0 Linear |R| = 4.128239e-02\n      1 Linear |R| = 7.882306e-15\n    |residual|_2 of individual variables:\n                temperature: 5.79485e-10\n                pp:          5.73685e-06\n                gp:          0\n 1 Nonlinear |R| = 5.736851e-06\n      0 Linear |R| = 5.736851e-06\n      1 Linear |R| = 5.541206e-19\n    |residual|_2 of individual variables:\n                temperature: 3.97652e-14\n                pp:          1.05583e-11\n                gp:          0\n 2 Nonlinear |R| = 1.055841e-11\n Solve Converged!\n\nOutlier Variable Residual Norms:\n  pp: 1.055834e-11\n\nTime Step 4, time = 15, dt = 8\n    |residual|_2 of individual variables:\n                temperature: 0.000101025\n                pp:          0.0410618\n                gp:          0\n 0 Nonlinear |R| = 4.106189e-02\n      0 Linear |R| = 4.106189e-02\n      1 Linear |R| = 6.580356e-15\n    |residual|_2 of individual variables:\n                temperature: 1.13279e-09\n                pp:          1.12142e-05\n                gp:          0\n 1 Nonlinear |R| = 1.121419e-05\n      0 Linear |R| = 1.121419e-05\n      1 Linear |R| = 2.132151e-18\n    |residual|_2 of individual variables:\n                temperature: 1.90351e-14\n                pp:          6.11194e-12\n                gp:          0\n 2 Nonlinear |R| = 6.111972e-12\n Solve Converged!\n\nOutlier Variable Residual Norms:\n  pp: 6.111943e-12\n\nTime Step 5, time = 31, dt = 16\n    |residual|_2 of individual variables:\n                temperature: 0.000101011\n                pp:          0.0405702\n                gp:          0\n 0 Nonlinear |R| = 4.057037e-02\n      0 Linear |R| = 4.057037e-02\n      1 Linear |R| = 1.285182e-14\n    |residual|_2 of individual variables:\n                temperature: 2.16505e-09\n                pp:          2.14305e-05\n                gp:          0\n 1 Nonlinear |R| = 2.143047e-05\n      0 Linear |R| = 2.143047e-05\n      1 Linear |R| = 8.095591e-18\n    |residual|_2 of individual variables:\n                temperature: 1.01259e-14\n                pp:          9.57052e-12\n                gp:          0\n 2 Nonlinear |R| = 9.570522e-12\n Solve Converged!\n\nOutlier Variable Residual Norms:\n  pp: 9.570517e-12\n\nTime Step 6, time = 63, dt = 32\n    |residual|_2 of individual variables:\n                temperature: 0.000100985\n                pp:          0.0396091\n                gp:          0\n 0 Nonlinear |R| = 3.960924e-02\n      0 Linear |R| = 3.960924e-02\n      1 Linear |R| = 2.460333e-14\n    |residual|_2 of individual variables:\n                temperature: 3.95813e-09\n                pp:          3.91682e-05\n                gp:          0\n 1 Nonlinear |R| = 3.916816e-05\n      0 Linear |R| = 3.916816e-05\n      1 Linear |R| = 2.912404e-17\n    |residual|_2 of individual variables:\n                temperature: 7.25249e-15\n                pp:          4.27596e-11\n                gp:          0\n 2 Nonlinear |R| = 4.275961e-11\n Solve Converged!\n\nOutlier Variable Residual Norms:\n  pp: 4.275961e-11\n\n...\n\nTime Step 23, time = 2.62144e+06, dt = 1.04858e+06\n    |residual|_2 of individual variables:\n                temperature: 2.18385e-05\n                pp:          0.000213111\n                gp:          1.1951e-17\n 0 Nonlinear |R| = 2.142274e-04\n      0 Linear |R| = 2.142274e-04\n      1 Linear |R| = 1.578726e-12\n    |residual|_2 of individual variables:\n                temperature: 1.96539e-05\n                pp:          0.000179868\n                gp:          3.45051e-12\n 1 Nonlinear |R| = 1.809389e-04\n      0 Linear |R| = 1.809389e-04\n      1 Linear |R| = 1.407470e-12\n    |residual|_2 of individual variables:\n                temperature: 1.76878e-05\n                pp:          0.000153433\n                gp:          5.92844e-12\n 2 Nonlinear |R| = 1.544496e-04\n      0 Linear |R| = 1.544496e-04\n      1 Linear |R| = 1.257432e-12\n    |residual|_2 of individual variables:\n                temperature: 1.59184e-05\n                pp:          0.00013233\n                gp:          7.64295e-12\n 3 Nonlinear |R| = 1.332836e-04\n      0 Linear |R| = 1.332836e-04\n      1 Linear |R| = 1.126859e-12\n    |residual|_2 of individual variables:\n                temperature: 1.4326e-05\n                pp:          0.000115356\n                gp:          8.7629e-12\n...\n(still Timestep 23)\n18 Nonlinear |R| = 2.258367e-05\n      0 Linear |R| = 2.258367e-05\n      1 Linear |R| = 1.988794e-13\n    |residual|_2 of individual variables:\n                temperature: 1.52874e-06\n                pp:          1.65406e-05\n                gp:          3.46199e-12\n19 Nonlinear |R| = 1.661108e-05\n      0 Linear |R| = 1.661108e-05\n      1 Linear |R| = 1.287722e-13\n    |residual|_2 of individual variables:\n                temperature: 8.9859e-09\n                pp:          1.12735e-05\n                gp:          1.86524e-12\n20 Nonlinear |R| = 1.127355e-05\n      0 Linear |R| = 1.127355e-05\n      1 Linear |R| = 3.068889e-16\n    |residual|_2 of individual variables:\n                temperature: 1.47373e-13\n                pp:          2.4968e-10\n                gp:          5.79438e-18\n21 Nonlinear |R| = 2.496796e-10\n Solve Converged!\n\nOutlier Variable Residual Norms:\n  pp: 2.496796e-10\n\nTime Step 24, time = 4.71859e+06, dt = 2.09715e+06\n    |residual|_2 of individual variables:\n                temperature: 1.15035e-05\n                pp:          0.000132808\n                gp:          5.79438e-18\n 0 Nonlinear |R| = 1.333055e-04\n      0 Linear |R| = 1.333055e-04\n      1 Linear |R| = 1.317020e-12\n    |residual|_2 of individual variables:\n                temperature: 1.45014e-05\n                pp:          0.000107648\n                gp:          1.39441e-12\n 1 Nonlinear |R| = 1.086199e-04\n      0 Linear |R| = 1.086199e-04\n      1 Linear |R| = 2.085017e-12\n    |residual|_2 of individual variables:\n                temperature: 1.3073e-05\n                pp:          8.09952e-05\n                gp:          2.13668e-12\n 2 Nonlinear |R| = 8.204340e-05\n      0 Linear |R| = 8.204340e-05\n      1 Linear |R| = 2.055298e-12\n    |residual|_2 of individual variables:\n                temperature: 1.17854e-05\n                pp:          7.55753e-05\n                gp:          2.63689e-12\n 3 Nonlinear |R| = 7.648866e-05\n      0 Linear |R| = 7.648866e-05\n      1 Linear |R| = 2.016316e-12\n    |residual|_2 of individual variables:\n                temperature: 1.12005e-05\n                pp:          7.45407e-05\n                gp:          2.64867e-12\n 4 Nonlinear |R| = 7.537747e-05\n      0 Linear |R| = 7.537747e-05\n      1 Linear |R| = 1.946223e-12\n    |residual|_2 of individual variables:\n                temperature: 1.06447e-05\n                pp:          7.39642e-05\n                gp:          2.64562e-12\n 5 Nonlinear |R| = 7.472626e-05\n      0 Linear |R| = 7.472626e-05\n      1 Linear |R| = 1.873821e-12\n    |residual|_2 of individual variables:\n                temperature: 1.05915e-05\n                pp:          7.36266e-05\n                gp:          2.63356e-12\n...\n45 Nonlinear |R| = 7.177738e-05\n      0 Linear |R| = 7.177738e-05\n      1 Linear |R| = 1.806229e-12\n    |residual|_2 of individual variables:\n                temperature: 1.01896e-05\n                pp:          7.10504e-05\n                gp:          2.5413e-12\n46 Nonlinear |R| = 7.177738e-05\n      0 Linear |R| = 7.177738e-05\n      1 Linear |R| = 1.806225e-12\n    |residual|_2 of individual variables:\n                temperature: 1.01896e-05\n                pp:          7.10504e-05\n                gp:          2.5413e-12\n47 Nonlinear |R| = 7.177738e-05\n      0 Linear |R| = 7.177738e-05\n      1 Linear |R| = 1.806224e-12\n    |residual|_2 of individual variables:\n                temperature: 1.01896e-05\n                pp:          7.10504e-05\n                gp:          2.5413e-12\n48 Nonlinear |R| = 7.177738e-05\n      0 Linear |R| = 7.177738e-05\n      1 Linear |R| = 1.806232e-12\n    |residual|_2 of individual variables:\n                temperature: 1.01896e-05\n                pp:          7.10504e-05\n                gp:          2.5413e-12\n49 Nonlinear |R| = 7.177738e-05\n      0 Linear |R| = 7.177738e-05\n      1 Linear |R| = 1.806227e-12\n    |residual|_2 of individual variables:\n                temperature: 1.01896e-05\n                pp:          7.10504e-05\n                gp:          2.5413e-12\n50 Nonlinear |R| = 7.177738e-05\n      0 Linear |R| = 7.177738e-05\n      1 Linear |R| = 1.806223e-12\n  Nonlinear solve did not converge due to DIVERGED_LINE_SEARCH iterations 50\n Solve Did NOT Converge!\nAborting as solve did not converge\n\nSolve failed, cutting timestep.\n\nI let it run to the end an this were the last iterations:\nTime Step 40, time = 2.72429e+06, dt = 3.63798e-12\n    |residual|_2 of individual variables:\n                temperature: 1.06688e-05\n                pp:          0.000131931\n                gp:          4.00379e-18\n 0 Nonlinear |R| = 1.323615e-04\n      0 Linear |R| = 1.323615e-04\n      1 Linear |R| = 1.891523e-20\n  Nonlinear solve did not converge due to DIVERGED_LINE_SEARCH iterations 0\n Solve Did NOT Converge!\nAborting as solve did not converge\n\nSolve failed, cutting timestep.\n\nTime Step 40, time = 2.72429e+06, dt = 1.81899e-12\n    |residual|_2 of individual variables:\n                temperature: 1.06688e-05\n                pp:          0.000131931\n                gp:          4.00379e-18\n 0 Nonlinear |R| = 1.323615e-04\n      0 Linear |R| = 1.323615e-04\n      1 Linear |R| = 2.229316e-20\n  Nonlinear solve did not converge due to DIVERGED_LINE_SEARCH iterations 0\n Solve Did NOT Converge!\nAborting as solve did not converge\n\nSolve failed, cutting timestep.\n\nTime Step 40, time = 2.72429e+06, dt = 1e-12\n    |residual|_2 of individual variables:\n                temperature: 1.06688e-05\n                pp:          0.000131931\n                gp:          4.00379e-18\n 0 Nonlinear |R| = 1.323615e-04\n      0 Linear |R| = 1.323615e-04\n      1 Linear |R| = 1.677338e-20\n  Nonlinear solve did not converge due to DIVERGED_LINE_SEARCH iterations 0\n Solve Did NOT Converge!\nAborting as solve did not converge\n\n\n*** ERROR ***\n/home/julian.munz@anggeo.tu-berlin.de/projects/konzept/dbg_simple.i:413.3:\nThe following error occurred in the TimeStepper 'IterationAdaptiveDT' of type IterationAdaptiveDT.\n\nSolve failed and timestep already at dtmin, cannot continue!",
+                          "url": "https://github.com/idaholab/moose/discussions/29644#discussioncomment-11784393",
+                          "updatedAt": "2025-01-09T09:38:27Z",
+                          "publishedAt": "2025-01-09T09:38:26Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cpgr"
+                          },
+                          "bodyText": "Is that for the really simple square mesh? It might have reached a steady state and can't solve any further? Do the results look like what you expect? Does the mesh with a circle work with those changes?",
+                          "url": "https://github.com/idaholab/moose/discussions/29644#discussioncomment-11784787",
+                          "updatedAt": "2025-01-09T10:11:59Z",
+                          "publishedAt": "2025-01-09T10:11:59Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "julianseb"
+                          },
+                          "bodyText": "Yes, thats for the simple uniform mesh.\nI would say it looks like expected. The artifacts are probably because of the coarse grid. And the temperature increase could be handled by a OutflowBC.\n\n\nFor the complex grid with the circle it shows a simmilar behaviour. For the first time steps it is running fine and at some point ist starts stagnating. It just shows a corious behaviour for the gas pressure:\n\nAnd following on that also for the saturations of the two phases.\n\n\nWould you say it would be the easiest to just adapt the IC and BC for the gaspressure? I would have thougt that the line of saturation change would be higher, closer to where i set the pp with the gradient. So going from 10 on the left to 8 on the right.\nBut otherwise i would say the convergence issues are handeld. Thank you !!!",
+                          "url": "https://github.com/idaholab/moose/discussions/29644#discussioncomment-11787417",
+                          "updatedAt": "2025-01-09T14:38:16Z",
+                          "publishedAt": "2025-01-09T14:38:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lynnmunday"
+                          },
+                          "bodyText": "@cpgr is an expert in this so definitely follow all of his suggestions before trying mine.\nAnyway, I think you can get rid of temperature as a variable by creating a PorousFlowTemperature material called temperature:\n[Materials]\n  [temperature]\n    type = PorousFlowTemperature\n    temperature = T\n  []\n[]\n\nYou can initialize temperature with this:\n[AuxVariables]\n  [T]\n    initial_condition = 293\n    order = CONSTANT\n    family = MONOMIAL\n  []\n[]\n\nThis should then work with [FluidProperties] type = TabulatedBicubicFluidProperties\nI think your smaller mesh should work.  With a small mesh you can output the jacobian and see if it looks bad:\npetsc_options = '-pc_svd_monitor'\npetsc_options_iname = '-pc_type'\npetsc_options_value = 'svd'",
+                          "url": "https://github.com/idaholab/moose/discussions/29644#discussioncomment-11789527",
+                          "updatedAt": "2025-01-09T17:49:31Z",
+                          "publishedAt": "2025-01-09T17:49:31Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cpgr"
+                          },
+                          "bodyText": "Tabulated fluid properties will definitely make it faster when using Nitrogen as the gas as it avoids the iterative step to compute pressure - good call @lynnmunday\nIt looks like you are at a stage where it is running, but not quite exactly as you expect. Like you, I suspect that it is a boundary condition that isn't exactly as you think it should be. I'd focus on that.\nLet us know how it goes!",
+                          "url": "https://github.com/idaholab/moose/discussions/29644#discussioncomment-11793596",
+                          "updatedAt": "2025-01-10T04:02:45Z",
+                          "publishedAt": "2025-01-10T04:02:44Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "julianseb"
+                          },
+                          "bodyText": "I found my BC issue. I forgot to change them back from the samller uniform mesh. Now it is like suspected.\nThank you so much for your support. You really helped me out :)",
+                          "url": "https://github.com/idaholab/moose/discussions/29644#discussioncomment-11796650",
+                          "updatedAt": "2025-01-10T10:41:31Z",
+                          "publishedAt": "2025-01-10T10:41:30Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "cpgr"
+                  },
+                  "bodyText": "Also just noticed that you don't specify fluid_component = 1 for every kernel for the gp variable which you should do!",
+                  "url": "https://github.com/idaholab/moose/discussions/29644#discussioncomment-11766928",
+                  "updatedAt": "2025-01-08T00:14:14Z",
+                  "publishedAt": "2025-01-08T00:14:13Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "UK MOOSE Conference",
+          "author": {
+            "login": "ABallisat"
+          },
+          "bodyText": "Hello all,\nThe Centre For Modelling & Simulation (CFMS) is planning to host a UK MOOSE conference in February 2025 at our offices in Bristol, UK. CFMS have been utilising MOOSE in a number of projects beyond the nuclear sector and want to bring together experts from academia, RTOs and industry to foster the UK MOOSE community. The idea is to have a combination of talks from across the user base, highlighting the industrial challenges faced and the capabilities of MOOSE, hopefully prompting discussions as to how MOOSE can be applied.\nWe are starting to put an agenda together for this event and gauging interest from the community. It would be really helpful to know if this is something you would be interested in attending or have any suggestions. Please feel free to reply to this or contact me directly.\nThanks in advance.\nUpdate January 2025\nThe registration page is now live, date is the 27th February. Link to the registration page:\nhttps://cfms.org.uk/article/2025-uk-moose-conference-register-your-interest/",
+          "url": "https://github.com/idaholab/moose/discussions/29367",
+          "updatedAt": "2025-01-09T09:40:18Z",
+          "publishedAt": "2024-12-06T12:12:20Z",
+          "category": {
+            "name": "Opportunities"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "makeclean"
+                  },
+                  "bodyText": "We'd love to come, we can send a few folks from UKAEA @helen-brooks @ajdubas @alexanderianblair",
+                  "url": "https://github.com/idaholab/moose/discussions/29367#discussioncomment-11619641",
+                  "updatedAt": "2024-12-19T16:34:32Z",
+                  "publishedAt": "2024-12-19T16:34:31Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "alexanderianblair"
+                          },
+                          "bodyText": "Yes, would be very keen!",
+                          "url": "https://github.com/idaholab/moose/discussions/29367#discussioncomment-11619843",
+                          "updatedAt": "2024-12-19T16:51:34Z",
+                          "publishedAt": "2024-12-19T16:51:33Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ajdubas"
+                          },
+                          "bodyText": "Great idea, let me know as soon as you have a date as my February is booking up fast!",
+                          "url": "https://github.com/idaholab/moose/discussions/29367#discussioncomment-11626365",
+                          "updatedAt": "2024-12-20T08:55:56Z",
+                          "publishedAt": "2024-12-20T08:55:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "helen-brooks"
+                          },
+                          "bodyText": "ditto!",
+                          "url": "https://github.com/idaholab/moose/discussions/29367#discussioncomment-11628859",
+                          "updatedAt": "2024-12-20T13:38:55Z",
+                          "publishedAt": "2024-12-20T13:38:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ABallisat"
+                          },
+                          "bodyText": "Great, I think I already have email addresses for you so will take this offline and you a message via email",
+                          "url": "https://github.com/idaholab/moose/discussions/29367#discussioncomment-11651349",
+                          "updatedAt": "2024-12-23T15:46:21Z",
+                          "publishedAt": "2024-12-23T15:46:21Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@ABallisat I emailed Rolls Royce (nuclear, they use some of our ec-ed tools) a few weeks ago to let them know but I did not hear back.\nHappy to try again but I'd like to CC you so they have someone to talk to. Do you mind sharing your email at guillaume.giudicelli@inl.gov and I'll email when I get back",
+                  "url": "https://github.com/idaholab/moose/discussions/29367#discussioncomment-11620515",
+                  "updatedAt": "2024-12-20T14:47:09Z",
+                  "publishedAt": "2024-12-19T17:58:23Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "ngrilli"
+                  },
+                  "bodyText": "@ABallisat  thanks for organizing this.\nThere is a growing number of MOOSE users at the University of Bristol\nand surely some of us can participate as we are close by.",
+                  "url": "https://github.com/idaholab/moose/discussions/29367#discussioncomment-11706616",
+                  "updatedAt": "2024-12-31T16:19:56Z",
+                  "publishedAt": "2024-12-31T16:19:51Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "HyungseonSong-plasma"
+                  },
+                  "bodyText": "Hi, I'm a scientist at Quantemol, a UK-based company specializing in plasma chemistry simulation software. Myself and a colleague are currently exploring MOOSE and would be very interested in attending this conference if it goes ahead. Please share details when they become available, thank you!",
+                  "url": "https://github.com/idaholab/moose/discussions/29367#discussioncomment-11761140",
+                  "updatedAt": "2025-01-07T13:46:14Z",
+                  "publishedAt": "2025-01-07T13:20:02Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "ABallisat"
+                  },
+                  "bodyText": "Thanks all for the interest. We are currently finalising the details and will have an event page soon which will cover sign ups as well. Once it is live I will post it on here.",
+                  "url": "https://github.com/idaholab/moose/discussions/29367#discussioncomment-11761254",
+                  "updatedAt": "2025-01-07T13:28:56Z",
+                  "publishedAt": "2025-01-07T13:28:56Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "ABallisat"
+                  },
+                  "bodyText": "Update: the registration page is now live, I have edited the original post with a link to the page, if anyone has any questions please just ask.",
+                  "url": "https://github.com/idaholab/moose/discussions/29367#discussioncomment-11784416",
+                  "updatedAt": "2025-01-09T09:40:19Z",
+                  "publishedAt": "2025-01-09T09:40:17Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "I need to enable Fortran support during PETSc installation",
+          "author": {
+            "login": "ddmoa"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n I have consulted the Posting Guidelines.\n I have searched the Discussions Forum and MOOSE Framework Troubleshooting and have not found what I was looking for\n Q&A Getting Started is the most appropriate category for my question (trouble installing, beginner user, ...)\n\nIssue or question about MOOSE\nHello! I want to install PETSc with Fortran support when running the Moose installation script. I modified the configure_petsc.sh file by setting --with-fortran-bindings=1, but it doesn't seem to work. The final PETSc installation directory does not contain the petsc/finclude directory. How should I modify the configuration?",
+          "url": "https://github.com/idaholab/moose/discussions/29561",
+          "updatedAt": "2025-01-08T17:22:57Z",
+          "publishedAt": "2024-12-17T08:17:33Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "lindsayad"
+                  },
+                  "bodyText": "Either delete the line --with-sowing=0 or change it to --with-sowing=1",
+                  "url": "https://github.com/idaholab/moose/discussions/29561#discussioncomment-11598002",
+                  "updatedAt": "2024-12-17T20:32:37Z",
+                  "publishedAt": "2024-12-17T20:32:37Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ddmoa"
+                          },
+                          "bodyText": "I followed your suggestions, but it still isn't working. What confuses me is that the petsc/arc-moose/include directory in MOOSE doesn't contain header files like petsc.h or petscao.h , even though these files are present in the standalone PETSc installation.\nI copied all these header files directly into the MOOSE directory, but I'm not sure if this will work. Could you give me some advice?",
+                          "url": "https://github.com/idaholab/moose/discussions/29561#discussioncomment-11604698",
+                          "updatedAt": "2024-12-18T11:54:52Z",
+                          "publishedAt": "2024-12-18T11:52:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "The following does not seem to create an finclude directory either:\ngit clone -b release https://gitlab.com/petsc/petsc.git petsc\ncd petsc/\ngit co v3.22.1\n./configure --with-64-bit-indices \\\n      --with-cxx-dialect=C++17 \\\n      --with-debugging=no \\\n      --with-fortran-bindings=1 \\\n      --with-mpi=1 \\\n      --with-openmp=1 \\\n      --with-strict-petscerrorcode=1 \\\n      --with-shared-libraries=1 \\\n      --with-sowing=1 \\\n      --download-fblaslapack=1 \\\n      --download-hpddm=1 \\\n      --download-hypre=1 \\\n      --download-metis=1 \\\n      --download-mumps=1 \\\n      --download-ptscotch=1 \\\n      --download-parmetis=1 \\\n      --download-scalapack=1 \\\n      --download-slepc=1 \\\n      --download-strumpack=1 \\\n      --download-superlu_dist=1 \\\n      --prefix=/data/milljm/petsc_installed\nmake PETSC_DIR=/data/milljm/projects/petsc PETSC_ARCH=arch-linux-c-opt all\nmake PETSC_DIR=/data/milljm/projects/petsc PETSC_ARCH=arch-linux-c-opt install\nWhat is supposed to happen? This is a clone directly from PETSc. No use of MOOSE at all here.",
+                          "url": "https://github.com/idaholab/moose/discussions/29561#discussioncomment-11606259",
+                          "updatedAt": "2024-12-18T14:30:04Z",
+                          "publishedAt": "2024-12-18T14:30:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "doesn't contain header files like petsc.h or petscao.h\n\nThese files are in $PETSC_DIR/include, not $PETSC_DIR/$PETSC_ARCH/include. When building with a PETSC_ARCH like is done when running the update_and_rebuild_petsc.sh script, you will not see all the files arranged such as you would see for a classic installation. C headers independent of configuration will be in $PETSC_DIR/include (moose/petsc/include) while headers dependent on configuration will be in $PETSC_DIR/$PETSC_ARCH/include (moose/petsc/arch-moose/include)",
+                          "url": "https://github.com/idaholab/moose/discussions/29561#discussioncomment-11613330",
+                          "updatedAt": "2024-12-19T05:59:12Z",
+                          "publishedAt": "2024-12-19T05:58:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ddmoa"
+                          },
+                          "bodyText": "Sorry, I don't understand how the configuration-dependent headers and configuration-independent headers are set.\nMaybe I need to clarify the points I mentioned above about the headers. I downloaded PETSc version 3.21.5 and configured it using only the following command: ./configure --prefix=/xx/build --with-mpi-dir=/xx/build --download-fblaslapack=1 After installation, the build directory contains a include/petsc/finclude directory, and inside it, there are headers like petsc.h.",
+                          "url": "https://github.com/idaholab/moose/discussions/29561#discussioncomment-11613941",
+                          "updatedAt": "2024-12-19T07:28:20Z",
+                          "publishedAt": "2024-12-19T07:27:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "that is definitely different from what I expected based on your OP from which I thought you only modified the fortran configuration in configure_petsc.sh. So you are running your configure command in the PETSc root directory?",
+                          "url": "https://github.com/idaholab/moose/discussions/29561#discussioncomment-11622021",
+                          "updatedAt": "2024-12-19T20:57:36Z",
+                          "publishedAt": "2024-12-19T20:57:34Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ddmoa"
+                          },
+                          "bodyText": "Yes, I ran the command directly in the root directory. I don't think there's any fundamental difference between this and using the script.",
+                          "url": "https://github.com/idaholab/moose/discussions/29561#discussioncomment-11623613",
+                          "updatedAt": "2024-12-20T01:56:23Z",
+                          "publishedAt": "2024-12-20T01:56:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "If you had been running our script then you would have been brining along a lot of configure arguments, so that's a substantial difference, and we do not use --prefix which is another substantial difference",
+                          "url": "https://github.com/idaholab/moose/discussions/29561#discussioncomment-11660428",
+                          "updatedAt": "2024-12-24T22:16:21Z",
+                          "publishedAt": "2024-12-24T22:15:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "I don't understand at this point what's not working. When running your own configure command you are not getting fortran bindings?",
+                          "url": "https://github.com/idaholab/moose/discussions/29561#discussioncomment-11660438",
+                          "updatedAt": "2024-12-24T22:18:11Z",
+                          "publishedAt": "2024-12-24T22:18:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ddmoa"
+                          },
+                          "bodyText": "It seems that the --prefix option is what makes the difference. For the PETSc I installed myself, if I don't use the --prefix option to set a custom installation path, those header files I mentioned earlier do not exist. However, if I use --prefix to set the installation directory to build, then build/include will contain petsc/finclude.\nIf I add the --prefix option to the PETSc installation script in MOOSE and specify another location, will MOOSE still work properly?",
+                          "url": "https://github.com/idaholab/moose/discussions/29561#discussioncomment-11705157",
+                          "updatedAt": "2024-12-31T11:44:22Z",
+                          "publishedAt": "2024-12-31T11:44:21Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "Yes. You just will need to set PETSC_DIR to that location and make sure PETSC_ARCH is not set",
+                          "url": "https://github.com/idaholab/moose/discussions/29561#discussioncomment-11752544",
+                          "updatedAt": "2025-01-06T18:39:18Z",
+                          "publishedAt": "2025-01-06T18:39:18Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Convergence problem of creep model",
+          "author": {
+            "login": "lucuo"
+          },
+          "bodyText": "Hello Moose Development Team,\nI am trying a creep model, but when the creep strain is large, the program always one step converge and then one step error Encountered inf or nan in material return mapping iterations. At element 0 _qp=0 Coordinates (x,y,z)=(0.211325, 0.211325, 0.211325) block=0 In 1000 iterations the residual went from -11.8316 to -nan in 'creep'.. Could you please advise on how to improve convergence under large strains? Below are the relevant settings from my input file.\n[Physics/SolidMechanics/QuasiStatic]\n  [all]\n    strain = FINITE\n    incremental = true\n    add_variables = true\n    generate_output = 'stress_yy strain_yy creep_strain_yy '\n  []\n[]\n[Materials]\n  [elasticity_tensor]\n    type = ComputeIsotropicElasticityTensor\n    youngs_modulus = 5e11\n    poissons_ratio = 0.3\n  []\n [./creep]\n  type = Creepmodel\n  temperature = temp\n  coefficients = '2.5e-5 6e-8'\n  activation_energys = '18000 10000'\n[../]\n[./creep_plas]\n  type = ComputeMultipleInelasticStress\n  tangent_operator = elastic\n  inelastic_models = 'creep '\n  max_iterations = 50\n  absolute_tolerance = 1e-02\n[../]\n[]\n[BCs]\n\n  [u_bottom_fix]\n    type = DirichletBC\n    variable = disp_y\n    boundary = bottom\n    value = 0.0\n  []\n  [u_yz_fix]\n    type = DirichletBC\n    variable = disp_x\n    boundary = left\n    value = 0.0\n  []\n  [u_xy_fix]\n    type = DirichletBC\n    variable = disp_z\n    boundary = back\n    value = 0.0\n  []\n  [temp_fix]\n    type = DirichletBC\n    variable = temp\n    boundary = 'bottom top'\n    value = 1000.0\n  []\n  [./Pressure]\n    [./pressure]\n      boundary = 'top'\n      factor = -100e6\n    [../]\n  [../]\n[]\n\nHere is part of the program output.\nFramework Information:\nMOOSE Version:           git commit 4107adf72d on 2024-08-28\nLibMesh Version:         \nPETSc Version:           3.21.4\nSLEPc Version:           3.21.1\nCurrent Time:            Wed Jan  8 22:48:45 2025\nExecutable Timestamp:    Wed Jan  8 22:24:35 2025\n\nCheckpoint:\n  Wall Time Interval:      Every 3600 s\n  User Checkpoint:         Disabled\n  # Checkpoints Kept:      2\n  Execute On:              TIMESTEP_END \n\nParallelism:\n  Num Processors:          1\n  Num Threads:             1\n\nMesh: \n  Parallel Type:           replicated\n  Mesh Dimension:          3\n  Spatial Dimension:       3\n  Nodes:                   8\n  Elems:                   1\n  Num Subdomains:          1\n\nNonlinear System:\n  Num DOFs:                32\n  Num Local DOFs:          32\n  Variables:               { \"temp\" \"disp_x\" \"disp_y\" \"disp_z\" } \n  Finite Element Types:    \"LAGRANGE\" \n  Approximation Orders:    \"FIRST\" \n\nAuxiliary System:\n  Num DOFs:                11\n  Num Local DOFs:          11\n  Variables:               \"fast_neutron_flux\" { \"stress_yy\" \"strain_yy\" \"creep_strain_yy\" } \n  Finite Element Types:    \"LAGRANGE\" \"MONOMIAL\" \n  Approximation Orders:    \"FIRST\" \"CONSTANT\" \n\nExecution Information:\n  Executioner:             Transient\n  TimeStepper:             ConstantDT\n  TimeIntegrator:          ImplicitEuler\n  Solver Mode:             Preconditioned JFNK\n  PETSc Preconditioner:    lu mat_superlu_dist_fact: SamePattern  mat_superlu_dist_replacetinypivot: true \n\n\nTime Step 0, time = 0\n\nPostprocessor Values:\n+----------------+----------------+----------------+\n| time           | creep_strain_yy| strain_yy      |\n+----------------+----------------+----------------+\n|   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |\n+----------------+----------------+----------------+\n\n\nTime Step 1, time = 100000, dt = 100000\n 0 Nonlinear |R| = 5.000000e+07\n      0 Linear |R| = 5.000000e+07\n      1 Linear |R| = 3.944267e+07\n      2 Linear |R| = 1.637957e-06\n 1 Nonlinear |R| = 1.038691e+08\n      0 Linear |R| = 1.038691e+08\n      1 Linear |R| = 4.734065e+07\n      2 Linear |R| = 3.953094e-04\n\nEncountered inf or nan in material return mapping iterations.\nAt element 0 _qp=0 Coordinates (x,y,z)=(0.211325, 0.211325, 0.211325) block=0\nIn 1000 iterations the residual went from -1654.13 to -nan in 'creep'.\n\nTo recover, the solution will fail and then be re-attempted with a reduced time step.\n\n  Nonlinear solve did not converge due to DIVERGED_LINE_SEARCH iterations 1\n Solve Did NOT Converge!\nAborting as solve did not converge\n\nTime Step 1, time = 50000, dt = 50000\n 0 Nonlinear |R| = 5.000000e+07\n      0 Linear |R| = 5.000000e+07\n      1 Linear |R| = 3.826928e+07\n      2 Linear |R| = 9.195750e-07\n 1 Nonlinear |R| = 1.086685e+08\n      0 Linear |R| = 1.086685e+08\n      1 Linear |R| = 9.936241e+06\n      2 Linear |R| = 2.807456e-04\n\nEncountered inf or nan in material return mapping iterations.\nAt element 0 _qp=0 Coordinates (x,y,z)=(0.211325, 0.211325, 0.211325) block=0\nIn 1000 iterations the residual went from -74.0775 to -nan in 'creep'.\n\nTo recover, the solution will fail and then be re-attempted with a reduced time step.\n\n  Nonlinear solve did not converge due to DIVERGED_LINE_SEARCH iterations 1\n Solve Did NOT Converge!\nAborting as solve did not converge\n\nTime Step 1, time = 25000, dt = 25000\n 0 Nonlinear |R| = 5.000000e+07\n      0 Linear |R| = 5.000000e+07\n      1 Linear |R| = 3.640671e+07\n      2 Linear |R| = 2.675547e-06\n 1 Nonlinear |R| = 1.173146e+08\n      0 Linear |R| = 1.173146e+08\n      1 Linear |R| = 2.555997e+06\n      2 Linear |R| = 1.435902e-04\n\nEncountered inf or nan in material return mapping iterations.\nAt element 0 _qp=0 Coordinates (x,y,z)=(0.211325, 0.211325, 0.211325) block=0\nIn 1000 iterations the residual went from -5.46939 to -nan in 'creep'.\n\nTo recover, the solution will fail and then be re-attempted with a reduced time step.\n\n  Nonlinear solve did not converge due to DIVERGED_LINE_SEARCH iterations 1\n Solve Did NOT Converge!\nAborting as solve did not converge\n\nTime Step 1, time = 12500, dt = 12500\n 0 Nonlinear |R| = 5.000000e+07\n      0 Linear |R| = 5.000000e+07\n      1 Linear |R| = 3.393029e+07\n      2 Linear |R| = 3.391693e-07\n 1 Nonlinear |R| = 1.920391e+05\n      0 Linear |R| = 1.920391e+05\n      1 Linear |R| = 1.317353e+05\n      2 Linear |R| = 6.661266e-08\n 2 Nonlinear |R| = 4.183909e+01\n Solve Converged!\n\nOutlier Variable Residual Norms:\n  disp_y: 3.346897e+01\n\nPostprocessor Values:\n+----------------+----------------+----------------+\n| time           | creep_strain_yy| strain_yy      |\n+----------------+----------------+----------------+\n|   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |\n|   1.250000e+04 |   1.797493e-04 |   3.797494e-04 |\n+----------------+----------------+----------------+\n\n\nTime Step 2, time = 37500, dt = 25000\n 0 Nonlinear |R| = 2.762531e+07\n      0 Linear |R| = 2.762531e+07\n      1 Linear |R| = 7.143196e+03\n      2 Linear |R| = 6.244047e-06\n 1 Nonlinear |R| = 1.173032e+08\n      0 Linear |R| = 1.173032e+08\n      1 Linear |R| = 1.345613e+06\n      2 Linear |R| = 9.048020e-02\n\nEncountered inf or nan in material return mapping iterations.\nAt element 0 _qp=0 Coordinates (x,y,z)=(0.211325, 0.211325, 0.211325) block=0\nIn 1000 iterations the residual went from -5.4689 to -nan in 'creep'.\n\nTo recover, the solution will fail and then be re-attempted with a reduced time step.\n\n  Nonlinear solve did not converge due to DIVERGED_LINE_SEARCH iterations 1\n Solve Did NOT Converge!\nAborting as solve did not converge\n\nTime Step 2, time = 25000, dt = 12500\n 0 Nonlinear |R| = 2.087095e+07\n      0 Linear |R| = 2.087095e+07\n      1 Linear |R| = 2.704644e+03\n      2 Linear |R| = 5.444010e-06\n 1 Nonlinear |R| = 1.556647e+05\n      0 Linear |R| = 1.556647e+05\n      1 Linear |R| = 5.730100e+04\n      2 Linear |R| = 7.099486e-05\n 2 Nonlinear |R| = 3.029730e+01\n Solve Converged!\n\nOutlier Variable Residual Norms:\n  disp_y: 2.424607e+01\n\nPostprocessor Values:\n+----------------+----------------+----------------+\n| time           | creep_strain_yy| strain_yy      |\n+----------------+----------------+----------------+\n|   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |\n|   1.250000e+04 |   1.797493e-04 |   3.797494e-04 |\n|   2.500000e+04 |   3.594985e-04 |   5.594986e-04 |\n+----------------+----------------+----------------+\n\n\nTime Step 3, time = 50000, dt = 25000\n 0 Nonlinear |R| = 2.762283e+07\n      0 Linear |R| = 2.762283e+07\n      1 Linear |R| = 7.140029e+03\n      2 Linear |R| = 5.080629e-05\n 1 Nonlinear |R| = 1.172927e+08\n      0 Linear |R| = 1.172927e+08\n      1 Linear |R| = 1.345614e+06\n      2 Linear |R| = 1.282506e-01\n\nEncountered inf or nan in material return mapping iterations.\nAt element 0 _qp=0 Coordinates (x,y,z)=(0.211325, 0.211325, 0.211325) block=0\nIn 1000 iterations the residual went from -5.4689 to -nan in 'creep'.\n\nTo recover, the solution will fail and then be re-attempted with a reduced time step.\n\n  Nonlinear solve did not converge due to DIVERGED_LINE_SEARCH iterations 1\n Solve Did NOT Converge!\nAborting as solve did not converge\n\nTime Step 3, time = 37500, dt = 12500\n 0 Nonlinear |R| = 2.086908e+07\n      0 Linear |R| = 2.086908e+07\n      1 Linear |R| = 2.702685e+03\n      2 Linear |R| = 4.871648e-05\n 1 Nonlinear |R| = 1.556537e+05\n      0 Linear |R| = 1.556537e+05\n      1 Linear |R| = 5.729420e+04\n      2 Linear |R| = 2.581781e-04\n 2 Nonlinear |R| = 3.029417e+01\n Solve Converged!\n\nOutlier Variable Residual Norms:\n  disp_y: 2.424116e+01\n\nPostprocessor Values:\n+----------------+----------------+----------------+\n| time           | creep_strain_yy| strain_yy      |\n+----------------+----------------+----------------+\n|   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |\n|   1.250000e+04 |   1.797493e-04 |   3.797494e-04 |\n|   2.500000e+04 |   3.594985e-04 |   5.594986e-04 |\n|   3.750000e+04 |   5.392477e-04 |   7.392478e-04 |\n+----------------+----------------+----------------+\n\n\nTime Step 4, time = 62500, dt = 25000\n 0 Nonlinear |R| = 2.762035e+07\n      0 Linear |R| = 2.762035e+07\n      1 Linear |R| = 7.140039e+03\n      2 Linear |R| = 7.507184e-05\n 1 Nonlinear |R| = 1.172822e+08\n      0 Linear |R| = 1.172822e+08\n      1 Linear |R| = 1.345618e+06\n      2 Linear |R| = 9.754059e-02\n\nEncountered inf or nan in material return mapping iterations.\nAt element 0 _qp=0 Coordinates (x,y,z)=(0.211325, 0.211325, 0.211325) block=0\nIn 1000 iterations the residual went from -5.4689 to -nan in 'creep'.\n\nTo recover, the solution will fail and then be re-attempted with a reduced time step.\n\n  Nonlinear solve did not converge due to DIVERGED_LINE_SEARCH iterations 1\n Solve Did NOT Converge!\nAborting as solve did not converge\n\nTime Step 4, time = 50000, dt = 12500\n 0 Nonlinear |R| = 2.086721e+07\n      0 Linear |R| = 2.086721e+07\n      1 Linear |R| = 2.702690e+03\n      2 Linear |R| = 6.907979e-05\n 1 Nonlinear |R| = 1.556427e+05\n      0 Linear |R| = 1.556427e+05\n      1 Linear |R| = 5.728751e+04\n      2 Linear |R| = 5.998405e-04\n 2 Nonlinear |R| = 3.029105e+01\n Solve Converged!\n\nOutlier Variable Residual Norms:\n  disp_y: 2.423635e+01\n\nPostprocessor Values:\n+----------------+----------------+----------------+\n| time           | creep_strain_yy| strain_yy      |\n+----------------+----------------+----------------+\n|   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |\n|   1.250000e+04 |   1.797493e-04 |   3.797494e-04 |\n|   2.500000e+04 |   3.594985e-04 |   5.594986e-04 |\n|   3.750000e+04 |   5.392477e-04 |   7.392478e-04 |\n|   5.000000e+04 |   7.189969e-04 |   9.189970e-04 |\n+----------------+----------------+----------------+\n\n\nTime Step 5, time = 75000, dt = 25000\n 0 Nonlinear |R| = 2.761787e+07\n      0 Linear |R| = 2.761787e+07\n      1 Linear |R| = 7.140123e+03\n      2 Linear |R| = 1.735079e-04\n 1 Nonlinear |R| = 1.172717e+08\n      0 Linear |R| = 1.172717e+08\n      1 Linear |R| = 1.345624e+06\n      2 Linear |R| = 1.619276e-01\n\nEncountered inf or nan in material return mapping iterations.\nAt element 0 _qp=0 Coordinates (x,y,z)=(0.211325, 0.211325, 0.211325) block=0\nIn 1000 iterations the residual went from -5.4689 to -nan in 'creep'.\n\nTo recover, the solution will fail and then be re-attempted with a reduced time step.\n\n  Nonlinear solve did not converge due to DIVERGED_LINE_SEARCH iterations 1\n Solve Did NOT Converge!\nAborting as solve did not converge\n\nTime Step 5, time = 62500, dt = 12500\n 0 Nonlinear |R| = 2.086534e+07\n      0 Linear |R| = 2.086534e+07\n      1 Linear |R| = 2.702732e+03\n      2 Linear |R| = 1.555194e-04\n 1 Nonlinear |R| = 1.556318e+05\n      0 Linear |R| = 1.556318e+05\n      1 Linear |R| = 5.728098e+04\n      2 Linear |R| = 1.631024e-03\n 2 Nonlinear |R| = 3.028796e+01\n Solve Converged!\n\nOutlier Variable Residual Norms:\n  disp_y: 2.423142e+01\n\nPostprocessor Values:\n+----------------+----------------+----------------+\n| time           | creep_strain_yy| strain_yy      |\n+----------------+----------------+----------------+\n|   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |\n|   1.250000e+04 |   1.797493e-04 |   3.797494e-04 |\n|   2.500000e+04 |   3.594985e-04 |   5.594986e-04 |\n|   3.750000e+04 |   5.392477e-04 |   7.392478e-04 |\n|   5.000000e+04 |   7.189969e-04 |   9.189970e-04 |\n|   6.250000e+04 |   8.987461e-04 |   1.098746e-03 |\n+----------------+----------------+----------------+\n\n\nTime Step 6, time = 87500, dt = 25000\n 0 Nonlinear |R| = 2.761539e+07\n      0 Linear |R| = 2.761539e+07\n      1 Linear |R| = 7.140077e+03\n      2 Linear |R| = 1.715144e-02\n 1 Nonlinear |R| = 1.172612e+08\n      0 Linear |R| = 1.172612e+08\n      1 Linear |R| = 1.345625e+06\n      2 Linear |R| = 1.265038e-01\n\nEncountered inf or nan in material return mapping iterations.\nAt element 0 _qp=0 Coordinates (x,y,z)=(0.211325, 0.211325, 0.211325) block=0\nIn 1000 iterations the residual went from -5.4689 to -nan in 'creep'.\n\nTo recover, the solution will fail and then be re-attempted with a reduced time step.\n\n  Nonlinear solve did not converge due to DIVERGED_LINE_SEARCH iterations 1\n Solve Did NOT Converge!\nAborting as solve did not converge\n\nTime Step 6, time = 75000, dt = 12500\n 0 Nonlinear |R| = 2.086347e+07\n      0 Linear |R| = 2.086347e+07\n      1 Linear |R| = 2.702736e+03\n      2 Linear |R| = 3.683948e-04\n 1 Nonlinear |R| = 1.556208e+05\n      0 Linear |R| = 1.556208e+05\n      1 Linear |R| = 5.727429e+04\n      2 Linear |R| = 3.772965e-03\n 2 Nonlinear |R| = 3.028476e+01\n Solve Converged!\n\nOutlier Variable Residual Norms:\n  disp_y: 2.422648e+01\n\nPostprocessor Values:\n+----------------+----------------+----------------+\n| time           | creep_strain_yy| strain_yy      |\n+----------------+----------------+----------------+\n|   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |\n|   1.250000e+04 |   1.797493e-04 |   3.797494e-04 |\n|   2.500000e+04 |   3.594985e-04 |   5.594986e-04 |\n|   3.750000e+04 |   5.392477e-04 |   7.392478e-04 |\n|   5.000000e+04 |   7.189969e-04 |   9.189970e-04 |\n|   6.250000e+04 |   8.987461e-04 |   1.098746e-03 |\n|   7.500000e+04 |   1.078495e-03 |   1.278495e-03 |\n+----------------+----------------+----------------+\n\n\nTime Step 7, time = 100000, dt = 25000\n 0 Nonlinear |R| = 2.761292e+07\n      0 Linear |R| = 2.761292e+07\n      1 Linear |R| = 7.140013e+03\n      2 Linear |R| = 8.744307e-03\n 1 Nonlinear |R| = 1.172507e+08\n      0 Linear |R| = 1.172507e+08\n      1 Linear |R| = 1.345627e+06\n      2 Linear |R| = 2.042160e-01\n\nEncountered inf or nan in material return mapping iterations.\nAt element 0 _qp=0 Coordinates (x,y,z)=(0.211325, 0.211325, 0.211325) block=0\nIn 1000 iterations the residual went from -5.4689 to -nan in 'creep'.\n\nTo recover, the solution will fail and then be re-attempted with a reduced time step.\n\n  Nonlinear solve did not converge due to DIVERGED_LINE_SEARCH iterations 1\n Solve Did NOT Converge!\nAborting as solve did not converge\n\nTime Step 7, time = 87500, dt = 12500\n 0 Nonlinear |R| = 2.086160e+07\n      0 Linear |R| = 2.086160e+07\n      1 Linear |R| = 2.702695e+03\n      2 Linear |R| = 4.448420e-03\n 1 Nonlinear |R| = 1.556099e+05\n      0 Linear |R| = 1.556099e+05\n      1 Linear |R| = 5.726742e+04\n      2 Linear |R| = 5.655096e-03\n 2 Nonlinear |R| = 3.028167e+01\n Solve Converged!\n\nOutlier Variable Residual Norms:\n  disp_y: 2.422181e+01\n\nPostprocessor Values:\n+----------------+----------------+----------------+\n| time           | creep_strain_yy| strain_yy      |\n+----------------+----------------+----------------+\n|   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |\n|   1.250000e+04 |   1.797493e-04 |   3.797494e-04 |\n|   2.500000e+04 |   3.594985e-04 |   5.594986e-04 |\n|   3.750000e+04 |   5.392477e-04 |   7.392478e-04 |\n|   5.000000e+04 |   7.189969e-04 |   9.189970e-04 |\n|   6.250000e+04 |   8.987461e-04 |   1.098746e-03 |\n|   7.500000e+04 |   1.078495e-03 |   1.278495e-03 |\n|   8.750000e+04 |   1.258245e-03 |   1.458245e-03 |\n+----------------+----------------+----------------+\n\n\nTime Step 8, time = 112500, dt = 25000\n 0 Nonlinear |R| = 2.761044e+07\n      0 Linear |R| = 2.761044e+07\n      1 Linear |R| = 7.140005e+03\n      2 Linear |R| = 1.648070e-03\n 1 Nonlinear |R| = 1.172402e+08\n      0 Linear |R| = 1.172402e+08\n      1 Linear |R| = 1.345631e+06\n      2 Linear |R| = 1.761336e-01\n\nEncountered inf or nan in material return mapping iterations.\nAt element 0 _qp=0 Coordinates (x,y,z)=(0.211325, 0.211325, 0.211325) block=0\nIn 1000 iterations the residual went from -5.4689 to -nan in 'creep'.\n\nTo recover, the solution will fail and then be re-attempted with a reduced time step.\n\n  Nonlinear solve did not converge due to DIVERGED_LINE_SEARCH iterations 1\n Solve Did NOT Converge!\nAborting as solve did not converge\n\nTime Step 8, time = 100000, dt = 12500\n 0 Nonlinear |R| = 2.085973e+07\n      0 Linear |R| = 2.085973e+07\n      1 Linear |R| = 2.702700e+03\n      2 Linear |R| = 8.285261e-03\n 1 Nonlinear |R| = 1.555989e+05\n      0 Linear |R| = 1.555989e+05\n      1 Linear |R| = 5.726074e+04\n      2 Linear |R| = 4.378199e-03\n 2 Nonlinear |R| = 3.027848e+01\n Solve Converged!\n\nOutlier Variable Residual Norms:\n  disp_y: 2.421676e+01\n\nPostprocessor Values:\n+----------------+----------------+----------------+\n| time           | creep_strain_yy| strain_yy      |\n+----------------+----------------+----------------+\n|   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |\n|   1.250000e+04 |   1.797493e-04 |   3.797494e-04 |\n|   2.500000e+04 |   3.594985e-04 |   5.594986e-04 |\n|   3.750000e+04 |   5.392477e-04 |   7.392478e-04 |\n|   5.000000e+04 |   7.189969e-04 |   9.189970e-04 |\n|   6.250000e+04 |   8.987461e-04 |   1.098746e-03 |\n|   7.500000e+04 |   1.078495e-03 |   1.278495e-03 |\n|   8.750000e+04 |   1.258245e-03 |   1.458245e-03 |\n|   1.000000e+05 |   1.437994e-03 |   1.637994e-03 |\n+----------------+----------------+----------------+\n\n\nTime Step 9, time = 125000, dt = 25000\n 0 Nonlinear |R| = 2.760797e+07\n      0 Linear |R| = 2.760797e+07\n      1 Linear |R| = 7.140087e+03\n      2 Linear |R| = 2.019849e-03\n 1 Nonlinear |R| = 1.172297e+08\n      0 Linear |R| = 1.172297e+08\n      1 Linear |R| = 1.345636e+06\n      2 Linear |R| = 1.212490e-01\n\nEncountered inf or nan in material return mapping iterations.\nAt element 0 _qp=0 Coordinates (x,y,z)=(0.211325, 0.211325, 0.211325) block=0\nIn 1000 iterations the residual went from -5.4689 to -nan in 'creep'.\n\nTo recover, the solution will fail and then be re-attempted with a reduced time step.\n\n  Nonlinear solve did not converge due to DIVERGED_LINE_SEARCH iterations 1\n Solve Did NOT Converge!\nAborting as solve did not converge\n\nTime Step 9, time = 112500, dt = 12500\n 0 Nonlinear |R| = 2.085786e+07\n      0 Linear |R| = 2.085786e+07\n      1 Linear |R| = 2.702714e+03\n      2 Linear |R| = 1.968096e-03\n 1 Nonlinear |R| = 1.555880e+05\n      0 Linear |R| = 1.555880e+05\n      1 Linear |R| = 5.725409e+04\n      2 Linear |R| = 8.983486e-03\n 2 Nonlinear |R| = 3.027538e+01\n Solve Converged!\n\nOutlier Variable Residual Norms:\n  disp_y: 2.421197e+01\n\nPostprocessor Values:\n+----------------+----------------+----------------+\n| time           | creep_strain_yy| strain_yy      |\n+----------------+----------------+----------------+\n|   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |\n|   1.250000e+04 |   1.797493e-04 |   3.797494e-04 |\n|   2.500000e+04 |   3.594985e-04 |   5.594986e-04 |\n|   3.750000e+04 |   5.392477e-04 |   7.392478e-04 |\n|   5.000000e+04 |   7.189969e-04 |   9.189970e-04 |\n|   6.250000e+04 |   8.987461e-04 |   1.098746e-03 |\n|   7.500000e+04 |   1.078495e-03 |   1.278495e-03 |\n|   8.750000e+04 |   1.258245e-03 |   1.458245e-03 |\n|   1.000000e+05 |   1.437994e-03 |   1.637994e-03 |\n|   1.125000e+05 |   1.617743e-03 |   1.817743e-03 |\n+----------------+----------------+----------------+\n\n\nTime Step 10, time = 137500, dt = 25000\n 0 Nonlinear |R| = 2.760550e+07\n      0 Linear |R| = 2.760550e+07\n      1 Linear |R| = 7.140022e+03\n      2 Linear |R| = 3.671282e-03\n 1 Nonlinear |R| = 1.172193e+08\n      0 Linear |R| = 1.172193e+08\n      1 Linear |R| = 1.345639e+06\n      2 Linear |R| = 2.377454e-01\n\nEncountered inf or nan in material return mapping iterations.\nAt element 0 _qp=0 Coordinates (x,y,z)=(0.211325, 0.211325, 0.211325) block=0\nIn 1000 iterations the residual went from -5.4689 to -nan in 'creep'.\n\nTo recover, the solution will fail and then be re-attempted with a reduced time step.\n\n  Nonlinear solve did not converge due to DIVERGED_LINE_SEARCH iterations 1\n Solve Did NOT Converge!\nAborting as solve did not converge\n\nTime Step 10, time = 125000, dt = 12500\n 0 Nonlinear |R| = 2.085599e+07\n      0 Linear |R| = 2.085599e+07\n      1 Linear |R| = 2.702691e+03\n      2 Linear |R| = 4.810857e-03\n 1 Nonlinear |R| = 1.555771e+05\n      0 Linear |R| = 1.555771e+05\n      1 Linear |R| = 5.724729e+04\n      2 Linear |R| = 1.579306e-02\n 2 Nonlinear |R| = 3.027224e+01\n Solve Converged!\n\nOutlier Variable Residual Norms:\n  disp_y: 2.420726e+01\n\nPostprocessor Values:\n+----------------+----------------+----------------+\n| time           | creep_strain_yy| strain_yy      |\n+----------------+----------------+----------------+\n|   0.000000e+00 |   0.000000e+00 |   0.000000e+00 |\n|   1.250000e+04 |   1.797493e-04 |   3.797494e-04 |\n|   2.500000e+04 |   3.594985e-04 |   5.594986e-04 |\n|   3.750000e+04 |   5.392477e-04 |   7.392478e-04 |\n|   5.000000e+04 |   7.189969e-04 |   9.189970e-04 |\n|   6.250000e+04 |   8.987461e-04 |   1.098746e-03 |\n|   7.500000e+04 |   1.078495e-03 |   1.278495e-03 |\n|   8.750000e+04 |   1.258245e-03 |   1.458245e-03 |\n|   1.000000e+05 |   1.437994e-03 |   1.637994e-03 |\n|   1.125000e+05 |   1.617743e-03 |   1.817743e-03 |\n|   1.250000e+05 |   1.797492e-03 |   1.997492e-03 |\n+----------------+----------------+----------------+\n\n\nTime Step 11, time = 150000, dt = 25000\n 0 Nonlinear |R| = 2.760303e+07\n      0 Linear |R| = 2.760303e+07\n      1 Linear |R| = 7.139995e+03\n      2 Linear |R| = 2.400820e-02\n 1 Nonlinear |R| = 1.172088e+08\n      0 Linear |R| = 1.172088e+08\n      1 Linear |R| = 1.345641e+06\n      2 Linear |R| = 2.017448e-01\n\nEncountered inf or nan in material return mapping iterations.\nAt element 0 _qp=0 Coordinates (x,y,z)=(0.211325, 0.211325, 0.211325) block=0\nIn 1000 iterations the residual went from -5.4689 to -nan in 'creep'.\n\nTo recover, the solution will fail and then be re-attempted with a reduced time step.\n\n  Nonlinear solve did not converge due to DIVERGED_LINE_SEARCH iterations 1\n Solve Did NOT Converge!\nAborting as solve did not converge\n\nTime Step 11, time = 137500, dt = 12500\n 0 Nonlinear |R| = 2.085412e+07\n      0 Linear |R| = 2.085412e+07\n      1 Linear |R| = 2.702677e+03\n      2 Linear |R| = 1.138983e-02\n 1 Nonlinear |R| = 1.555662e+05\n      0 Linear |R| = 1.555662e+05\n      1 Linear |R| = 5.724054e+04\n      2 Linear |R| = 2.217140e-02\n 2 Nonlinear |R| = 3.026916e+01\n Solve Converged!",
+          "url": "https://github.com/idaholab/moose/discussions/29660",
+          "updatedAt": "2025-01-09T02:44:14Z",
+          "publishedAt": "2025-01-08T14:51:50Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nWe cannot take huge time steps sometimes. Simply because the element would be so deformed after such a step that it no longer makes geometrical sense.\nSo my recommendation is to maintain reasonable time steps through the simulation.\nSetting preset=false on displacements BCs can help if the deformed elements are near the boundary conditions",
+                  "url": "https://github.com/idaholab/moose/discussions/29660#discussioncomment-11775824",
+                  "updatedAt": "2025-01-08T16:34:01Z",
+                  "publishedAt": "2025-01-08T16:34:00Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Computing gradient on both the reference and deformed configuration in the same kernel",
+          "author": {
+            "login": "TheGreatCid"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nHi all,\nIs it possible to a compute a gradient on the reference and on the deformed configuration in the same kernel?\nFor example, if I set use_displaced_mesh=false I want to compute a gradient on the reference configuration, and then I want to switch to computing a separate gradient on the displaced configuration.\nI normally compute gradients by just declaring a adcoupledgradient type, however I don't believe there is a way to specify the configuration in the declaration.\nAny insight is appreciated, thank you.",
+          "url": "https://github.com/idaholab/moose/discussions/29655",
+          "updatedAt": "2025-01-08T14:35:17Z",
+          "publishedAt": "2025-01-07T18:44:26Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "maxnezdyur"
+                  },
+                  "bodyText": "Let's say you create a material class that computes the gradient. If in your input file you have two of these objects: one that has the use_displaced_mesh=false and the other true. Then you would have two materials that store the gradient information one for deformed and another for undeformed. From there you should be able to couple them into a kernel and perform any actions needed.",
+                  "url": "https://github.com/idaholab/moose/discussions/29655#discussioncomment-11773849",
+                  "updatedAt": "2025-01-08T13:55:23Z",
+                  "publishedAt": "2025-01-08T13:55:22Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "TheGreatCid"
+                          },
+                          "bodyText": "Yea that's what I settled on. I just wanted to avoid having to do that because I am lazy.\nThanks!",
+                          "url": "https://github.com/idaholab/moose/discussions/29655#discussioncomment-11774347",
+                          "updatedAt": "2025-01-08T14:35:18Z",
+                          "publishedAt": "2025-01-08T14:35:17Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "capillary pressure -another try",
+          "author": {
+            "login": "marinsiebert"
+          },
+          "bodyText": "Hello everyone,\nthis is a continuation of discussion #26790, so I guess one you guys @GiudGiud @cpgr @WilkAndy would be the ones to adress. So far I've been through the user manual and the available objects multiple times, however with no success. Maybe you can clarify this:\nThe sensitivity I am talking about in the discussion above does not seem to be related to wrong calculations in the capillary pressure as the approximation by van genuchten was chosen to fit available WRC-data.\nSince the capillary pressures are fine this must be related to either\na) insufficiently reproduced mass transport:\nin unsaturated porous media mass transport is often related to isothermal and thermal vapor  and liquid transport, such as described here in section 2.3.: https://acsess.onlinelibrary.wiley.com/doi/full/10.1002/vzj2.20173\nThis results in a equilibrium where water flows towards an area of increased temperature and vapor is transported away, up to a point where this equilibrium holds no longer such that no liquid flow occurs, leading to a dry area.\nI tried going a little bit in that direction using the ThermoDiffusion Kernel, which actually improved the results a little bit, however still not really satisfying:\n showing a lack of sensitivity but nicely repocing the shape\n showing kind of an inversed behaviour compared to the measured data (most likely due to drying front now progressing as fast) and also lack of sensitivity\nb) insufficiently reproduced phase change (evaporation):\nassuming that the capillary pressures are calculated correctly and mass transport is fine (more or less? see a)), maybe the amount of water evaporation due to increased temperature as calculated by IAWPS97 does not work properly (doubt that) or is simply not entirely applicable to unsaturated porous media?\nRight now I tend to think, that option a) is the likely candidate and that the mass transport equations are simply not appropiate for this type of problem.\nI would be very happy to hear your opinions on this.\nmarin",
+          "url": "https://github.com/idaholab/moose/discussions/29379",
+          "updatedAt": "2025-01-07T10:20:51Z",
+          "publishedAt": "2024-12-08T16:35:12Z",
+          "category": {
+            "name": "Q&A Modules: Porous Flow"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "marinsiebert"
+                  },
+                  "bodyText": "It has been real quiet on this end and unfortunately I have no spare time left, so I will close the discussion as outdated.\nSome closing remarks on this if someone else tries to do something simila in the future:\nThe problem most likely lies in the fact, that thermodiffusion is not incorporated in the standard tool-box of porous flow. This can be done either by using a ThermoDiffusion or SoretDiffusion Kernel.\nAlternatively you can also populate a GenericMaterial with your own description of the thermal diffusion coefficients of your phases and then pass that to MatDiffusion, acting on your pressure, saturation or mass fraction (depending on the model you are using) and specifying you temperature variable as gradient.",
+                  "url": "https://github.com/idaholab/moose/discussions/29379#discussioncomment-11595367",
+                  "updatedAt": "2024-12-17T16:06:40Z",
+                  "publishedAt": "2024-12-17T16:06:04Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Sorry I'm not actually a porous flow person so I could not help. You have the right experts tagged, they are likely just busy",
+                          "url": "https://github.com/idaholab/moose/discussions/29379#discussioncomment-11595411",
+                          "updatedAt": "2024-12-17T16:10:55Z",
+                          "publishedAt": "2024-12-17T16:10:54Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cpgr"
+                          },
+                          "bodyText": "Did you manage to get this working properly @marinsiebert?\nSorry I missed it last year but my end of year was hectic!",
+                          "url": "https://github.com/idaholab/moose/discussions/29379#discussioncomment-11757197",
+                          "updatedAt": "2025-01-07T05:13:54Z",
+                          "publishedAt": "2025-01-07T05:13:54Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "marinsiebert"
+                          },
+                          "bodyText": "Unfortunately my contract ended and so has my time in research, so I was did not have the opportunity to delve in deeper, however, I am confident that the approach described above could work. I did a short simulation with the MatDiffusion Kernel together with the GenericMaterial, where the results were very good for the first heating, however, for subsequent heating phases the pressures show progressively increasing overshoot.\nThe diffusion coefficient in this case were based on De Vries (1958), so I guess they no not go well with the mass diffusion coefficients in my model. They may also not be applicable to this case with the generalised Darcy's law (As in the one PorousFlow uses if I am not mistaken), since De Vries does not explicitly describe the flow of the gaseous phase and uses Richards equation. .\nThis (MOYNE, C.; PERRE, P.. (1991). PROCESSES RELATED TO DRYING: PART I, THEORETICAL MODEL. , 9(5), 1135\u20131152. doi:10.1080/07373939108916746 ) might work, though.\nAnyhow, I think the module in the current state needs some tweaking to be applicable for the vadose zone (which makes sense, because I think it was initially developed for rock?)",
+                          "url": "https://github.com/idaholab/moose/discussions/29379#discussioncomment-11759634",
+                          "updatedAt": "2025-01-07T10:21:15Z",
+                          "publishedAt": "2025-01-07T10:20:51Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Accessing _qp of a particular element",
+          "author": {
+            "login": "M16R24"
+          },
+          "bodyText": "How can the Gauss points associated with an element be accessed? How to get the elements that belong to a particular grain? Any source or documentation to understand the further mesh related functions can be highly useful.",
+          "url": "https://github.com/idaholab/moose/discussions/29649",
+          "updatedAt": "2025-01-07T00:43:51Z",
+          "publishedAt": "2025-01-06T12:11:47Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "ngrilli"
+                  },
+                  "bodyText": "@M16R24 if by \"grain\" you mean a region related to a single crystal in a polycrystal, then you can use neper to generate a mesh and MOOSE will be able to see each grain as a block. There is a related video here:\nhttps://www.youtube.com/watch?v=qG7EoX34hZ8&t=1123s\nOnce you have a grain as a block, there are plenty of things you can do, for instance postprocessors\nto process data on a single grain or assign a specific material to that grain.",
+                  "url": "https://github.com/idaholab/moose/discussions/29649#discussioncomment-11748470",
+                  "updatedAt": "2025-01-06T12:53:15Z",
+                  "publishedAt": "2025-01-06T12:53:15Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "How can the Gauss points associated with an element be accessed?\n\nmost objects in moose (kernels, auxkernels) loop over element quadrature points, or are called during those loops (materials)\nThe inner routines of these objects, the ones that MOOSE users write (for example computeQpResidual for a kernel, computeQpProperties for a material), are called on every quadrature points. _current_elem is usually the name of the attribute for the element and _qp is the index of the current quadrature point. Then there are numerous class attributes (variables values, material properties, quadrature point locations as _q_point) that are indexed by quadrature points, and can be accessed with the index _qp within those inner routines",
+                          "url": "https://github.com/idaholab/moose/discussions/29649#discussioncomment-11755823",
+                          "updatedAt": "2025-01-07T00:43:52Z",
+                          "publishedAt": "2025-01-07T00:43:51Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Modal Analysis and Component Mode Synthesis?",
+          "author": {
+            "login": "oldninja"
+          },
+          "bodyText": "Dear MOOSE Team,\nI am interested in performing modal analysis and component mode synthesis (CMS) using the moose framework. However, I looked for these terms in the documentation, and I could not find any information about them. That's why I opened this discussion to see if anyone could point me in the right direction. I'm more interested in performing the CMS part, sometimes referred as \"superelement\" in NASTRAN or \"substructure\" in Abaqus/CalculiX (more info here, here, or here). Any help would be greatly appreciated!\nThanks,",
+          "url": "https://github.com/idaholab/moose/discussions/20174",
+          "updatedAt": "2025-01-06T20:49:23Z",
+          "publishedAt": "2022-01-29T17:54:34Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@dschwen @somu15 do you know who might know about this?",
+                  "url": "https://github.com/idaholab/moose/discussions/20174#discussioncomment-2093452",
+                  "updatedAt": "2022-08-10T19:36:43Z",
+                  "publishedAt": "2022-02-02T05:04:41Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "somu15"
+                          },
+                          "bodyText": "Tagging @cbolisetti and @lynnmunday. This may have something to do with Craig Bampton as per one of the shared documents.",
+                          "url": "https://github.com/idaholab/moose/discussions/20174#discussioncomment-2093463",
+                          "updatedAt": "2022-08-10T19:36:43Z",
+                          "publishedAt": "2022-02-02T05:07:34Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "oldninja"
+                          },
+                          "bodyText": "Craig Bampton\n\nYes, that is usually the underlying method either in Abaqus or Nastran.",
+                          "url": "https://github.com/idaholab/moose/discussions/20174#discussioncomment-2093478",
+                          "updatedAt": "2022-08-10T19:36:43Z",
+                          "publishedAt": "2022-02-02T05:11:31Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cbolisetti"
+                          },
+                          "bodyText": "Yes, we have looked into implementing this in moose but never got funded. We don't have CMS/Craig Brampton right now, unfortunately.",
+                          "url": "https://github.com/idaholab/moose/discussions/20174#discussioncomment-2093519",
+                          "updatedAt": "2022-08-10T19:36:43Z",
+                          "publishedAt": "2022-02-02T05:21:28Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "oldninja"
+                          },
+                          "bodyText": "I see, thank you for letting me know.",
+                          "url": "https://github.com/idaholab/moose/discussions/20174#discussioncomment-2093598",
+                          "updatedAt": "2022-08-10T19:44:08Z",
+                          "publishedAt": "2022-02-02T05:56:54Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "lynnmunday"
+                  },
+                  "bodyText": "Here are some examples for modal anaylysis including eign analysis:\nhttps://mooseframework.inl.gov/modules/solid_mechanics/1d_elastic_waves.html\nIf you're still interested in this, we have added some capabilities to do reduced order models that could probably be used to for super elements.",
+                  "url": "https://github.com/idaholab/moose/discussions/20174#discussioncomment-11753725",
+                  "updatedAt": "2025-01-06T20:49:24Z",
+                  "publishedAt": "2025-01-06T20:49:23Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Benchmarks for GPU speedup?",
+          "author": {
+            "login": "raguiar2"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nIs there a benchmark on how much faster GPU-based simulation is for different solvers? all I see in the official thread is that it will 'significantly speed up the simulation'.",
+          "url": "https://github.com/idaholab/moose/discussions/29030",
+          "updatedAt": "2025-01-04T09:52:09Z",
+          "publishedAt": "2024-11-08T06:59:19Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThis is work in progress. We are currently able to assemble the system on the CPU and solve it on the GPU. Our next step is integrating both on the GPU.\nWhat do you need the benchmark for?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/29030#discussioncomment-11189467",
+                  "updatedAt": "2024-11-08T13:57:18Z",
+                  "publishedAt": "2024-11-08T13:57:17Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "raguiar2"
+                          },
+                          "bodyText": "I am choosing a tool for a set of Thermo-Mechanical Solves, and I wanted to test both MOOSE and MFEM on GPU. Just wanted to know if there was a baseline performance profile I could work off of.\nAlso happy to get involved in the discussion of integrating both on the GPU, if there's a thread you can point me to.",
+                          "url": "https://github.com/idaholab/moose/discussions/29030#discussioncomment-11191465",
+                          "updatedAt": "2024-11-08T17:05:18Z",
+                          "publishedAt": "2024-11-08T17:05:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I think you'll find a lot more implemented CPU capability here than you will find with MFEM on the GPU. It depends of what you need in terms of physics & models.\nThere is no public project afaik, GPU support is being developed internally.",
+                          "url": "https://github.com/idaholab/moose/discussions/29030#discussioncomment-11191493",
+                          "updatedAt": "2024-11-08T17:09:06Z",
+                          "publishedAt": "2024-11-08T17:09:05Z",
+                          "isAnswer": true
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "PengWei97"
+                          },
+                          "bodyText": "So I would like to ask, will the GPU computing version based on MOOSE be made public? If yes, when will it be made public?\nBecause when I used phase field module, I found that the computing efficiency of GPU can reach 100~1000 times that of GPU.\nwei",
+                          "url": "https://github.com/idaholab/moose/discussions/29030#discussioncomment-11731859",
+                          "updatedAt": "2025-01-04T08:11:10Z",
+                          "publishedAt": "2025-01-04T08:09:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "There is a pull request open now for integrating MFEM into moose. This will be our GPU capability",
+                          "url": "https://github.com/idaholab/moose/discussions/29030#discussioncomment-11732203",
+                          "updatedAt": "2025-01-04T09:10:40Z",
+                          "publishedAt": "2025-01-04T09:10:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "PengWei97"
+                          },
+                          "bodyText": "Oh, that's great. Looking forward to having GPU acceleration in MOOSE. Could you provide the link of this pull request, so I can follow the development progress?",
+                          "url": "https://github.com/idaholab/moose/discussions/29030#discussioncomment-11732350",
+                          "updatedAt": "2025-01-04T09:46:08Z",
+                          "publishedAt": "2025-01-04T09:46:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "#29633",
+                          "url": "https://github.com/idaholab/moose/discussions/29030#discussioncomment-11732382",
+                          "updatedAt": "2025-01-04T09:52:09Z",
+                          "publishedAt": "2025-01-04T09:52:09Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

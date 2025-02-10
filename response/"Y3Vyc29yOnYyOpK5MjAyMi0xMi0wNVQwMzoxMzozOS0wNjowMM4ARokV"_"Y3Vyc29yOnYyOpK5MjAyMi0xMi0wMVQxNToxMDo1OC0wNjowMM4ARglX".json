@@ -1,0 +1,1086 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMi0xMi0wMVQxNToxMDo1OC0wNjowMM4ARglX"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Using VectorPostprocessor values as boundary conditions",
+          "author": {
+            "login": "salaudeen-ya"
+          },
+          "bodyText": "Hello,\nI want to use the values on a boundary on one 2D subdomain as the boundary condition of another 2D subdomain.\nI am trying to use the values from a vector postprocessor (SideValueSampler) as the boundary condition for the other domain.\nMy field variable is not a vector.\nHow do I go about this?\nThank you.",
+          "url": "https://github.com/idaholab/moose/discussions/22845",
+          "updatedAt": "2022-12-06T15:31:24Z",
+          "publishedAt": "2022-12-01T15:48:56Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nAre the 2D subdomain physically connected in the mesh?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22845#discussioncomment-4285121",
+                  "updatedAt": "2022-12-01T16:38:54Z",
+                  "publishedAt": "2022-12-01T16:38:53Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "salaudeen-ya"
+                  },
+                  "bodyText": "I am assuming they are not physically connected but they have the same mesh\nsizes and dimension.\n\nMy main aim is to decompose a 2D domain into subdomains and still obtain\nthe same result as if they are a single domain.\n\u2026\nOn Thu, Dec 1, 2022, 11:39 AM Guillaume Giudicelli ***@***.***> wrote:\n Hello\n\n Are the 2D subdomain physically connected in the mesh?\n\n Guillaume\n\n \u2014\n Reply to this email directly, view it on GitHub\n <#22845 (comment)>,\n or unsubscribe\n <https://github.com/notifications/unsubscribe-auth/AJCC7Q6ISRWGSQMG43B3LRTWLDICTANCNFSM6AAAAAASQ545LY>\n .\n You are receiving this because you authored the thread.Message ID:\n ***@***.***>",
+                  "url": "https://github.com/idaholab/moose/discussions/22845#discussioncomment-4285475",
+                  "updatedAt": "2022-12-01T17:24:30Z",
+                  "publishedAt": "2022-12-01T17:24:29Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "so we do not have a VPPDirichletBC you could use.\nAnd if you went through CSV output you would necessarily lag a bit. The minimum lag would be 1 linear iteration, if you run the CSV output on linear (expensive to write all the time). It's doable though if you want to try:\n\noutput using a SideValueSampler\nread using a PropertyReadFile\nsample using a PiecewiseConstantFromCSV on a nearest-node basis OR if the ids match nice on a per-element basis\nuse a function dirichlet BC\n\nWhat I would advocate instead is a multiapp approach. Then you can use a nearest node transfer to match two boundaries that are close but disjoint. This will let you synchornize those values every time step using fixed point iterations.",
+                          "url": "https://github.com/idaholab/moose/discussions/22845#discussioncomment-4287810",
+                          "updatedAt": "2022-12-01T23:29:22Z",
+                          "publishedAt": "2022-12-01T23:29:21Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "salaudeen-ya"
+                  },
+                  "bodyText": "Awesome. Thanks for the tip!\n\nSo, I was actually using Multi-App. Currently I need to use the values\ntransferred using nearest node from the other subdomain as the BC for the\nsecond domain.\n\nI can see the transfer. But since the values from the nearest node is saved\nin an aux variable, it's proving difficult to use this aux value as BC. Any\nidea on how to do that?\n\nThanks.\n\u2026\nOn Thu, Dec 1, 2022, 6:29 PM Guillaume Giudicelli ***@***.***> wrote:\n so we do not have a VPPDirichletBC you could use.\n And if you went through CSV output you would necessarily lag a bit. The\n minimum lag would be 1 linear iteration, if you run the CSV output on\n linear (expensive to write all the time). It's doable though if you want to\n try:\n\n    - output using a SideValueSampler\n    - read using a PropertyReadFile\n    - sample using a PiecewiseConstantFromCSV on a nearest-node basis OR\n    if the ids match nice on a per-element basis\n    - use a function dirichlet BC\n\n What I would advocate instead is a multiapp approach. Then you can use a\n nearest node transfer to match two boundaries that are close but disjoint.\n This will let you synchornize those values every time step using fixed\n point iterations.\n\n \u2014\n Reply to this email directly, view it on GitHub\n <#22845 (reply in thread)>,\n or unsubscribe\n <https://github.com/notifications/unsubscribe-auth/AJCC7QYOOW2QQFTSMFYXKL3WLEYFZANCNFSM6AAAAAASQ545LY>\n .\n You are receiving this because you authored the thread.Message ID:\n ***@***.***>",
+                  "url": "https://github.com/idaholab/moose/discussions/22845#discussioncomment-4306432",
+                  "updatedAt": "2022-12-04T15:35:00Z",
+                  "publishedAt": "2022-12-04T15:34:59Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "To use the dirichlet BC from a variable I think you want to look at the matchedValueBC\n\u2026\n Le 4 d\u00e9c. 2022 \u00e0 10:35, Yusuf A. Salaudeen ***@***.***> a \u00e9crit :\n\n \ufeff\n Awesome. Thanks for the tip!\n\n So, I was actually using Multi-App. Currently I need to use the values\n transferred using nearest node from the other subdomain as the BC for the\n second domain.\n\n I can see the transfer. But since the values from the nearest node is saved\n in an aux variable, it's proving difficult to use this aux value as BC. Any\n idea on how to do that?\n\n Thanks.\n\n On Thu, Dec 1, 2022, 6:29 PM Guillaume Giudicelli ***@***.***>\n wrote:\n\n > so we do not have a VPPDirichletBC you could use.\n > And if you went through CSV output you would necessarily lag a bit. The\n > minimum lag would be 1 linear iteration, if you run the CSV output on\n > linear (expensive to write all the time). It's doable though if you want to\n > try:\n >\n > - output using a SideValueSampler\n > - read using a PropertyReadFile\n > - sample using a PiecewiseConstantFromCSV on a nearest-node basis OR\n > if the ids match nice on a per-element basis\n > - use a function dirichlet BC\n >\n > What I would advocate instead is a multiapp approach. Then you can use a\n > nearest node transfer to match two boundaries that are close but disjoint.\n > This will let you synchornize those values every time step using fixed\n > point iterations.\n >\n > \u2014\n > Reply to this email directly, view it on GitHub\n > <#22845 (reply in thread)>,\n > or unsubscribe\n > <https://github.com/notifications/unsubscribe-auth/AJCC7QYOOW2QQFTSMFYXKL3WLEYFZANCNFSM6AAAAAASQ545LY>\n > .\n > You are receiving this because you authored the thread.Message ID:\n > ***@***.***>\n >\n \u2014\n Reply to this email directly, view it on GitHub, or unsubscribe.\n You are receiving this because you commented.",
+                  "url": "https://github.com/idaholab/moose/discussions/22845#discussioncomment-4306845",
+                  "updatedAt": "2022-12-04T17:12:36Z",
+                  "publishedAt": "2022-12-04T17:12:35Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Question about a syntax in THM",
+          "author": {
+            "login": "Ethan-xj"
+          },
+          "bodyText": "I'm learning the HeatTransferFromHeatStructure1Phase.C and there's a syntax I don't know the meaning:\nparams.set<BoundaryName>(\"secondary_boundary\") = {getSlaveSideName()};\nWhy there is a {}?\nThere are some codes like:\nparams.set<std::vector<BoundaryName>>(\"boundary\") = {getSlaveSideName()};\nparams.set<std::vector<BoundaryName>>(\"boundary\") = {getMasterSideName()};\nCan anybody tell me the effect of the {}?",
+          "url": "https://github.com/idaholab/moose/discussions/22865",
+          "updatedAt": "2022-12-04T14:58:15Z",
+          "publishedAt": "2022-12-04T09:36:03Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\n{} creates a C++ standard vector with the items inside the bracket contained in the vector. The parameter has not been added as a single instance, it needs to be a vector\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22865#discussioncomment-4303353",
+                  "updatedAt": "2022-12-04T13:47:02Z",
+                  "publishedAt": "2022-12-04T13:47:01Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Ethan-xj"
+                          },
+                          "bodyText": "Oh I got it. Thanks.\nI actually noticed that the parameter type before every {xxx} is vector. And there is another point that confused me:\nWhat is the type BoundaryName? Can a vector be BoundaryName?\nThe 185 line shows:\nparams.set<BoundaryName>(\"secondary_boundary\") = {getSlaveSideName()};",
+                          "url": "https://github.com/idaholab/moose/discussions/22865#discussioncomment-4303555",
+                          "updatedAt": "2022-12-04T14:20:01Z",
+                          "publishedAt": "2022-12-04T14:20:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "BoundaryName is an alias for a string\nYou can have a vector of boundary names\n{\"boundary_1\", \"boundary_2\"} for example",
+                          "url": "https://github.com/idaholab/moose/discussions/22865#discussioncomment-4303564",
+                          "updatedAt": "2022-12-04T14:22:28Z",
+                          "publishedAt": "2022-12-04T14:22:27Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Ethan-xj"
+                          },
+                          "bodyText": "I understand. Thank you :D",
+                          "url": "https://github.com/idaholab/moose/discussions/22865#discussioncomment-4303786",
+                          "updatedAt": "2022-12-04T14:58:15Z",
+                          "publishedAt": "2022-12-04T14:58:15Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "why is my derived/child material class requesting parameters from the parent class?",
+          "author": {
+            "login": "batodon"
+          },
+          "bodyText": "Hello,\nI made two material classes; one is derived from the other (base class). I override the methods from the base class and I used different parameters in the derived class. However, when I ran an input file using the derived material class as an object in the input file, I received an error asking me to set a parameter from the parent class. The error is shown below. Could you help, pls? Thanks.\n*** ERROR ***\nThe parameter \"a\" is being retrieved before being set.",
+          "url": "https://github.com/idaholab/moose/discussions/22864",
+          "updatedAt": "2022-12-04T02:13:39Z",
+          "publishedAt": "2022-12-04T00:42:58Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "dschwen"
+                  },
+                  "bodyText": "Your derived class must call the constructor of the parent class, which will likely access parent class input parameters. Look again at the example we have for derived classes (pretty much all of the classes in framework and modules), and not how the validParams of the parent class are always added to the validParams of the child class.",
+                  "url": "https://github.com/idaholab/moose/discussions/22864#discussioncomment-4301583",
+                  "updatedAt": "2022-12-04T00:48:38Z",
+                  "publishedAt": "2022-12-04T00:48:38Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "batodon"
+                          },
+                          "bodyText": "Hello @dschwen ,\nI looked through some examples of the derived classes, and I believe my derived class calls the parent constructor. I\u2019m still getting that error. Here is a snippet example of my derived class. PEMF is the derived, and EMFBase is the base. Thanks.\nInputParameters\nPEMF::validParams()\n{\n  InputParameters params = EMFBase::validParams();\n  params.addClassDescription(\n    \" This is the derived class \");    \n    params.addRequiredParam<std::vector<double>>(\"alpha\", \"distance value in all 3 directions\");\n    params.addRequiredParam<std::vector<double>>(\"eps0\", \"threshold values\");\n  return params;\n}\n\nPEMF::PEMF(\n    const InputParameters & parameters)\n  : EMFBase(parameters),\n    _alpha(getParam<std::vector<double>>(\"alpha\")),\n    _eps(getParam<std::vector<double>>(\"eps0\"))\n{}",
+                          "url": "https://github.com/idaholab/moose/discussions/22864#discussioncomment-4301657",
+                          "updatedAt": "2022-12-04T01:39:47Z",
+                          "publishedAt": "2022-12-04T01:14:31Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "what does EMFBase look like?\nthis looks fine so far",
+                          "url": "https://github.com/idaholab/moose/discussions/22864#discussioncomment-4301680",
+                          "updatedAt": "2022-12-04T01:26:48Z",
+                          "publishedAt": "2022-12-04T01:26:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "batodon"
+                          },
+                          "bodyText": "Hi @GiudGiud,\nHere is EMFBase:\nInputParameters\nEMFBase::validParams()\n{\n  InputParameters params = PermBase::validParams();\n  params.addClassDescription(\n    \" This is the base\");\n    params.addRangeCheckedParam<Real>(\"a\",\n                                      \"a > 0\",\n                                      \" distance value\");\n    params.addParam<Real>(\"e0\", \"threshold value\");\n  return params;\n}\n\nEMFBase::EMFBase(\n    const InputParameters & parameters)\n  : PermBase(parameters),\n    _a(getParam<Real>(\"a\")),\n    _e0(getParam<Real>(\"e0\"))\n{}",
+                          "url": "https://github.com/idaholab/moose/discussions/22864#discussioncomment-4301704",
+                          "updatedAt": "2022-12-04T01:39:54Z",
+                          "publishedAt": "2022-12-04T01:34:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "and did you pass a in the input file?\na does not have a default here",
+                          "url": "https://github.com/idaholab/moose/discussions/22864#discussioncomment-4301719",
+                          "updatedAt": "2022-12-04T01:40:48Z",
+                          "publishedAt": "2022-12-04T01:40:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "batodon"
+                          },
+                          "bodyText": "Nope, I did not pass a in the input file because I\u2019m using new parameters and methods attributed to the derived class (PEMF). I\u2019m not sure if I have to. Do i?",
+                          "url": "https://github.com/idaholab/moose/discussions/22864#discussioncomment-4301727",
+                          "updatedAt": "2022-12-04T01:43:44Z",
+                          "publishedAt": "2022-12-04T01:43:43Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "yes you have to.\nThe a parameter is being retrieved in the constructor for the EMFBase. The constructor for the EMFBase is called by the constructor for the derived class. The EMFBase is not written the way we intended, with this getParam that is unavoidable, the a parameter should have been required. Same for e0",
+                          "url": "https://github.com/idaholab/moose/discussions/22864#discussioncomment-4301746",
+                          "updatedAt": "2022-12-04T01:53:49Z",
+                          "publishedAt": "2022-12-04T01:50:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "batodon"
+                          },
+                          "bodyText": "Great! it worked after setting a default for a and e0. Thanks @GiudGiud @dschwen",
+                          "url": "https://github.com/idaholab/moose/discussions/22864#discussioncomment-4301755",
+                          "updatedAt": "2022-12-04T01:54:34Z",
+                          "publishedAt": "2022-12-04T01:54:33Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Serial run working but mpirun not working",
+          "author": {
+            "login": "MusannaGalib"
+          },
+          "bodyText": "Hello,\nI submitted the same job as mpirun (which is working fine in serial) but aborting due to a convergence issue.  I attached the log files here.\nlog_parallel_run.txt\nlog_serial_run.txt\nThe preconditioning and executioner block for the run is as below-\n[Preconditioning]\n  [./SMP]\n    type = SMP\n    full = true\n      petsc_options_iname = '-pc_type -ksp_grmres_restart -sub_ksp_type -sub_pc_type -pc_asm_overlap'\n  petsc_options_value = 'asm      121                  preonly       lu           4'\n  [../]\n[]\n\n\n\n[Executioner]\n  type = Transient\n  scheme = bdf2\n  verbose = True\n  solve_type ='Newton'\n  l_max_its = 50\n  l_tol = 1e-5\n  nl_max_its = 50\n  nl_rel_tol = 1e-6\n  nl_abs_tol = 1e-10\n    petsc_options_iname = '-pc_type -ksp_gmres_restart -sub_ksp_type -sub_pc_type -pc_asm_overlap'\n  petsc_options_value = 'asm      31                  preonly      lu          4'\n  dt=0.04\n  end_time = 800\n[]\n\n[Outputs]\n  exodus = true\n  csv = true\n  execute_on = 'TIMESTEP_END'\n  [./other]        # creates input_other.e\n     type = Exodus\n     interval = 60\n  [../]\n  [./checkpt]\n  type = Checkpoint\n  num_files = 2\n  interval = 500\n  [../]\n[]\n\n\n[Debug]\n  show_var_residual_norms = true\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/22669",
+          "updatedAt": "2022-12-13T00:13:51Z",
+          "publishedAt": "2022-11-11T17:02:39Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nyou typically will want to work on the preconditioning on this kind of discrepancy between serial and parallel.\nCan you please try to increase the asm overlap?\ni think the problem is likely the convergence criteria. I would add automatic_scaling = true  and tighten linear and non linear convergence criteria\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22669#discussioncomment-4150120",
+                  "updatedAt": "2022-11-15T19:57:18Z",
+                  "publishedAt": "2022-11-15T19:57:18Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "MusannaGalib"
+                          },
+                          "bodyText": "Hello Guillaume,\nThanks for your reply. parallel runs are working after adding  line_search = 'none' and adding scaling to variables. However, parallel runs with 4 processors are shower than serial runs with 1 processor in my case! I added automatic_scaling = true in a new run but it seems like it is also slower than the serial one! Can you please guide me in this case? @GiudGiud\nI am adding the log files here-\nlog_parallel.txt\nlog_serial.txt\nThe preconditioning and executioner block for the run is as below-\n[Preconditioning]\n  [./SMP]\n    type = SMP\n    full = true\n      petsc_options_iname = '-pc_type -ksp_grmres_restart -sub_ksp_type -sub_pc_type -pc_asm_overlap'\n  petsc_options_value = 'asm      121                  preonly       lu           4'\n  [../]\n[]\n\n[Executioner]\n  type = Transient\n  scheme = bdf2\n  verbose = True\n  solve_type ='Newton'\n  l_max_its = 50\n  l_tol = 1e-5\n  nl_max_its = 50\n  nl_rel_tol = 1e-5\n  nl_abs_tol = 1e-6\n    petsc_options_iname = '-pc_type -ksp_gmres_restart -sub_ksp_type -sub_pc_type -pc_asm_overlap'\n  petsc_options_value = 'asm      31                  preonly      lu          4'\n  dt=0.02\n  end_time = 400\n  line_search = 'none'\n[]\n\n[Outputs]\n  exodus = true\n  csv = true\n  execute_on = 'TIMESTEP_END'\n  [./other]        # creates input_other.e\n     type = Exodus\n     interval = 60\n  [../]\n  [./checkpt]\n  type = Checkpoint\n  num_files = 2\n  interval = 100\n  [../]\n[]\n\n\n[Debug]\n  show_var_residual_norms = true\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/22669#discussioncomment-4180272",
+                          "updatedAt": "2022-11-19T19:42:15Z",
+                          "publishedAt": "2022-11-18T20:04:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nCan you keep track of the number of linear iterations in the serial and parallel cases? with this postprocessor\nhttps://mooseframework.inl.gov/moose/source/postprocessors/NumLinearIterations.html\nI'm thinking the preconditioning is still the issue here.\nGiven that you have 5 variables, you could set up a field split preconditioner\nhttps://mooseframework.inl.gov/source/preconditioners/FieldSplitPreconditioner.html\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/22669#discussioncomment-4191895",
+                          "updatedAt": "2022-11-21T04:20:13Z",
+                          "publishedAt": "2022-11-21T04:20:12Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "MusannaGalib"
+                  },
+                  "bodyText": "Hello,\nI added FSP but facing the following error at time step 2 -\nlog.txt\n[se007:128455] 3 more processes have sent help message help-mpi-common-cuda.txt / dlopen failed\n[se007:128455] Set MCA parameter \"orte_base_help_aggregate\" to 0 to see all help / error messages\n[0]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------\n[0]PETSC ERROR: Petsc has generated inconsistent data\n[0]PETSC ERROR: Unhandled case, must have at least two fields, not 0\n[0]PETSC ERROR: See https://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.\n[0]PETSC ERROR: Petsc Release Version 3.12.1, unknown \n[0]PETSC ERROR: /home/galibubc/scratch/musanna/MOOSE/project/dendrite__zn/dendrite__zn-opt on a arch-moose named se007 by galibubc Wed Nov 23 23:19:53 2022\n[0]PETSC ERROR: Configure options --download-hypre=1 --with-debugging=no --with-shared-libraries=1 --download-fblaslapack=1 --download-metis=1 --download-ptscotch=1 --download-parmetis=1 --download-superlu_dist=1 --download-mumps=1 --download-scalapack=1 --download-slepc=git://https://gitlab.com/slepc/slepc.git --download-slepc-commit= 59ff81b --with-mpi=1 --with-cxx-dialect=C++11 --with-fortran-bindings=0 --with-sowing=0\n[0]PETSC ERROR: #1 PCFieldSplitSetDefaults() line 564 in /scratch/st-mponga1-1/musanna/MOOSE/project/moose/petsc/src/ksp/pc/impls/fieldsplit/fieldsplit.c\n[0]PETSC ERROR: #2 PCSetUp_FieldSplit() line 607 in /scratch/st-mponga1-1/musanna/MOOSE/project/moose/petsc/src/ksp/pc/impls/fieldsplit/fieldsplit.c\n[0]PETSC ERROR: #3 PCSetUp() line 894 in /scratch/st-mponga1-1/musanna/MOOSE/project/moose/petsc/src/ksp/pc/interface/precon.c\n[0]PETSC ERROR: #4 KSPSetUp() line 377 in /scratch/st-mponga1-1/musanna/MOOSE/project/moose/petsc/src/ksp/ksp/interface/itfunc.c\n[0]PETSC ERROR: #5 KSPSolve() line 707 in /scratch/st-mponga1-1/musanna/MOOSE/project/moose/petsc/src/ksp/ksp/interface/itfunc.c\n[0]PETSC ERROR: #6 SNESSolve_NEWTONLS() line 225 in /scratch/st-mponga1-1/musanna/MOOSE/project/moose/petsc/src/snes/impls/ls/ls.c\n[0]PETSC ERROR: #7 SNESSolve() line 4461 in /scratch/st-mponga1-1/musanna/MOOSE/project/moose/petsc/src/snes/interface/snes.c\n--------------------------------------------------------------------------\nMPI_ABORT was invoked on rank 0 in communicator MPI_COMM_WORLD\nwith errorcode 1.\n\nNOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.\n\n\nInput file -\n[GlobalParams]\n  enable_jit = false           # We are having some trouble with JIT, just forget about it\n  displacements = 'disp_x disp_y'\n[]\n[Postprocessors]\n  [./ETA]\n    type = ElementIntegralMaterialProperty\n   mat_prop = etao\n    execute_on = 'initial timestep_end'\n  [../]\n  [./num_lin_it]\n    type = NumLinearIterations\n  [../]\n  [./num_nonlin_it]\n    type = NumNonlinearIterations\n  [../]\n[]\n\n\n[Preconditioning]\n  active = 'FSP'\n\n  [./FSP]\n    type = FSP\n    topsplit = 'wetapotdisp_xdispy' # 'uv' should match the following block name\n    [./wetapotdisp_xdispy]\n      splitting = 'w eta pot disp_x disp_y'\n      splitting_type  = additive\n    [../]\n    [./w]\n      vars = 'w'\n          petsc_options_iname = '-pc_type -ksp_gmres_restart -sub_ksp_type -sub_pc_type -pc_asm_overlap'\n  petsc_options_value = 'asm      31                  preonly      lu          4'\n\n    [../]\n    [./eta]\n      vars = 'eta'\n          petsc_options_iname = '-pc_type -ksp_gmres_restart -sub_ksp_type -sub_pc_type -pc_asm_overlap'\n  petsc_options_value = 'asm      31                  preonly      lu          4'\n\n    [../]\n    [./pot]\n      vars = 'pot'\n          petsc_options_iname = '-pc_type -ksp_gmres_restart -sub_ksp_type -sub_pc_type -pc_asm_overlap'\n  petsc_options_value = 'asm      31                  preonly      lu          4'\n\n    [../]\n    [./disp_x]\n      vars = 'disp_x'\n          petsc_options_iname = '-pc_type -ksp_gmres_restart -sub_ksp_type -sub_pc_type -pc_asm_overlap'\n  petsc_options_value = 'asm      31                  preonly      lu          4'\n\n    [../]\n    [./disp_y]\n      vars = 'disp_y'\n         petsc_options_iname = '-pc_type -ksp_gmres_restart -sub_ksp_type -sub_pc_type -pc_asm_overlap'\n  petsc_options_value = 'asm      31                  preonly      lu          4'\n\n    [../]\n  [../]\n\n\n  [./SMP]\n    type = SMP\n    full = true\n      petsc_options_iname = '-pc_type -ksp_grmres_restart -sub_ksp_type -sub_pc_type -pc_asm_overlap'\n  petsc_options_value = 'asm      121                  preonly       lu           4'\n  [../]\n[]\n\n[Executioner]\n  type = Transient\n  scheme = bdf2\n  verbose = True\n  solve_type ='Newton'\n  l_max_its = 50\n  l_tol = 1e-5\n  nl_max_its = 50\n  nl_rel_tol = 1e-5\n  nl_abs_tol = 1e-6\n    petsc_options_iname = '-pc_type -ksp_gmres_restart -sub_ksp_type -sub_pc_type -pc_asm_overlap'\n  petsc_options_value = 'asm      31                  preonly      lu          4'\n  dt=0.02\n  end_time = 400\n  line_search = 'none'\n  automatic_scaling = true\n[]\n\n[Outputs]\n  exodus = true\n  csv = true\n  execute_on = 'TIMESTEP_END'\n  [./other]        # creates input_other.e\n     type = Exodus\n     interval = 60\n  [../]\n  [./checkpt]\n  type = Checkpoint\n  num_files = 2\n  interval = 100\n  [../]\n[]\n\n\n[Debug]\n  show_var_residual_norms = true\n[]",
+                  "url": "https://github.com/idaholab/moose/discussions/22669#discussioncomment-4234890",
+                  "updatedAt": "2022-11-25T07:40:06Z",
+                  "publishedAt": "2022-11-25T07:40:05Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "It's odd that it only happens on time step 2.\nThis looks like a bug. We'll need to have the full input file to re-create this.\nOne thing that worries me is that you are using PETSc 3.12 and we are using 3.16.\nA few things you can try:\n\nupdate petsc\nuse different types of field splits (multiplicative, or make 2 groups of variables and use schur)\ngroup variables differently (2 groups is most common)",
+                          "url": "https://github.com/idaholab/moose/discussions/22669#discussioncomment-4240316",
+                          "updatedAt": "2022-11-25T23:19:18Z",
+                          "publishedAt": "2022-11-25T23:19:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "MusannaGalib"
+                          },
+                          "bodyText": "Hello,\nI am adding the input file here. However, I used this moose version - git checkout remotes/origin/2020-01-24-release to build the app (https://github.com/BattModels/zn_hybrid_electrolyte). Can you please try to rerun it if possible?\nI know I have to update the validparams in .C and .h files to update the app (https://mooseframework.inl.gov/newsletter/2020_04.html#). But couldn't figure out which files the author modified. There are hundreds of files so I couldn't update it and hence used the 2020-01-24 version of moose.\ninput.txt",
+                          "url": "https://github.com/idaholab/moose/discussions/22669#discussioncomment-4240993",
+                          "updatedAt": "2022-11-26T03:20:17Z",
+                          "publishedAt": "2022-11-26T03:20:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "MusannaGalib"
+                          },
+                          "bodyText": "Hello,\nThe problem is solved. It was related to the number of processors. Though I was asking for 4 processors it was working on one! That's why petsc was showing inconsistent results.\nThanks",
+                          "url": "https://github.com/idaholab/moose/discussions/22669#discussioncomment-4297393",
+                          "updatedAt": "2022-12-03T04:25:43Z",
+                          "publishedAt": "2022-12-03T04:25:42Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Output displacement at a node with GeneratedMesh",
+          "author": {
+            "login": "selarem"
+          },
+          "bodyText": "Hi,\nI would like to make a force-displacement curve.\nI can have the force reactions at a boundary but I would like to output (csv table the displacement at a node from the same boundary).\nWhen the mesh comes from a file, I could see the number of the concerned node and make postprocessing with NodalVariableValue to output the displacements. However, with GeneratedMesh, I have not the node number.\nAny suggestion ?\nThanks in advance\nsab",
+          "url": "https://github.com/idaholab/moose/discussions/22844",
+          "updatedAt": "2022-12-22T09:09:04Z",
+          "publishedAt": "2022-12-01T15:05:09Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "maxnezdyur"
+                  },
+                  "bodyText": "Would something like NodalExtremeValue work for you? It can give the max or min of a value from the nodes on a boundary.",
+                  "url": "https://github.com/idaholab/moose/discussions/22844#discussioncomment-4284326",
+                  "updatedAt": "2022-12-01T15:13:25Z",
+                  "publishedAt": "2022-12-01T15:13:24Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "You could also output all the nodal values and postprocess from there.\nThe NodalValueSampler is a VPP that does that",
+                          "url": "https://github.com/idaholab/moose/discussions/22844#discussioncomment-4284366",
+                          "updatedAt": "2022-12-01T15:17:10Z",
+                          "publishedAt": "2022-12-01T15:17:09Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "selarem"
+                  },
+                  "bodyText": "This is the most appropriate way to do it.\nThanks\n\nLe jeu. 1 d\u00e9c. 2022, 16:13, Max Nezdyur ***@***.***> a \u00e9crit :\n\u2026\n Would something like NodalExtremeValue work for you? It can give the max\n or min of a value from the nodes on a boundary.\n\n \u2014\n Reply to this email directly, view it on GitHub\n <#22844 (comment)>,\n or unsubscribe\n <https://github.com/notifications/unsubscribe-auth/AFBUGDD3LTJ262OXNFH5S5DWLC6CBANCNFSM6AAAAAASQ4M3DA>\n .\n You are receiving this because you authored the thread.Message ID:\n ***@***.***>",
+                  "url": "https://github.com/idaholab/moose/discussions/22844#discussioncomment-4294723",
+                  "updatedAt": "2022-12-02T17:53:18Z",
+                  "publishedAt": "2022-12-02T17:53:17Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to initialise VectorOfPostprocessors",
+          "author": {
+            "login": "fervaldies"
+          },
+          "bodyText": "Hello, I am currently using a \"getPostprocessorValue\" and \"getPostprocessorValueOld\" to receive the temperature of one location in the 3D model. What I want to do is to change the position of this Postprocessor at a certain time step in the simulation, and I was thinking of using a vector of postprocessors and then take the, for example, temp[1] and then temp[2] for different time steps to change the location of the point to collect the temperature. Is there any getVectorPostprocessorValue or something similar? If so, how do I initialise it in the .C and .h files? The .i code would look something like:\n[Materials]\n [./vol_h]\n    temp_passes = 'temp_pass1 temp_pass2 temp_pass3'\n []\n[]\n\n...\n...\n\n[Postprocessors]\n  [./temp_pass1]\n    type = PointValue\n    variable = temp\n    point = '2 2 2'\n  [../]\n  [./temp_pass2]\n    type = PointValue\n    variable = temp\n    point = '2 3 1'\n  [../]\n  [./temp_pass3]\n    type = PointValue\n    variable = temp\n    point = '1 2 3'\n  [../]\n[]\n\nBeing temp_pass1, temp_pass2, and temp_pass3 the postprocessors that I would like to select depending on the time step. So something like temp_passes[1] or temp_passes[2], as an example.\nThank you in advance",
+          "url": "https://github.com/idaholab/moose/discussions/22854",
+          "updatedAt": "2023-01-03T23:23:09Z",
+          "publishedAt": "2022-12-02T09:47:05Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThere are a few options here:\n\n\nuse the VPP interface. Then there is a getVectorPostprocessorValue routine. There are similar routines for \"old\" values.\nYou may need to add it to the list of classes your object inherits from if it's not already (99% chance it is)\nhttps://mooseframework.inl.gov/docs/doxygen/moose/classVectorPostprocessorInterface.html\n\n\nuse the Reporter interface and use the getReporterValue with the name of the VPP and the name of the vector within the VPP.\nThis is because all VPPs are reporters\nhttps://mooseframework.inl.gov/docs/doxygen/moose/classReporterInterface.html\n\n\ndont use your strategy by changing the indexing, but by changing the position in the postprocessor and, if necessary, performing the geometric search again for the new position.\nChanging the position can be done by making it controllable and using the Controls system.\nhttps://mooseframework.inl.gov/syntax/Controls/index.html\n\n\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22854#discussioncomment-4293616",
+                  "updatedAt": "2022-12-02T15:42:03Z",
+                  "publishedAt": "2022-12-02T15:42:02Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "SinglePhaseFluidProperties & ADVariableValue",
+          "author": {
+            "login": "joe61vette"
+          },
+          "bodyText": "I feel really dumb asking this but...\nI am writing a material that uses a SinglePhaseFluidProperties UO to get the necessary properties.  In the header, I have:\n // Nonlinear variables:\n  const ADVariableValue & _p;    // pressure\n  const ADVariableValue & _T;    // fluid temperature\n\n  /// Properties produced by this material\n  const ADMaterialProperty<Real> & _rho;    // fluid density\n\nIn the source file, I initialize the ADVariableValues :\n    _p(adCoupledValue(\"pressure\")),\n    _T(adCoupledValue(\"temperature\")),\n\nand declare the material property with:\n_rho(declareADProperty<Real>(\"density\")),\n\nIn computeQpProperties() I have:\n_rho[_qp] = _fluid.rho_from_p_T(_p[_qp], _T[_qp]);\n\nwhere _fluid is an instance of SinglePhaseFluidProperties UO.\nOn compile, I get the following error:\n/Users/joe/projects/ASP/src/materials/SPFluidMaterial.C:132:13: error: no viable overloaded '='\n  _rho[_qp] = _fluid.rho_from_p_T(_p[_qp], _T[_qp]);\n  ~~~~~~~~~ ^ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n/Users/joe/mambaforge3/envs/moose/libmesh/include/metaphysicl/dualnumber_decl.h:85:15: note: candidate function not viable: 'this' argument has type 'const MooseADWrapper<double, true>' (aka 'const DualNumber<double, SemiDynamicSparseNumberArray<double, unsigned long long, NWrapper<53>>, true>'), but method is not marked const\n  DualNumber& operator= (DualNumber<T, D, asd> && /*src*/);\n              ^\n/Users/joe/mambaforge3/envs/moose/libmesh/include/metaphysicl/dualnumber_decl.h:94:15: note: candidate function not viable: 'this' argument has type 'const MooseADWrapper<double, true>' (aka 'const DualNumber<double, SemiDynamicSparseNumberArray<double, unsigned long long, NWrapper<53>>, true>'), but method is not marked const\n  DualNumber& operator= (const DualNumber<T, D, asd> & /*src*/);\n              ^\n/Users/joe/mambaforge3/envs/moose/libmesh/include/metaphysicl/dualnumber_decl.h:97:16: note: candidate function template not viable: 'this' argument has type 'const MooseADWrapper<double, true>' (aka 'const DualNumber<double, SemiDynamicSparseNumberArray<double, unsigned long long, NWrapper<53>>, true>'), but method is not marked const\n  DualNumber & operator=(const DualNumber<T2,D2,asd> & dn);\n               ^\n/Users/joe/mambaforge3/envs/moose/libmesh/include/metaphysicl/dualnumber_decl.h:100:16: note: candidate template ignored: could not match 'NotADuckDualNumber' against 'DualNumber'\n  DualNumber & operator=(const NotADuckDualNumber<T2,D2> & nd_dn);\n               ^\n/Users/joe/mambaforge3/envs/moose/libmesh/include/metaphysicl/dualnumber_decl.h:106:16: note: candidate template ignored: could not match 'DualNumberSurrogate' against 'DualNumber'\n  DualNumber & operator= (const DualNumberSurrogate<T2, D2> & dns);\n               ^\n/Users/joe/mambaforge3/envs/moose/libmesh/include/metaphysicl/dualnumber_decl.h:109:16: note: candidate function template not viable: 'this' argument has type 'const MooseADWrapper<double, true>' (aka 'const DualNumber<double, SemiDynamicSparseNumberArray<double, unsigned long long, NWrapper<53>>, true>'), but method is not marked const\n  DualNumber & operator= (const T2 & scalar);\n               ^\n\nIs an ADVariableValue not a DualNumber so that propfuncAD doesn't work as expected?\nThanks for the help,\nJoe Kelly",
+          "url": "https://github.com/idaholab/moose/discussions/22850",
+          "updatedAt": "2022-12-02T15:39:45Z",
+          "publishedAt": "2022-12-02T00:23:07Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hi Joe\nrho is being modified by _rho[_qp] = _fluid.rho_from_p_T(_p[_qp], _T[_qp]);\nso it cant be const. In the header you have:\nconst ADMaterialProperty & _rho; // fluid density\nit should be\nADMaterialProperty & _rho; // fluid density\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22850#discussioncomment-4288132",
+                  "updatedAt": "2022-12-02T00:28:36Z",
+                  "publishedAt": "2022-12-02T00:28:35Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "joe61vette"
+                          },
+                          "bodyText": "THANKS Guillaume.  Stared at the error message so long I missed the 'const'.  So obvious once you pointed it out.  Once again, thanks!\nJoe",
+                          "url": "https://github.com/idaholab/moose/discussions/22850#discussioncomment-4293597",
+                          "updatedAt": "2022-12-02T15:39:45Z",
+                          "publishedAt": "2022-12-02T15:39:45Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "MOOSE installation issues:Download error (35) SSL connect error",
+          "author": {
+            "login": "Wolke24"
+          },
+          "bodyText": "I want to install MOOSE on my mac according to the instructions on this website https://mooseframework.inl.gov/getting_started/installation/conda.html\nwhen I try to create the conda environment (using mamba create -n moose moose-tools moose-libmesh   ), my terminal shows :\nDownload error (35) SSL connect error [https://conda.software.inl.gov/public/noarch/repodata.json]\nerror:0A000152:SSL routines::unsafe legacy renegotiation disabled\nCan anybody help me fix this problem?\n\nhere is the report:\nLooking for: ['moose-tools', 'moose-libmesh']\n\nconda-forge/osx-arm64                              @   2.9MB/s  1.7s\nconda-forge/noarch                                 @   3.5MB/s  3.2s\nDownload error (35) SSL connect error [https://conda.software.inl.gov/public/noarch/repodata.json]\nerror:0A000152:SSL routines::unsafe legacy renegotiation disabled\n\n# >>>>>>>>>>>>>>>>>>>>>> ERROR REPORT <<<<<<<<<<<<<<<<<<<<<<\n\n    Traceback (most recent call last):\n      File \"/Users/chuxiaoyun/mambaforge3/lib/python3.10/site-packages/conda/exceptions.py\", line 1129, in __call__\n        return func(*args, **kwargs)\n      File \"/Users/chuxiaoyun/mambaforge3/lib/python3.10/site-packages/mamba/mamba.py\", line 935, in exception_converter\n        raise e\n      File \"/Users/chuxiaoyun/mambaforge3/lib/python3.10/site-packages/mamba/mamba.py\", line 928, in exception_converter\n        exit_code = _wrapped_main(*args, **kwargs)\n      File \"/Users/chuxiaoyun/mambaforge3/lib/python3.10/site-packages/mamba/mamba.py\", line 886, in _wrapped_main\n        result = do_call(parsed_args, p)\n      File \"/Users/chuxiaoyun/mambaforge3/lib/python3.10/site-packages/mamba/mamba.py\", line 754, in do_call\n        exit_code = create(args, parser)\n      File \"/Users/chuxiaoyun/mambaforge3/lib/python3.10/site-packages/mamba/mamba.py\", line 630, in create\n        return install(args, parser, \"create\")\n      File \"/Users/chuxiaoyun/mambaforge3/lib/python3.10/site-packages/mamba/mamba.py\", line 497, in install\n        index = load_channels(pool, channels, repos)\n      File \"/Users/chuxiaoyun/mambaforge3/lib/python3.10/site-packages/mamba/utils.py\", line 129, in load_channels\n        index = get_index(\n      File \"/Users/chuxiaoyun/mambaforge3/lib/python3.10/site-packages/mamba/utils.py\", line 110, in get_index\n        is_downloaded = dlist.download(api.MAMBA_DOWNLOAD_FAILFAST)\n    RuntimeError: Download error (35) SSL connect error [https://conda.software.inl.gov/public/noarch/repodata.json]\n    error:0A000152:SSL routines::unsafe legacy renegotiation disabled\n\n`$ /Users/chuxiaoyun/mambaforge3/bin/mamba create -n moose moose-tools moose-libmesh`\n\n  environment variables:\n                 CIO_TEST=<not set>\n        CONDA_DEFAULT_ENV=base\n                CONDA_EXE=/Users/chuxiaoyun/mambaforge3/bin/conda\n             CONDA_PREFIX=/Users/chuxiaoyun/mambaforge3\n    CONDA_PROMPT_MODIFIER=(base)\n         CONDA_PYTHON_EXE=/Users/chuxiaoyun/mambaforge3/bin/python\n               CONDA_ROOT=/Users/chuxiaoyun/mambaforge3\n              CONDA_SHLVL=1\n           CURL_CA_BUNDLE=<not set>\n                 INFOPATH=/opt/homebrew/share/info:\n                  MANPATH=/opt/local/share/man:/opt/homebrew/share/man::\n                     PATH=/Users/chuxiaoyun/mambaforge3/bin:/Users/chuxiaoyun/mambaforge3/condab\n                          in:/opt/local/bin:/opt/local/sbin:/opt/homebrew/bin:/opt/homebrew/sbin\n                          :/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Library/Apple/usr/bin:/\n                          Library/Frameworks/Mono.framework/Versions/Current/Commands\n       REQUESTS_CA_BUNDLE=<not set>\n            SSL_CERT_FILE=<not set>\n\n     active environment : base\n    active env location : /Users/chuxiaoyun/mambaforge3\n            shell level : 1\n       user config file : /Users/chuxiaoyun/.condarc\n populated config files : /Users/chuxiaoyun/mambaforge3/.condarc\n                          /Users/chuxiaoyun/.condarc\n          conda version : 22.9.0\n    conda-build version : not installed\n         python version : 3.10.6.final.0\n       virtual packages : __osx=11.6.5=0\n                          __unix=0=0\n                          __archspec=1=arm64\n       base environment : /Users/chuxiaoyun/mambaforge3  (writable)\n      conda av data dir : /Users/chuxiaoyun/mambaforge3/etc/conda\n  conda av metadata url : None\n           channel URLs : https://conda.software.inl.gov/public/osx-arm64\n                          https://conda.software.inl.gov/public/noarch\n                          https://conda.anaconda.org/conda-forge/osx-arm64\n                          https://conda.anaconda.org/conda-forge/noarch\n          package cache : /Users/chuxiaoyun/mambaforge3/pkgs\n                          /Users/chuxiaoyun/.conda/pkgs\n       envs directories : /Users/chuxiaoyun/mambaforge3/envs\n                          /Users/chuxiaoyun/.conda/envs\n               platform : osx-arm64\n             user-agent : conda/22.9.0 requests/2.28.1 CPython/3.10.6 Darwin/20.6.0 OSX/11.6.5\n                UID:GID : 501:20\n             netrc file : None\n           offline mode : False\n\n\nAn unexpected error has occurred. Conda has prepared the above report.",
+          "url": "https://github.com/idaholab/moose/discussions/22696",
+          "updatedAt": "2022-12-02T14:10:31Z",
+          "publishedAt": "2022-11-14T21:05:42Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "milljm"
+                  },
+                  "bodyText": "We see this error on occasion when using VPN software. The issue is related to OpenSSL >3 and our servers not supporting:\nerror:0A000152:SSL routines::unsafe legacy renegotiation disabled\nOne solution if this is not related to VPN, is to install openssl <3. Specifically in your base environment, install the older openssl package, and then create the moose environment:\nmamba activate base\nmamba install openssl=1   # accept the changes, hopefully should be minimal\nmamba create -n moose moose-tools moose-libmesh\nActivate the environment, and then continue with our instructions:\nmamba activate moose",
+                  "url": "https://github.com/idaholab/moose/discussions/22696#discussioncomment-4140807",
+                  "updatedAt": "2022-11-14T21:27:17Z",
+                  "publishedAt": "2022-11-14T21:26:30Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "This may end up being a very popular topic as the base Mamba/Conda environments begin to default to OpenSSL >=3.x. We may need to update our instructions to include pinning the base environment to openSSL <3.x",
+                          "url": "https://github.com/idaholab/moose/discussions/22696#discussioncomment-4140857",
+                          "updatedAt": "2022-11-14T21:32:48Z",
+                          "publishedAt": "2022-11-14T21:32:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Wolke24"
+                          },
+                          "bodyText": "Yes, please, when I try to install openssl it will be automatically upgraded to the 3.0 Version.",
+                          "url": "https://github.com/idaholab/moose/discussions/22696#discussioncomment-4178516",
+                          "updatedAt": "2022-11-18T16:07:40Z",
+                          "publishedAt": "2022-11-18T16:07:40Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "mamba install openssl=1 this will force 1.x version",
+                          "url": "https://github.com/idaholab/moose/discussions/22696#discussioncomment-4179080",
+                          "updatedAt": "2022-11-18T17:14:03Z",
+                          "publishedAt": "2022-11-18T17:14:03Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "jeffbaylor"
+                  },
+                  "bodyText": "I hit this as well without using a VPN.  I am using a clean install of RHEL8 in a VirtualBox just to evaluate MOOSE.  The work around I used was to modify ~/mambaforge3/ssl/openssl.cnf to allow UnsafeLegacyRenegotiation.\nFrom debugging this, my understanding of the error is that it means that the SSL server does not support the Renegotiation Indication Extension (RFC 5746) so is vulnerable to man-in-the-middle attacks (CVE-2009-3555).  This may be something worth upgrading on the INL side.\n...\n[openssl_init]\nproviders = provider_sect\n\n#JSB START\nssl_conf = ssl_sect\n[ssl_sect]\nsystem_default = system_default_sect\n\n[system_default_sect]\nOptions = UnsafeLegacyRenegotiation\n\n#JSB END\n\n# List of providers to load\n[provider_sect]\n...",
+                  "url": "https://github.com/idaholab/moose/discussions/22696#discussioncomment-4222353",
+                  "updatedAt": "2022-11-24T05:19:26Z",
+                  "publishedAt": "2022-11-24T05:19:25Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "gka80"
+                          },
+                          "bodyText": "This also worked for me. Another vote for (eventually) fixing the issue.",
+                          "url": "https://github.com/idaholab/moose/discussions/22696#discussioncomment-4239352",
+                          "updatedAt": "2022-11-25T18:57:56Z",
+                          "publishedAt": "2022-11-25T18:57:56Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "smpeyres"
+                  },
+                  "bodyText": "On my end, I can't seem to get through \"mamba install openssl=1\" :\nLooking for: ['openssl=1']\n\nconda-forge/osx-arm64                                       Using cache\nconda-forge/noarch                                          Using cache\nhttps://conda.software.inl.gov/public/osx-arm64     9.1s\nDownload error (35) SSL connect error [https://conda.software.inl.gov/public/noarch/repodata.json]\nerror:0A000152:SSL routines::unsafe legacy renegotiation disabled\n\n# >>>>>>>>>>>>>>>>>>>>>> ERROR REPORT <<<<<<<<<<<<<<<<<<<<<<\n\n    Traceback (most recent call last):\n      File \"/Users/seanpeyres/mambaforge3/lib/python3.10/site-packages/conda/exceptions.py\", line 1129, in __call__\n        return func(*args, **kwargs)\n      File \"/Users/seanpeyres/mambaforge3/lib/python3.10/site-packages/mamba/mamba.py\", line 935, in exception_converter\n        raise e\n      File \"/Users/seanpeyres/mambaforge3/lib/python3.10/site-packages/mamba/mamba.py\", line 928, in exception_converter\n        exit_code = _wrapped_main(*args, **kwargs)\n      File \"/Users/seanpeyres/mambaforge3/lib/python3.10/site-packages/mamba/mamba.py\", line 886, in _wrapped_main\n        result = do_call(parsed_args, p)\n      File \"/Users/seanpeyres/mambaforge3/lib/python3.10/site-packages/mamba/mamba.py\", line 750, in do_call\n        exit_code = install(args, parser, \"install\")\n      File \"/Users/seanpeyres/mambaforge3/lib/python3.10/site-packages/mamba/mamba.py\", line 497, in install\n        index = load_channels(pool, channels, repos)\n      File \"/Users/seanpeyres/mambaforge3/lib/python3.10/site-packages/mamba/utils.py\", line 129, in load_channels\n        index = get_index(\n      File \"/Users/seanpeyres/mambaforge3/lib/python3.10/site-packages/mamba/utils.py\", line 110, in get_index\n        is_downloaded = dlist.download(api.MAMBA_DOWNLOAD_FAILFAST)\n    RuntimeError: Download error (35) SSL connect error [https://conda.software.inl.gov/public/noarch/repodata.json]\n    error:0A000152:SSL routines::unsafe legacy renegotiation disabled\n\n`$ /Users/seanpeyres/mambaforge3/bin/mamba install openssl=1`\n\n  environment variables:\n                 CIO_TEST=<not set>\n        CONDA_DEFAULT_ENV=base\n                CONDA_EXE=/Users/seanpeyres/mambaforge3/bin/conda\n             CONDA_PREFIX=/Users/seanpeyres/mambaforge3\n    CONDA_PROMPT_MODIFIER=(base)\n         CONDA_PYTHON_EXE=/Users/seanpeyres/mambaforge3/bin/python\n               CONDA_ROOT=/Users/seanpeyres/mambaforge3\n              CONDA_SHLVL=1\n           CURL_CA_BUNDLE=<not set>\n                     PATH=/Users/seanpeyres/mambaforge3/bin:/Users/seanpeyres/mambaforge3/condab\n                          in:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin\n       REQUESTS_CA_BUNDLE=<not set>\n            SSL_CERT_FILE=<not set>\n\n     active environment : base\n    active env location : /Users/seanpeyres/mambaforge3\n            shell level : 1\n       user config file : /Users/seanpeyres/.condarc\n populated config files : /Users/seanpeyres/mambaforge3/.condarc\n                          /Users/seanpeyres/.condarc\n          conda version : 22.9.0\n    conda-build version : not installed\n         python version : 3.10.6.final.0\n       virtual packages : __osx=12.4=0\n                          __unix=0=0\n                          __archspec=1=arm64\n       base environment : /Users/seanpeyres/mambaforge3  (writable)\n      conda av data dir : /Users/seanpeyres/mambaforge3/etc/conda\n  conda av metadata url : None\n           channel URLs : https://conda.software.inl.gov/public/osx-arm64\n                          https://conda.software.inl.gov/public/noarch\n                          https://conda.anaconda.org/conda-forge/osx-arm64\n                          https://conda.anaconda.org/conda-forge/noarch\n          package cache : /Users/seanpeyres/mambaforge3/pkgs\n                          /Users/seanpeyres/.conda/pkgs\n       envs directories : /Users/seanpeyres/mambaforge3/envs\n                          /Users/seanpeyres/.conda/envs\n               platform : osx-arm64\n             user-agent : conda/22.9.0 requests/2.28.1 CPython/3.10.6 Darwin/21.5.0 OSX/12.4\n                UID:GID : 501:20\n             netrc file : None\n           offline mode : False\n\n\nAn unexpected error has occurred. Conda has prepared the above report.",
+                  "url": "https://github.com/idaholab/moose/discussions/22696#discussioncomment-4283632",
+                  "updatedAt": "2022-12-01T14:20:30Z",
+                  "publishedAt": "2022-12-01T14:01:55Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "You first need to remove our public channel:\nconda config --remove channels https://conda.software.inl.gov/public\nmamba activate base\nmamba install openssl=1\nconda config --add channels https://conda.software.inl.gov/public\n<then do what you were trying to do>\nWe've since refined the instructions and pinned them to this discussion: #22826",
+                          "url": "https://github.com/idaholab/moose/discussions/22696#discussioncomment-4283817",
+                          "updatedAt": "2022-12-01T14:23:53Z",
+                          "publishedAt": "2022-12-01T14:22:04Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "gudalam"
+                          },
+                          "bodyText": "Working well, Thanks",
+                          "url": "https://github.com/idaholab/moose/discussions/22696#discussioncomment-4292807",
+                          "updatedAt": "2022-12-02T14:10:32Z",
+                          "publishedAt": "2022-12-02T14:10:31Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Possible Workaround to Obtain Most-up-to-date Residuals of StressDivergenceTensor Kernels",
+          "author": {
+            "login": "chunhuizhao478"
+          },
+          "bodyText": "Hi all,\nI have a question about getting up-to-date residuals of StressDivergenceTensor Kernel using explicit solver e.g. CentralDifference.\nI obtain the residuals through save_in option in StressDivergenceTensor:\n[Modules]\n    [./TensorMechanics]\n      [./Master]\n        [./all]\n          strain = SMALL\n          add_variables = true\n          planar_formulation = PLANE_STRAIN\n          generate_output = 'stress_xx stress_yy stress_xy'\n          save_in = 'resid_x resid_y'\n        [../]\n      [../]\n    [../]\n  []\n\nThe residuals resid_x resid_y are then used as input parameters  in the custom cohesive zone material kernel along with _interface_displacement_jump[_qp]  to update the local traction vector.\nThe kernel gives acceleration is as follows:\n[Kernels]\n    [./inertia_x]\n        type = InertialForce\n        use_displaced_mesh = false\n        variable = disp_x\n    []\n    [./inertia_y]\n        type = InertialForce\n        use_displaced_mesh = false\n        variable = disp_y\n    []\n[]\n\nIn our current traction-separation law, shear stress _stress[_qp](1) combined with _interface_displacement_jump[_qp] gives correct answer. However, this is an approximation to the original theory and this \"shear stress term\" is needed be replaced by difference of reaction at upper/lower surface divided by area (_resid_x[_qp] - _resid_x_neighbor[_qp])/(2*area), and that is where the problem comes in.\nTo better illustrate what is happening, here I showed the output (variables printed inside the material kernel) for the first several steps:\nTime Step 0, time = 0\n\nTime Step 1, time = 0.0025, dt = 0.0025\ndisplacement jump: 0\nreaction: 0\nshear stress: 0\n **Solve Converged!**\ndisplacement jump: -3.37079e-05\nreaction: 0\nshear stress: -5400\n\nTime Step 2, time = 0.005, dt = 0.0025\ndisplacement jump: -3.37079e-05\nreaction: 0\nshear stress: -5400\n **Solve Converged!**\ndisplacement jump: -0.000100711\nreaction: -5400\nshear stress: -16089.4\n\nTime Step 3, time = 0.0075, dt = 0.0025\ndisplacement jump: -0.000100711\nreaction: 0\nshear stress: -16089.4\n **Solve Converged!**\ndisplacement jump: -0.000200246\nreaction: -16089.4\nshear stress: -31862\n\nTo be precise, shear stress:  represents shear stress term (which gives correct results), reaction:  represents the reaction difference term (_resid_x[_qp] - _resid_x_neighbor[_qp])/(2*area) (which uses the variable I extracted from StressDivergenceTerm.\nFrom the output we can see\n\n\nMaterial kernel is evaluated before/after solve.\n\n\n_interface_displacement_jump[_qp] and _stress[_qp](1) are closely updated once the new displacements are available, which is the default feature of material kernel.\n\n\nreaction only updates after solve (the reaction: 0 can be solved by introducing auxkernel and save old values) but retrieve the residuals before the new displacements are calculated, in other words, reaction has time step offsets with shear stress.\n\n\nI have searched several options, but currently none of them is working:\n\n\nDefine reaction as material property same as stress. (But  _grad_test[_i][_qp] computeQpResidual() is not available in material kernel)\n\n\nEvaluate it again right after the new displacements are available. (Probably need a separate kernel object to achieve it or do multi-app, which is not trivial)\n\n\nUse Tagging Interface or Control System as suggested by similar posts (But I can't find a solution from them, because this seems to be issue of save_in which is not re-evaluating residuals after the solve )\n\n\nI'm struggling to find a workaround of it. Any suggestion or comment is welcome. Thanks a lot!",
+          "url": "https://github.com/idaholab/moose/discussions/22841",
+          "updatedAt": "2023-01-03T23:54:52Z",
+          "publishedAt": "2022-12-01T01:36:42Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nso you need the output from one kernel (the residual) to compute the residual from another kernel?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22841#discussioncomment-4279371",
+                  "updatedAt": "2022-12-01T01:47:06Z",
+                  "publishedAt": "2022-12-01T01:47:05Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "chunhuizhao478"
+                          },
+                          "bodyText": "Hi, basically I need the residual from StressDivergenceKernel as a variable to compute traction (not the residual) in cohesive zone model material kernel, but it seems like it is not up-to-date as I showed above.",
+                          "url": "https://github.com/idaholab/moose/discussions/22841#discussioncomment-4279415",
+                          "updatedAt": "2022-12-01T02:07:00Z",
+                          "publishedAt": "2022-12-01T02:03:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "This is tough since because all the kernels are executed together.\nCan you duplicate the calculation in StressDivergenceKernel and place it in a material property instead? Material properties are calculated before kernels",
+                          "url": "https://github.com/idaholab/moose/discussions/22841#discussioncomment-4279436",
+                          "updatedAt": "2022-12-01T02:08:18Z",
+                          "publishedAt": "2022-12-01T02:08:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "chunhuizhao478"
+                          },
+                          "bodyText": "I'm not sure whether I understand this correctly, is it fine to inherit all the necessary header files of StressDivergenceKernel and duplicate all the residual calculations but pass as material property by overriding computeQpProperties() in material kernel?",
+                          "url": "https://github.com/idaholab/moose/discussions/22841#discussioncomment-4279456",
+                          "updatedAt": "2022-12-01T03:29:48Z",
+                          "publishedAt": "2022-12-01T02:13:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "No this wont work. An object may not be both a kernel and a material property.\nYou would have to create a material property and duplicate the code that computes the residual in the Kernel.\nMaybe there are other solutions, through the tagging system.\nYou would have to make sure one kernel gets executed before the other one though",
+                          "url": "https://github.com/idaholab/moose/discussions/22841#discussioncomment-4285159",
+                          "updatedAt": "2022-12-01T16:44:02Z",
+                          "publishedAt": "2022-12-01T16:44:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "chunhuizhao478"
+                          },
+                          "bodyText": "Thanks for your reply. I would like to try to define a material property first. Maybe we are referring to the same method (not trying to define kernel and material property at the same time). Let me try to explain my thought here: After looking through the code in StressDivergenceKernel.C, the code snippets for calculating residuals are the following (I would need to include the necessary header files though) :\nvoid\nStressDivergenceTensors::computeResidual()\n{\n  prepareVectorTag(_assembly, _var.number());\n\n  if (_volumetric_locking_correction)\n    computeAverageGradientTest();\n\n  precalculateResidual();\n  for (_i = 0; _i < _test.size(); ++_i)\n    for (_qp = 0; _qp < _qrule->n_points(); ++_qp)\n      _local_re(_i) += _JxW[_qp] * _coord[_qp] * computeQpResidual();\n\n  accumulateTaggedLocalResidual();\n\n  if (_has_save_in)\n  {\n    Threads::spin_mutex::scoped_lock lock(Threads::spin_mtx);\n    for (const auto & var : _save_in)\n      var->sys().solution().add_vector(_local_re, var->dofIndices());\n  }\n}\n\nReal\nStressDivergenceTensors::computeQpResidual()\n{\n  Real residual = _stress[_qp].row(_component) * _grad_test[_i][_qp];\n  // volumetric locking correction\n  if (_volumetric_locking_correction)\n    residual += _stress[_qp].trace() / 3.0 *\n                (_avg_grad_test[_i][_component] - _grad_test[_i][_qp](_component));\n\n  if (_ndisp != 3 && _out_of_plane_strain_coupled && _use_displaced_mesh)\n  {\n    const Real out_of_plane_thickness = std::exp((*_out_of_plane_strain)[_qp]);\n    residual *= out_of_plane_thickness;\n  }\n\n  return residual;\n}\n\n\nThe quantity I would like to extract is _local_re after accumulateTaggedLocalResidual() and evaluate at each _qp point of interest, without considering the volumetric locking, I should write something like:\nvoid\nCompResidualCustom::computeQpProperties()\n{\n   computeResidualCustom();\n    _local_re_out[_qp] = _local_re[_qp];\n}\n\nvoid\nCompResidualCustom::computeResidualCustom()\n{\n  prepareVectorTag(_assembly, _var.number());\n\n  precalculateResidual();\n  for (_i = 0; _i < _test.size(); ++_i)\n    for (_qp = 0; _qp < _qrule->n_points(); ++_qp)\n      _local_re(_i) += _JxW[_qp] * _coord[_qp] * computeQpResidualCustom();\n\n  accumulateTaggedLocalResidual();\n}\n\nReal\nCompResidualCustom::computeQpResidualCustom()\n{\n  Real residual = _stress[_qp].row(_component) * _grad_test[_i][_qp];\n  return residual;\n}\n\nnot sure if it is doable to pass _local_re[_qp] inside  computeQpProperties() in material kernel or there is something else I need to be careful when trying to duplicate the calculation. Thanks!",
+                          "url": "https://github.com/idaholab/moose/discussions/22841#discussioncomment-4285448",
+                          "updatedAt": "2022-12-01T17:20:27Z",
+                          "publishedAt": "2022-12-01T17:20:27Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Yeah this seems difficult. The local weights are not available in a material property I think.",
+                          "url": "https://github.com/idaholab/moose/discussions/22841#discussioncomment-4287166",
+                          "updatedAt": "2022-12-01T21:37:34Z",
+                          "publishedAt": "2022-12-01T21:37:34Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "chunhuizhao478"
+                          },
+                          "bodyText": "Hi Guillaume, thanks for your reply, Just want to let you know, I manage to solve the problem using multiapp, I will add some comments about it later.",
+                          "url": "https://github.com/idaholab/moose/discussions/22841#discussioncomment-4287183",
+                          "updatedAt": "2022-12-01T21:39:58Z",
+                          "publishedAt": "2022-12-01T21:39:57Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "This is a real issue, and I agree with @GiudGiud this is very difficult. However, I don't think this has any serious practical consequences with explicit time integration, i.e., the response of the system (for instance the force displacement curve) won't be sensitive to the lagged residual.",
+                  "url": "https://github.com/idaholab/moose/discussions/22841#discussioncomment-4287276",
+                  "updatedAt": "2022-12-01T21:55:31Z",
+                  "publishedAt": "2022-12-01T21:54:19Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Injection/production in one grid element",
+          "author": {
+            "login": "pierre-jeanne"
+          },
+          "bodyText": "Hello Moose community,\nI try to simulate water injection and production into two grid elements, with PorousFlowSink:\n [injection]\n    type = PorousFlowSink\n    boundary = '8'\n    variable = porepressure\n    flux_function = -1E-2\n [] \n'\nand \n'\n [production]\n    type = PorousFlowSink\n    boundary = '9'\n    variable = porepressure\n    flux_function = 1E-2\n  []\n[]\n\n8 and 9 are made of one single element respectively. Is it possible to do that?\nHere is the message error :\n*** ERROR ***\npath 89:(BCs/injection/boundary):  \nthe following side sets (ids) do not exist on the mesh: 8\n\nIdeally, I would like to impose a fixed pore pressure in one grid element and impose a fixed production rate (kg/s) in another grid element.\nDo you have any advice on how to do that?\nThanks!!!",
+          "url": "https://github.com/idaholab/moose/discussions/22772",
+          "updatedAt": "2023-01-03T23:51:01Z",
+          "publishedAt": "2022-11-22T12:17:03Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nWhen you open the mesh do you see boundary 8?\nA single side of an element should be fine\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/22772#discussioncomment-4207393",
+                  "updatedAt": "2022-11-22T15:12:18Z",
+                  "publishedAt": "2022-11-22T15:12:18Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "pierre-jeanne"
+                          },
+                          "bodyText": "yes, I can see it in ParaView.However, when I tried another subdomain_id, (e.g. boundary = '2'), the simulation started without an error message...",
+                          "url": "https://github.com/idaholab/moose/discussions/22772#discussioncomment-4208867",
+                          "updatedAt": "2022-11-22T17:51:30Z",
+                          "publishedAt": "2022-11-22T17:51:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "it should be a boundary id not a subdomain id.\nIn paraview do you see a sideset or a nodeset?",
+                          "url": "https://github.com/idaholab/moose/discussions/22772#discussioncomment-4209283",
+                          "updatedAt": "2022-11-22T18:42:16Z",
+                          "publishedAt": "2022-11-22T18:42:15Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "pierre-jeanne"
+                          },
+                          "bodyText": "yes in paraview I can see them.\nI have re-generated the mesh using 'show_info = true'. I can see that the subdomain exists with 8 active nodes.\nWhere can I find the list of the boundary id? is there a command line to get the characteristic of the mesh (nodes coordinates, center of the block, boundary coordinate etc...)? i looked for that but I found nothing.",
+                          "url": "https://github.com/idaholab/moose/discussions/22772#discussioncomment-4213896",
+                          "updatedAt": "2022-11-23T09:06:23Z",
+                          "publishedAt": "2022-11-23T09:06:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "You keep referring to 8 as a subdomain, but it needs to be a sideset not a subdomain.\nshow_info=true shows all the sidesets in the mesh.\nCould you please paste that here?",
+                          "url": "https://github.com/idaholab/moose/discussions/22772#discussioncomment-4215298",
+                          "updatedAt": "2022-11-23T11:17:53Z",
+                          "publishedAt": "2022-11-23T11:17:53Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "pierre-jeanne"
+                          },
+                          "bodyText": "\"you keep referring to 8 as a subdomain, but it needs to be a sideset not a subdomain.\"\nyes, I understand.\nMaybe I had it wrong, so let me reformulate my question.\nI have a 2d horizontal model. I want to inject (or produce) in the middle of the MESH.\nI used TOUGH2 a lot, and in TOUGH2 you change the Pressure within one grid element.\nIn MOOSE, I understand you have to fix the pressure at the boundary between two grid elements, is that correct?\nIn this case, how can you find the boundaries id?\nHere is the results get with show_info\nCartesianMeshGenerator 'cmg':  Mesh Information:\nCartesianMeshGenerator 'cmg':   elem_dimensions()={3}\nCartesianMeshGenerator 'cmg':   spatial_dimension()=3\nCartesianMeshGenerator 'cmg':   n_nodes()=7656\nCartesianMeshGenerator 'cmg':     n_local_nodes()=7656\nCartesianMeshGenerator 'cmg':   n_elem()=3705\nCartesianMeshGenerator 'cmg':     n_local_elem()=3705\nCartesianMeshGenerator 'cmg':     n_active_elem()=3705\nCartesianMeshGenerator 'cmg':   n_subdomains()=9\nCartesianMeshGenerator 'cmg':   n_elemsets()=0\nCartesianMeshGenerator 'cmg':   n_partitions()=1\nCartesianMeshGenerator 'cmg':   n_processors()=1\nCartesianMeshGenerator 'cmg':   n_threads()=1\nCartesianMeshGenerator 'cmg':   processor_id()=0\nCartesianMeshGenerator 'cmg':   is_prepared()=true\nCartesianMeshGenerator 'cmg':   is_replicated()=true\nCartesianMeshGenerator 'cmg':\nCartesianMeshGenerator 'cmg':  Mesh Bounding Box:\nCartesianMeshGenerator 'cmg':   Minimum: (x,y,z)=(       0,        0,        0)\nCartesianMeshGenerator 'cmg':   Maximum: (x,y,z)=( 2449.97,  3063.61,       30)\nCartesianMeshGenerator 'cmg':   Delta:   (x,y,z)=( 2449.97,  3063.61,       30)\nCartesianMeshGenerator 'cmg':\nCartesianMeshGenerator 'cmg':  Mesh Element Type(s):\nCartesianMeshGenerator 'cmg':   HEX8\nCartesianMeshGenerator 'cmg':\nCartesianMeshGenerator 'cmg':  Mesh Nodesets:\nCartesianMeshGenerator 'cmg':   Nodeset 0 (back), 3828 nodes\nCartesianMeshGenerator 'cmg':    Bounding box minimum: (x,y,z)=(       0,        0,        0)\nCartesianMeshGenerator 'cmg':    Bounding box maximum: (x,y,z)=( 2449.97,  3063.61,        0)\nCartesianMeshGenerator 'cmg':    Bounding box delta: (x,y,z)=( 2449.97,  3063.61,        0)\nCartesianMeshGenerator 'cmg':   Nodeset 1 (bottom), 132 nodes\nCartesianMeshGenerator 'cmg':    Bounding box minimum: (x,y,z)=(       0,        0,        0)\nCartesianMeshGenerator 'cmg':    Bounding box maximum: (x,y,z)=( 2449.97,        0,       30)\nCartesianMeshGenerator 'cmg':    Bounding box delta: (x,y,z)=( 2449.97,        0,       30)\nCartesianMeshGenerator 'cmg':   Nodeset 2 (right), 116 nodes\nCartesianMeshGenerator 'cmg':    Bounding box minimum: (x,y,z)=( 2449.97,        0,        0)\nCartesianMeshGenerator 'cmg':    Bounding box maximum: (x,y,z)=( 2449.97,  3063.61,       30)\nCartesianMeshGenerator 'cmg':    Bounding box delta: (x,y,z)=(       0,  3063.61,       30)\nCartesianMeshGenerator 'cmg':   Nodeset 3 (top), 132 nodes\nCartesianMeshGenerator 'cmg':    Bounding box minimum: (x,y,z)=(       0,  3063.61,        0)\nCartesianMeshGenerator 'cmg':    Bounding box maximum: (x,y,z)=( 2449.97,  3063.61,       30)\nCartesianMeshGenerator 'cmg':    Bounding box delta: (x,y,z)=( 2449.97,        0,       30)\nCartesianMeshGenerator 'cmg':   Nodeset 4 (left), 116 nodes\nCartesianMeshGenerator 'cmg':    Bounding box minimum: (x,y,z)=(       0,        0,        0)\nCartesianMeshGenerator 'cmg':    Bounding box maximum: (x,y,z)=(       0,  3063.61,       30)\nCartesianMeshGenerator 'cmg':    Bounding box delta: (x,y,z)=(       0,  3063.61,       30)\nCartesianMeshGenerator 'cmg':   Nodeset 5 (front), 3828 nodes\nCartesianMeshGenerator 'cmg':    Bounding box minimum: (x,y,z)=(       0,        0,       30)\nCartesianMeshGenerator 'cmg':    Bounding box maximum: (x,y,z)=( 2449.97,  3063.61,       30)\nCartesianMeshGenerator 'cmg':    Bounding box delta: (x,y,z)=( 2449.97,  3063.61,        0)\nCartesianMeshGenerator 'cmg':\nCartesianMeshGenerator 'cmg':  Mesh Sidesets:\nCartesianMeshGenerator 'cmg':   Sideset 0 (back), 3705 sides (QUAD4), 3705 elems (HEX8), 3828 nodes\nCartesianMeshGenerator 'cmg':    Side volume: 7.50575e+06\nCartesianMeshGenerator 'cmg':    Bounding box minimum: (x,y,z)=(       0,        0,        0)\nCartesianMeshGenerator 'cmg':    Bounding box maximum: (x,y,z)=( 2449.97,  3063.61,        0)\nCartesianMeshGenerator 'cmg':    Bounding box delta: (x,y,z)=( 2449.97,  3063.61,        0)\nCartesianMeshGenerator 'cmg':   Sideset 1 (bottom), 65 sides (QUAD4), 65 elems (HEX8), 132 nodes\nCartesianMeshGenerator 'cmg':    Side volume: 73499.1\nCartesianMeshGenerator 'cmg':    Bounding box minimum: (x,y,z)=(       0,        0,        0)\nCartesianMeshGenerator 'cmg':    Bounding box maximum: (x,y,z)=( 2449.97,        0,       30)\nCartesianMeshGenerator 'cmg':    Bounding box delta: (x,y,z)=( 2449.97,        0,       30)\nCartesianMeshGenerator 'cmg':   Sideset 2 (right), 57 sides (QUAD4), 57 elems (HEX8), 116 nodes\nCartesianMeshGenerator 'cmg':    Side volume: 91908.3\nCartesianMeshGenerator 'cmg':    Bounding box minimum: (x,y,z)=( 2449.97,        0,        0)\nCartesianMeshGenerator 'cmg':    Bounding box maximum: (x,y,z)=( 2449.97,  3063.61,       30)\nCartesianMeshGenerator 'cmg':    Bounding box delta: (x,y,z)=(       0,  3063.61,       30)\nCartesianMeshGenerator 'cmg':   Sideset 3 (top), 65 sides (QUAD4), 65 elems (HEX8), 132 nodes\nCartesianMeshGenerator 'cmg':    Side volume: 73499.1\nCartesianMeshGenerator 'cmg':    Bounding box minimum: (x,y,z)=(       0,  3063.61,        0)\nCartesianMeshGenerator 'cmg':    Bounding box maximum: (x,y,z)=( 2449.97,  3063.61,       30)\nCartesianMeshGenerator 'cmg':    Bounding box delta: (x,y,z)=( 2449.97,        0,       30)\nCartesianMeshGenerator 'cmg':   Sideset 4 (left), 57 sides (QUAD4), 57 elems (HEX8), 116 nodes\nCartesianMeshGenerator 'cmg':    Side volume: 91908.3\nCartesianMeshGenerator 'cmg':    Bounding box minimum: (x,y,z)=(       0,        0,        0)\nCartesianMeshGenerator 'cmg':    Bounding box maximum: (x,y,z)=(       0,  3063.61,       30)\nCartesianMeshGenerator 'cmg':    Bounding box delta: (x,y,z)=(       0,  3063.61,       30)\nCartesianMeshGenerator 'cmg':   Sideset 5 (front), 3705 sides (QUAD4), 3705 elems (HEX8), 3828 nodes\nCartesianMeshGenerator 'cmg':    Side volume: 7.50575e+06\nCartesianMeshGenerator 'cmg':    Bounding box minimum: (x,y,z)=(       0,        0,       30)\nCartesianMeshGenerator 'cmg':    Bounding box maximum: (x,y,z)=( 2449.97,  3063.61,       30)\nCartesianMeshGenerator 'cmg':    Bounding box delta: (x,y,z)=( 2449.97,  3063.61,        0)\nCartesianMeshGenerator 'cmg':\nCartesianMeshGenerator 'cmg':  Mesh Edgesets:\nCartesianMeshGenerator 'cmg':   None\nCartesianMeshGenerator 'cmg':\nCartesianMeshGenerator 'cmg':  Mesh Subdomains:\nCartesianMeshGenerator 'cmg':   Subdomain 1: 3078 elems (HEX8, 3078 active), 6496 active nodes\nCartesianMeshGenerator 'cmg':    Volume: 2.25171e+08\nCartesianMeshGenerator 'cmg':    Bounding box minimum: (x,y,z)=(       0,        0,        0)\nCartesianMeshGenerator 'cmg':    Bounding box maximum: (x,y,z)=( 2449.97,  3063.61,       30)\nCartesianMeshGenerator 'cmg':    Bounding box delta: (x,y,z)=( 2449.97,  3063.61,       30)\nCartesianMeshGenerator 'cmg':   Subdomain 2: 55 elems (HEX8, 55 active), 232 active nodes\nCartesianMeshGenerator 'cmg':    Volume: 91.8963\nCartesianMeshGenerator 'cmg':    Bounding box minimum: (x,y,z)=( 1224.98,        0,        0)\nCartesianMeshGenerator 'cmg':    Bounding box maximum: (x,y,z)=( 1224.98,  3063.61,       30)\nCartesianMeshGenerator 'cmg':    Bounding box delta: (x,y,z)=(   0.001,  3063.61,       30)\nCartesianMeshGenerator 'cmg':   Subdomain 3: 114 elems (HEX8, 114 active), 464 active nodes\nCartesianMeshGenerator 'cmg':    Volume: 183.817\nCartesianMeshGenerator 'cmg':    Bounding box minimum: (x,y,z)=( 1224.98,        0,        0)\nCartesianMeshGenerator 'cmg':    Bounding box maximum: (x,y,z)=( 1224.99,  3063.61,       30)\nCartesianMeshGenerator 'cmg':    Bounding box delta: (x,y,z)=(   0.003,  3063.61,       30)\nCartesianMeshGenerator 'cmg':   Subdomain 4: 114 elems (HEX8, 114 active), 464 active nodes\nCartesianMeshGenerator 'cmg':    Volume: 183.817\nCartesianMeshGenerator 'cmg':    Bounding box minimum: (x,y,z)=( 1224.98,        0,        0)\nCartesianMeshGenerator 'cmg':    Bounding box maximum: (x,y,z)=( 1224.99,  3063.61,       30)\nCartesianMeshGenerator 'cmg':    Bounding box delta: (x,y,z)=(   0.005,  3063.61,       30)\nCartesianMeshGenerator 'cmg':   Subdomain 5: 114 elems (HEX8, 114 active), 464 active nodes\nCartesianMeshGenerator 'cmg':    Volume: 183.817\nCartesianMeshGenerator 'cmg':    Bounding box minimum: (x,y,z)=( 1224.98,        0,        0)\nCartesianMeshGenerator 'cmg':    Bounding box maximum: (x,y,z)=( 1224.99,  3063.61,       30)\nCartesianMeshGenerator 'cmg':    Bounding box delta: (x,y,z)=(   0.007,  3063.61,       30)\nCartesianMeshGenerator 'cmg':   Subdomain 6: 114 elems (HEX8, 114 active), 464 active nodes\nCartesianMeshGenerator 'cmg':    Volume: 183.817\nCartesianMeshGenerator 'cmg':    Bounding box minimum: (x,y,z)=( 1224.98,        0,        0)\nCartesianMeshGenerator 'cmg':    Bounding box maximum: (x,y,z)=( 1224.99,  3063.61,       30)\nCartesianMeshGenerator 'cmg':    Bounding box delta: (x,y,z)=(   0.009,  3063.61,       30)\nCartesianMeshGenerator 'cmg':   Subdomain 7: 114 elems (HEX8, 114 active), 464 active nodes\nCartesianMeshGenerator 'cmg':    Volume: 183.817\nCartesianMeshGenerator 'cmg':    Bounding box minimum: (x,y,z)=( 1224.98,        0,        0)\nCartesianMeshGenerator 'cmg':    Bounding box maximum: (x,y,z)=( 1224.99,  3063.61,       30)\nCartesianMeshGenerator 'cmg':    Bounding box delta: (x,y,z)=(   0.011,  3063.61,       30)\nCartesianMeshGenerator 'cmg':   Subdomain 8: 1 elems (HEX8, 1 active), 8 active nodes\nCartesianMeshGenerator 'cmg':    Volume: 0.006\nCartesianMeshGenerator 'cmg':    Bounding box minimum: (x,y,z)=( 1224.98,  1295.81,        0)\nCartesianMeshGenerator 'cmg':    Bounding box maximum: (x,y,z)=( 1224.98,  1296.01,       30)\nCartesianMeshGenerator 'cmg':    Bounding box delta: (x,y,z)=(   0.001,      0.2,       30)\nCartesianMeshGenerator 'cmg':   Subdomain 9: 1 elems (HEX8, 1 active), 8 active nodes\nCartesianMeshGenerator 'cmg':    Volume: 0.006\nCartesianMeshGenerator 'cmg':    Bounding box minimum: (x,y,z)=( 1224.98,  1767.61,        0)\nCartesianMeshGenerator 'cmg':    Bounding box maximum: (x,y,z)=( 1224.98,  1767.81,       30)\nCartesianMeshGenerator 'cmg':    Bounding box delta: (x,y,z)=(   0.001,      0.2,       30)\nCartesianMeshGenerator 'cmg':   Global mesh volume = 2.25172e+08",
+                          "url": "https://github.com/idaholab/moose/discussions/22772#discussioncomment-4215629",
+                          "updatedAt": "2022-11-23T12:05:23Z",
+                          "publishedAt": "2022-11-23T12:05:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "pierre-jeanne"
+                          },
+                          "bodyText": "I think I know, I should use 'ParsedGenerateSideset' when generating the mesh to select and name the side where I want to apply my BC.\nIs that correct?",
+                          "url": "https://github.com/idaholab/moose/discussions/22772#discussioncomment-4215722",
+                          "updatedAt": "2022-11-23T12:22:17Z",
+                          "publishedAt": "2022-11-23T12:22:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I ll let @WilkAndy comment on how to inject pressure.\nWith regards to sidesets, under\nCartesianMeshGenerator 'cmg': Mesh Sidesets:\n\nyou can see that there are only 6 sidesets, and none of them have an ID of 8.\nYou may use meshgenerators, such as the SidesetBetweenSubdomainGenerator to add new sidesets\nhttps://mooseframework.inl.gov/source/meshgenerators/SideSetsBetweenSubdomainsGenerator.html",
+                          "url": "https://github.com/idaholab/moose/discussions/22772#discussioncomment-4215726",
+                          "updatedAt": "2022-11-23T12:22:51Z",
+                          "publishedAt": "2022-11-23T12:22:51Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "ParsedGenerateSideset would work too",
+                          "url": "https://github.com/idaholab/moose/discussions/22772#discussioncomment-4215736",
+                          "updatedAt": "2022-11-23T12:23:18Z",
+                          "publishedAt": "2022-11-23T12:23:17Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "WilkAndy"
+                  },
+                  "bodyText": "@pierre-jeanne - i think you might be using the wrong PorousFlow objects.  The BCs objects like PorousFlowSink are usually used on boundaries of your mesh, eg, on the entire left-hand edge of the mesh, in your case.   Instead, I believe what you want is two DiracKernels, which inject and produce at a single point (into a single element, for instance).  Have a look at https://mooseframework.inl.gov/modules/porous_flow/sinks.html , which details quite a variety of point (and line) sinks/sources available.  You probably want https://mooseframework.inl.gov/source/dirackernels/PorousFlowSquarePulsePointSource.html or https://mooseframework.inl.gov/source/dirackernels/PorousFlowPointSourceFromPostprocessor.html .",
+                  "url": "https://github.com/idaholab/moose/discussions/22772#discussioncomment-4221142",
+                  "updatedAt": "2022-11-24T00:11:11Z",
+                  "publishedAt": "2022-11-24T00:11:11Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "pierre-jeanne"
+                          },
+                          "bodyText": "Hello Andy,\nthank you for your answer. You are right, the two Dirackernels  can do what I was looking for.\nI used PorousFlowSquarePulsePointSource to simulate injection and production. My simulation run, there is no error message but the pressure doesn't change. I am doing something wrong but I don't know what. Do you mind having a look at the code below?\nThanks.\n[GlobalParams]\nPorousFlowDictator = dictator\n[]\n############################################################\n[Variables]\n[porepressure]\ninitial_condition = 20.0E6\n[]\n[]\n#####################################################\n[PorousFlowBasicTHM]\nporepressure = porepressure    # There is just one variable \u2014 the porepressure\ncoupling_type = Hydro          # there is no coupling with heat or mechanics.\ngravity = '0 0 -9.81'          # gravity is vertical\nfp = the_simple_fluid          # Most PorousFlow simulations require fluid properties to be supplied.\n[]\n############################################################\nThe SimpleFluidProperties are used, which assume a constant fluid bulk modulus and viscosity:\n[FluidProperties]\n[the_simple_fluid]\ntype = SimpleFluidProperties\nbulk_modulus = 2E9\nviscosity = 1.0E-3\ndensity0 = 1000.0\n[]\n[]\n#####################################################\n[Kernels]\n[mass0]\ntype = PorousFlowMassTimeDerivative\nvariable = porepressure\n[]\n[]\n############################################################\n[BCs]\n[./left]                              # arbitrary name\ntype = DirichletBC\nvariable = porepressure\nvalue = 20E6\nboundary = left  # This must match a named boundary in the mesh file\n[../]\n[./right]                             # arbitrary name\ntype = DirichletBC\nvariable = porepressure\nvalue = 20E6\nboundary = right # This must match a named boundary in the mesh file\n[../]\n[./front]                              # arbitrary name\ntype = DirichletBC\nvariable = porepressure\nvalue = 20E6\nboundary = front # This must match a named boundary in the mesh file\n[../]\n[./back]                              # arbitrary name\ntype = DirichletBC\nvariable = porepressure\nvalue = 20E6\nboundary = back # This must match a named boundary in the mesh file\n[../]\n[]\n############################################################\nThe porosity, Biot modulus and permeability are defined through the Materials block:\n[Materials]\n[porosity]\ntype = PorousFlowPorosityConst\nblock = '1 3 4 5 6 7'\nporosity = 0.01\n[]\n[porosity_fracture]\ntype = PorousFlowPorosityConst\nblock = '2 8 9'\nporosity = 0.05\n[]\n[permeability_intact_rock]\ntype = PorousFlowPermeabilityConst\nblock = '1 3 4 5 6 7'\npermeability = '1E-16 0 0   0 1E-16 0   0 0 1E-16'\n[]\n[permeability_fracture]\ntype = PorousFlowPermeabilityConst\nblock = '2 8 9'\npermeability = '1E-11 0 0   0 1E-11 0   0 0 1E-11'\n[]\n[biot_modulus]\ntype = PorousFlowConstantBiotModulus\nblock = '1 2 3 4 5 6 7 8 9'\nfluid_bulk_modulus = 2E9\nbiot_coefficient = 1.0\n[]\n[]\n#####################################################\n[DiracKernels]\n[sink1]\ntype = PorousFlowSquarePulsePointSource\nblock = '8'\npoint = '1224.985 1296.005 0'\nstart_time = 604800\nmass_flux = -0.353\nvariable = porepressure\npoint_not_found_behavior = ERROR\n[]\n[source]\ntype = PorousFlowSquarePulsePointSource\nblock = '9'\npoint = '1224.985 1767.805 0'\nmass_flux = 9.353\nvariable = porepressure\npoint_not_found_behavior = ERROR\n[]\n[]\n############################################################\n[Postprocessors]\n[./p0]\ntype = PointValue\noutputs = csv\npoint = '1224.985 1296.005 0'\nvariable = porepressure\n[../]\n[./p1]\ntype = PointValue\noutputs = csv\npoint = '1224.985 1767.805 0'\nvariable = porepressure\n[../]\n[]\n############################################################\n[Executioner]\ntype = Transient\nsolve_type = Newton\nstart_time = 0.0\nend_time = 7.884e8\n[TimeStepper]\ntype = IterationAdaptiveDT\noptimal_iterations = 1e7\ndt = 1E2\n[]\n[]\n############################################################\n[Outputs]\nexecute_on = 'timestep_end'\nexodus = true\n[./csv]\ntype = CSV\n[../]\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/22772#discussioncomment-4235540",
+                          "updatedAt": "2022-11-25T08:56:36Z",
+                          "publishedAt": "2022-11-25T08:56:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "You don't need the Kernels block, since PorousFlowBasicTHM automatically adds it.   Just be careful with the multiply_by_density flag: see https://mooseframework.inl.gov/source/actions/PorousFlowBasicTHM.html for a discussion.  Eg, you when multiply_by_density = false (which is the default) you will actually be injecting in m^3/s, not in kg/s.\nI'm about to board a plane, sorry for the rushed response.   What do you mean by \"the pressure doesn't change\" - what do the nonlinear iterations look like?  If they're all \"residual = 0\" then the porepressure won't have changed, but if you get >=1 nonlinear iteration per timestep then the pressure must have changed, but your postprocessing (visualisation) must be wrong.",
+                          "url": "https://github.com/idaholab/moose/discussions/22772#discussioncomment-4235682",
+                          "updatedAt": "2022-11-25T09:15:37Z",
+                          "publishedAt": "2022-11-25T09:15:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "pierre-jeanne"
+                          },
+                          "bodyText": "Thank you for your reply! yes the residuals are equal to 0.",
+                          "url": "https://github.com/idaholab/moose/discussions/22772#discussioncomment-4235759",
+                          "updatedAt": "2022-11-25T09:26:18Z",
+                          "publishedAt": "2022-11-25T09:26:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Hmmm, i can't see anything obviously wrong - i must be missing something.  i can't run your input file because i don't have the mesh.  Can you please:\n\nuse multiply_by_density = true\nremove the Kernels block\nmake a boring GeneratedMesh and use that instead, just in case it's a mesh problem.   You don't need multiple blocks - just one block that covers your domain is sufficient to see if \"residual = 0\" or not.\n\na",
+                          "url": "https://github.com/idaholab/moose/discussions/22772#discussioncomment-4257762",
+                          "updatedAt": "2022-11-28T22:09:55Z",
+                          "publishedAt": "2022-11-28T22:09:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "pierre-jeanne"
+                          },
+                          "bodyText": "Ok it was a problem with the mesh. I appreciate your help!\nI had a 3D mesh but with only one layer in the z-direction (and it didn't work), I added a layer above and below (3 layers in total),  and it worked.\nDo you know why? Is it because the nodes where I simulated injection and production were on the upper and lower boundaries (now they are in the middle of the mesh)?\nPierre",
+                          "url": "https://github.com/idaholab/moose/discussions/22772#discussioncomment-4262280",
+                          "updatedAt": "2022-11-29T09:55:00Z",
+                          "publishedAt": "2022-11-29T09:55:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "@pierre-jeanne , it's good to know that it works now, but i think we need to explore further, because the situation you describe (with 1 mesh layer) should have worked fine.   Could you please try using your original 1-layer mesh, and move your points just a little bit so they're definitely inside the mesh domain?",
+                          "url": "https://github.com/idaholab/moose/discussions/22772#discussioncomment-4268049",
+                          "updatedAt": "2022-11-29T21:03:14Z",
+                          "publishedAt": "2022-11-29T21:03:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "pierre-jeanne"
+                          },
+                          "bodyText": "Hello Andy,\nI  changed the coordinate to locate the injection and production points in the middle of the grid element, but it didn't fix the problem.\nYou can try it by yourself.  I copy and past the two codes:\n\nthe first one (1 layer) ran without an error message but injection and production do not 'work'.\nthe 2nd (3 layers) ran fine.\n\nFirst one:\n[Mesh]\n[cmg]\ntype = CartesianMeshGenerator\ndim = 3\ndx = '\n1 1 1 1 1\n'\ndy = '\n1 1 1 1 1\n'\ndz = '1'\nsubdomain_id = '\n1 1 1 1 1\n1 1 8 1 1\n1 1 1 1 1\n1 1 9 1 1\n1 1 1 1 1\n'\nshow_info = True\n[]\n[]\n[GlobalParams]\nPorousFlowDictator = dictator\n[]\n[Variables]\n[porepressure]\ninitial_condition = 20.0E6\n[]\n[]\n[PorousFlowBasicTHM]\nporepressure = porepressure    # There is just one variable \u2014 the porepressure\ncoupling_type = Hydro          # there is no coupling with heat or mechanics.\ngravity = '0 0 -9.81'          # gravity is vertical\nmultiply_by_density = true     # to inject kg/s\nfp = the_simple_fluid          # Most PorousFlow simulations require fluid properties to be supplied.\n[]\n[FluidProperties]\n[the_simple_fluid]\ntype = SimpleFluidProperties\nbulk_modulus = 2E9\nviscosity = 1.0E-3\ndensity0 = 1000.0\n[]\n[]\n[BCs]\n[./left] # arbitrary user-chosen name\ntype = DirichletBC\nvariable = porepressure\nvalue = 20E6\nboundary = left # This must match a named boundary in the mesh file\n[../]\n[./right] # arbitrary user-chosen name\ntype = DirichletBC\nvariable = porepressure\nvalue = 20E6\nboundary = right # This must match a named boundary in the mesh file\n[../]\n[./front] # arbitrary user-chosen name\ntype = DirichletBC\nvariable = porepressure\nvalue = 20E6\nboundary = front # This must match a named boundary in the mesh file\n[../]\n[./back] # arbitrary user-chosen name\ntype = DirichletBC\nvariable = porepressure\nvalue = 20E6\nboundary = back # This must match a named boundary in the mesh file\n[../]\n[]\n[Materials]\n[porosity]\ntype = PorousFlowPorosityConst\nblock = '1 8 9'\nporosity = 0.01\n[]\n[permeability]\ntype = PorousFlowPermeabilityConst\nblock = '1 8 9'\npermeability = '1E-16 0 0   0 1E-16 0   0 0 1E-16'\n[]\n[biot_modulus]\ntype = PorousFlowConstantBiotModulus\nblock = '1 8 9'\nfluid_bulk_modulus = 2E9\nbiot_coefficient = 1.0\n[]\n[]\n[DiracKernels]\n[sink1]\ntype = PorousFlowSquarePulsePointSource\nblock = '8'\npoint = '2 1 0'\nstart_time = 604800\nmass_flux = -0.379\nvariable = porepressure\npoint_not_found_behavior = ERROR\n[]\n[source]\ntype = PorousFlowSquarePulsePointSource\nblock = '9'\npoint = '2.5 3.5 0.5'\nmass_flux = 0.379\nvariable = porepressure\npoint_not_found_behavior = ERROR\n[]\n[]\n[Executioner]\ntype = Transient\nsolve_type = Newton\nstart_time = 0.0\nend_time = 7.884e8\nnl_abs_tol = 1e-6\n[TimeStepper]\ntype = IterationAdaptiveDT\noptimal_iterations = 1e7\ndt = 1E2\n[]\n[]\n[Outputs]\nexecute_on = 'timestep_end'\nexodus = true\n[./csv]\ntype = CSV\n[../]\n[]\n#########################\nthe second code:\n[Mesh]\n[cmg]\ntype = CartesianMeshGenerator\ndim = 3\ndx = '\n1 1 1 1 1\n'\ndy = '\n1 1 1 1 1\n'\ndz = '1 1 1'\nsubdomain_id = '\n1 1 1 1 1\n1 1 1 1 1\n1 1 1 1 1\n1 1 1 1 1\n1 1 1 1 1\n1 1 1 1 1\n1 1 8 1 1\n1 1 1 1 1\n1 1 9 1 1\n1 1 1 1 1\n\n1 1 1 1 1\n1 1 1 1 1\n1 1 1 1 1\n1 1 1 1 1\n1 1 1 1 1\n'\nshow_info = True\n\n[]\n[]\n[GlobalParams]\nPorousFlowDictator = dictator\n[]\n[Variables]\n[porepressure]\ninitial_condition = 20.0E6\n[]\n[]\n[PorousFlowBasicTHM]\nporepressure = porepressure    # There is just one variable \u2014 the porepressure\ncoupling_type = Hydro          # there is no coupling with heat or mechanics.\ngravity = '0 0 -9.81'          # gravity is vertical\nmultiply_by_density = true     # to inject kg/s\nfp = the_simple_fluid          # Most PorousFlow simulations require fluid properties to be supplied.\n[]\n[FluidProperties]\n[the_simple_fluid]\ntype = SimpleFluidProperties\nbulk_modulus = 2E9\nviscosity = 1.0E-3\ndensity0 = 1000.0\n[]\n[]\n[BCs]\n[./left] # arbitrary user-chosen name\ntype = DirichletBC\nvariable = porepressure\nvalue = 20E6\nboundary = left # This must match a named boundary in the mesh file\n[../]\n[./right] # arbitrary user-chosen name\ntype = DirichletBC\nvariable = porepressure\nvalue = 20E6\nboundary = right # This must match a named boundary in the mesh file\n[../]\n[./front] # arbitrary user-chosen name\ntype = DirichletBC\nvariable = porepressure\nvalue = 20E6\nboundary = front # This must match a named boundary in the mesh file\n[../]\n[./back] # arbitrary user-chosen name\ntype = DirichletBC\nvariable = porepressure\nvalue = 20E6\nboundary = back # This must match a named boundary in the mesh file\n[../]\n[]\n[Materials]\n[porosity]\ntype = PorousFlowPorosityConst\nblock = '1 8 9'\nporosity = 0.01\n[]\n[permeability]\ntype = PorousFlowPermeabilityConst\nblock = '1 8 9'\npermeability = '1E-16 0 0   0 1E-16 0   0 0 1E-16'\n[]\n[biot_modulus]\ntype = PorousFlowConstantBiotModulus\nblock = '1 8 9'\nfluid_bulk_modulus = 2E9\nbiot_coefficient = 1.0\n[]\n[]\n[DiracKernels]\n[sink1]\ntype = PorousFlowSquarePulsePointSource\nblock = '8'\npoint = '2.5 1.5 1.5'\nstart_time = 604800\nmass_flux = -0.379\nvariable = porepressure\npoint_not_found_behavior = ERROR\n[]\n[source]\ntype = PorousFlowSquarePulsePointSource\nblock = '9'\npoint = '2.5 3.5 1.5'\nmass_flux = 0.379\nvariable = porepressure\npoint_not_found_behavior = ERROR\n[]\n[]\n[Executioner]\ntype = Transient\nsolve_type = Newton\nstart_time = 0.0\nend_time = 7.884e8\nnl_abs_tol = 1e-6\n[TimeStepper]\ntype = IterationAdaptiveDT\noptimal_iterations = 1e7\ndt = 1E2\n[]\n[]\n[Outputs]\nexecute_on = 'timestep_end'\nexodus = true\n[]\nBest,\nPierre",
+                          "url": "https://github.com/idaholab/moose/discussions/22772#discussioncomment-4272986",
+                          "updatedAt": "2022-11-30T11:40:28Z",
+                          "publishedAt": "2022-11-30T11:40:27Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Great, thanks for this, @pierre-jeanne - i hope to try this in the next 12 hours.",
+                          "url": "https://github.com/idaholab/moose/discussions/22772#discussioncomment-4277873",
+                          "updatedAt": "2022-11-30T22:39:54Z",
+                          "publishedAt": "2022-11-30T22:39:53Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "OK, the solution turned out to be super easy.   Your BCs are wrong: they are fixing the porepressure on zmax and zmin (this is the boundary = front and boundary = back BCs).   So, there are no degrees of freedom for MOOSE to solve for.  Physically: you are injecting water, but immediately removing it from the zmax and zmin boundaries.  Ooops!\nBy the way, you can simulate this example using a 2D mesh - more computationally efficient.",
+                          "url": "https://github.com/idaholab/moose/discussions/22772#discussioncomment-4280602",
+                          "updatedAt": "2022-12-01T06:55:06Z",
+                          "publishedAt": "2022-12-01T06:55:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "pierre-jeanne"
+                          },
+                          "bodyText": "Yes it is working thanks.\nI am a little bit confused it is a 3d model with 6 boundaries: top, bottom, left, right, front, and back.  but when I fix the pore pressure on the front and back boundaries it also fixed the pore pressure on the top and bottom boundaries, why?\nit is true that I didn't define the bottom and top BCs, because I made the assumption that when no the BCs are defined by default the boundaries are impermeable (it is like this in TOUGH2). Is it wrong? and is it why the front and back BCs are applied to the top and bottom BCs?\nI simulated a 1 layer mesh instead of a 2d mesh because I wanted to compare my simulation results with the result obtained in TOUGH2 (with the exact same mesh).\nThanks again for your help and for taking the time to answer my question.\nBest,\nPiere",
+                          "url": "https://github.com/idaholab/moose/discussions/22772#discussioncomment-4281101",
+                          "updatedAt": "2022-12-01T08:09:02Z",
+                          "publishedAt": "2022-12-01T08:09:02Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

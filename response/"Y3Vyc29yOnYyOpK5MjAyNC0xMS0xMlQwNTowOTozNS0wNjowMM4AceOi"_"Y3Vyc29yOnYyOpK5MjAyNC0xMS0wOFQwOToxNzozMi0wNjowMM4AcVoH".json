@@ -1,0 +1,822 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyNC0xMS0wOFQwOToxNzozMi0wNjowMM4AcVoH"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Porosity based on STATE (MaterialProperty)- cant figure out, what did i do wrong",
+          "author": {
+            "login": "Traiwit"
+          },
+          "bodyText": "Hi PorousFlow experts,\nI need help with my Porosity class (where the porosity is updated based on state value) where STATE is another MaterialProperty\nlet's look at my simple input file below\n## mpiexec -n 4 ~/moose_beh/moose_beh-opt -i groundwater_test.i --n-threads=4 --t\n\ngravity = '0 0 -9.81'\n[Mesh]\n  [basic_mesh]\n    type = GeneratedMeshGenerator\n    dim = 3\n    xmin = -200\n    xmax = 200\n    nx = 10\n    ymin = -50\n    ymax = 50\n    ny = 5\n    zmin = -200\n    zmax = -100\n    nz = 5\n  []\n\n  [block_2]\n    type = SubdomainBoundingBoxGenerator\n    input = basic_mesh\n    block_id = 2\n    block_name = lower_aquifer\n    bottom_left = '150 -50 -200'\n    top_right = '200 50 -100'\n  []\n[]\n\n[Problem]\n  type = 'FEProblem'   # (see https://mooseframework.inl.gov/source/problems/FEProblem.html)\n  \n  ### checking parameters:\n  boundary_restricted_elem_integrity_check = true   # default: true\n  boundary_restricted_node_integrity_check = true   # default: true\n  check_uo_aux_state = false                        # default: false\n  error_on_jacobian_nonzero_reallocation = false    # default: false\n  fv_bcs_integrity_check = true                     # default: true\n  kernel_coverage_check = true                      # default: true\n  material_coverage_check = true                    # default: true\n  material_dependency_check = false                  # default: true\n  skip_nl_system_check = false                      # default: false\n[]\n\n[GlobalParams]\n  PorousFlowDictator = dictator\n[]\n\n[UserObjects]\n    [dictator]\n      type = PorousFlowDictator\n      porous_flow_vars = pp\n      number_fluid_phases = 1\n      number_fluid_components = 1\n      execute_on = 'TIMESTEP_END'   # the default\n    []\n  []\n\n[Variables]\n  [pp]\n  []\n[]\n\n[ICs]\n  [pp]\n    type = FunctionIC\n    variable = pp\n    function = fcn_pwp_initialCondition\n  []\n[]\n\n[BCs]\n  [pp]\n    type = FunctionDirichletBC\n    variable = pp\n    function = fcn_pwp_initialCondition\n    boundary = 'left'\n  []\n\n  # [bc_drain]\n  #   type = PorousFlowBEH_Drainage\n  #   boundary = 'right'\n  #   variable = pp\n  #   # char_elem_length_n = charElLength_M0\n  #   fluid_phase = 0\n  #   pt_vals =     '0 1e9'\n  #   multipliers = '0 1e9'\n  #   PT_shift = 0.\n  #   flux_function = 1e-1\n  #   use_mobility = true   \n  #   use_relperm = false   \n  # []\n[]\n\n[Functions]\n  [fcn_pwp_initialCondition]\n    type = ParsedFunction\n    expression = '9810.*(-100-z)'\n  []\n[]\n\n[AuxVariables]\n  [porosity_M0]\n    type = MooseVariableConstMonomial\n  []\n[]\n\n[AuxKernels]\n  [porosity_M0]\n    type = PorousFlowPropertyAux\n    variable = porosity_M0\n    property = porosity\n    execute_on = 'INITIAL TIMESTEP_BEGIN TIMESTEP_END'\n  []\n[]\n\n\n\n[Kernels]\n    [fluid_mass_dot]\n      type = PorousFlowMassTimeDerivative\n      variable = pp\n      fluid_component = 0\n      multiply_by_density = true\n    []\n    \n    [fluid_flux_fullupwind]\n      type = PorousFlowAdvectiveFlux\n      variable = pp\n      gravity = '${gravity}'\n      fluid_component = 0\n    []\n  []\n\n[FluidProperties]\n  [simple_fluid]\n    type = SimpleFluidProperties\n    thermal_expansion = 0\n    bulk_modulus = 1e9\n    density0 = 1000\n  []\n[]\n\n[UserObjects]\n    [uobj_saturation]\n      type = PorousFlowCapillaryPressureVG\n      alpha = 1e-6\n      m = 0.6\n      log_extension = True\n      sat_lr = 0.1\n    []\n[]\n\n[Materials]\n  [mat_groundwater]\n      type = PorousFlowSingleComponentFluid\n      fp = simple_fluid\n      phase = 0\n      pressure_unit = Pa          # options: Pa (default), MPa\n      temperature_unit = Kelvin   # options: Kelvin (default), Celsius\n      time_unit = years           # options: seconds (default), hours, days, years\n      compute_density_and_viscosity = true\n  []\n  [mat_temperature]\n    type = PorousFlowTemperature\n  []\n  [mat_massfrac]\n    type = PorousFlowMassFraction\n  []\n\n  [mat_saturation]\n    type = PorousFlow1PhaseP\n    porepressure = pp\n    capillary_pressure = uobj_saturation\n  []\n  \n  [porosity_block0]\n    type = PorousFlowPorosityConst\n    porosity = 0.07\n    block = 0\n  []\n  [porosity_block2_1]\n    type = PorousFlowPorosityConst\n    porosity = 0.075\n    block = 2\n  []\n\n  # [PorousFlowPorosityFromCSV]\n  #   type = PorousFlowPorosityFromCSV\n  #   state = state\n  #   state_values =      '0    1       2    3'\n  #   poro_state_values = '0.07 0.07  0.075 0.1'\n  # []\n\n    ## specify state here\n  [state1]\n    type = GenericFunctionMaterial\n    block = 0\n    prop_names = state\n    prop_values = 1\n  [../]\n  [state2]\n    type = GenericFunctionMaterial\n    block = 2\n    prop_names = state\n    prop_values = 2\n  [../]\n\n  [biot_mod]\n    type = PorousFlowConstantBiotModulus\n    fluid_bulk_modulus = 2E9\n    biot_coefficient = 1.0\n  []\n  [permeability_aquifers]\n    type = PorousFlowPermeabilityConst\n    permeability = '1E-14 0 0 0 1E-14 0 0 0 1E-14'\n  []\n  [mat_relative_permeability]\n      type = PorousFlowRelativePermeabilityConst\n      phase = 0\n      kr = 1.0\n  []\n[]\n\n[Preconditioning]\n  [smp]\n    type = SMP\n    full = true\n  []\n[]\n\n[Executioner]\n  type = Transient\n  solve_type = Newton\n  use_pre_SMO_residual = false\n  dt = 0.0005\n  end_time = 0.01 \n  nl_abs_tol = 1E-5\n  nl_rel_tol = 1E-20\n[]\n\n[Outputs]\n  [exodus]\n    type = Exodus\n    file_base = test_poro_change\n    output_material_properties = true\n  []\n[]\n\nso as you can see, there are 2 ways of assigning the porosity:\n\nMOOSE standard way\n\n  [porosity_block0]\n    type = PorousFlowPorosityConst\n    porosity = 0.07\n    block = 0\n  []\n  [porosity_block2_1]\n    type = PorousFlowPorosityConst\n    porosity = 0.075\n    block = 2\n  []\n\n\nfrom my class\n\n # [PorousFlowPorosityFromCSV]\n  #   type = PorousFlowPorosityFromCSV\n  #   state = state\n  #   state_values =      '0    1       2    3'\n  #   poro_state_values = '0.07 0.07  0.075 0.1'\n  # []\n\n    ## specify state here\n  [state1]\n    type = GenericFunctionMaterial\n    block = 0\n    prop_names = state\n    prop_values = 1\n  [../]\n  [state2]\n    type = GenericFunctionMaterial\n    block = 2\n    prop_names = state\n    prop_values = 2\n  [../]\n\nthe porosity showing on Paraview are exactly the same, but the pp are drastically different (only when PorousFlowMassTimeDerivative is activated)\n\npp with assign porosity from MOOSE default method\n\nPP when assign porosity from my class\n\nand below is my class .C\ni couldnt figure out, what did i do wrong? also you can see the density are a lil bit different too\n//* This file is part of the MOOSE framework\n//* https://www.mooseframework.org\n//*\n//* All rights reserved, see COPYRIGHT for full restrictions\n//* https://github.com/idaholab/moose/blob/master/COPYRIGHT\n//*\n//* Licensed under LGPL 2.1, please see LICENSE for details\n//* https://www.gnu.org/licenses/lgpl-2.1.html\n\n#include \"PorousFlowPorosityFromCSV.h\"\n\nregisterMooseObject(\"moose_behApp\", PorousFlowPorosityFromCSV);\n\nInputParameters\nPorousFlowPorosityFromCSV::validParams()\n{\n  InputParameters params = PorousFlowPorosityBase::validParams();\n  params.addParam<UserObjectName>(\"read_prop_user_object\",\n                                  \"The ElementReadPropertyFile GeneralUserObject to read element-specific property values from file\");\n  params.addClassDescription(\"This Material calculates the porosity assuming it is constant\");\n  params.addParam<MaterialPropertyName>(\"state\", 0, \"state\");\n  params.addParam<std::vector<int>>(\"state_values\", std::vector<int>(), \"List of state values\");\n  params.addParam<std::vector<Real>>(\"poro_state_values\", std::vector<Real>(), \"List of porosity values corresponding to the state values\");\n  return params;\n}\n\nPorousFlowPorosityFromCSV::PorousFlowPorosityFromCSV(const InputParameters & parameters)\n  : PorousFlowPorosityBase(parameters),\n    _read_prop_user_object(isParamValid(\"read_prop_user_object\")\n                               ? &getUserObject<ElementPropertyReadFile>(\"read_prop_user_object\")\n                               : nullptr),\n    _state(getMaterialProperty<Real>(\"state\")),\n    _stateValues(getParam<std::vector<int>>(\"state_values\")),\n    _poroStateValues(getParam<std::vector<Real>>(\"poro_state_values\"))\n{\n    // Ensure the state and poro_state vectors are of the same size\n    if (_stateValues.size() != _poroStateValues.size()) {\n        mooseError(\"state_values and poro_state_values must have the same length\");\n    }\n\n    // Populate the state to porosity map\n    for (size_t i = 0; i < _stateValues.size(); ++i) {\n        _stateToPoroMap[_stateValues[i]] = _poroStateValues[i];\n    }\n}\n\nvoid\nPorousFlowPorosityFromCSV::initQpStatefulProperties()\n{\n  // Calculate Porosity\n  if (_stateToPoroMap.find(_state[_qp]) != _stateToPoroMap.end()) {\n    // If the state exists in the map, use the corresponding porosity value\n    Real poroValue = _stateToPoroMap[_state[_qp]];\n    _porosity[_qp] = poroValue;\n  } else {\n    if (_read_prop_user_object) {\n      _porosity[_qp] = _read_prop_user_object->getData(_current_elem, 0);\n    } else {\n      mooseWarning(\"No user object specified for reading property values, and state value not found in the map. Porosity will remain undefined.\");\n    }\n  }\n}\n\nvoid\nPorousFlowPorosityFromCSV::computeQpProperties()\n{\n  initQpStatefulProperties();\n\n    // The derivatives are zero for all time\n    (*_dporosity_dvar)[_qp].assign(_num_var, 0.0);\n    (*_dporosity_dgradvar)[_qp].assign(_num_var, RealGradient());\n}\n\n\nthank you!\nHi @cpgr I tag you since you are the expert here \ud83e\udd47\nquick note:\nit seems that the problem only occurs when i assign porosity based on state (like below)\nstate_values =      '0    1       2    3'\nporo_state_values = '0.07 0.07  0.075 0.1'\nvaried spatial porosity from .csv file does not give this weird pp/results",
+          "url": "https://github.com/idaholab/moose/discussions/29041",
+          "updatedAt": "2024-11-13T01:58:28Z",
+          "publishedAt": "2024-11-11T06:11:29Z",
+          "category": {
+            "name": "Q&A Modules: Porous Flow"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "Traiwit"
+                  },
+                  "bodyText": "interesting finding\nso i let it run a bit, the pp seems to go back to where it should be\n\n\nnot even sure why, since\nstate_values = '0 1 2 3'\nporo_state_values = '0.07 0.07 0.075 0.1'\nare assigned since INITIAL similar to MOOSE default way",
+                  "url": "https://github.com/idaholab/moose/discussions/29041#discussioncomment-11211139",
+                  "updatedAt": "2024-11-11T06:50:04Z",
+                  "publishedAt": "2024-11-11T06:50:03Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "hello\nif you output porosity using the outputs parameter of the material, do you see the profile you expect when using your material?\nBe careful with this\n  if (_stateToPoroMap.find(_state[_qp]) != _stateToPoroMap.end()) {\n\nyou are converting state, a field of Real, to an int (depending on the type of _stateToPoroMap maybe implicitly). It's probably working here with integers though since you are not getting the warning and also double = (Real) represents ints exactly.\nOtherwise since the results eventually agree, it must stem from your use of initQpStatefulProperties to computeQpProperties.\nIf you set the code directly in computeQpProperties, does the result improve?\nBy using initQpStatefulProperties the material is now considered to have a state, e.g. to depend on its previous values for its current values.\nThis material seems stateful when state is such that on some time steps you find a value, and afterwards you have steps where a value is not found and you only get the warning.",
+                          "url": "https://github.com/idaholab/moose/discussions/29041#discussioncomment-11214736",
+                          "updatedAt": "2024-11-11T13:29:01Z",
+                          "publishedAt": "2024-11-11T13:29:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "Hi @GiudGiud\nThe porosity output looks good to me (as expecte for all cases)\nI will check the difference when i moved stuff from initQpStatefulProperties to computeQpProperties\nI didnt know about this before\n\nBy using initQpStatefulProperties the material is now considered to have a state, e.g. to depend on its previous values for its current values.\n\nalso I did have a quick fixed when i modified PorousFlowMassTimeDerivative\nReal\nPorousFlowMassTimeDerivative::computeQpResidual()\n{\n  Real mass = 0.0;\n  Real mass_old = 0.0;\n  for (unsigned ph = 0; ph < _num_phases; ++ph)\n  {\n    const Real dens = (_multiply_by_density ? (*_fluid_density)[_i][ph] : 1.0);\n    mass += dens * _fluid_saturation_nodal[_i][ph] * _mass_frac[_i][ph][_fluid_component];\n    const Real dens_old = (_multiply_by_density ? (*_fluid_density_old)[_i][ph] : 1.0);\n    mass_old +=\n        dens_old * _fluid_saturation_nodal_old[_i][ph] * _mass_frac_old[_i][ph][_fluid_component];\n  }\n  const Real strain = (_has_total_strain ? (*_total_strain_old)[_qp].trace() : 0.0);\n\n## Original\n # return _test[_i][_qp] * (1.0 + strain) * (_porosity[_i] * mass - _porosity_old[_i] * mass_old) /\n #        _dt;\n\n## change  _porosity_old[_i]  to  _porosity[_i] \n return _test[_i][_qp] * (1.0 + strain) * (_porosity[_i] * mass - _porosity[_i] * mass_old) /\n         _dt;  \n}\n\nit kinda works, I tested it with:\n\nMOOSE way of assign porosity + original PorousFlowMassTimeDerivative\nMOOSE way of assign porosity + modified PorousFlowMassTimeDerivative\nmy class + modified PorousFlowMassTimeDerivative\n\nThey all give the same results from node-to-node comparison\nnote: I haven't tested it with the case when i change porosity between time_step yet",
+                          "url": "https://github.com/idaholab/moose/discussions/29041#discussioncomment-11219576",
+                          "updatedAt": "2024-11-11T23:06:12Z",
+                          "publishedAt": "2024-11-11T23:06:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "this line was coding the backwards Euler time integration. So using porosity_old was correct imo. However, porosity_old might have had the wrong value. In which case this expression was not working for you.",
+                          "url": "https://github.com/idaholab/moose/discussions/29041#discussioncomment-11219739",
+                          "updatedAt": "2024-11-11T23:42:34Z",
+                          "publishedAt": "2024-11-11T23:42:33Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "dumb question: how do I then make sure that porosity_old that is produced from my class is correct?",
+                          "url": "https://github.com/idaholab/moose/discussions/29041#discussioncomment-11219758",
+                          "updatedAt": "2024-11-11T23:46:30Z",
+                          "publishedAt": "2024-11-11T23:46:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "You could output it\nWe d need to modify https://mooseframework.inl.gov/source/auxkernels/MaterialRealAux.html to output old and older properties.",
+                          "url": "https://github.com/idaholab/moose/discussions/29041#discussioncomment-11219774",
+                          "updatedAt": "2024-11-11T23:49:54Z",
+                          "publishedAt": "2024-11-11T23:49:53Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cpgr"
+                          },
+                          "bodyText": "Might be worth making a 1 element model and just printing the values to the console to make sure everything is being initialised correctly",
+                          "url": "https://github.com/idaholab/moose/discussions/29041#discussioncomment-11219954",
+                          "updatedAt": "2024-11-12T00:27:22Z",
+                          "publishedAt": "2024-11-12T00:27:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "Hi guys,\nyeh, now i can see something isnt right\nfor the context, i run 1 step simulation with\n  [PorousFlowPorosityFromCSV]\n    type = PorousFlowPorosityFromCSV\n    state = state\n    state_values =      '0    1     2    3'\n    poro_state_values = '0.07 0.07  0.071 0.1'\n  []\n\nin theory, _porosity_old and _porosity should be exactly the same\n(moose default method gives the same values for _porosity_old and _porosity)\n_porosity_old: 0.071\n_porosity: 0.07\nmass_old: 1000\nmass: 1011.45\n\n_porosity_old: 0.071\n_porosity: 0.07\nmass_old: 1000\nmass: 1011.45\n\n_porosity_old: 0.071\n_porosity: 0.07\nmass_old: 1000\nmass: 1011.45\n\n_porosity_old: 0.071\n_porosity: 0.07\nmass_old: 1000\nmass: 1011.45\n\n_porosity_old: 0.071\n_porosity: 0.07\nmass_old: 1000\nmass: 1011.45\n\nquestion now would be: can i control _porosity_old from my class?\nor i have to make another material property and name it _porosity_old ? and call it differently from the original PorousFlowMassTimeDerivative's way\n_porosity_old(getMaterialPropertyOld<Real>(\"PorousFlow_porosity_nodal\")),",
+                          "url": "https://github.com/idaholab/moose/discussions/29041#discussioncomment-11220055",
+                          "updatedAt": "2024-11-12T00:45:22Z",
+                          "publishedAt": "2024-11-12T00:45:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "Hi @cpgr\nI think I might have found a bug (or maybe it's just a misunderstanding on my part) with how MOOSE assigns porosity.\nIf I set porosity to vary over time using [Controls], the porosity_nodal seems to stay constant.\nfor example:\n  [porosity_block0]\n    type = PorousFlowPorosityConst\n    porosity = 0.07\n    block = 0\n  []\n  [porosity_block2_1]\n    type = PorousFlowPorosityConst\n    porosity = 0.071\n    block = 2\n  []\n  [porosity_block2_2]\n    type = PorousFlowPorosityConst\n    porosity = 0.85\n    block = 2\n    enable = false\n  []\n  [porosity_block2_3]\n    type = PorousFlowPorosityConst\n    porosity = 1\n    block = 2\n    enable = false\n  []\n\n[Controls]\n  [control_1]\n    type = ConditionalFunctionEnableControl\n    conditional_function = 'if(t > 0.0005 & t<=0.001 ,1,0)'\n    enable_objects = 'Materials::porosity_block2_2'\n    disable_objects = 'Materials::porosity_block2_1'\n    execute_on = 'INITIAL TIMESTEP_BEGIN TIMESTEP_END'\n  [../]\n  [control_2]\n    type = ConditionalFunctionEnableControl\n    conditional_function = 'if(t>0.001,1,0)'\n    enable_objects = 'Materials::porosity_block2_3'\n    disable_objects = 'Materials::porosity_block2_2'\n    execute_on = 'INITIAL TIMESTEP_BEGIN TIMESTEP_END'\n  [../]\n[]\n\nfrom paraview I can see, porosity_qp has change but porosity_nodal remains the same, and PorousFlowMassTimeDerivative takes nodal value not qp",
+                          "url": "https://github.com/idaholab/moose/discussions/29041#discussioncomment-11220183",
+                          "updatedAt": "2024-11-12T01:08:51Z",
+                          "publishedAt": "2024-11-12T01:08:50Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cpgr"
+                          },
+                          "bodyText": "I prefer 'feature' rather than bug \ud83d\ude06\nPorosity is a tricky material as we typically need it at nodes and ups, so it gets added twice. In your control example, you aren't switching the nodal porosity materials that get added in the background - these should be called 'porosity_block2_1_nodal' etc, (all your porosity materials with a  _nodal appended to the end). I imagine that if you add these to the control block that it will work.\nI have been thinking of your problem and believe it would be better to make an AuxVariable porosity that gets set based on a state AuxVariable. You can probably achieve what you want using a FunctionAux with a PiecewiseConstant function? The advantage of this is that the porosity AuxVariable can be used with the existing PorousFlowPorosityConst material to provide a spatially heterogeneous porosity based on the state variable.",
+                          "url": "https://github.com/idaholab/moose/discussions/29041#discussioncomment-11220865",
+                          "updatedAt": "2024-11-12T03:12:15Z",
+                          "publishedAt": "2024-11-12T03:12:14Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cpgr"
+                          },
+                          "bodyText": "In regards to the error when using your material, there must be a logic issue in there somewhere as it looks like the old value is getting set to the state + 1 value?",
+                          "url": "https://github.com/idaholab/moose/discussions/29041#discussioncomment-11220875",
+                          "updatedAt": "2024-11-12T03:14:53Z",
+                          "publishedAt": "2024-11-12T03:14:53Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to use MOOSE to generate a layered square with circular void in the middle?",
+          "author": {
+            "login": "Yulongggggg"
+          },
+          "bodyText": "Dear developers, I am trying to use MOOSE to generate a mesh, which is a square with a circular void inside, can u tell me how to do it? Also, the square should be layered, i.e., composed of different blocks(rectangle shape), and how to assign different boundary names (apply to the boundary condition block. e.g., 'inner')",
+          "url": "https://github.com/idaholab/moose/discussions/29045",
+          "updatedAt": "2024-11-11T15:10:30Z",
+          "publishedAt": "2024-11-11T14:54:07Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "I am trying to use MOOSE to generate a mesh, which is a square with a circular void inside, can u tell me how to do it?\n\nYou can use this from the Reactor module\nhttps://mooseframework.inl.gov/source/meshgenerators/PinMeshGenerator.html\nor this\nhttps://mooseframework.inl.gov/source/meshgenerators/ConcentricCircleMeshGenerator.html\nwith has_outer_square set to true\nthen delete the central cirlcle using a BlockDeletionGenerator\n\nand how to assign different boundary names (apply to the boundary condition block. e.g., 'inner')\n\nOnce the blocks are set you can use this\nhttps://mooseframework.inl.gov/source/meshgenerators/SideSetsBetweenSubdomainsGenerator.html",
+                  "url": "https://github.com/idaholab/moose/discussions/29045#discussioncomment-11215738",
+                  "updatedAt": "2024-11-11T14:58:40Z",
+                  "publishedAt": "2024-11-11T14:58:38Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Yulongggggg"
+                          },
+                          "bodyText": "Thank you! Could you please tell me how to generate a layered square mesh with inclusion inside? Which looks like this",
+                          "url": "https://github.com/idaholab/moose/discussions/29045#discussioncomment-11215829",
+                          "updatedAt": "2024-11-11T15:06:20Z",
+                          "publishedAt": "2024-11-11T15:06:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "with the mesh generators I mentioned you should get a good start.\nYou can add subdomains 1 by 1 using this generator\nhttps://mooseframework.inl.gov/source/meshgenerators/ParsedSubdomainMeshGenerator.html\nhow many layered subdomains do you need?",
+                          "url": "https://github.com/idaholab/moose/discussions/29045#discussioncomment-11215876",
+                          "updatedAt": "2024-11-11T15:10:31Z",
+                          "publishedAt": "2024-11-11T15:10:30Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "how to apply phase field to different subdomain?",
+          "author": {
+            "login": "RWTHLHK"
+          },
+          "bodyText": "It is very time consuming to apply phase field on an entire 3D mesh, so I only want to apply phase field to a small subdomain(block 1). But I always get material property not defined error. I know this is because I am not defining material property on different blocks in a correct way but I don't know how to fix this. Can some expert please have a look at my  inp file?\nnew block 1:\n\nkernels:\n\nmaterials:\n\nThe error I get:",
+          "url": "https://github.com/idaholab/moose/discussions/29042",
+          "updatedAt": "2024-11-11T13:15:00Z",
+          "publishedAt": "2024-11-11T10:39:51Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nUse Debug/show_material_props=true to get the names of the material properties to match up between the two equations. What is happening is that half your material properties are prefaced with uncracked which is set in cracked_stress while the rest is not prefaced, and the equations are not set consistently with one or the other. Did you block restrict the SolidMechanics physics?",
+                  "url": "https://github.com/idaholab/moose/discussions/29042#discussioncomment-11214600",
+                  "updatedAt": "2024-11-11T13:15:00Z",
+                  "publishedAt": "2024-11-11T13:14:59Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "PTScotch needs flex installed error while installing Cardinal",
+          "author": {
+            "login": "nancysemwal"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n I have consulted the Posting Guidelines.\n I have searched the Discussions Forum and MOOSE Framework Troubleshooting and have not found what I was looking for\n Q&A Getting Started is the most appropriate category for my question (trouble installing, beginner user, ...)\n\nIssue or question about MOOSE\nHello everyone.\nI am installing Cardinal on my PC using this \"Building Cardinal without MOOSE's conda Environment\" guide.\nBefore installing Cardinal, I had already installed MOOSE using conda  because I didn't know that Cardinal could manage its dependencies itself. I can access this MOOSE installation using conda activate moose. However, while installing Cardinal, I am not in this environment. I am in the base environment only. So I think I'm on the right path.\nHowever when executing ./contrib/moose/scripts/update_and_rebuild_petsc.sh command I am getting the following error:\nUNABLE to CONFIGURE with GIVEN OPTIONS (see configure.log for details):- PTScotch needs flex installed\nI have already searched this forum and found Questions when building Cardinal without MOOSE's conda environment #27115 which talked about deinit and rinit using git submodule update --init --recursive moose command (This didn't work for me) and Error when installing PETSc and libMesh #27184 but here the issue was with METIS and not flex so I didn't try the solutions. So I'm making a new thread.\nOne thing to note is that I am not doing the installation in my HOME directory but rather in some other directory. I believe that's not a problem as long as I specify the correct paths.\nChanges made in my .bashrc -\nexport NEKRS_HOME=/mnt/faa6b7ba-bc59-4346-b975-2b5cd78afa12/cardinal/install\nexport CC=mpicc\nexport CXX=mpicxx\nexport FC=mpif90\nHere I have omitted one command which is suggested as OPTIONAL in the tutorial\nexport OPENMC_CROSS_SECTIONS=${HOME}/cross_sections/endfb-vii.1-hdf5/cross_sections.xml\nThat's because I am not installing in HOME, and when I checked the path where I am installing (/mnt/faa6b7ba-bc59-4346-b975-2b5cd78afa12/), there is no folder named cross_sections. Could this be the cause of my issue?\nI also checked my configure.log file and saw something which seems amiss to me.\nConfigure Options: --with-hdf5-dir=/home/nancy/.local/share/Trash/files/anaconda2/pkgs/hdf5-1.10.2-hba1933b_1/include/hdf5.h/../../ \nWhy is the HDF5 package being picked up from a trash directory ? I am assuming this is somehow responsible for the issue.\nI feel like I have tried everything that I could. What more can be done?\nDetails:\nOS - Ubuntu 24.04.1 LTS (Installed about 2 months ago)\nCmake - 3.28.4\nGCC - 13.2.0\nG++ - 13.2.0\nGFortran - 13.2.0\nGit - 2.43.0\nConda - 24.9.1\nEncountering Errors? Please include diagnostic output\nInfluential Environment Variables\nCC=mpicc\nCONDA_CHANNEL=https://conda.software.inl.gov/public\nCONDA_DEFAULT_ENV=base\nCONDA_EXE=/home/nancy/miniconda3/bin/conda\nCONDA_PREFIX=/home/nancy/miniconda3\nCONDA_PROMPT_MODIFIER=(base)\nCONDA_PYTHON_EXE=/home/nancy/miniconda3/bin/python\nCONDA_SHLVL=1\nCURL_CA_BUNDLE=\nCXX=mpicxx\nFC=mpif90\nLD_LIBRARY_PATH=/usr/local/cuda-11.8/lib64 MOOSE_JOBS=6 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin REQUESTS_CA_BUNDLE= SSL_CERT_FILE= Compiler(s) (CC CXX FC F77 F90):`\nwhich $CC; /usr/bin/mpicc\n$CC --version; gcc (Ubuntu 13.2.0-23ubuntu4) 13.2.0\n$CC -show; gcc -I/usr/lib/x86_64-linux-gnu/openmpi/include -I/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi -L/usr/lib/x86_64-linux-gnu/openmpi/lib -lmpi\nwhich $CXX; /usr/bin/mpicxx\n$CXX --version; g++ (Ubuntu 13.2.0-23ubuntu4) 13.2.0\n$CXX -show; g++ -I/usr/lib/x86_64-linux-gnu/openmpi/include -I/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi -L/usr/lib/x86_64-linux-gnu/openmpi/lib -lmpi_cxx -lmpi\nwhich $FC; /usr/bin/mpif90\n$FC --version; GNU Fortran (Ubuntu 13.2.0-23ubuntu4) 13.2.0\n$FC -show; gfortran -I/usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi -I/usr/lib/x86_64-linux-gnu/openmpi/lib -L/usr/lib/x86_64-linux-gnu/openmpi/lib/fortran/gfortran -lmpi_usempif08 -lmpi_usempi_ignore_tkr -lmpi_mpifh -lmpi -lopen-rte -lopen-pal -lhwloc -levent_core -levent_pthreads -lm -lz\nF77\tnot set\nF90\tnot set\nFAIL: One or more compiler environment variables not set, or set incorrectly\nPython Sanity Checks\n/usr/bin/env python3 --version; (reporting as: Python 3.12.3) matches\nwhich python3 python;\n/usr/bin/python3 --version; == Python 3.12.3\nWARNING: python; does not exist\nOK\nPython Modules (TestHarness, run-ability)\nFAIL:    missing module(s): packaging \nEither install the above packages, or perhaps you have yet to activate the moose environment: conda activate moose\nMissing 'failing' Python modules will prevent you from building MOOSE.\nFAIL: One or more Python issues present.\nMOOSE Repository/Conda Version Checks\nWARNING: Unable to run Conda tests due to missing Python modules\nchecks FAILED",
+          "url": "https://github.com/idaholab/moose/discussions/29017",
+          "updatedAt": "2024-11-11T10:47:53Z",
+          "publishedAt": "2024-11-06T12:19:57Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "The path forward here is to install flex.\nIt should just be sudo apt-get install flex\n\nthere is no folder named cross_sections. Could this be the cause of my issue?\n\nNo this wont cause issues for installation. You ll need cross sections to run openmc later though\n\nWhy is the HDF5 package being picked up from a trash directory\n\nDo you have it installed elsewhere?",
+                  "url": "https://github.com/idaholab/moose/discussions/29017#discussioncomment-11166697",
+                  "updatedAt": "2024-11-06T13:18:13Z",
+                  "publishedAt": "2024-11-06T13:18:13Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "It is because we add an inclusive path to ~/.local. ref: \n  \n    \n      moose/scripts/configure_petsc.sh\n    \n    \n         Line 52\n      in\n      facbaef\n    \n  \n  \n    \n\n        \n          \n           HDF5_PATHS=/usr/lib/hdf5:/usr/local/hdf5:/usr/share/hdf5:/usr/local/hdf5/share:/opt/hdf5:$HOME/.local \n        \n    \n  \n\n\n@cticenhour and I spoke about possibly refining the path to be not so broad.",
+                          "url": "https://github.com/idaholab/moose/discussions/29017#discussioncomment-11167129",
+                          "updatedAt": "2024-11-06T14:01:25Z",
+                          "publishedAt": "2024-11-06T14:01:24Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "nancysemwal"
+                          },
+                          "bodyText": "I installed flex using sudo apt-get install flex and also deleted the trash folder from where the HDF5 package was getting picked. After this, there was no problem in building the 3 dependencies. But I am now stuck in a new problem which again involves HDF5, detailed here.",
+                          "url": "https://github.com/idaholab/moose/discussions/29017#discussioncomment-11213212",
+                          "updatedAt": "2024-11-11T10:45:26Z",
+                          "publishedAt": "2024-11-11T10:44:23Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "best practice for \"inactive\" subdomains?",
+          "author": {
+            "login": "jmeier"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nDear Moose Community,\nFor various tasks in the field of engineering and mining, the excavation (and possibly refilling) of defined volumes must be modelled. In Moose this is usually to be done by \"parking\" elements in \"inactive subdomains\" via one of the SubdomainModifiers (e.g  CoupledVarThresholdElementSubdomainModifier or TimedSubdomainModifier). Initially inactive subdomains may be created via add_subdomain_ids and/or add_subdomain_names in MooseMesh.\nWith this discussion entry I'd like to gain insight on the best practice on how to define the inactive subdomain.\nAs recommented here and shown there for the \"inactive\" subdomains a Diffusion or MatDiffusion kernels may be used. As stated in the first link, kernel_coverage_check = false must also be set. In the setup used in this example, also material_coverage_check = false must be set.\nI assume that the usual requirements for the inactive domain are as follows (open for discussion):\n\nNothing should happen to the elements in the inactive domains (no numerical instabilities, etc.)\nElements in the inactive domain should not add as less weight as possible to the memory and/or CPU consuption.\nElements from an inactive subdomain can be reactivated at the user's request.\n\nNow my questions start, all dealing on what are the best practice to define these inactive domains:\n\nIs it really neccessary to define kernels in these inactive domains? I assume these kernels add some computational weight?\nIf kernels are to be added, what is the \"best\" kernel to add? Diffusion? MatDiffusion? From the description, NullKernel seems to be aimed at tests and debugging and not for \"production\".\nIs there a way to avoid setting kernel_coverage_check = false and material_coverage_check = false while keeping the inactive subdomains lightweight? I'd love Moose to perform these checks in my \"active\" subdomains,\nIf the answer to point 3 above would be \"no\", what would be an acceptable solution as PR? A Parameter skip_kernel_coverage_check_on = 'list of subdomains' in [Problem] (same for skip_material_coverage_check_on)?\n\nKind regards,\nJ\u00f6rg",
+          "url": "https://github.com/idaholab/moose/discussions/28092",
+          "updatedAt": "2024-11-09T15:28:35Z",
+          "publishedAt": "2024-07-10T06:11:27Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Nothing should happen to the elements in the inactive domains (no numerical instabilities, etc.)\n\nThere should be either no equations there because the variables are block-restricted away from them\nOR\nOnly trivial equations (dc/dt = 0) if for some reason the variables need to still be there\n\nElements in the inactive domain should not add as less weight as possible to the memory and/or CPU consuption.\n\nYes that seems fair. To do that, remove the variables and auxvariables from those subdomains\n\nElements from an inactive subdomain can be reactivated at the user's request.\n\nThis seems fine if you move them back to the active subdomains\n\nIs it really neccessary to define kernels in these inactive domains? I assume these kernels add some computational weight?\n\nNo it's not. Just turn off the kernel_coverage_check\n\nIf kernels are to be added, what is the \"best\" kernel to add? Diffusion? MatDiffusion? From the description, NullKernel seems to be aimed at tests and debugging and not for \"production\".\n\nNullKernel is fine. A TimeDerivative is fine too\n\nIs there a way to avoid setting kernel_coverage_check = false and material_coverage_check = false while keeping the inactive subdomains lightweight? I'd love Moose to perform these checks in my \"active\" subdomains,\n\nNot really. For now these checks are on/off. But you could change the checks to ignore the inactive subdomains. We would need new code to identify the inactive subdomains\n\nIf the answer to point 3 above would be \"no\", what would be an acceptable solution as PR? A Parameter skip_kernel_coverage_check_on = 'list of subdomains' in [Problem] (same for skip_material_coverage_check_on)?\n\nThis seems fine. An alternative could be this:\nskip_kernel_coverage_check = 'false / true / active'",
+                  "url": "https://github.com/idaholab/moose/discussions/28092#discussioncomment-10012132",
+                  "updatedAt": "2024-07-10T16:21:28Z",
+                  "publishedAt": "2024-07-10T16:13:20Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@hugary1995 or @dschwen  may want to pitch in",
+                          "url": "https://github.com/idaholab/moose/discussions/28092#discussioncomment-10012211",
+                          "updatedAt": "2024-07-10T16:22:19Z",
+                          "publishedAt": "2024-07-10T16:22:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "I just have a few things to add to what @GiudGiud suggested\nFirst of all, there is an unfortunate terminology clash: I want to make it clear to whomever may read this thread in the future, the terms \"active\" and \"inactive\" used in element subdomain modifiers are NOT the same as those used in libmesh to denote h-refinement.\n\nElements in the inactive domain should add as less weight as possible to the memory and/or CPU consumption.\n\nIf there is no equation system on inactive subdomains, the memory consumption is mostly just the mesh itself. However, things are complicated in parallel, as it depends on the mesh type, i.e., replicated vs distributed. See this discussion #27929 for more details.\nRegarding kernel coverage check, there is no middle ground at the moment between \"kernel coverage check everywhere\" and \"no kernel coverage check at all\". As an alternative to @GiudGiud 's proposal, I'd recommend something like\nkernel_coverage_check = 'A B C'\nwhere the user can specify a list of subdomains to perform the coverage check. The same goes to material_coverage_check. An empty list (default) would be equivalent to \"all subdomains\", in consistency with the block parameter in block-restrictable objects.",
+                          "url": "https://github.com/idaholab/moose/discussions/28092#discussioncomment-10012536",
+                          "updatedAt": "2024-07-10T16:59:15Z",
+                          "publishedAt": "2024-07-10T16:59:14Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jmeier"
+                          },
+                          "bodyText": "Dear @hugary1995,\nThank you for your answer and information provided.\nOn the parameter \"kernel_coverage_check\" as described by you: This would be opt-in. The opt-out method would be more fail-safe in the event that the user adds subdomains as the input file evolves over time. Therefore my suggestion was to use skip_kernel_coverage_check_on = 'list of subdomains' (same for skip_material_coverage_check_on)?\nJ\u00f6rg",
+                          "url": "https://github.com/idaholab/moose/discussions/28092#discussioncomment-10012592",
+                          "updatedAt": "2024-07-10T17:05:06Z",
+                          "publishedAt": "2024-07-10T17:05:05Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "An empty list (default) would be equivalent to \"all subdomains\", in consistency with the block parameter in block-restrictable objects.\n\nMake sure 'false' is still an option to that parameter otherwise you'll have to patch 1000 inputs\n\nTherefore my suggestion was to use skip_kernel_coverage_check_on = 'list of subdomains' (same for skip_material_coverage_check_on)?\n\nThis is fine but ideally the default does the right thing. As in it skips empty / inactive subdomains. Which by specifying a list manually we wont have",
+                          "url": "https://github.com/idaholab/moose/discussions/28092#discussioncomment-10012619",
+                          "updatedAt": "2024-07-10T17:10:00Z",
+                          "publishedAt": "2024-07-10T17:08:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "I welcome any improvement. @Wendy-Ji since you have a lot of practical applications using this capability, do you have any comment to add here?",
+                          "url": "https://github.com/idaholab/moose/discussions/28092#discussioncomment-10012632",
+                          "updatedAt": "2024-07-10T17:09:27Z",
+                          "publishedAt": "2024-07-10T17:09:27Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jmeier"
+                          },
+                          "bodyText": "Make sure 'false' is still an option to that parameter otherwise you'll have to patch 1000 inputs\n\nThat's on me. I did not describe this hypothetical proposal in detail. I apologise for the confusion.\nI'd like to keep kernel_coverage_check = true/false as is (while \"true\" is the default as it is today). The proposal is to just add the optional parameter skip_kernel_coverage_check_on = 'list of subdomains' while the default for this parameter is an empty list (no subdomains to be skipped).\n\nIn case  kernel_coverage_check = true and skip_kernel_coverage_check_on is not set (or empty), the coverage check is to be done on all subdomains (as today). This is the default.\nIn case  kernel_coverage_check = true and skip_kernel_coverage_check_on = 'list of some subdomains', the coverage check is to be done on all subdomains except the subdomains listed by the user.\nIn case  kernel_coverage_check = false and skip_kernel_coverage_check_on is not set (or empty), the coverage check is to be done on no subdomain at all (as today).\nIn case  kernel_coverage_check = false and skip_kernel_coverage_check_on = 'list of some subdomains', the coverage check is to be done on no subdomain at all (and skip_kernel_coverage_check_on is ignored).\n\nThe same with material coverage.",
+                          "url": "https://github.com/idaholab/moose/discussions/28092#discussioncomment-10012755",
+                          "updatedAt": "2024-07-10T17:49:19Z",
+                          "publishedAt": "2024-07-10T17:23:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jmeier"
+                          },
+                          "bodyText": "Dear @hugary1995\n\nFirst of all, there is an unfortunate terminology clash: I want to make it clear to whomever may read this thread in the future, the terms \"active\" and \"inactive\" used in element subdomain modifiers are NOT the same as those used in libmesh to denote h-refinement.\n\nWhat would be the appropriate term in context of Moose?",
+                          "url": "https://github.com/idaholab/moose/discussions/28092#discussioncomment-10012920",
+                          "updatedAt": "2024-07-10T17:40:52Z",
+                          "publishedAt": "2024-07-10T17:40:51Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Wendy-Ji"
+                          },
+                          "bodyText": "I agree with improving the kernel_coverage_check to having more options than all or nothing. While it would be more convenient to have an option to only check over active subdomains, it might be better for a general case to go with manually listing subdomains to include/exclude in the check. I'm not sure what other applications there are for skipping particular subdomains, but it's at least an option.\nI've also found I run into boundary_restricted checks because of boundaries defined over the inactive subdomains, but since that's not checking subdomains and is instead checking variables over the boundaries, that's probably a different problem.\nFor the proposed parameter, @grunerjmeier , I don't think it's necessary to have two parameters controlling the kernel_coverage_check. The 4 cases listed aren't really separate. Cases 1 and 2 only use skip_kernel_coverage_check_on to see what subdomains to skip, while Cases 3 and 4 only use kernel_coverage_check=false to skip all the subdomains. It doesn't seem like there's 4 different scenarios that would need two parameters.\nEither having just a kernel_coverage_check with true|false|list of subdomains to check, or skip_kernel_coverage_check with false|true|list of subdomains to skip, would cover the scenarios of: checking all the subdomains, checking none of the subdomains, and checking particular subdomains, respectively.\nAlso, since adding subdomains over time could introduce either more active or inactive subdomains, I'm not sure I see the advantage of skip_kernel_coverage_check over kernel_coverage_check. The only argument I would make is that listing subdomains to check would let you keep the current kernel_coverage_check parameter mostly as is, and then the third option can be added in.",
+                          "url": "https://github.com/idaholab/moose/discussions/28092#discussioncomment-10013881",
+                          "updatedAt": "2024-07-10T19:36:43Z",
+                          "publishedAt": "2024-07-10T19:36:43Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "One issue with that is, given kernel_coverage_check = false, how to distinguish between the boolean false and a subdomain named \"false\".",
+                          "url": "https://github.com/idaholab/moose/discussions/28092#discussioncomment-10013989",
+                          "updatedAt": "2024-07-10T19:55:20Z",
+                          "publishedAt": "2024-07-10T19:55:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "we can always error if the Mesh contains a subdomain called false and that parameter is set",
+                          "url": "https://github.com/idaholab/moose/discussions/28092#discussioncomment-10014000",
+                          "updatedAt": "2024-07-10T19:58:03Z",
+                          "publishedAt": "2024-07-10T19:58:03Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "TimedSubdomainModifier",
+          "author": {
+            "login": "PEI0214"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nHello\nWhen I modified the subdomain using TimedSubdomainModifier, the displacement continued to increase at each time step. When I use CoupledVarThresholdElementSubdomainModifier modify domain, this will not happen. What causes this? Do you have any good suggestions?",
+          "url": "https://github.com/idaholab/moose/discussions/28521",
+          "updatedAt": "2024-11-09T03:35:07Z",
+          "publishedAt": "2024-08-31T12:17:33Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "hello\ninstead of looking at the displacement, look at the subdomain assignments, to make sure the two objects are actually moving the elements the same way\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/28521#discussioncomment-10507466",
+                  "updatedAt": "2024-08-31T14:58:25Z",
+                  "publishedAt": "2024-08-31T14:58:24Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "PEI0214"
+                          },
+                          "bodyText": "The subdomain assignment is the same for both methods. The subdomain assignment is the same for both methods. Only the displacement is inconsistent. Curiously, after the subdomain modification is complete, test 1 displacement increases while other variables (such as stress) remain unchanged.",
+                          "url": "https://github.com/idaholab/moose/discussions/28521#discussioncomment-10528794",
+                          "updatedAt": "2024-09-03T08:08:49Z",
+                          "publishedAt": "2024-09-03T08:08:48Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "PEI0214"
+                          },
+                          "bodyText": "Hello, do you know what caused this situation?",
+                          "url": "https://github.com/idaholab/moose/discussions/28521#discussioncomment-10644751",
+                          "updatedAt": "2024-09-14T07:53:09Z",
+                          "publishedAt": "2024-09-14T07:53:08Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "We have just updated the element subdomain modifier (last Thursday). So it is worth updating moose and seeing if the behavior is more consistent now",
+                          "url": "https://github.com/idaholab/moose/discussions/28521#discussioncomment-10646378",
+                          "updatedAt": "2024-09-14T12:49:26Z",
+                          "publishedAt": "2024-09-14T12:49:26Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "any update on this?\nbtw I am looking a figure on the use of CoupledVarThresholdElementSubdomainModifier / MeshModifiers if you have a good one I would love to be able to feature it at a coming conference (ANS Winter 2024)",
+                          "url": "https://github.com/idaholab/moose/discussions/28521#discussioncomment-11194729",
+                          "updatedAt": "2024-11-09T03:35:07Z",
+                          "publishedAt": "2024-11-09T03:35:07Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Modeling Diffusion-Induced Deformation in Elasto-Plastic Materials",
+          "author": {
+            "login": "dylanzhanggg"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nHi everyone! I'm new to MOOSE and am currently working on a problem involving diffusion-induced deformation (based on Fick's Law) in an elasto-plastic material. Could anyone point me to any related code or examples to help me get started?",
+          "url": "https://github.com/idaholab/moose/discussions/29037",
+          "updatedAt": "2024-11-08T23:56:02Z",
+          "publishedAt": "2024-11-08T21:16:52Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": []
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Ending simulation based on a post processor value",
+          "author": {
+            "login": "TheGreatCid"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nHi all,\nI am sure that I am missing an obvious solution here but it is eluding me. Is there a way to end a simulating using a post processor?\nFor example I want to end a simulation if the minimum element quality is too low. I have a post proc that outputs min quality, but I can't find a way to have that value interact with the executioner.\nThanks!",
+          "url": "https://github.com/idaholab/moose/discussions/29033",
+          "updatedAt": "2024-11-08T17:48:25Z",
+          "publishedAt": "2024-11-08T16:36:46Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYes, this capability just got added to MOOSE. You ll need to install the \"next\" branch, because it has not been released to the main branch yet.\nYou ll want to specify a PostprcoessorConvergence and specify nonlinear_convergence_name to the name of that object in the Executioner\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/29033#discussioncomment-11191224",
+                  "updatedAt": "2024-11-08T16:42:53Z",
+                  "publishedAt": "2024-11-08T16:42:52Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "TheGreatCid"
+                          },
+                          "bodyText": "Great, thanks!",
+                          "url": "https://github.com/idaholab/moose/discussions/29033#discussioncomment-11191293",
+                          "updatedAt": "2024-11-08T16:47:50Z",
+                          "publishedAt": "2024-11-08T16:47:50Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "TheGreatCid"
+                          },
+                          "bodyText": "Actually, does this method then override the normal convergence parameters?\nI want to keep non linear tolerances, but just kill the simulation when a certain mesh quality is reached.",
+                          "url": "https://github.com/idaholab/moose/discussions/29033#discussioncomment-11191808",
+                          "updatedAt": "2024-11-08T17:43:02Z",
+                          "publishedAt": "2024-11-08T17:42:52Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "ok just use this instead with PPs on the quality\nhttps://mooseframework.inl.gov/source/userobjects/Terminator.html\nthis CV object method will eventually do what you want but not yet. We dont have a \"Combo\" convergence to specify more than 1 criterion",
+                          "url": "https://github.com/idaholab/moose/discussions/29033#discussioncomment-11191821",
+                          "updatedAt": "2024-11-08T17:44:52Z",
+                          "publishedAt": "2024-11-08T17:44:30Z",
+                          "isAnswer": true
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "TheGreatCid"
+                          },
+                          "bodyText": "Ah this is exactly what I was looking for! Thanks!",
+                          "url": "https://github.com/idaholab/moose/discussions/29033#discussioncomment-11191854",
+                          "updatedAt": "2024-11-08T17:48:25Z",
+                          "publishedAt": "2024-11-08T17:48:24Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Help for Display of Thermal Hydraulic Module Calculation Results",
+          "author": {
+            "login": "LGQ199810"
+          },
+          "bodyText": "At present, I have used Paraview to read the calculation results of the circulation loop constructed based on the thermal hydraulic module. However, temperature cloud maps are based on line displays, which are too thin to distinguish. Is there any way to make the lines in the displayed temperature/pressure cloud maps thicker or more intuitive, or is there any tutorial to read the calculation results of thermal hydraulic modules based on Paraview? Thank you very much!",
+          "url": "https://github.com/idaholab/moose/discussions/29031",
+          "updatedAt": "2024-11-12T15:06:14Z",
+          "publishedAt": "2024-11-08T15:35:00Z",
+          "category": {
+            "name": "Q&A Modules: Thermal Hydraulics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "hello\nin the settings in the Properties tab you can click the \"cog\" to show more parameters, then increase the line thichkness",
+                  "url": "https://github.com/idaholab/moose/discussions/29031#discussioncomment-11190711",
+                  "updatedAt": "2024-11-08T15:56:43Z",
+                  "publishedAt": "2024-11-08T15:56:42Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "LGQ199810"
+                          },
+                          "bodyText": "Wow, I found that option, it helped me a lot. Sincere thanks!",
+                          "url": "https://github.com/idaholab/moose/discussions/29031#discussioncomment-11190958",
+                          "updatedAt": "2024-11-08T16:16:29Z",
+                          "publishedAt": "2024-11-08T16:16:28Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "NS with FE not converging",
+          "author": {
+            "login": "adigc"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A Navier Stokes is the most appropriate category for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (avoid screenshots if possible, triple back quotes before/after pasted text, etc)\n\nQuestion\nI am having difficulties with convergence of a 3D CFD simulation with INSAD at higher Reynolds  Number.\nI am providing the input I am using below.\nNOTE: The mesh contains only linear tetra elements.\nWith the above settings, that is with\ninlet_velocity = 1\nmu = 1\nrho = 1\nReynolds number = ~60\nthe simulation takes 8 nonlinear iterations to converge. Everything is fine. But as soon as I increase the inlet velocity to 10 (Reynolds number = 600) the simulation takes forever to converge.\nAny hints what I am missing would be helpful.\nThanks in advance.\nAdditional information\nMesh size and type: 250K nodes, 4 noded linear tet elements.\nReynolds number: Target Reynolds number is around ~4000\nDiscretization (finite element CG/DG, finite volume, etc): Finite element CG\nModels (turbulence, porous media, etc): Not including any turbulence models.\nSolver method (fully coupled, segregated, multiapps, etc): fully coupled (input provided.)\nBase input you started from:\n# input for cfd sim\n\ninlet_boundary = 'inlet'\n\nwall_boundary = 'wall_bottom_top wall_sides '\n\npressure_boundary = 'outlet'\n\ninlet_velocity = 1\n\nmu = 1\n\nrho = 1.0\n\n[GlobalParams]\n  integrate_p_by_parts = true\n  viscous_form = traction\n[]\n\n\n[Mesh]\n  file = mesh.inp\n  construct_side_list_from_node_list=true\n[]\n\n[Variables]\n  [./velocity]\n    order = SECOND\n    family = LAGRANGE_VEC\n  [../]\n  [./p]\n  [../]\n[]\n\n\n[AuxVariables]\n  [rvel_x]\n    # Velocity residual in (x) directions\n    order = SECOND\n  [] \n  [rvel_y]\n    # Velocity residual in (y) directions\n    order = SECOND\n  [] \n  [rvel_z]\n    # Velocity residual in (z) directions\n    order = SECOND\n  []   \n[]\n\n\n[AuxKernels] \n  [reaction_vx]\n    type = DebugResidualAux\n    variable = rvel_x\n    debug_variable = velocity\n    component = 0\n  []\n  [reaction_vy]\n    type = DebugResidualAux\n    variable = rvel_y\n    debug_variable = velocity\n    component = 1\n  []\n  [reaction_vz]\n    type = DebugResidualAux\n    variable = rvel_z\n    debug_variable = velocity\n    component = 2\n  []  \n[]\n\n\n\n[Kernels]\n  [./mass]\n    type = INSADMass\n    variable = p\n  [../]\n  [./momentum_convection]\n    type = INSADMomentumAdvection\n    variable = velocity\n  [../]\n  [./momentum_viscous]\n    type = INSADMomentumViscous\n    variable = velocity\n  [../]\n  [./momentum_pressure]\n    type = INSADMomentumPressure\n    variable = velocity\n    pressure = p\n  [../]\n  [momentum_supg]\n    type = INSADMomentumSUPG\n    variable = velocity\n    velocity = velocity\n  []  \n[]\n\n[BCs]\n  [./inlet]\n    type = VectorDirichletBC\n    variable = velocity\n    boundary = ${inlet_boundary}\n    values = '0.0 ${inlet_velocity} 0.0'\n  [../]\n  [./wall]\n    type = VectorDirichletBC\n    variable = velocity\n    boundary = ${wall_boundary}\n    values = '0.0 0.0 0.0'\n  [../]\n\n  [./pressure_pin]\n    type = DirichletBC\n    variable = p\n    boundary = ${pressure_boundary}\n    value = 0.0\n  [../]\n[]\n\n[Materials]\n  [./const]\n    type = ADGenericConstantMaterial\n    prop_names = 'rho mu'\n    prop_values = '${rho} ${mu}'\n  [../]\n  [ins_mat]\n    type = INSADTauMaterial\n    velocity = velocity\n    pressure = p\n  []\n[]\n\n[Preconditioning]\n  [./SMP]\n    type = SMP\n    full = true\n    solve_type = 'NEWTON'\n  [../]\n[]\n\n[Executioner]\n  type = Steady\n  solve_type = 'NEWTON'\n \n  snesmf_reuse_base = false\n  petsc_options_iname = '-ksp_type -pc_type -pc_factor_mat_solver_type'\n  petsc_options_value = 'preonly   lu       mumps'  \n  nl_rel_tol = 1e-6\n  nl_max_its = 100\n  l_max_its = 1000\n  automatic_scaling = false\n[]\n\n\n[Postprocessors]\n  [reaction_x]\n    type = NodalSum\n    variable = rvel_x\n    boundary = ${wall_boundary}\n  []\n  [reaction_y]\n    type = NodalSum\n    variable = rvel_y\n    boundary = ${wall_boundary}\n  []\n  [reaction_z]\n    type = NodalSum\n    variable = rvel_z\n    boundary = ${wall_boundary}\n  []  \n[]\n\n\n[Outputs]\n  [fe_pattern]\n    type = Exodus\n    execute_on = 'nonlinear'\n  []\n  perf_graph = false\n  csv = true\n  print_nonlinear_residuals = true\n  print_linear_residuals = true  \n[]",
+          "url": "https://github.com/idaholab/moose/discussions/29004",
+          "updatedAt": "2024-11-08T15:17:32Z",
+          "publishedAt": "2024-11-05T11:25:50Z",
+          "category": {
+            "name": "Q&A Modules: Navier-Stokes"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nAdding a turbulence model will facilitate convergence.\nA few things you could try:\n\ninitializing the Re=600 case with the Re=60 solution\nramping up the velocity slowly using a Function and turning this simulation into a transient",
+                  "url": "https://github.com/idaholab/moose/discussions/29004#discussioncomment-11157412",
+                  "updatedAt": "2024-11-05T16:56:40Z",
+                  "publishedAt": "2024-11-05T16:56:39Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "adigc"
+                          },
+                          "bodyText": "@GiudGiud thank you for your suggestions\n\nAdding a turbulence model will facilitate convergence.\n\nCan you point me to an example in the repo on how to do that for NS-FE ?\n\n\ninitializing the Re=600 case with the Re=60 solution\n\n\nI see. Again how to do that ? a restart simulation ?\n\n\nramping up the velocity slowly using a Function and turning this simulation into a transient\n\n\nI will try this with the setup/input I posted above and update if it worked !",
+                          "url": "https://github.com/idaholab/moose/discussions/29004#discussioncomment-11163951",
+                          "updatedAt": "2024-11-06T08:38:15Z",
+                          "publishedAt": "2024-11-06T08:38:15Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Can you point me to an example in the repo on how to do that for NS-FE ?\n\nYou'll need to code one, we never merged a turbulence model in INSAD.\nThe mixing length we have in FV would be simple enough to add. You can look at that one too for an example\nhttps://mooseframework.inl.gov/source/kernels/INSADSmagorinskyEddyViscosity.html\nThere is also an old PR for k-epsilon in INSAD but I could not find it\n\nI see. Again how to do that ? a restart simulation ?\n\nYes with a restart. For INSAD you can use either checkpoint or exodus restart\nhttps://mooseframework.inl.gov/application_usage/restart_recover.html",
+                          "url": "https://github.com/idaholab/moose/discussions/29004#discussioncomment-11166675",
+                          "updatedAt": "2024-11-06T13:15:12Z",
+                          "publishedAt": "2024-11-06T13:15:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "adigc"
+                          },
+                          "bodyText": "You'll need to code one, we never merged a turbulence model in INSAD. The mixing length we have in FV would be simple enough to add. You can look at that one too for an example https://mooseframework.inl.gov/source/kernels/INSADSmagorinskyEddyViscosity.html\n\nwell I used INSAD only because I saw that example. If just INSFE or INSFV makes it easy I will go for it !",
+                          "url": "https://github.com/idaholab/moose/discussions/29004#discussioncomment-11167626",
+                          "updatedAt": "2024-11-06T14:47:14Z",
+                          "publishedAt": "2024-11-06T14:47:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "adigc"
+                          },
+                          "bodyText": "Also I though the SUPG will help dealing with high Re simulations ! Isn't that the case ?",
+                          "url": "https://github.com/idaholab/moose/discussions/29004#discussioncomment-11167646",
+                          "updatedAt": "2024-11-06T14:48:44Z",
+                          "publishedAt": "2024-11-06T14:48:43Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Yes it helps. And you can try PSPG as well if you think that will be enough.\nWe are developing INSFV at the moment",
+                          "url": "https://github.com/idaholab/moose/discussions/29004#discussioncomment-11167834",
+                          "updatedAt": "2024-11-06T15:07:54Z",
+                          "publishedAt": "2024-11-06T15:07:53Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "adigc"
+                          },
+                          "bodyText": "Thank you for the suggestions.\nI believe I have progress.\nSo I tried\n\nramping up the velocity slowly using a Function and turning this simulation into a transient\n\ntogether with  https://mooseframework.inl.gov/source/kernels/INSADSmagorinskyEddyViscosity.html\nthe simulation is more stable now. What puzzles me now is that simulation now hangs after some 200 time steps.\n    340 Linear |R| = 8.285654e-09\n    341 Linear |R| = 8.043995e-09\n    342 Linear |R| = 7.831560e-09\n 1 Nonlinear |R| = 2.301015e-04\n\n    Computing Jacobian                                                                   [  5.24 s] [ 1273 MB]\n\nJust like that. It isn't proceeding further !",
+                          "url": "https://github.com/idaholab/moose/discussions/29004#discussioncomment-11190095",
+                          "updatedAt": "2024-11-08T14:57:12Z",
+                          "publishedAt": "2024-11-08T14:57:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Can you use a debugger to attach to the process, then print a backtrace.\nyou should see where it is hanging.\nMy guess is that the linear solve is failing. It would only report a failure at 10000 linear iterations\n  petsc_options_iname = '-ksp_type -pc_type -pc_factor_mat_solver_type'\n  petsc_options_value = 'preonly   lu       mumps'  \n\nthis should have been solving in only 1 linear iteration if you did not use preonly can you try that?",
+                          "url": "https://github.com/idaholab/moose/discussions/29004#discussioncomment-11190297",
+                          "updatedAt": "2024-11-08T15:17:33Z",
+                          "publishedAt": "2024-11-08T15:17:32Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

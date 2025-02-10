@@ -1,0 +1,927 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMS0xMC0xNVQwMTo1MjoyNS0wNTowMM4ANybS"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Handling AuxVariable and Problem compatible with multiprocessing/threading",
+          "author": {
+            "login": "bielsnohr"
+          },
+          "bodyText": "I am in the process of creating a MultiApp to call an external program, and the SubApp (contains a class inheriting from ExternalProblem) is meant to both run the external program and then read from the HDF5 file that the program generates. I am currently working on the reading from the HDF5. Some values from this HDF5 are read in, used in some calculations, and then the result is to be stored in an AuxVariable that is passed up to the MainApp. I have a few questions in relation to syncing the results to this AuxVariable.\nI want to check that the AuxVariable is present and of the correct family and order, which I do with the following at the top of the syncSolutions() class method:\n  // _problem_system is initialised to getAuxiliarySystem() in the class constructor\n  if (!_problem_system.hasVariable(_sync_to_var_name))\n  {\n    throw MooseException(\"AuxVariable \" + _sync_to_var_name +\n                         \" from input file is not present in the AuxiliarySystem. Make sure you \"\n                         \"have declared the AuxVariables block.\");\n  }\n  MooseVariableFieldBase & fi_heat_fluxes =\n      _problem_system.getVariable(_restartable_tid, _sync_to_var_name);\n\n  if (fi_heat_fluxes.isNodal() || fi_heat_fluxes.feType().order != 1)\n  {\n    throw MooseException(\"MooseVariable passed to AscotProblem is nodal or of order >1. It must be \"\n                         \"elemental and order 1.\");\n  }\nThere are two things that bother me about this. First, the use of MooseVariableFieldBase which my IDE says is the only valid option. Is that really the correct type for an AuxVariable? Second, the need to pass a thread ID to the getVariable() method. I am currently passing _restartable_tid, but I am not sure if this is really what I want? This makes me suspect that I am only getting a portion of the AuxVariable, and so I will need to take that into consideration when getting the values calculated from the HDF5 file (indexed by mesh element).\nThe latter question exposed a confusion in my understanding of how MOOSE handles multiprocessing and multithreading. I understand the that underlying libMesh System and Mesh are handled in a distributed manner, but I don't know whether the the MOOSE class objects are handled in the same way. In other words, is there a ExternalProblem-based object that lives in each process/thread, such that when a call is made to ExternalProblemObject.syncSolutions() this is executed on each process/thread?",
+          "url": "https://github.com/idaholab/moose/discussions/19146",
+          "updatedAt": "2022-06-26T03:57:19Z",
+          "publishedAt": "2021-10-19T12:01:46Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nFor your first question:\nMooseVariableFieldBase is pretty high up in the inheritance chain. If you know it'll be a FE variable you can likely use MooseVariableFEBase. But you can also just write auto and let the compiler figure it out\nFor your second question:\nThere is an ExternalProblem on each process. Thread-wise I dont know. I suspect not. Someone needs to write a comprehensive threading documentation in MOOSE. Do you really need to use threads though? Distributed memory is usually better in MOOSE.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/19146#discussioncomment-1505135",
+                  "updatedAt": "2022-06-26T03:57:20Z",
+                  "publishedAt": "2021-10-19T22:48:56Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "bielsnohr"
+                          },
+                          "bodyText": "But you can also just write auto and let the compiler figure it out\n\nYes, I realised this whilst looking at some other code in the MOOSE library after I posted. auto is my friend I always forget \ud83d\ude1b\n\nThere is an ExternalProblem on each process.\n\nFrom looking as some other programs, this is what I was beginning to suspect. Thank you.\n\nDo you really need to use threads though? Distributed memory is usually better in MOOSE.\n\nNope, don't need threads particularly, just wondering what I should pass to get the variable. @friedmud 's answer clears that up.",
+                          "url": "https://github.com/idaholab/moose/discussions/19146#discussioncomment-1507071",
+                          "updatedAt": "2022-06-26T03:57:21Z",
+                          "publishedAt": "2021-10-20T09:11:33Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "friedmud"
+                  },
+                  "bodyText": "Just pass 0 for the thread ID in this case.\nThe ExternalProblem class is not \"threaded\" (meaning that only one instance of it exists - no matter how many threads you are using).  Therefore it's \"on thread 0\".",
+                  "url": "https://github.com/idaholab/moose/discussions/19146#discussioncomment-1505909",
+                  "updatedAt": "2022-06-26T03:57:27Z",
+                  "publishedAt": "2021-10-20T03:54:51Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "bielsnohr"
+                          },
+                          "bodyText": "Thank you, that clears my thread ID question up.",
+                          "url": "https://github.com/idaholab/moose/discussions/19146#discussioncomment-1507037",
+                          "updatedAt": "2022-06-26T03:57:27Z",
+                          "publishedAt": "2021-10-20T09:04:36Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Non local stress update",
+          "author": {
+            "login": "albiedahal"
+          },
+          "bodyText": "Hi all,\nI am trying to implement a nonlocal return mapping algorithm for inelastic stress update as per this paper. The figure attached outlines the stress update algorithm for the nonlocal approach.\n\nThe values of the plastic multiplier for all of the quadrature points are coupled and calculated simultaneously (Ref Equations 33, 34, and 41). As far as I know, traditional (local) stress update materials in MOOSE compute plastic strain at a quadrature point independent of the stress state of the other quadrature points, which does not work for this approach. Except for the return map, the solution method is no different from the standard finite element method, so I need to update the stresses at the quadrature points globally and store those values for the kernels to consume.  Any pointers or suggestions on how and where to start would be highly appreciated.\nKind regards,\nAlbert",
+          "url": "https://github.com/idaholab/moose/discussions/19003",
+          "updatedAt": "2022-06-10T14:45:35Z",
+          "publishedAt": "2021-10-04T22:34:45Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "jiangwen84"
+                  },
+                  "bodyText": "which paper?",
+                  "url": "https://github.com/idaholab/moose/discussions/19003#discussioncomment-1427219",
+                  "updatedAt": "2022-06-10T14:45:59Z",
+                  "publishedAt": "2021-10-04T22:51:58Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "albiedahal"
+                          },
+                          "bodyText": "Sorry for that. I have linked the paper now.",
+                          "url": "https://github.com/idaholab/moose/discussions/19003#discussioncomment-1427223",
+                          "updatedAt": "2022-06-10T14:45:59Z",
+                          "publishedAt": "2021-10-04T22:54:59Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "So in MOOSE we loop over elements to compute material properties, e.g. stress and strain.\nThe method called at each element is computeProperties. Within this method, we loop over quadrature points, and at each quadrature point, we call computeQpProperties. So you do have access to this sort of non-local information within the computeProperties method. We do this routinely for stuff like volumetric locking correction. You can take a look at ComputeSmallStrain::computeProperties() for example.\nThe stress update classes derive from StressUpdateBase, which has the method setQp that allows you to set the current quadrature point. This could also be useful when implementing this non-local method.",
+                          "url": "https://github.com/idaholab/moose/discussions/19003#discussioncomment-1427568",
+                          "updatedAt": "2022-06-10T14:46:01Z",
+                          "publishedAt": "2021-10-05T01:10:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "@albiedahal    Thanks for the paper. Unfortunately, we do not have the access to that paper :-(\nDoes all integration points in this algorithm refer to the quadrature points within a single element or all elements? If it is for a single element, @hugary1995 's suggestion is what you should follow. If it evolves multiple elements, we need to read the paper and give you other suggestions.",
+                          "url": "https://github.com/idaholab/moose/discussions/19003#discussioncomment-1427972",
+                          "updatedAt": "2022-06-10T14:46:01Z",
+                          "publishedAt": "2021-10-05T04:12:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "albiedahal"
+                          },
+                          "bodyText": "@hugary1995 Thank you for the reply. I need to loop over the quadrature points of all the elements in the domain, not just at a particular element. I don't think computeProperties allows me to do that?\n@jiangwen84 I have updated the link to a google drive link which should be accessible now. The all integration points in the algorithm refers to all the quadrature points in the domain over all elements.",
+                          "url": "https://github.com/idaholab/moose/discussions/19003#discussioncomment-1431177",
+                          "updatedAt": "2022-07-26T01:27:12Z",
+                          "publishedAt": "2021-10-05T16:19:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@albiedahal app developers usually write an implementation for computeQpProperties. But if you want to compute the matprop at all qps together, you can re-implement computeProperties. It s in Material.C it s not very complicated\nEDIT this is a little hacky, hence the dislike",
+                          "url": "https://github.com/idaholab/moose/discussions/19003#discussioncomment-1498933",
+                          "updatedAt": "2022-07-26T01:27:12Z",
+                          "publishedAt": "2021-10-18T22:17:04Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "albiedahal"
+                          },
+                          "bodyText": "@GiudGiud Thank you, I'll definitely look into that. I am having a hard time figuring the qp indexes and the prop ids in the computeProperties as I do not have much programming background/experience.",
+                          "url": "https://github.com/idaholab/moose/discussions/19003#discussioncomment-1505341",
+                          "updatedAt": "2022-07-26T01:27:12Z",
+                          "publishedAt": "2021-10-20T00:17:14Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "dschwen"
+                  },
+                  "bodyText": "Can you explain what the \"nonlocal internal variables\" are?",
+                  "url": "https://github.com/idaholab/moose/discussions/19003#discussioncomment-1499477",
+                  "updatedAt": "2022-06-10T14:46:02Z",
+                  "publishedAt": "2021-10-19T02:02:50Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "albiedahal"
+                          },
+                          "bodyText": "@dschwen the non local variables in this algorithm is the non local plastic strain increment (or the plastic multiplier)  $\\tilde{\\kappa}$. The non local plastic strain increment for ith quadrature point in the domain includes weighted contributions of the local plastic strains $\\kappa$ of all quadrature points in the domain (Eq. 33). The a_ij in is the non-local weight and w_j is the quadrature rule weight. The yield function (Eq. 34) in this case is not satisfied explicitly at each quadrature points locally, but more in a distributed sense by specifying a tolerance $\\delta_f$.",
+                          "url": "https://github.com/idaholab/moose/discussions/19003#discussioncomment-1505340",
+                          "updatedAt": "2022-06-29T06:22:32Z",
+                          "publishedAt": "2021-10-20T00:17:11Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Setting options from command line",
+          "author": {
+            "login": "doquang"
+          },
+          "bodyText": "I would like to turn off the color output when running an app. The command given by -h saying: \"--no-color Disable coloring of all Console outputs.\" does not work. For example,\n./moose_test-opt --no-color -i tests/kernels/simple_diffusion/simple_diffusion.i has no effect.\nI only success by setting it via the input file\n[Outputs]\n  color = false\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/19149",
+          "updatedAt": "2022-05-31T14:50:15Z",
+          "publishedAt": "2021-10-19T14:17:17Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nWhen you used no color you must have received the following warning:\n\n*** Warning, This code is deprecated and will be removed in future versions:\nThe --no-color flag is deprecated. Use '--color off' instead.\n\n--color off worked for me\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/19149#discussioncomment-1502805",
+                  "updatedAt": "2022-05-31T14:50:20Z",
+                  "publishedAt": "2021-10-19T14:21:49Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "doquang"
+                  },
+                  "bodyText": "Oh, sorry, It showed up on the very first lines that I missed.",
+                  "url": "https://github.com/idaholab/moose/discussions/19149#discussioncomment-1502833",
+                  "updatedAt": "2022-05-31T14:50:23Z",
+                  "publishedAt": "2021-10-19T14:25:47Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "AD equivalent to ParsedMaterial?",
+          "author": {
+            "login": "LukeFisherUKAEA"
+          },
+          "bodyText": "Hello,\nIs there an existing Automatic Differentiation equivalent to ParsedMaterial within the framework?  I am moving to an ADKernel-based simulation but need to solve the issue of ADKernels requiring ADMaterialProperties.  Alternatively, this may require modification of existing Material blocks to declare ADMaterialProperty values?\nThanks for the help.",
+          "url": "https://github.com/idaholab/moose/discussions/19132",
+          "updatedAt": "2024-03-30T17:43:08Z",
+          "publishedAt": "2021-10-18T12:51:30Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "ABallisat"
+                  },
+                  "bodyText": "ADParsedMaterial does exist but it is not explicitly in the docs, it is defined in here:\nhttps://github.com/idaholab/moose/blob/master/framework/src/materials/ParsedMaterial.C\nI have found this in a few places throughout MOOSE, in general if it does not appear in the docs I check the source code as it may already be there.",
+                  "url": "https://github.com/idaholab/moose/discussions/19132#discussioncomment-1496185",
+                  "updatedAt": "2024-03-30T17:44:39Z",
+                  "publishedAt": "2021-10-18T14:20:06Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@lindsayad do you think we should add some standardized text to class that is doubled up between AD and non AD?\nOr prefer doubling up the documentation?\nIs there an issue where people discussed this? i looked at the AD PR and the AD issue #5658, could not find it",
+                          "url": "https://github.com/idaholab/moose/discussions/19132#discussioncomment-1497390",
+                          "updatedAt": "2024-09-09T21:37:55Z",
+                          "publishedAt": "2021-10-18T16:39:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "The bool is_ad idiom developed separately from all the primary AD work. It's been an idiom that's really taken off because of developers who want to maintain both regular and AD versions of classes with minimal effort, which I applaud them for. But I'm not surprised that there is no mention of this in the original AD issue or PR because I never envisioned it really.\nI think it would be good to somehow indicate in the documentation all the concrete types that arise from a class template. That could definitely help our users",
+                          "url": "https://github.com/idaholab/moose/discussions/19132#discussioncomment-1497506",
+                          "updatedAt": "2024-03-30T17:44:39Z",
+                          "publishedAt": "2021-10-18T16:56:50Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "@LukeFisherUKAEA ADParsedMaterial should be the answer here as @ABallisat suggested. Please let us know if there are any issues with that.",
+                          "url": "https://github.com/idaholab/moose/discussions/19132#discussioncomment-1497551",
+                          "updatedAt": "2024-03-30T17:44:41Z",
+                          "publishedAt": "2021-10-18T17:03:45Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "In case it's of interest, ADParsedMaterial was added in #15331 in reference to #15207",
+                          "url": "https://github.com/idaholab/moose/discussions/19132#discussioncomment-1497578",
+                          "updatedAt": "2024-03-30T17:44:41Z",
+                          "publishedAt": "2021-10-18T17:06:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "ok raising an issue to keep track of this\n#19137",
+                          "url": "https://github.com/idaholab/moose/discussions/19132#discussioncomment-1497640",
+                          "updatedAt": "2024-03-30T17:44:50Z",
+                          "publishedAt": "2021-10-18T17:14:34Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "LukeFisherUKAEA"
+                          },
+                          "bodyText": "Thanks all - this is what I was looking for.",
+                          "url": "https://github.com/idaholab/moose/discussions/19132#discussioncomment-1500475",
+                          "updatedAt": "2024-03-30T17:44:50Z",
+                          "publishedAt": "2021-10-19T07:27:56Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Linking external libraries across different modules",
+          "author": {
+            "login": "mcacace"
+          },
+          "bodyText": "Dear all,\nI linked an external library (mfront) to the tensor mechanics module. All worked fine and my tests did run with success. Now, I would like to combine this module with others (e. g. porous flow and navier stokes). Would it be enough to activate the module or should I add all relevant flags somewhere specific. I am saying this since a first attempt to make porous flow threw a linking error while making the tensor mechanics module (all external calls are no longer valid). Need to say that I added all flags to the make file of tensor mechanics.\nThanks for any feedback,\nMauro",
+          "url": "https://github.com/idaholab/moose/discussions/18834",
+          "updatedAt": "2022-09-18T17:16:31Z",
+          "publishedAt": "2021-09-15T22:40:40Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Should be enough to activate the module in your makefile for your applications.\nIf you are running with the modules directly, you may want to use the combined module",
+                  "url": "https://github.com/idaholab/moose/discussions/18834#discussioncomment-1363432",
+                  "updatedAt": "2022-09-18T17:16:36Z",
+                  "publishedAt": "2021-09-21T17:08:47Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "linking errors are common if you havent cleaned your repository of pre-compiled objects before re-compiling with different sets of modules",
+                          "url": "https://github.com/idaholab/moose/discussions/18834#discussioncomment-1363434",
+                          "updatedAt": "2022-09-18T18:10:39Z",
+                          "publishedAt": "2021-09-21T17:09:27Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mcacace"
+                          },
+                          "bodyText": "Sorry to reopen this post (BTW, thanks @GiudGiud for the reply), but even after retrying - force cleaning and remake the combined module, I am still facing the same problem.\nIf I compile the tensor mechanics module directly all works fine, however if I try to compile it via the combined module I keep receiving errors for undefined references to specific calls of the external library I want to link. Not sure, what is wrong.\nAs always, any help would be appreciated.\nThanks,\nMauro\nFor the sake of completeness, these are the additional flags I required (added to the makefile):\nADDITIONAL_CPPFLAGS += -I/home/cacace/snippets/MFrontGenericInterfaceSupport/include/\nADDITIONAL_LIBS += -L/home/cacace/snippets/MFrontGenericInterfaceSupport/build/src/ -lMFrontGenericInterface",
+                          "url": "https://github.com/idaholab/moose/discussions/18834#discussioncomment-1459788",
+                          "updatedAt": "2022-09-18T18:10:39Z",
+                          "publishedAt": "2021-10-11T15:32:34Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "can you please paste the error message?\nDid you make clobberall before compiling the combined module?",
+                          "url": "https://github.com/idaholab/moose/discussions/18834#discussioncomment-1459848",
+                          "updatedAt": "2022-09-18T18:10:40Z",
+                          "publishedAt": "2021-10-11T15:43:43Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mcacace"
+                          },
+                          "bodyText": "I did force make clobberall before recompiling, but it did not work.\nAttached the screenshot of the error.",
+                          "url": "https://github.com/idaholab/moose/discussions/18834#discussioncomment-1459863",
+                          "updatedAt": "2022-09-18T18:10:40Z",
+                          "publishedAt": "2021-10-11T15:46:52Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mcacace"
+                          },
+                          "bodyText": "All function related to the mgis library are undefined...",
+                          "url": "https://github.com/idaholab/moose/discussions/18834#discussioncomment-1459869",
+                          "updatedAt": "2022-09-18T17:16:36Z",
+                          "publishedAt": "2021-10-11T15:47:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "can you save all your work (git commit) then run git clean -xfd in the repo",
+                          "url": "https://github.com/idaholab/moose/discussions/18834#discussioncomment-1459954",
+                          "updatedAt": "2022-09-18T17:16:36Z",
+                          "publishedAt": "2021-10-11T16:05:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mcacace"
+                          },
+                          "bodyText": "@GiudGiud Thanks! I will try and let you know.",
+                          "url": "https://github.com/idaholab/moose/discussions/18834#discussioncomment-1460047",
+                          "updatedAt": "2022-09-18T17:16:36Z",
+                          "publishedAt": "2021-10-11T16:20:48Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "this flag is a little weird btw\nADDITIONAL_LIBS += -L/home/cacace/snippets/MFrontGenericInterfaceSupport/build/src/\nI d expect a lib/ folder not a src/folder",
+                          "url": "https://github.com/idaholab/moose/discussions/18834#discussioncomment-1460143",
+                          "updatedAt": "2022-09-18T17:16:36Z",
+                          "publishedAt": "2021-10-11T16:37:44Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "anilkunwar"
+                          },
+                          "bodyText": "@mcacace  I am curious to know whether you can access the individual modules from external user app. When did you create your external app if you have created one . I have encountered some issues with the newly created (created few months ago) external app. I do not see the necessity to compile the individual modules as long as the user app can access them externally through compilation.  Previously it was recommended to  use the modules through an external app outside the framework, and so I had never compiled the individual modules themselves. Recently,  when  an older external app (created before 2020) compiled on top of recently installed MOOSE  could not  access all of the modules  of MOOSE, I first tried to compile the individual modules by jumping into the modules directory inside the moose directory and I have never been successful with the combined module. so I choose to compile ( individualmodulename := yes in the Makefile) of the external app and it has been successful in accessing phase field, navier stokes, heat conduction, tensor mechanics and xfem modules.\nThis explanation is associated with moose installation in Ubuntu 20.04 in conda environment.  ALL_MODULES := yes is still working fine in the same older app compiled on top of MOOSE framework  installed in the previous Moose environment based installation in Ubuntu 18.04 OS.",
+                          "url": "https://github.com/idaholab/moose/discussions/18834#discussioncomment-1461370",
+                          "updatedAt": "2022-09-18T17:19:50Z",
+                          "publishedAt": "2021-10-11T21:52:28Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "anilkunwar"
+                  },
+                  "bodyText": "when I use ALL_MODULES :=yes, I also get the linking error for the POROUS_FLOW. For now I am using ALL_MODULES :=no and specifying the other linkable modules only\nPHASE_FIELD :=yes\nNAVIER_STOKES :=yes\n...\nPOROUS_FLOW :=no\n...\n\n\nIn my case, even after the test runs successful with the executable of app, i cannot run the input file that uses objects from these compiled modules.",
+                  "url": "https://github.com/idaholab/moose/discussions/18834#discussioncomment-1363651",
+                  "updatedAt": "2022-09-18T17:20:01Z",
+                  "publishedAt": "2021-09-21T17:53:57Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "dschwen"
+                  },
+                  "bodyText": "@mcacace It seems to me a better approach would be to create your own app, and link the new library there. Your change to tensormechanics is unlikely to ever get merged into moose, and you'll be stuck rebasing your branch for all eternity. In https://github.com/idaholab/magpie we link a few external libraries successfully.",
+                  "url": "https://github.com/idaholab/moose/discussions/18834#discussioncomment-1461457",
+                  "updatedAt": "2022-09-18T17:20:01Z",
+                  "publishedAt": "2021-10-11T22:25:54Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mcacace"
+                          },
+                          "bodyText": "@dschwen I also think that creating a simple app could solve the issue - indeed I already have the mfront library linked to another app we developed. I will discuss with my colleague, who is interested to make use of tensormechanics and porous flow, to see whether he is fine with it. BTW, the mfront library is an interesting one, and it does more or less the same as per the umat interface in the module - maybe it would be worth considering as an alternative.",
+                          "url": "https://github.com/idaholab/moose/discussions/18834#discussioncomment-1462737",
+                          "updatedAt": "2022-09-18T17:20:03Z",
+                          "publishedAt": "2021-10-12T07:14:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dschwen"
+                          },
+                          "bodyText": "It does look interesting, however it is licensed under the GPL, which is incompatible with MOOSE's LGPL license. :-(",
+                          "url": "https://github.com/idaholab/moose/discussions/18834#discussioncomment-1499490",
+                          "updatedAt": "2022-09-18T17:20:03Z",
+                          "publishedAt": "2021-10-19T02:11:00Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Segfault with MultiApps and --recover",
+          "author": {
+            "login": "WilkAndy"
+          },
+          "bodyText": "I've made a test that runs without --recover.   But when i use ./run_tests --recover i get a segfault\nmatrix_app.i is the main App which uses TransientMultiApp\nfracture_app is the subApp\n\n\nOne thing i notice is that there are no checkpoint files associated with fracture_app: there is only matrix_app_out_cp.  Is this expected?   But even if i make those checkpoint files manually, i still get a segfault.\n\n\nHere is a snipped version of the output:\n\n\n/Users/wil04q/projects/moose/modules/porous_flow/> ./run_tests --dbg --re=3dFra --recover --heavy\nexamples/multiapp_fracture_flow/3dFracture.matrix_part1 .............................................. RUNNING\nexamples/multiapp_fracture_flow/3dFracture.matrix_part1 ..................................... [FINISHED] PART1\nexamples/multiapp_fracture_flow/3dFracture.matrix: Working Directory: /Users/wil04q/projects/moose/modules/porous_flow/examples/multiapp_fracture_flow/3dFracture\nexamples/multiapp_fracture_flow/3dFracture.matrix: Running command: /Users/wil04q/projects/moose/modules/porous_flow/porous_flow-dbg -i matrix_app.i Executioner/end_time=1 --recover --recoversuffix cpr --error --error-unused --error-override --no-gdb-backtrace\nexamples/multiapp_fracture_flow/3dFracture.matrix: \nexamples/multiapp_fracture_flow/3dFracture.matrix: \nexamples/multiapp_fracture_flow/3dFracture.matrix: \nexamples/multiapp_fracture_flow/3dFracture.matrix: *** Info ***\nexamples/multiapp_fracture_flow/3dFracture.matrix: Using matrix_app_out_cp/0001 for recovery.\nexamples/multiapp_fracture_flow/3dFracture.matrix: Creating MultiApp fracture_app of type PorousFlowTestApp of level 1 and number 0:\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0: \nexamples/multiapp_fracture_flow/3dFracture.matrix: \nexamples/multiapp_fracture_flow/3dFracture.matrix: Running App: main\nexamples/multiapp_fracture_flow/3dFracture.matrix: \nexamples/multiapp_fracture_flow/3dFracture.matrix: Framework Information:\nexamples/multiapp_fracture_flow/3dFracture.matrix: MOOSE Version:           git commit 86b7dc01ee on 2021-07-08\n\nexamples/multiapp_fracture_flow/3dFracture.matrix: Execution Information:\nexamples/multiapp_fracture_flow/3dFracture.matrix:   Executioner:             Transient\nexamples/multiapp_fracture_flow/3dFracture.matrix:   TimeStepper:             IterationAdaptiveDT\nexamples/multiapp_fracture_flow/3dFracture.matrix:   Solver Mode:             NEWTON\nexamples/multiapp_fracture_flow/3dFracture.matrix:   PETSc Preconditioner:    lu \nexamples/multiapp_fracture_flow/3dFracture.matrix:   MOOSE Preconditioner:    SMP\nexamples/multiapp_fracture_flow/3dFracture.matrix: \nexamples/multiapp_fracture_flow/3dFracture.matrix: Initializing All MultiApps\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0: \nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0: Running App: fracture_app0\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0: Parallelism:\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   Num Processors:          1\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   Num Threads:             1\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0: \nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0: Mesh: \nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   Parallel Type:           replicated\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   Mesh Dimension:          2\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   Spatial Dimension:       3\n\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0: Execution Information:\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   Executioner:             Transient\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   TimeStepper:             IterationAdaptiveDT\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   Solver Mode:             NEWTON\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   PETSc Preconditioner:    asm \nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   MOOSE Preconditioner:    SMP\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0: \nexamples/multiapp_fracture_flow/3dFracture.matrix: \nexamples/multiapp_fracture_flow/3dFracture.matrix: \nexamples/multiapp_fracture_flow/3dFracture.matrix: \nexamples/multiapp_fracture_flow/3dFracture.matrix: *** Info ***\nexamples/multiapp_fracture_flow/3dFracture.matrix: Using matrix_app_out_cp/0001 for recovery.\nexamples/multiapp_fracture_flow/3dFracture.matrix: Creating MultiApp fracture_app of type PorousFlowTestApp of level 1 and number 0:\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0: \nexamples/multiapp_fracture_flow/3dFracture.matrix: \nexamples/multiapp_fracture_flow/3dFracture.matrix: Running App: main\nexamples/multiapp_fracture_flow/3dFracture.matrix: \nexamples/multiapp_fracture_flow/3dFracture.matrix: Framework Information:\nexamples/multiapp_fracture_flow/3dFracture.matrix: MOOSE Version:           git commit 86b7dc01ee on 2021-07-08\n\nexamples/multiapp_fracture_flow/3dFracture.matrix: Execution Information:\nexamples/multiapp_fracture_flow/3dFracture.matrix:   Executioner:             Transient\nexamples/multiapp_fracture_flow/3dFracture.matrix:   TimeStepper:             IterationAdaptiveDT\nexamples/multiapp_fracture_flow/3dFracture.matrix:   Solver Mode:             NEWTON\nexamples/multiapp_fracture_flow/3dFracture.matrix:   PETSc Preconditioner:    lu \nexamples/multiapp_fracture_flow/3dFracture.matrix:   MOOSE Preconditioner:    SMP\nexamples/multiapp_fracture_flow/3dFracture.matrix: \nexamples/multiapp_fracture_flow/3dFracture.matrix: Initializing All MultiApps\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0: \nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0: Running App: fracture_app0\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0: Parallelism:\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   Num Processors:          1\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   Num Threads:             1\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0: \nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0: Mesh: \nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   Parallel Type:           replicated\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   Mesh Dimension:          2\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   Spatial Dimension:       3\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   Nodes:                   \nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:     Total:                 681\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:     Local:                 681\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   Elems:                   \nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:     Total:                 1221\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:     Local:                 1221\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   Num Subdomains:          10\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   Num Partitions:          1\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0: \nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0: Nonlinear System:\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   Num DOFs:                1362\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   Num Local DOFs:          1362\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   Variables:               { \"frac_P\" \"frac_T\" } \nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   Finite Element Types:    \"LAGRANGE\" \nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   Approximation Orders:    \"FIRST\" \nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0: \nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0: Auxiliary System:\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   Num DOFs:                17916\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   Num Local DOFs:          17916\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   Variables:               { \"darcy_vel_x\" \"darcy_vel_y\" \"darcy_vel_z\" \"heat_transfer_coefficient\" } { \"transferred_matrix_T\" \nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:                              \"joules_per_s\" } { \"normal_dirn_x\" \"normal_dirn_y\" \"normal_dirn_z\" \"enclosing_element_normal_length\" \nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:                              \"enclosing_element_normal_thermal_cond\" \"aperture\" \"perm_times_app\" \"density\" \nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:                              \"viscosity\" } \"insitu_pp\" \nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   Finite Element Types:    \"MONOMIAL\" \"LAGRANGE\" \"MONOMIAL\" \"LAGRANGE\" \nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   Approximation Orders:    \"CONSTANT\" \"FIRST\" \"CONSTANT\" \"FIRST\" \nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0: \nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0: Execution Information:\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   Executioner:             Transient\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   TimeStepper:             IterationAdaptiveDT\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   Solver Mode:             NEWTON\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   PETSc Preconditioner:    asm \nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0:   MOOSE Preconditioner:    SMP\nexamples/multiapp_fracture_flow/3dFracture.matrix: fracture_app0: \nexamples/multiapp_fracture_flow/3dFracture.matrix: \nexamples/multiapp_fracture_flow/3dFracture.matrix: \nexamples/multiapp_fracture_flow/3dFracture.matrix: Exit Code: -11\nexamples/multiapp_fracture_flow/3dFracture.matrix: ################################################################################\nexamples/multiapp_fracture_flow/3dFracture.matrix: Tester failed, reason: CRASH\nexamples/multiapp_fracture_flow/3dFracture.matrix: \nexamples/multiapp_fracture_flow/3dFracture.matrix ................................... [recover] FAILED (CRASH)\n\n\nRunning through lldb gives:\n\n(lldb) bt\n* thread #1, queue = 'com.apple.main-thread', stop reason = EXC_BAD_ACCESS (code=1, address=0x0)\n  * frame #0: 0x0000000101276427 libmoose-opt.0.dylib`void dataLoad<unsigned int, MaterialProperties>(std::__1::basic_istream<char, std::__1::char_traits<char> >&, HashMap<unsigned int, MaterialProperties>&, void*) + 295\n    frame #1: 0x00000001012762c9 libmoose-opt.0.dylib`void dataLoad<libMesh::Elem const*, HashMap<unsigned int, MaterialProperties> >(std::__1::basic_istream<char, std::__1::char_traits<char> >&, HashMap<libMesh::Elem const*, HashMap<unsigned int, MaterialProperties> >&, void*) + 169\n    frame #2: 0x00000001012760d4 libmoose-opt.0.dylib`RestartableData<MaterialPropertyStorage>::load(std::__1::basic_istream<char, std::__1::char_traits<char> >&) + 36\n    frame #3: 0x00000001013a9080 libmoose-opt.0.dylib`RestartableDataIO::deserializeRestartableData(std::__1::unordered_map<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >, RestartableDataValuePair, std::__1::hash<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> > >, std::__1::equal_to<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> > >, std::__1::allocator<std::__1::pair<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> > const, RestartableDataValuePair> > > const&, std::__1::basic_istream<char, std::__1::char_traits<char> >&, std::__1::unordered_set<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >, std::__1::hash<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> > >, std::__1::equal_to<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> > >, std::__1::allocator<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> > > > const&) + 400\n    frame #4: 0x00000001013aad80 libmoose-opt.0.dylib`RestartableDataIO::restoreBackup(std::__1::shared_ptr<Backup>, bool) + 640\n    frame #5: 0x0000000101962a0c libmoose-opt.0.dylib`MooseApp::restore(std::__1::shared_ptr<Backup>, bool) + 124\n    frame #6: 0x000000010196f237 libmoose-opt.0.dylib`MooseApp::restoreCachedBackup() + 103\n    frame #7: 0x0000000101219635 libmoose-opt.0.dylib`FEProblemBase::initialSetup() + 5189\n    frame #8: 0x0000000100f9ff64 libmoose-opt.0.dylib`Transient::init() + 1396\n    frame #9: 0x00000001013f46a9 libmoose-opt.0.dylib`TransientMultiApp::setupApp(unsigned int, double) + 553\n    frame #10: 0x00000001013f443a libmoose-opt.0.dylib`TransientMultiApp::initialSetup() + 186\n    frame #11: 0x0000000101219809 libmoose-opt.0.dylib`FEProblemBase::initialSetup() + 5657\n    frame #12: 0x0000000100f9ff64 libmoose-opt.0.dylib`Transient::init() + 1396\n    frame #13: 0x000000010196250b libmoose-opt.0.dylib`MooseApp::executeExecutioner() + 75\n    frame #14: 0x00000001019638be libmoose-opt.0.dylib`MooseApp::run() + 3262\n    frame #15: 0x000000010000fb9e porous_flow-opt`main + 142\n    frame #16: 0x00007fff71d9bcc9 libdyld.dylib`start + 1\n    frame #17: 0x00007fff71d9bcc9 libdyld.dylib`start + 1\n\n\n\nWithout the MultiApp, both the main and subapp can --recover fine.\n\n\nThe input files are actually in #18294, but you won't be able to run them before #18235 is merged.  Once that happens, I'll rebase and then you'll see my #18294 start to fail the recover tests.",
+          "url": "https://github.com/idaholab/moose/discussions/18295",
+          "updatedAt": "2022-06-16T00:09:57Z",
+          "publishedAt": "2021-07-09T06:33:47Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hi Andy\nI probably cant help on this system but I ll ask some questions to understand the issue better\n\nmatrix_app_out_cp should be a folder that contains the checkpoint files (0001, xdr stuff if i recall). Does it not?\nFrom the logs it looks like some material properties are involved in the crash. Is there anything special about those properties? Vectors? AD?\n\nIs there any way you could use the debug version to generate the lldb backtrace? The line numbers would help\nWith any luck you may even hit an assert that will tell us what s happening\n5) @loganharbour could you please merge #18235 ? Looks like they addressed the comments\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/18295#discussioncomment-986070",
+                  "updatedAt": "2022-06-16T00:10:02Z",
+                  "publishedAt": "2021-07-09T16:47:02Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Other comments:\nfor 1)  this is expected.  The results for the sub app are saved in the main app checkpoint\nI would double check your input file to look for something that does not support recover. There are a few objects. We should be capturing this more gracefully so it s worth identifying what object is messing up",
+                          "url": "https://github.com/idaholab/moose/discussions/18295#discussioncomment-1427402",
+                          "updatedAt": "2022-06-16T00:10:02Z",
+                          "publishedAt": "2021-10-05T00:02:13Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@WilkAndy can we close this? Is this still an issue?\nI can see one test in #18294 that is set to recover = false but it s a subapp input file tested on its own it seems so it's not the problem?",
+                  "url": "https://github.com/idaholab/moose/discussions/18295#discussioncomment-1498981",
+                  "updatedAt": "2022-06-16T00:10:03Z",
+                  "publishedAt": "2021-10-18T22:33:23Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "This is still a problem.  The recover = false test (in moose/modules/porous_flow/examples/multiapp_fracture_flow/3dFracture) still crashes.\nYes, it is very likely that it is a Material problem - PorousFlow has these \"nodal Material\" things.\nBut, nevertheless, both the main and sub Apps can --recover when run by themselves.  It is only when in a MultiApp situation that things don't work.",
+                          "url": "https://github.com/idaholab/moose/discussions/18295#discussioncomment-1499271",
+                          "updatedAt": "2022-06-16T00:10:03Z",
+                          "publishedAt": "2021-10-19T00:37:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "The result of\nlldb -- /Users/wil04q/projects/moose/modules/porous_flow/porous_flow-dbg -i matrix_app.i Executioner/end_time=1 --recover --recoversuffix cpr\n\nis\nLikely cause: p.&p accessed 0x0\n(lldb) bt\n* thread #1, queue = 'com.apple.main-thread', stop reason = EXC_BAD_ACCESS (code=1, address=0x0)\n  * frame #0: 0x00000001040c0aaf libmoose-dbg.0.dylib`void dataLoad<PropertyValue>(stream=0x0000000116c2b240, p=0x0000000118fd2bd0, (null)=0x0000000114081618) at MaterialProperty.h:93:6\n    frame #1: 0x00000001040c07e5 libmoose-dbg.0.dylib`void loadHelper<PropertyValue*>(stream=0x0000000116c2b240, data=0x0000000118fd2bd0, context=0x0000000114081618) at DataIO.h:791:3\n    frame #2: 0x00000001040c070e libmoose-dbg.0.dylib`void dataLoad<PropertyValue*>(stream=0x0000000116c2b240, v=size=6, context=0x0000000114081618) at DataIO.h:486:5\n    frame #3: 0x00000001040c0685 libmoose-dbg.0.dylib`void loadHelper<PropertyValue*>(stream=0x0000000116c2b240, data=size=6, context=0x0000000114081618) at DataIO.h:799:3\n    frame #4: 0x00000001040c0653 libmoose-dbg.0.dylib`void dataLoad<MaterialProperties>(stream=0x0000000116c2b240, v=0x0000000118fd2ba8, context=0x0000000114081618) at MaterialProperty.h:421:3\n    frame #5: 0x00000001040c0615 libmoose-dbg.0.dylib`void loadHelper<MaterialProperties>(stream=0x0000000116c2b240, data=0x0000000118fd2ba8, context=0x0000000114081618) at DataIO.h:791:3\n    frame #6: 0x00000001040c05d6 libmoose-dbg.0.dylib`void dataLoad<unsigned int, MaterialProperties>(stream=0x0000000116c2b240, m=0x0000000118fd2b58, context=0x0000000114081618) at DataIO.h:609:5\n    frame #7: 0x00000001040c0555 libmoose-dbg.0.dylib`void loadHelper<unsigned int, MaterialProperties>(stream=0x0000000116c2b240, data=0x0000000118fd2b58, context=0x0000000114081618) at DataIO.h:847:3\n    frame #8: 0x00000001040c04e6 libmoose-dbg.0.dylib`void dataLoad<libMesh::Elem const*, HashMap<unsigned int, MaterialProperties> >(stream=0x0000000116c2b240, m=0x0000000117280d50, context=0x0000000114081618) at DataIO.h:609:5\n    frame #9: 0x00000001040c0408 libmoose-dbg.0.dylib`void dataLoad<MaterialPropertyStorage>(stream=0x0000000116c2b240, storage=0x0000000117280db0, context=0x0000000114081618) at MaterialPropertyStorage.h:331:3\n    frame #10: 0x00000001040c03c5 libmoose-dbg.0.dylib`void loadHelper<MaterialPropertyStorage>(stream=0x0000000116c2b240, data=0x0000000117280db0, context=0x0000000114081618) at DataIO.h:791:3\n    frame #11: 0x00000001040bf826 libmoose-dbg.0.dylib`RestartableData<MaterialPropertyStorage>::load(this=0x0000000117280cf0, stream=0x0000000116c2b240) at RestartableData.h:172:3\n    frame #12: 0x00000001043b7f62 libmoose-dbg.0.dylib`RestartableDataIO::deserializeRestartableData(this=0x00007ffeefbf61a8, restartable_data=size=48, stream=0x0000000116c2b240, filter_names=size=0) at RestartableDataIO.C:173:35\n    frame #13: 0x00000001043ba71c libmoose-dbg.0.dylib`RestartableDataIO::restoreBackup(this=0x00007ffeefbf61a8, backup=std::__1::shared_ptr<Backup>::element_type @ 0x0000000116c2b108 strong=4 weak=1, for_restart=false) at RestartableDataIO.C:384:7\n    frame #14: 0x0000000104e9e2d9 libmoose-dbg.0.dylib`MooseApp::restore(this=0x0000000116974018, backup=std::__1::shared_ptr<Backup>::element_type @ 0x0000000116c2b108 strong=4 weak=1, for_restart=false) at MooseApp.C:1142:8\n    frame #15: 0x0000000104eac095 libmoose-dbg.0.dylib`MooseApp::restoreCachedBackup(this=0x0000000116974018) at MooseApp.C:1982:3\n    frame #16: 0x0000000103fe3d78 libmoose-dbg.0.dylib`FEProblemBase::initialSetup(this=0x0000000113841c18) at FEProblemBase.C:1019:12\n    frame #17: 0x0000000103aaac9b libmoose-dbg.0.dylib`Transient::init(this=0x0000000113840c18) at Transient.C:242:12\n    frame #18: 0x0000000104429c3a libmoose-dbg.0.dylib`TransientMultiApp::setupApp(this=0x000000011406ae18, i=0, (null)=0) at TransientMultiApp.C:652:7\n    frame #19: 0x00000001044298b8 libmoose-dbg.0.dylib`TransientMultiApp::initialSetup(this=0x000000011406ae18) at TransientMultiApp.C:171:7\n    frame #20: 0x0000000103fec733 libmoose-dbg.0.dylib`MooseObjectWarehouse<MultiApp>::initialSetup(this=0x0000000115018708, tid=0) const at MooseObjectWarehouse.h:154:13\n    frame #21: 0x0000000103fe4e1f libmoose-dbg.0.dylib`FEProblemBase::initialSetup(this=0x0000000115016e18) at FEProblemBase.C:1048:17\n    frame #22: 0x0000000103aaac9b libmoose-dbg.0.dylib`Transient::init(this=0x0000000115022a18) at Transient.C:242:12\n    frame #23: 0x0000000104e9d302 libmoose-dbg.0.dylib`MooseApp::executeExecutioner(this=0x0000000116895018) at MooseApp.C:1062:19\n    frame #24: 0x0000000104ea047f libmoose-dbg.0.dylib`MooseApp::run(this=0x0000000116895018) at MooseApp.C:1292:5\n    frame #25: 0x000000010000ef07 porous_flow-dbg`main(argc=7, argv=0x00007ffeefbfdc38) at main.C:33:8\n    frame #26: 0x00007fff6af62cc9 libdyld.dylib`start + 1\n    frame #27: 0x00007fff6af62cc9 libdyld.dylib`start + 1\n(lldb)",
+                          "url": "https://github.com/idaholab/moose/discussions/18295#discussioncomment-1499349",
+                          "updatedAt": "2022-06-16T00:10:02Z",
+                          "publishedAt": "2021-10-19T01:08:10Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Some Questions on Coupling SPPARKS and MyTrim Modules in Magpie",
+          "author": {
+            "login": "mcrossover97"
+          },
+          "bodyText": "Hi there,\nI am trying to understand how exactly the coupling of SPPARKS and MyTrim with Magpie works. I have several questions:\n\nWhen compiling SPPARKS and MyTrim, a bunch of .lo and .d files are created. I assume that they are object files that will be used to make libmagpie-opt files in the lib folder. Am I correct? If so, what is the difference between .lo and .d files? One can understand from spparks.mk and mytrim.mk files that .lo  and .d files are labeled as ADDITIONAL_APP_OBJECTS and ADDITIONAL_APP_DEPS, respectively. However, it seems that when I delete the following line which is used to make .d files, .d files will not be created and yet no error comes up during compilation:\n\nADDITIONAL_APP_DEPS += $(patsubst %.C, %.$(obj-suffix).d, $(mytrim_srcfiles))\nWhat are they for and are they even necessary?\n\n\nFrom my understanding, when compiling a module, all .c and .cpp files used in that module should be compiled. However, for example, in the MyTrim module, only files that are in the module main folder (MYTRIM_DIR) are made into object files while there is another .c files in the $(MYTRIM_DIR)/shim folder (point.c) that seems to go uncompiled. Anyway, it looks like files that are in this folder (point.c, point.h, and pow.h) aren't doing anything. This is because, when I delete the codes within these 3 files, the program will be compiled without error although simconf.h in $(MYTRIM_DIR) seems to be using the point class. What am I missing here?\n\n\nI don't have GSL and fftw3 installed. Shouldn't it cause an error when compiling? Where GSL and fftw3 are used?\n\n\nWhat does ADDITIONAL_CPPFLAGS += -DMYTRIM_ENABLED in the magpie.mk file do? If I delete this line, I encounter a compilation error.\n\n\nIt seems like MyTrim uses CMake to generate a makefile as we can see the CMakeLists.txt in the main folder. However, I think that this file doesn't impact compilation. How does our compiler understand what procedures to follow to compile a program without using CMake to generate a makefile? For example, if a package uses C++17 features, I think we can set this in the CMake file which in turn generates a Makefile that is told to compile based on C++17. How do we set stuff like this in our makefiles without CMake?\n\n\nI know probably my questions are full of insufficient, wrong, and misguiding terminologies due to my lack of knowledge in computer engineering. I hope I have been able to express what I mean. I would be really appreciative if someone could clear things up for me. Thanks for your help and support,\nMohammad",
+          "url": "https://github.com/idaholab/moose/discussions/18986",
+          "updatedAt": "2022-09-13T16:07:16Z",
+          "publishedAt": "2021-10-03T08:16:54Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@cticenhour who is in charge of Magpie?",
+                  "url": "https://github.com/idaholab/moose/discussions/18986#discussioncomment-1427405",
+                  "updatedAt": "2022-09-13T16:07:27Z",
+                  "publishedAt": "2021-10-05T00:04:00Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cticenhour"
+                          },
+                          "bodyText": "@dschwen are you still in charge of Magpie?",
+                          "url": "https://github.com/idaholab/moose/discussions/18986#discussioncomment-1427594",
+                          "updatedAt": "2022-09-13T16:07:29Z",
+                          "publishedAt": "2021-10-05T01:26:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@snschune @recuero",
+                          "url": "https://github.com/idaholab/moose/discussions/18986#discussioncomment-1498936",
+                          "updatedAt": "2022-09-13T16:07:29Z",
+                          "publishedAt": "2021-10-18T22:18:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dschwen"
+                          },
+                          "bodyText": "Me",
+                          "url": "https://github.com/idaholab/moose/discussions/18986#discussioncomment-1499044",
+                          "updatedAt": "2022-09-13T16:07:29Z",
+                          "publishedAt": "2021-10-18T22:59:07Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "dschwen"
+                  },
+                  "bodyText": "1 ..d files are dependency files. We use the compiler supplied dependency resolution to enable recompiling only what needs to be recompiled.\nOur build system makes heavy use of libtool; .lo files contain information for building a .so.\n2. You are missing that myTRIM is a submodule in Magpie, and it is also intended to be compiled as a standalone program. The files you mention contain shims for objects that MOOSE provides, but are absent (and need to come from somewhere) when building myTRIM as a standalone code.\n3. GSL and FFTW3 are optional dependencies. If you look closer in the Makefiles you'll see -D defines that are checked using #ifdefs which disable certain classes in Magpie if those libs are not available\n4. what I just said ^\n5. See my answer to 2. CMake is only used when building a standalone version of myTRIM",
+                  "url": "https://github.com/idaholab/moose/discussions/18986#discussioncomment-1499067",
+                  "updatedAt": "2022-09-20T03:08:42Z",
+                  "publishedAt": "2021-10-18T23:06:37Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "External mesh file - merging blocks?",
+          "author": {
+            "login": "aiskhak"
+          },
+          "bodyText": "Hello everyone,\nI am importing mesh in a moose-based application (SAM) for 3D fluid dynamics modeling. The mesh is composed of different blocks. It seems like SAM treats the boundaries between the blocks as walls.\nThe geometry and mesh are generated using .geo file. The surfaces are merged according to BCs:\nPhysical Surface(\"inlet\") = {102,106,109,112,114};\nPhysical Surface(\"outlet\") = {8,31,54,77};\nPhysical Surface(\"wall\") = {7,9,12,18,20,28,30,32,35,41,43,51,53,55,58,64,66,74,76,78,80,85,86,92,104,108,111,113,153,157,160,163,165};\n\nThe volume (whole) is merged as:\nPhysical Volume(\"fluid\") = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44};\nThe remaining surfaces (between the blocks) are not \"touched\". Then the .geo file opened by gmsh and saved as .msh file:\nMesh.ElementOrder = 1;\u200b \nMesh.MshFileVersion = 2.16;\u200b\nMesh 3;\u200b\nSave \"tamu.msh\";\n\nWhen I get the results it seems like the surfaces between the blocks are treated as walls and fluid cannot penetrate them. How to fix that?",
+          "url": "https://github.com/idaholab/moose/discussions/19071",
+          "updatedAt": "2022-06-18T18:46:40Z",
+          "publishedAt": "2021-10-12T00:30:06Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@travismui",
+                  "url": "https://github.com/idaholab/moose/discussions/19071#discussioncomment-1461722",
+                  "updatedAt": "2022-06-18T18:47:11Z",
+                  "publishedAt": "2021-10-12T00:34:53Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@rui-hu\ndo you know people who have experience with using SAM and .geo (gmsh files)",
+                          "url": "https://github.com/idaholab/moose/discussions/19071#discussioncomment-1498956",
+                          "updatedAt": "2022-06-18T18:47:12Z",
+                          "publishedAt": "2021-10-18T22:26:50Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "travismui"
+                          },
+                          "bodyText": "Hi @GiudGiud, sorry for the radio silence. We're in the process of resolving this internally, @aiskhak is actually one of our affiliate students. It seems like this was a SAM-related input syntax issue, if we find any relevant info for the larger community we'll try to share it here.",
+                          "url": "https://github.com/idaholab/moose/discussions/19071#discussioncomment-1498998",
+                          "updatedAt": "2022-06-18T18:47:15Z",
+                          "publishedAt": "2021-10-18T22:40:11Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "aiskhak"
+                  },
+                  "bodyText": "Sorry for not reporting. The problem is caused by sharp mesh transition regions. The generation of unstructured grids without sharp transitions resolved the issue. Thanks, everyone.",
+                  "url": "https://github.com/idaholab/moose/discussions/19071#discussioncomment-1499029",
+                  "updatedAt": "2022-06-18T18:47:25Z",
+                  "publishedAt": "2021-10-18T22:51:40Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to export small strain component using auxkernel RankTwoAux?",
+          "author": {
+            "login": "ZhigangPu"
+          },
+          "bodyText": "Dear,\nI want to export strain tensor component using RankTwoAux auxkernel. How can I do that? I only know the way with stress like below:\nAux variable definition:\n\nAux kernel :\n\nMaterial stress tensor calculation:\n\nI suppose the logic is first define aux variable, then use auxkernels RankTwoAux to get tensor component for the variable, while the tensor is come from the material object ComputeLinearElasticStress. But I don't know how to use the same logic in the strain.\nAny response will be highly appreciated!\nzhigang",
+          "url": "https://github.com/idaholab/moose/discussions/19101",
+          "updatedAt": "2022-10-20T13:33:25Z",
+          "publishedAt": "2021-10-14T07:04:06Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYou should have a look at the tests in the tensor mechanics module.\nLike these ones:\nhttps://github.com/idaholab/moose/blob/next/modules/tensor_mechanics/test/tests/ad_anisotropic_plasticity/anis_plasticity_test.i\nhttps://github.com/idaholab/moose/blob/next/modules/tensor_mechanics/test/tests/global_strain/global_strain_disp.i\n@jiangwen84 will probably know a better one for small strain.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/19101#discussioncomment-1479618",
+                  "updatedAt": "2022-10-20T13:33:25Z",
+                  "publishedAt": "2021-10-14T22:11:33Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "@GiudGiud  pointed you to the right examples.\nSimplest way is to use TensorMechanicsAction\n[Modules/TensorMechanics/Master]\n[all]\nstrain = SMALL\nadd_variables = true\nincremental = true\ngenerate_output = 'elastic_strain_xx elastic_strain_yy elastic_strain_xy stress_xx stress_xy stress_yy'\n[]\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/19101#discussioncomment-1480388",
+                          "updatedAt": "2022-10-20T13:33:29Z",
+                          "publishedAt": "2021-10-15T03:42:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ZhigangPu"
+                          },
+                          "bodyText": "Sorry for late reply! Too many examinations these days.\nMany thanks for your help, I will try that!\nBest,\nzhigang",
+                          "url": "https://github.com/idaholab/moose/discussions/19101#discussioncomment-1491087",
+                          "updatedAt": "2022-10-20T13:33:37Z",
+                          "publishedAt": "2021-10-18T02:35:12Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Linear strain-softening -Mohr Coulomb",
+          "author": {
+            "login": "rksin8"
+          },
+          "bodyText": "How can I implement linear strain-softening to Mohr-Coulomb failure criterion?",
+          "url": "https://github.com/idaholab/moose/discussions/19042",
+          "updatedAt": "2022-06-19T14:50:06Z",
+          "publishedAt": "2021-10-08T07:59:16Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "You can take a look at this example: moose/modules/tensor_mechanics/test/tests/mohr_coulomb/uni_axial2.i",
+                  "url": "https://github.com/idaholab/moose/discussions/19042#discussioncomment-1461691",
+                  "updatedAt": "2022-06-19T14:50:22Z",
+                  "publishedAt": "2021-10-12T00:22:58Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rksin8"
+                          },
+                          "bodyText": "Thank you for sharing this. Found a similar example using TensorMechanicsHardeningExponential.",
+                          "url": "https://github.com/idaholab/moose/discussions/19042#discussioncomment-1481052",
+                          "updatedAt": "2022-06-19T14:50:22Z",
+                          "publishedAt": "2021-10-15T06:52:25Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

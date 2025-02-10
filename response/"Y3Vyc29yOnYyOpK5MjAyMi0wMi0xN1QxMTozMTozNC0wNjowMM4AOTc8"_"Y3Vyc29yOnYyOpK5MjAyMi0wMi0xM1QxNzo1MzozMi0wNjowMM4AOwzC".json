@@ -1,0 +1,1024 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMi0wMi0xM1QxNzo1MzozMi0wNjowMM4AOwzC"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Spatially-dependent timestep size",
+          "author": {
+            "login": "WilkAndy"
+          },
+          "bodyText": "I'm currently in a meeting where someone mentioned their software could use spatially-dependent timestep size.  Eg, if nothing-much is happening in a certain domain, then why not take large timesteps there?  Has anyone thought about doing this with MOOSE?\nandy",
+          "url": "https://github.com/idaholab/moose/discussions/20320",
+          "updatedAt": "2022-09-13T19:00:25Z",
+          "publishedAt": "2022-02-16T20:37:22Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nFor a per-domain granularity:\nSeems like something we ll be able to do when we support multi-system. First we are reworking the Executioner system to allow arbitrary chaining (see the Executor system), then we will look at multi-system.\nFor a per-element granularity of the time & timestep,\nI dont think that s planned. Could be interesting but seems like a headache to keep track of time everywhere and always be interpolating.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20320#discussioncomment-2191591",
+                  "updatedAt": "2022-09-13T19:00:25Z",
+                  "publishedAt": "2022-02-16T20:42:43Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Saturation Issue with NeumannBC in Cahn-Hilliard",
+          "author": {
+            "login": "ashwinshekhar21"
+          },
+          "bodyText": "Hello,\nWe are attempting to modify the tutorial code for the spinodal decomposition of the Cr-Fe alloy provided with MOOSE. We start with a somewhat homogeneous initial concentration of a value less than that required for spinodal decomposition.\nOur objective is to induce the spinodal decomposition locally, by imposing a flux on the left boundary, such that the concentration gradually shifts towards the right in the double-well delG vs concentration curve, inducing the decomposition into an advancing front of c=0.8 Cr followed by the rest being ~0.2 Cr.\n\nOver time, we expected one of the decomposition product phases (orange in our output, Cr mol = ~0.8), to grow and progressively occupy a larger fraction. However, it saturates after a certain number of timesteps and it is not clear why this happens. For instance, here, this configuration is attained relatively early in the simulation, and nothing happens until the simulation ends:\n\n  \n    \n    \n\n    op035.mp4\n    \n  \n\n  \n\n  \n\n\nThis does not appear to depend on the length of the simulation either (same result even if we run for t=280 weeks etc.). We are implementing periodic boundary conditions in the y-direction, and imposing NeumannBC value = 1e-5 on the left and = 0 on the right. Our initial concentration is approximately 0.35 mol Cr (RandomIC, variation from 0.34-0.36).\nHere is our code:\n[Mesh]\n  type = GeneratedMesh\n  dim = 2\n  elem_type = QUAD4\n  nx = 25\n  ny = 25\n  nz = 0\n  xmin = 0\n  xmax = 25\n  ymin = 0\n  ymax = 25\n  zmin = 0\n  zmax = 0\n  uniform_refine = 2\n[]\n\n[Variables]\n  [./c]   # Mole fraction of Cr (unitless)\n    order = FIRST\n    family = LAGRANGE\n  [../]\n  [./w]   # Chemical potential (eV/mol)\n    order = FIRST\n    family = LAGRANGE\n  [../]\n[]\n\n[ICs]\n  [./concentrationIC]   # 35 wt% Cr with variations\n    type = RandomIC\n    min = 0.34\n    max = 0.36\n    seed = 210\n    variable = c\n  [../]\n[]\n\n[BCs]\n  [./Periodic]\n    [./c_bcs]\n      auto_direction = 'y'\n    [../]\n  [../]\n  [./left]\n    type = NeumannBC\n    variable = c\n    boundary = left\n    value = 1e-5\n  [../]\n  [./left]\n    type = NeumannBC\n    variable = c\n    boundary = right\n    value = 0\n  [../]\n[]\n\n[Kernels]\n  [./w_dot]\n    variable = w\n    v = c\n    type = CoupledTimeDerivative\n  [../]\n  [./coupled_res]\n    variable = w\n    type = SplitCHWRes\n    mob_name = M\n  [../]\n  [./coupled_parsed]\n    variable = c\n    type = SplitCHParsed\n    f_name = f_loc\n    kappa_name = kappa_c\n    w = w\n  [../]\n[]\n\n[Materials]\n  [./constants]\n    type = GenericFunctionMaterial\n    prop_names = 'kappa_c M'\n    prop_values = '8.125e-16*6.24150934e+18*1e+09^2*1e-27\n                   2.2841e-26*1e+09^2/6.24150934e+18/1e-27'\n                   # kappa_c*eV_J*nm_m^2*d\n                   # M*nm_m^2/eV_J/d\n  [../]\n  [./local_energy]\n    type = DerivativeParsedMaterial\n    f_name = f_loc\n    args = c\n    constant_names = 'A   B   C   D   E   F   G  eV_J  d'\n    constant_expressions = '-2.446831e+04 -2.827533e+04 4.167994e+03 7.052907e+03\n                            1.208993e+04 2.568625e+03 -2.354293e+03\n                            6.24150934e+18 1e-27'\n    function = 'eV_J*d*(A*c+B*(1-c)+C*c*log(c)+D*(1-c)*log(1-c)+\n                E*c*(1-c)+F*c*(1-c)*(2*c-1)+G*c*(1-c)*(2*c-1)^2)'\n    derivative_order = 2\n  [../]\n[]\n\n[Postprocessors]\n  [./step_size]          \n    type = TimestepSize\n  [../]\n  [./iterations]          \n    type = NumNonlinearIterations\n  [../]\n  [./nodes]                \n    type = NumNodes\n  [../]\n  [./evaluations]           \n    type = NumResidualEvaluations\n  [../]\n  [./active_time]          \n    type = PerfGraphData\n    section_name = \"Root\"\n    data_type = total\n  [../]\n[]\n\n[Preconditioning]\n  [./coupled]\n    type = SMP\n    full = true\n  [../]\n[]\n\n[Executioner]\n  type = Transient\n  solve_type = NEWTON\n  l_max_its = 30\n  l_tol = 1e-6\n  nl_max_its = 50\n  nl_abs_tol = 1e-9\n  end_time = 16934400   # 7*28 days\n  petsc_options_iname = '-pc_type -ksp_gmres_restart -sub_ksp_type\n                         -sub_pc_type -pc_asm_overlap'\n  petsc_options_value = 'asm      31                  preonly\n                         ilu          1'\n  [./TimeStepper]\n    type = IterationAdaptiveDT\n    dt = 10\n    cutback_factor = 0.8\n    growth_factor = 1.5\n    optimal_iterations = 7\n  [../]\n  [./Adaptivity]\n    coarsen_fraction = 0.1\n    refine_fraction = 0.7\n    max_h_level = 2\n  [../]\n[]\n\n[Debug]\n  show_var_residual_norms = true\n[]\n\n[Outputs]\n  exodus = true\n  console = true\n  [./console]\n    type = Console\n    max_rows = 10\n  [../]\n[]\n\nIs there any reason for this apparent \"saturation\", and is there any way to rectify it such that the transition continues to grow? Such that the orange portion in our simulation box eventually occupies the entire area?\nThank you!",
+          "url": "https://github.com/idaholab/moose/discussions/20308",
+          "updatedAt": "2022-06-22T07:33:07Z",
+          "publishedAt": "2022-02-15T18:51:07Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "ykvishal"
+                  },
+                  "bodyText": "Interesting issue.\nIf you replace your initial condition by following then what will happen?\n[ICs]\n  [./concentrationIC] \n     type = BoundingBoxIC\n     x1 = 0\n     y1 = 0\n     x2 = 20\n     y2 = 25\n     inside = 0.823659\n     outside = 0.236248\n    variable = c\n  [../]\n[]\n\nyou can vary x2 from 5 to 20 and comment out  end_time = 16934400",
+                  "url": "https://github.com/idaholab/moose/discussions/20308#discussioncomment-2186690",
+                  "updatedAt": "2022-06-22T07:33:10Z",
+                  "publishedAt": "2022-02-16T08:04:21Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ashwinshekhar21"
+                          },
+                          "bodyText": "Thank you for your response.\nSo we tried out the above modifications, as suggested. The resulting output is as follows (showing here for x2 = 15, although this is emblematic, as all the x2 values result in similar behaviour):\n\n  \n    \n    \n\n    x2_15.mp4\n    \n  \n\n  \n\n  \n\n\nThe relative fraction of the two phases remains unchanged. The only observable change is the establishment of a diffuse interface, but that's to be expected.",
+                          "url": "https://github.com/idaholab/moose/discussions/20308#discussioncomment-2187471",
+                          "updatedAt": "2022-06-22T07:33:10Z",
+                          "publishedAt": "2022-02-16T10:20:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ykvishal"
+                          },
+                          "bodyText": "This suggests that interface won't move after reaching to equilibrium concertation from common tangent construction. It seems that MOOSE is doing fine. I may be wrong, but the issue is related to your problem definition. If you change value = 1e-5 to value = 1e-3 or value = 1e-1 then it may not converge after reaching equilibrium concentration.",
+                          "url": "https://github.com/idaholab/moose/discussions/20308#discussioncomment-2190892",
+                          "updatedAt": "2022-06-22T07:33:10Z",
+                          "publishedAt": "2022-02-16T18:37:32Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to get the coordinates of mesh nodes after deformation",
+          "author": {
+            "login": "BihengX"
+          },
+          "bodyText": "Hello, MOOSE\nI am using MOOSE to do the calculation of thermal expansion of reactor fuel.  However, I need to extract the node coordinates at certain boundaries and specific sidesets for the fuel geometry after thermal mechanical coupling calculation, which can be used as a basis for other calculations. For example, I need the average height of the fuel rod top surface after deformation from the node coordinates.\nI would like to know how to export this coordinate information in post-processing. Thank you very much!",
+          "url": "https://github.com/idaholab/moose/discussions/20293",
+          "updatedAt": "2022-12-11T16:25:19Z",
+          "publishedAt": "2022-02-12T01:35:59Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "BihengX"
+                  },
+                  "bodyText": "I just found NodalValueSampler that can output boundary node coordinates, which seems to solve my problem. It is right that I use this coordinates information?   Thank you so much!",
+                  "url": "https://github.com/idaholab/moose/discussions/20293#discussioncomment-2161708",
+                  "updatedAt": "2022-12-11T16:25:19Z",
+                  "publishedAt": "2022-02-12T03:01:58Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nNodalValueSampler will output information at nodes, and will indeed preface the information with the x,y,z coordinates.\nSo this should work for you.\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/20293#discussioncomment-2169640",
+                          "updatedAt": "2022-12-11T16:25:19Z",
+                          "publishedAt": "2022-02-13T23:44:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "BihengX"
+                          },
+                          "bodyText": "Thank you very much! This is very helpful.",
+                          "url": "https://github.com/idaholab/moose/discussions/20293#discussioncomment-2186741",
+                          "updatedAt": "2023-01-12T22:19:25Z",
+                          "publishedAt": "2022-02-16T08:13:33Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Oh I just saw you wanted after deformation.\nCould you please execute the VPP on initial and during the problem to check that it s returning the deformed coordinates?\nadd this parameter:\nExecute_on = \u201cinitial timestep_end\u201d",
+                          "url": "https://github.com/idaholab/moose/discussions/20293#discussioncomment-2189295",
+                          "updatedAt": "2023-01-12T22:19:25Z",
+                          "publishedAt": "2022-02-16T15:03:02Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Computing Current Density Over an Interface",
+          "author": {
+            "login": "jsevic"
+          },
+          "bodyText": "I have a 2-D model of a thin-film dielectric stack with top and bottom ohmic contacts and I wish to compute the total current over either contact. Do I need to define an auxiliary variable, say J(x,y,t), from E(x,y,t) * sigma_electrical(x,y,t) and then perform an integration over either one of the contacts, say over x for fixed y? Is the integration something I can do in a post-processing step or would it too be an auxiliary variable?\nThank you!\nJohn Sevic",
+          "url": "https://github.com/idaholab/moose/discussions/20280",
+          "updatedAt": "2023-05-19T04:02:34Z",
+          "publishedAt": "2022-02-11T01:43:44Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nA total current seems like the job for a postprocessor.\nWhether you start from J = E * sigma or whether you provide E and sigma for the integration depends on your preferences. I suspect if you use J you ll be able to use an existing SideIntegration postprocessor\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20280#discussioncomment-2169669",
+                  "updatedAt": "2023-11-11T16:30:22Z",
+                  "publishedAt": "2022-02-13T23:55:51Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "jsevic"
+                  },
+                  "bodyText": "Ok cool let me try thx!\n\nJohn Sevic\n\u2026\nSent from my iPhone\n On Feb 13, 2022, at 4:56 PM, Guillaume Giudicelli ***@***.***> wrote:\n\n \ufeff\n Hello\n\n A total current seems like the job for a postprocessor.\n Whether you start from J = E * sigma or whether you provide E and sigma for the integration depends on your preferences. I suspect if you use J you ll be able to use an existing SideIntegration postprocessor\n\n Guillaume\n\n \u2014\n Reply to this email directly, view it on GitHub, or unsubscribe.\n Triage notifications on the go with GitHub Mobile for iOS or Android.\n You are receiving this because you authored the thread.",
+                  "url": "https://github.com/idaholab/moose/discussions/20280#discussioncomment-2170001",
+                  "updatedAt": "2023-11-11T16:30:24Z",
+                  "publishedAt": "2022-02-14T01:45:26Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "jsevic"
+                  },
+                  "bodyText": "Another question related to this.\n\nI recall on an earlier simulation I did, I used an auxiliary kernel to compute electrical conductivity based on the product mobility and charge density and electron charge.\n\nIf I define electrical conductivity presently using a ParsedMaterial, and call this sigma_e, is there a way to pass this sigma_e to the Exodus output so I can plot it? I used AuxKernal for this before.\n\nThx!\n\u2026\n On Feb 13, 2022, at 4:56 PM, Guillaume Giudicelli ***@***.***> wrote:\n\n\n Hello\n\n A total current seems like the job for a postprocessor.\n Whether you start from J = E * sigma or whether you provide E and sigma for the integration depends on your preferences. I suspect if you use J you ll be able to use an existing SideIntegration postprocessor\n\n Guillaume\n\n \u2014\n Reply to this email directly, view it on GitHub <#20280 (comment)>, or unsubscribe <https://github.com/notifications/unsubscribe-auth/ABD6MBQW6GSWM64ZBAY6EGTU3BAJHANCNFSM5OCWS5UA>.\n Triage notifications on the go with GitHub Mobile for iOS <https://apps.apple.com/app/apple-store/id1477376905?ct=notification-email&mt=8&pt=524675> or Android <https://play.google.com/store/apps/details?id=com.github.android&referrer=utm_campaign%3Dnotification-email%26utm_medium%3Demail%26utm_source%3Dgithub>.\n You are receiving this because you authored the thread.",
+                  "url": "https://github.com/idaholab/moose/discussions/20280#discussioncomment-2185078",
+                  "updatedAt": "2023-11-11T16:30:30Z",
+                  "publishedAt": "2022-02-16T01:11:53Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "From a ParsedMaterial you can output to exodus with this\nhttps://mooseframework.inl.gov/source/auxkernels/MaterialRealAux.html",
+                          "url": "https://github.com/idaholab/moose/discussions/20280#discussioncomment-2185762",
+                          "updatedAt": "2023-11-11T16:30:31Z",
+                          "publishedAt": "2022-02-16T03:47:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "or you can specify the output parameter of the parsedmaterial to the exodus output",
+                          "url": "https://github.com/idaholab/moose/discussions/20280#discussioncomment-2185763",
+                          "updatedAt": "2023-11-11T16:30:33Z",
+                          "publishedAt": "2022-02-16T03:48:18Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "jsevic"
+                  },
+                  "bodyText": "Ok I will try I also tried AuxVariable and AuxKernel and this seemed to work too.\n\u2026\nSent from my iPhone\n On Feb 15, 2022, at 8:48 PM, Guillaume Giudicelli ***@***.***> wrote:\n\n \ufeff\n From a ParsedMaterial you can output to exodus with this\n https://mooseframework.inl.gov/source/auxkernels/MaterialRealAux.html\n\n \u2014\n Reply to this email directly, view it on GitHub, or unsubscribe.\n Triage notifications on the go with GitHub Mobile for iOS or Android.\n You are receiving this because you authored the thread.",
+                  "url": "https://github.com/idaholab/moose/discussions/20280#discussioncomment-2188109",
+                  "updatedAt": "2023-11-11T16:30:33Z",
+                  "publishedAt": "2022-02-16T12:10:33Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "structure mechanic analysis using moose",
+          "author": {
+            "login": "tjumsl"
+          },
+          "bodyText": "I try to find an alternative structure analysis application to the commercial software NASTRAN. Moose seems to be very promising.\nMy main analysis area is using plate/shell/beam elements for airframe structures, including linear / non-linear / buckling / modal anlaysis / frequency response etc. I asssume Moose should be able to do this, is that correct?",
+          "url": "https://github.com/idaholab/moose/discussions/20285",
+          "updatedAt": "2022-07-23T05:52:27Z",
+          "publishedAt": "2022-02-11T06:21:57Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nWe dont have modal analysis\nWe have some capabilities for frequency response though they may be in MASTODON, @cbolisetti will know the most about this.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20285#discussioncomment-2169658",
+                  "updatedAt": "2022-07-23T05:52:54Z",
+                  "publishedAt": "2022-02-13T23:51:25Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "ats5662"
+                  },
+                  "bodyText": "If MOOSE doesn't have what you're looking for try openCFS",
+                  "url": "https://github.com/idaholab/moose/discussions/20285#discussioncomment-2184334",
+                  "updatedAt": "2022-07-23T05:52:54Z",
+                  "publishedAt": "2022-02-15T22:17:33Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "tjumsl"
+                          },
+                          "bodyText": "If MOOSE doesn't have what you're looking for try openCFS\n\nThanks for the kind suggestion. For OpenCFS, do you know whehter it can conver the structure areas I mentioned above?\nI quickly checked the website, it seems the tutorial examples are mainly on acoustic aspects.",
+                          "url": "https://github.com/idaholab/moose/discussions/20285#discussioncomment-2185694",
+                          "updatedAt": "2022-07-23T05:52:54Z",
+                          "publishedAt": "2022-02-16T03:30:33Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ats5662"
+                          },
+                          "bodyText": "Yeah, I use openCFS for acoustic simulations, so I am not very familiar with its structural dynamics capabilities. I know they exist though - check out these resources\nopenCFS YouTube tutorials\nCantilever beam eigenfrequency example\nSinglefield mechanics testsuit",
+                          "url": "https://github.com/idaholab/moose/discussions/20285#discussioncomment-2185756",
+                          "updatedAt": "2022-07-23T05:52:54Z",
+                          "publishedAt": "2022-02-16T03:46:54Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "tjumsl"
+                          },
+                          "bodyText": "Yeah, I use openCFS for acoustic simulations, so I am not very familiar with its structural dynamics capabilities. I know they exist though - check out these resources\nopenCFS YouTube tutorials Cantilever beam eigenfrequency example Singlefield mechanics testsuit\n\nThanks, I will check the materials and reach the openCFS team for further confirmation.",
+                          "url": "https://github.com/idaholab/moose/discussions/20285#discussioncomment-2185792",
+                          "updatedAt": "2022-07-23T05:52:54Z",
+                          "publishedAt": "2022-02-16T03:56:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "oldninja"
+                          },
+                          "bodyText": "Another one is CalculiX . The only issue is that plate/shell/beam elements are expanded internally into brick elements. But it can do linear, non-linear (material and contact), buckling, modal, and freq. response.",
+                          "url": "https://github.com/idaholab/moose/discussions/20285#discussioncomment-2185962",
+                          "updatedAt": "2022-09-28T08:31:26Z",
+                          "publishedAt": "2022-02-16T04:47:32Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "cbolisetti"
+                  },
+                  "bodyText": "@tjumsl, you can use MOOSE for several mechanics applications but it's still not at the extent of traditional structural engineering software. We have plate/beam/shell elements, but we cannot model nonlinearities yet. Also, we don't have Eigen value analysis merged into MOOSE. If you are looking to use solid elements or stay in the linear range, MOOSE is great for large problems and multiphysics applications.",
+                  "url": "https://github.com/idaholab/moose/discussions/20285#discussioncomment-2184400",
+                  "updatedAt": "2022-07-23T05:52:54Z",
+                  "publishedAt": "2022-02-15T22:28:40Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "tjumsl"
+                          },
+                          "bodyText": "@tjumsl, you can use MOOSE for several mechanics applications but it's still not at the extent of traditional structural engineering software. We have plate/beam/shell elements, but we cannot model nonlinearities yet. Also, we don't have Eigen value analysis merged into MOOSE. If you are looking to use solid elements or stay in the linear range, MOOSE is great for large problems and multiphysics applications.\n\nOK, i see. Many thanks for the kind response. How about XFEM crack propergation? Is it possible for MOOSE to carry out complicate crack propergation analysises? Solid elements will be used in most cases.",
+                          "url": "https://github.com/idaholab/moose/discussions/20285#discussioncomment-2185727",
+                          "updatedAt": "2022-07-23T05:52:54Z",
+                          "publishedAt": "2022-02-16T03:38:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "What do you mean by complicated crack propagation?  MOOSE XFEM can do certain 2D and 3D crack propagation modeling. Branching or merging is not well supported.",
+                          "url": "https://github.com/idaholab/moose/discussions/20285#discussioncomment-2185759",
+                          "updatedAt": "2022-07-23T05:52:54Z",
+                          "publishedAt": "2022-02-16T03:47:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "tjumsl"
+                          },
+                          "bodyText": "What do you mean by complicated crack propagation? MOOSE XFEM can do certain 2D and 3D crack propagation modeling. Branching or merging is not well supported.\n\nI am trying to use XFEM as an alternative tools to the commercial software Franc3D, do you think this would be possible?",
+                          "url": "https://github.com/idaholab/moose/discussions/20285#discussioncomment-2185788",
+                          "updatedAt": "2022-07-23T05:52:54Z",
+                          "publishedAt": "2022-02-16T03:55:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "Does Franc3D support XFEM? If you are comfortable with writing some codes, MOOSE will provide you much more flexibility. If you are a primary commercial code user, I guess Franc3D would be a better choice.",
+                          "url": "https://github.com/idaholab/moose/discussions/20285#discussioncomment-2185873",
+                          "updatedAt": "2022-07-23T05:53:16Z",
+                          "publishedAt": "2022-02-16T04:18:53Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "tjumsl"
+                          },
+                          "bodyText": "Does Franc3D support XFEM? If you are comfortable with writing some codes, MOOSE will provide you much more flexibility. If you are a primary commercial code user, I guess Franc3D would be a better choice.\n\nFranc3D ultilized traditional FEM methods which needs a lot of meshing work. I am willing to write some codes and will dig into more details of MOOSE XFEM.",
+                          "url": "https://github.com/idaholab/moose/discussions/20285#discussioncomment-2185968",
+                          "updatedAt": "2022-07-23T05:53:17Z",
+                          "publishedAt": "2022-02-16T04:50:42Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Generate sideset and nodeset for the intersection of the subdomains",
+          "author": {
+            "login": "avtarsinghh1991"
+          },
+          "bodyText": "Hello MOOSE Experts\nI am importing the Abaqus mesh file in the MOOSE. There is a number of subdomains in it.\nIs it possible to generate the NODESETS for the nodes that are at the intersection between subdomains? Also, I want to generate the SIDESET of the outer boundary of the entire domain.\nPlease guide me through it. I shall be very thankful.\nBest\nAvtar",
+          "url": "https://github.com/idaholab/moose/discussions/20310",
+          "updatedAt": "2022-08-26T07:16:22Z",
+          "publishedAt": "2022-02-15T20:07:56Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nSee the mesh generators for generating sidesets, notably these two:\nhttps://mooseframework.inl.gov/source/meshgenerators/SideSetsBetweenSubdomainsGenerator.html\nhttps://mooseframework.inl.gov/source/meshgenerators/SideSetsAroundSubdomainGenerator.html\nAnd see the options in this page to generate nodesets from sidesets:\nhttps://mooseframework.inl.gov/source/mesh/MooseMesh.html\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20310#discussioncomment-2183709",
+                  "updatedAt": "2022-08-26T07:16:22Z",
+                  "publishedAt": "2022-02-15T20:11:48Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "What is the domain outer boundary? If continuous, might be easier to just use that one for the outer boundary\nhttps://mooseframework.inl.gov/source/meshgenerators/SideSetsFromNormalsGenerator.html",
+                          "url": "https://github.com/idaholab/moose/discussions/20310#discussioncomment-2183724",
+                          "updatedAt": "2022-08-26T07:16:22Z",
+                          "publishedAt": "2022-02-15T20:14:27Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "avtarsinghh1991"
+                          },
+                          "bodyText": "Hello @GiudGiud\nIt is multiple 3d grains intersecting each other.",
+                          "url": "https://github.com/idaholab/moose/discussions/20310#discussioncomment-2183938",
+                          "updatedAt": "2022-08-26T07:16:46Z",
+                          "publishedAt": "2022-02-15T20:58:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "avtarsinghh1991"
+                          },
+                          "bodyText": "Hello @GiudGiud\nI am trying the following\nhttps://mooseframework.inl.gov/source/meshgenerators/SideSetsBetweenSubdomainsGenerator.html\nBut I do not have the information that the given subdomain is surrounded by how many and which subdomains.\nI think in this way, I cannot able to find all the intersection Nodesets once. For this, I need to apply it for individual subdomains. Correct me if I am wrong.\nBest\nAvtar",
+                          "url": "https://github.com/idaholab/moose/discussions/20310#discussioncomment-2183987",
+                          "updatedAt": "2022-08-26T07:16:46Z",
+                          "publishedAt": "2022-02-15T21:09:05Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "You can list one primary and all the other blocks in paired_block to be sure (you ll have to list them), even if they dont touch\nOr you can use https://mooseframework.inl.gov/source/meshgenerators/SideSetsAroundSubdomainGenerator.html\nif you just want to have what s around one grain.",
+                          "url": "https://github.com/idaholab/moose/discussions/20310#discussioncomment-2184535",
+                          "updatedAt": "2022-12-12T17:01:30Z",
+                          "publishedAt": "2022-02-15T22:57:08Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to output functor material properties",
+          "author": {
+            "login": "joe61vette"
+          },
+          "bodyText": "Hello:\nI use an AuxVariable and the ADFunctorElementalAux to get the value of a material property.  For example:\n[rho_out]\n    type = ADFunctorElementalAux\n    functor = 'rho_gas'\n    variable = 'rho_var'\n    execute_on = 'timestep_end'\n  []\n\nHowever, both in a VPP and in the Exodus file, the values of rho_var correspond to that for the last element in my mesh.  Values for the other elements don't show up.  Is there some way to do this?\nThanks,\nJoe Kelly",
+          "url": "https://github.com/idaholab/moose/discussions/20307",
+          "updatedAt": "2022-06-23T15:25:35Z",
+          "publishedAt": "2022-02-15T17:07:18Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "lindsayad"
+                  },
+                  "bodyText": "@joe61vette can you show me your block for your rho_var aux variable? My suspicion is that you are creating a nodal aux variable, in which case you will be evaluating a nodal aux kernel ... and we use _current_elem in the FunctorElementalAux evaluation which will be wrong if the aux kernel is being evaluated as a nodal quantity. We will add an error check to FunctorElementalAux that will catch this in the future",
+                  "url": "https://github.com/idaholab/moose/discussions/20307#discussioncomment-2183199",
+                  "updatedAt": "2022-06-23T15:25:34Z",
+                  "publishedAt": "2022-02-15T18:40:32Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "joe61vette"
+                          },
+                          "bodyText": "I bet you're right.  Here it is:\n[rho_var]\n[]\nIt was copied from the NS test case functorfluidprops.i",
+                          "url": "https://github.com/idaholab/moose/discussions/20307#discussioncomment-2183582",
+                          "updatedAt": "2022-06-23T15:25:27Z",
+                          "publishedAt": "2022-02-15T19:47:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Please change it to\n[rho_var]\n  type = MooseVariableFVReal\n[]\n\nthat test will be modified. The exodus seems fine because all the variables are constant over the domain in that test",
+                          "url": "https://github.com/idaholab/moose/discussions/20307#discussioncomment-2183590",
+                          "updatedAt": "2022-06-23T15:25:29Z",
+                          "publishedAt": "2022-02-15T19:48:53Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "joe61vette"
+                  },
+                  "bodyText": "THANKS Alex & Guillaume.",
+                  "url": "https://github.com/idaholab/moose/discussions/20307#discussioncomment-2183599",
+                  "updatedAt": "2022-06-23T15:25:32Z",
+                  "publishedAt": "2022-02-15T19:50:26Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Ensuring normalisation at all times of multiple components (variables)",
+          "author": {
+            "login": "RobMacka"
+          },
+          "bodyText": "Hi all,\nI wish to ensure the quadratic sum of multiple variables (representing vector components) equals 1 at all times during the simulation. I need this normalisation to be compatible with seperate evolution with free energy functionals with the Phase Field module. Thank you for your time and help.\nThanks,\nRobert",
+          "url": "https://github.com/idaholab/moose/discussions/20229",
+          "updatedAt": "2023-05-31T19:24:47Z",
+          "publishedAt": "2022-02-04T16:29:03Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@lindsayad I m thinking he should work with a lagrange multiplier scalar variable to enforce the constraint. Can you think of alternatives?",
+                  "url": "https://github.com/idaholab/moose/discussions/20229#discussioncomment-2122739",
+                  "updatedAt": "2023-05-31T19:24:47Z",
+                  "publishedAt": "2022-02-07T05:12:28Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lindsayad"
+                          },
+                          "bodyText": "I agree",
+                          "url": "https://github.com/idaholab/moose/discussions/20229#discussioncomment-2127280",
+                          "updatedAt": "2023-05-31T19:24:47Z",
+                          "publishedAt": "2022-02-07T17:30:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "RobMacka"
+                          },
+                          "bodyText": "Thank you both for your responses. But doesn't the ScalarLagrangeConstraint only work with the variables themselves and not functions of them? As I need mine to work with their quadratic sum, thanks again",
+                          "url": "https://github.com/idaholab/moose/discussions/20229#discussioncomment-2127719",
+                          "updatedAt": "2023-05-31T19:24:47Z",
+                          "publishedAt": "2022-02-07T18:37:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nThere may not be an object that does exactly what you want already. You will likely have to build it off of existing objects.\nhttps://mooseframework.inl.gov/source/kernels/ScalarLagrangeMultiplier.html is almost what you want, you just need to change the implementation of the norm to the one you want.\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/20229#discussioncomment-2128177",
+                          "updatedAt": "2023-05-31T19:24:47Z",
+                          "publishedAt": "2022-02-07T19:44:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "actually you ll need to adapt it to array variables as well, since it's only looking at a single variable.",
+                          "url": "https://github.com/idaholab/moose/discussions/20229#discussioncomment-2128274",
+                          "updatedAt": "2023-05-31T19:25:04Z",
+                          "publishedAt": "2022-02-07T20:02:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mangerij"
+                          },
+                          "bodyText": "What vector does this represent?\nWe have done this for magnetization successfully using a longitudinal term in the PDE. Perhaps something similar can work for you. I suppose it depends on what equation governs your vector component variables\nAnother alternative is letting your vector live on the unit sphere and reformulate your PDE in terms of angles. If the PDE isn't too horrible, it would work and you get the added bonus of having one less variable and significantly less dof when you scale.",
+                          "url": "https://github.com/idaholab/moose/discussions/20229#discussioncomment-2180469",
+                          "updatedAt": "2023-05-31T19:25:04Z",
+                          "publishedAt": "2022-02-15T12:02:19Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Error on implementing periodic boundary condition",
+          "author": {
+            "login": "avtarsinghh1991"
+          },
+          "bodyText": "Hello MOOSE Experts\nI am working with a chemo-mechanical model in which displacement is diffusion induced.\nFor the sake of RVE, I want to implement periodic boundary conditions on the displacement field.\nMy domain is of square shape with coordinates (0,0), (1e-5,0), (1e-5,1e-5) and (0,1e-5). I have generated the mesh in cubit and also verified the domain size using paraview.\nI am trying to put periodic boundary conditions on disp_x and disp_y for the left and right boundaries. But I am getting the following error:\n*** ERROR ***\nPeriodic boundary neighbor not found\n\napplication called MPI_Abort(MPI_COMM_WORLD, 1) - process 3\n\n\n*** ERROR ***\nPeriodic boundary neighbor not found\n\nMy code snippet for implementing periodic bc is as follows:\n[./Periodic]\n    [./left_right_periodic_disp_x]\n      variable = disp_x\n      primary = left1\n      secondary = right1\n      translation = '1e-05 0 0'\n    [../]\n    [./left_right_periodic_disp_y]\n      variable = disp_y\n      primary = left1\n      secondary = right1\n      translation = '1e-05 0 0'\n    [../]\n  [../]\n\nPlease let me know any suggestions you have?\nUpdate: If I apply the periodic boundaries on top and bottom boundaries, I didn't get any error even if put the wrong translation value.\nThanks.\nBest\nAvtar",
+          "url": "https://github.com/idaholab/moose/discussions/20232",
+          "updatedAt": "2022-06-29T06:33:44Z",
+          "publishedAt": "2022-02-04T17:35:02Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "ngrilli"
+                  },
+                  "bodyText": "Dear @asingh-mit\nSince your domain is a square,\nyou can try with auto_direction\nFor instrance, see this one:\nhttps://github.com/ngrilli/c_pfor_am/blob/main/test/tests/SandfeldZaiser2015/SandfeldLoop.i\nBest Regards,\nNicol\u00f2",
+                  "url": "https://github.com/idaholab/moose/discussions/20232#discussioncomment-2118074",
+                  "updatedAt": "2022-06-29T06:33:45Z",
+                  "publishedAt": "2022-02-05T22:04:11Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "avtarsinghh1991"
+                          },
+                          "bodyText": "Hey @ngrilli\nThank you very much. But I am importing a mesh file not generating it using a mesh generator. It cannot be used in that scenario.\nPlease correct me if I am wrong.\nEven though I have tried and get the following error.\n*** ERROR ***\nTask init_mesh is not registered to build MeshGenerator derived objects\n\nBest\nAvtar",
+                          "url": "https://github.com/idaholab/moose/discussions/20232#discussioncomment-2118818",
+                          "updatedAt": "2022-06-29T06:33:47Z",
+                          "publishedAt": "2022-02-06T04:55:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "You can import the mesh using the FileMeshGenerator.\nThen you can use mesh generators to modify it.\nhttps://mooseframework.inl.gov/source/meshgenerators/FileMeshGenerator.html",
+                          "url": "https://github.com/idaholab/moose/discussions/20232#discussioncomment-2122707",
+                          "updatedAt": "2022-06-29T06:33:47Z",
+                          "publishedAt": "2022-02-07T05:02:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "avtarsinghh1991"
+                          },
+                          "bodyText": "Hi @GiudGiud\nThank you very much.\nI am trying a simple problem. I have a square domain of size 1x1 afterward I am scaling the mesh. In this simple problem, the periodic boundary condition is not working. Please let me know any issues with the input file.\n[Mesh]\n   [./initial_mesh]\n     type =FileMeshGenerator\n     file = 'sq1.e'\n  []\n\n  [./scale]\n    type = TransformGenerator\n    input = initial_mesh\n    transform = SCALE\n    vector_value ='40 40 0'\n  []\n[]\n\n[Variables]\n  [./u]\n    order = FIRST\n    family = LAGRANGE\n  [../]\n[]\n\n[Kernels]\n  [./diff]\n    type = Diffusion\n    variable = u\n  [../]\n\n  [./dot]\n    type = TimeDerivative\n    variable = u\n  [../]\n\n[]\n\n[BCs]\n  [./u_left]\n    type = DirichletBC\n    variable = u\n    boundary = left1\n    value = 1\n  [../]\n\n  [./Periodic]\n    [./x_direction]\n      variable = u\n      primary = left1\n      secondary = right1\n      translation = '40 0 0'\n    [../]\n  [../]\n[]\n\n[Executioner]\n  type = Transient\n  dt = 1\n  num_steps = 20\n  solve_type = NEWTON\n[]\n\n[Outputs]\n  execute_on = 'timestep_end'\n  file_base = out\n  exodus = true\n[]\n\nBest\nAvtar",
+                          "url": "https://github.com/idaholab/moose/discussions/20232#discussioncomment-2152347",
+                          "updatedAt": "2022-06-29T06:33:47Z",
+                          "publishedAt": "2022-02-10T19:30:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "u has both a Dirichlet and a periodic BC on left1? Might as well just use two DirichletBCs",
+                          "url": "https://github.com/idaholab/moose/discussions/20232#discussioncomment-2152379",
+                          "updatedAt": "2022-07-05T11:02:15Z",
+                          "publishedAt": "2022-02-10T19:36:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "avtarsinghh1991"
+                          },
+                          "bodyText": "@GiudGiud\nThis is just a simple example problem I am trying to solve. Let's say with the Dirichlet BC, the value enforced on left should be transferred to the right using periodic boundary conditions.\nLeft and right boundaries get similar values if I use moose inbuilt MESHGENERATOR rather than the file.\nUpdate: I have even tried the EqualConstraint options but nothing is working for me.\nBest\nAvtar",
+                          "url": "https://github.com/idaholab/moose/discussions/20232#discussioncomment-2152417",
+                          "updatedAt": "2022-07-05T11:02:13Z",
+                          "publishedAt": "2022-02-10T19:44:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "avtarsinghh1991"
+                          },
+                          "bodyText": "Is there any way, so that I can use the auto direction option for periodic boundary conditions while still importing the mesh file?",
+                          "url": "https://github.com/idaholab/moose/discussions/20232#discussioncomment-2152629",
+                          "updatedAt": "2022-07-05T11:02:16Z",
+                          "publishedAt": "2022-02-10T20:15:48Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I highly doubt we support that. Please use a single boundary conditions per boundary per variable first, and see if you can make that work for your cases.\nPeriodicBCs are a whole different beast than DirichletBC. They are pretty much directly interfacing with libmesh to modify the numerical system.\nBut you are saying it works with moose generated meshes? Just not your custom one?",
+                          "url": "https://github.com/idaholab/moose/discussions/20232#discussioncomment-2152642",
+                          "updatedAt": "2022-07-05T11:02:13Z",
+                          "publishedAt": "2022-02-10T20:17:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "avtarsinghh1991"
+                          },
+                          "bodyText": "Yes, It is working with the MOOSE-generated meshes.\nActually, I am working on a chemo-mechanical problem in which displacement is induced. In that case, I only want to apply periodic boundary conditions for displacements on left, right, top, and bottom sides. No Dirichlet boundary conditions are needed. I tried to implement PeriodicBC there but it was not working so I am trying to implement it for the much simpler problem.\nBest\nAvtar",
+                          "url": "https://github.com/idaholab/moose/discussions/20232#discussioncomment-2152661",
+                          "updatedAt": "2022-07-05T11:02:28Z",
+                          "publishedAt": "2022-02-10T20:22:21Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "dschwen"
+                  },
+                  "bodyText": "Looks like your imported mesh has boundaries where the nodes do not exactly line up. Easiest solution is to remesh, or use an integrated constraint to enforce periodicity.",
+                  "url": "https://github.com/idaholab/moose/discussions/20232#discussioncomment-2118823",
+                  "updatedAt": "2022-06-29T06:33:56Z",
+                  "publishedAt": "2022-02-06T05:00:09Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "avtarsinghh1991"
+                          },
+                          "bodyText": "Thank you very much @dschwen. I will try the suggestions you proposed. Actually, I am using the scaling option in CUBIT to scale the model. I think that is distorting the mesh somehow.\nBest\nAvtar",
+                          "url": "https://github.com/idaholab/moose/discussions/20232#discussioncomment-2118828",
+                          "updatedAt": "2022-06-29T06:33:56Z",
+                          "publishedAt": "2022-02-06T05:05:52Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "avtarsinghh1991"
+                  },
+                  "bodyText": "Hello @GiudGiud and @dschwen\nThank you very much for your valuable insights and help. I resolved the issue.\nActually, periodic boundary conditions can only be applied to SIDESETS.\nI was trying to implement it to NODESETS.\nThis has not been documented in the given text:\nhttps://mooseframework.inl.gov/source/actions/AddPeriodicBCAction.html\nBest\nAvtar",
+                  "url": "https://github.com/idaholab/moose/discussions/20232#discussioncomment-2154782",
+                  "updatedAt": "2022-06-29T06:33:56Z",
+                  "publishedAt": "2022-02-11T04:06:38Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nThere should be another documentation page for periodic boundary conditions, this is the \"Action\" page. I cant find it so it may not exist.\nThanks for reporting this i ll add it to an upcoming documentation PR\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/20232#discussioncomment-2169665",
+                          "updatedAt": "2022-06-29T06:33:57Z",
+                          "publishedAt": "2022-02-13T23:53:52Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Is this conclusion correct?? I'm a little surprised by that.",
+                          "url": "https://github.com/idaholab/moose/discussions/20232#discussioncomment-2169950",
+                          "updatedAt": "2022-06-29T06:33:56Z",
+                          "publishedAt": "2022-02-14T01:28:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Well I double checked the missing docs and I didnt find a better page than the Action. It's not explicitly specified what's supported in that page either.\nwrt to nodesets and sidesets, what kind of variable are you using?",
+                          "url": "https://github.com/idaholab/moose/discussions/20232#discussioncomment-2170457",
+                          "updatedAt": "2022-06-29T06:33:57Z",
+                          "publishedAt": "2022-02-14T04:22:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "note that you can get sidesets from nodesets and vice-versa from MOOSE. See this page:\nhttps://mooseframework.inl.gov/source/mesh/MooseMesh.html",
+                          "url": "https://github.com/idaholab/moose/discussions/20232#discussioncomment-2170464",
+                          "updatedAt": "2022-07-05T11:05:16Z",
+                          "publishedAt": "2022-02-14T04:23:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "OP was using PBC on a nodal variable.",
+                          "url": "https://github.com/idaholab/moose/discussions/20232#discussioncomment-2173310",
+                          "updatedAt": "2022-07-05T11:05:16Z",
+                          "publishedAt": "2022-02-14T13:55:14Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "I mean, if PBC on a node set doesn't work for a nodal variable, that sounds like a bug -- not something that should be documented.",
+                          "url": "https://github.com/idaholab/moose/discussions/20232#discussioncomment-2173316",
+                          "updatedAt": "2022-07-05T11:05:16Z",
+                          "publishedAt": "2022-02-14T13:56:21Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "avtarsinghh1991"
+                          },
+                          "bodyText": "Hello @hugary1995 and @GiudGiud\nI generated the mesh using Trelis. It's a simple square domain.\nFirst, I generated the nodesets and tried to apply the PBC, it was not working.\nInput file, I was using is as below:\n[Mesh]\n   [./initial_mesh]\n     type =FileMeshGenerator\n     file = 'sq1.e'\n  []\n\n  [./scale]\n    type = TransformGenerator\n    input = initial_mesh\n    transform = SCALE\n    vector_value ='40 40 0'\n  []\n[]\n\n[Variables]\n  [./u]\n    order = FIRST\n    family = LAGRANGE\n  [../]\n[]\n\n[Kernels]\n  [./diff]\n    type = Diffusion\n    variable = u\n  [../]\n\n  [./dot]\n    type = TimeDerivative\n    variable = u\n  [../]\n\n[]\n\n[BCs]\n  [./u_left]\n    type = DirichletBC\n    variable = u\n    boundary = left1\n    value = 1\n  [../]\n\n  [./Periodic]\n    [./x_direction]\n      variable = u\n      primary = left1\n      secondary = right1\n      translation = '40 0 0'\n    [../]\n  [../]\n[]\n\n[Executioner]\n  type = Transient\n  dt = 1\n  num_steps = 20\n  solve_type = NEWTON\n[]\n\n[Outputs]\n  execute_on = 'timestep_end'\n  file_base = out\n  exodus = true\n[]\n\nI am using this file, just to understand the working of PBCs.\nAfter struggling for 3 days. I generated the side sets in TRELIS and tried to apply the PBC, and then it started working absolutely fine.\nAfterward, I applied the PBC on the displacement field in my actual chemo-mechanical problem, and they started working nicely.\nBest\nAvtar",
+                          "url": "https://github.com/idaholab/moose/discussions/20232#discussioncomment-2173367",
+                          "updatedAt": "2022-07-05T11:05:19Z",
+                          "publishedAt": "2022-02-14T14:03:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "It's not just a PBC, it's trying to get the DirichletBC applied on one side to be transported to the other side by the PBC.\nIf nodal PBCs were broken I think we would know about it",
+                          "url": "https://github.com/idaholab/moose/discussions/20232#discussioncomment-2174050",
+                          "updatedAt": "2022-07-05T11:06:50Z",
+                          "publishedAt": "2022-02-14T15:25:44Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "native windows build exe",
+          "author": {
+            "login": "tjumsl"
+          },
+          "bodyText": "I noted currently the instruction for windows installation is using conda and WSL, is there any way to get windows native builds (exe file) through cygwin or mingw?\nOnly the core server modulue is needed, post processing module is not necessary.",
+          "url": "https://github.com/idaholab/moose/discussions/20287",
+          "updatedAt": "2023-03-04T14:23:08Z",
+          "publishedAt": "2022-02-11T07:25:03Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nNo we have not developed a windows native build. We are interested in having this though, if anyone wants to tackle it\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20287#discussioncomment-2169649",
+                  "updatedAt": "2023-03-04T14:23:08Z",
+                  "publishedAt": "2022-02-13T23:49:09Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "dschwen"
+                  },
+                  "bodyText": "We have tried our hand on a native Windows build before. This effort might get revived as there is a libmesh contributor who's working on native support for VC.",
+                  "url": "https://github.com/idaholab/moose/discussions/20287#discussioncomment-2169664",
+                  "updatedAt": "2022-02-13T23:53:43Z",
+                  "publishedAt": "2022-02-13T23:53:32Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,875 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMi0wNi0wOFQxMzoxMzoyNC0wNTowMM15BA=="
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Questions about the dependence of elastic tensor on phase field variable",
+          "author": {
+            "login": "ZhigangPu"
+          },
+          "bodyText": "Dear,\nI am new to the moose and right now I am trying to couple the phase field and tensor mechanics to simlulate dendrite growth in elastic field. I am reading examples in the  modules/phase_field-mechanics/combined directory. I am confused about the way Moose specify the elastic tensor's dependence and strain's dependence on phase field varible.\nFor example, in the input file Conserved.i,\nFor elastic tensor, no field is reserved for the choice of phase variable in following section, but indeed elastic tensor is different across different phase field.\n\nFor strain and elastic energy, args are specified as c in the correponding section, but I cannot understand the way c interacts with strain and energy. I've read some official document on ComputeVariableEigenstrain and ElasticEnergyMaterial, but there seems to be no direct explanation.\n\nAny reponse will be highly appreciated!\nBest,\nZhigang",
+          "url": "https://github.com/idaholab/moose/discussions/19053",
+          "updatedAt": "2022-06-09T08:17:59Z",
+          "publishedAt": "2021-10-11T12:48:22Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "Just by reading that input file it seems to me that\n\nthe eigenstrain is defined as 0.1 * c * I, where I is the second order identity tensor;\nthe strain purely depends on the eigenstrain, hence the strain is defined as -0.1 * c * I; Nope, there's also elastic deformation.\nthe elasticity tensor is homogeneous (doesn't depend on c).",
+                  "url": "https://github.com/idaholab/moose/discussions/19053#discussioncomment-1461670",
+                  "updatedAt": "2022-06-09T07:52:52Z",
+                  "publishedAt": "2021-10-12T00:10:24Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "BTW, I'm not a fan of coupling \"Eulerian\" dendritic growth with \"Lagrangian\" mechanics. It's not as simple as it seems to be.",
+                          "url": "https://github.com/idaholab/moose/discussions/19053#discussioncomment-1461681",
+                          "updatedAt": "2022-06-09T07:52:53Z",
+                          "publishedAt": "2021-10-12T00:14:54Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ZhigangPu"
+                          },
+                          "bodyText": "Dear hugary:\nThanks for the comments. Yeah, but it's wired the elasticity tensor is homogeneous since there are two saperate phases. As for the difficulty of coupling between Eulerian method and Lagrangian method, thanks for pointing out and I will think more about it.\nBest\nzhigang",
+                          "url": "https://github.com/idaholab/moose/discussions/19053#discussioncomment-1461820",
+                          "updatedAt": "2022-06-09T07:52:54Z",
+                          "publishedAt": "2021-10-12T01:26:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "I think that's a perfectly valid example for demonstration purposes. If you want to have variable dependent elasticity tensor you can use ComputeVariableElasticityTensor or something like that, I don't remember the exact name.",
+                          "url": "https://github.com/idaholab/moose/discussions/19053#discussioncomment-1461885",
+                          "updatedAt": "2022-06-09T07:52:53Z",
+                          "publishedAt": "2021-10-12T01:46:40Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ZhigangPu"
+                          },
+                          "bodyText": "Dear hugary:\nGreat! Then I'll try the ComputeVariableElasticityTensor object.\nMany thanks for your kindly remind! I really need this.\nBest,\nzhigang",
+                          "url": "https://github.com/idaholab/moose/discussions/19053#discussioncomment-1462378",
+                          "updatedAt": "2022-10-14T00:20:07Z",
+                          "publishedAt": "2021-10-12T05:21:56Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "biaogxb"
+                  },
+                  "bodyText": "Hello, can I have your wechat or Facebook? I'm also using moose to do dendrite problems. Can I have an in-depth exchange with you\uff1flooking forward to your reply.\nmy emial \uff1a709806584@qq.com",
+                  "url": "https://github.com/idaholab/moose/discussions/19053#discussioncomment-2911649",
+                  "updatedAt": "2022-06-09T08:18:02Z",
+                  "publishedAt": "2022-06-09T08:17:59Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Different eigenstrain at different block",
+          "author": {
+            "login": "zx1987"
+          },
+          "bodyText": "Dear colleagues,\nI am trying to setup a multi-app simulation, where the current focus is on the sub-app which is a mechanical problem but used temperature and cure info passed from the master app. For this sub-app, I have block 0 and 1, where block 1 has temperature and degree of cure, and correspondingly thermal and chemical strains; block 0 only has temperature so only thermal expansion. As a first try, I only turn the thermal strain and chemical strain in block 1 on, but turn the thermal strain in block 0 off.\nIn the tensor mechanics module, I have something like:\n  [TensorMechanics]`\n    `[Master]\n      [DCPD]\n      incremental = `true`\n        new_system = true\n        formulation = UPDATED\n        volumetric_locking_correction = false\n        generate_output = 'cauchy_stress_xx cauchy_stress_yy cauchy_stress_xy '\n                          'strain_xx strain_yy strain_xy'\n        block = 1\n        eigenstrain_names = 'thermalstrain chemicalstrain'  %---- Consider thermal and chemical strains on for block 1\n      []\n      [Substrate]\n        incremental = true\n        new_system = true\n        formulation = UPDATED\n        volumetric_locking_correction = false\n        generate_output = 'cauchy_stress_xx cauchy_stress_yy cauchy_stress_xy '\n                          'strain_xx strain_yy strain_xy'\n        block = '0'   %--- no thermal strain at this point\n      []\n    []\n  []\n[]\n\nI them define my material properties:\n[Materials]\n  [./Elasticity_tensor_DCPD]\n    type = ComputeIsotropicElasticityTensorTempCureDependent %-- we coded a simple temp- and cure-dependent elasticity tensor\n    youngs_modulus = 2.1e9\n    poissons_ratio = 0.416\n    temperature = Temperature\n    cure = Cure\n     block = 1\n  [../]\n\n  [elasticity_tensor_Substrate]\n    type = ComputeIsotropicElasticityTensor\n    youngs_modulus = 200e9\n    poissons_ratio = 0.3\n    temperature = Temperature\n     block = 0\n  []\n  [compute_stress]\n    type = ComputeLagrangianLinearElasticStress\n  []\n\n  [thermal_expansion_strain]\n     type = ComputeInstantaneousCureTempDependentThermalExpansionFunctionEigenstrain %-- we coded a simple temp- and cure-dependent thermal expansion coefficient\n     block = 1\n     stress_free_temperature = 23.0\n     tg0= -137.0  # parameter tg0\n     tginf= 140.0  # parameter tg_inf\n     lambda=0.7   # parameter lambada\n     reference_cure = 0.28\n     thermal_expansion_coeff_gel_belowtg  = 35.0e-5 # thermal expansion coefficient of gel\n     thermal_expansion_coeff_gel_abovetg  = 56.72e-5 # thermal expansion coefficient of gel\n     thermal_expansion_coeff_pdcpd_belowtg = 12.91e-5  # thermal expansion coefficient of cured dcpd (poly-dcpd) below tg\n     thermal_expansion_coeff_pdcpd_abovetg = 25.58e-5 # thermal expansion coefficient of cured dcpd (poly-dcpd) above tg\n     temperature = Temperature\n     cure=Cure\n     eigenstrain_name = thermalstrain\n   []\n \n  [chemical_shrinkage_strain]\n    type = ComputeInstantaneousCureTempDependentChemicalShrinkageFunctionEigenstrain %-- we coded a simple temp- and cure-dependent chemical shrinkate coefficient\n    block = 1\n    stress_free_cure = 0.28\n    low_curerate=2.0\n    high_curerate=6\n    ccs_low_curerate=-0.0512\n    ccs_high_curerate=-0.3\n    ccs_ref=-0.3\n    para_f=0.1\n    para_f_ccs=55.5\n    cure = Cure\n    eigenstrain_name = chemicalstrain\n  []\n\n[]\n\nThere is an error message says something : Material property 'thermalstrain', requested by 'DCPD_strain' is not defined on block Substrate_QUAD4\nThis is suggesting to me that block = 1 in the DCPD block of the TensorMechanics is not taking effect, but rather, the code thinks the eigenstasins are defined in all the blocks.\nI may misunderstood something, but does any one has any experience with this, or could suggest what is the right way to assign different eigenstrains in each block? Thank you!\nBest,\nXiang",
+          "url": "https://github.com/idaholab/moose/discussions/20952",
+          "updatedAt": "2022-06-09T07:05:26Z",
+          "publishedAt": "2022-05-04T22:17:30Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@dschwen could you please help Xiang with the block restriction of the action",
+                  "url": "https://github.com/idaholab/moose/discussions/20952#discussioncomment-2698086",
+                  "updatedAt": "2022-06-09T07:05:36Z",
+                  "publishedAt": "2022-05-06T03:42:26Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@jiangwen84 would you know what's wrong with the block restriction here?",
+                          "url": "https://github.com/idaholab/moose/discussions/20952#discussioncomment-2755414",
+                          "updatedAt": "2022-06-09T07:05:36Z",
+                          "publishedAt": "2022-05-15T21:07:45Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@zx1987 Just define a 0 thermal strain property using a constant material for now\nhttps://mooseframework.inl.gov/docs/site/source/materials/GenericConstantMaterial.html",
+                  "url": "https://github.com/idaholab/moose/discussions/20952#discussioncomment-2909764",
+                  "updatedAt": "2022-06-09T01:26:48Z",
+                  "publishedAt": "2022-06-09T01:26:47Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "zx1987"
+                          },
+                          "bodyText": "Thank you Guillaume for your help. We will try this out and let you know!",
+                          "url": "https://github.com/idaholab/moose/discussions/20952#discussioncomment-2910460",
+                          "updatedAt": "2022-06-09T04:27:22Z",
+                          "publishedAt": "2022-06-09T04:27:21Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Getting warning while using mesh adaptivity",
+          "author": {
+            "login": "avtarsinghh1991"
+          },
+          "bodyText": "Hello MOOSE Experts\nI am trying to implement the mesh adaptivity as follows:\n[Adaptivity]\n  marker = errorfrac \n  steps = 3\n  [./Indicators]\n    [./error]\n      type = GradientJumpIndicator\n      variable = damage\n      outputs = none\n    [../]\n  [../]\n\n  [./Markers]\n  [./errorfrac]\n      type = ValueThresholdMarker\n      coarsen = 0\n      variable = damage\n      refine = 0.9\n      outputs = none\n    [../]\n  [../]\n[]\n\nHowever, I am getting the following error:\nUsing EXPERIMENTAL Stateful Material Property projection with Adaptivity!\n\nWarning! Mesh re-partitioning is disabled while using stateful material properties!  This can lead to large load imbalances and degraded performance!!\n\nCan you please let me know what does it mean and how to avoid it?\nThanks in advance.\nBest\nAvtar",
+          "url": "https://github.com/idaholab/moose/discussions/21213",
+          "updatedAt": "2022-06-09T01:50:33Z",
+          "publishedAt": "2022-06-05T14:45:43Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThe issue is that support for stateful properties (properties that depend on prior states) is growing but is not complete with regards to more advanced features like re-partitioning.\nSee this issue for more details:\n#4532\nI think there's a more recent issue too but cant seem to find it right now\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21213#discussioncomment-2887027",
+                  "updatedAt": "2022-06-05T18:41:01Z",
+                  "publishedAt": "2022-06-05T18:41:01Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "avtarsinghh1991"
+                          },
+                          "bodyText": "Hello @GiudGiud\nThank you very much.\nI think the only parameter is History field in phase field fracture.\nRest are all constants in my chemo-mechanical-fracture model.\nCan you suggest any other alternative to use adaptive mesh?\nBest\nAvtar",
+                          "url": "https://github.com/idaholab/moose/discussions/21213#discussioncomment-2887333",
+                          "updatedAt": "2022-06-05T20:38:45Z",
+                          "publishedAt": "2022-06-05T20:37:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "It's not barring you from using adaptivity here, it's just disabling re-partitioning which may lower performance if the load on each process becomes unequal.\nI think the way forward is to take the performance hit until we fix this. It's on the schedule for next FY",
+                          "url": "https://github.com/idaholab/moose/discussions/21213#discussioncomment-2887666",
+                          "updatedAt": "2022-06-05T23:07:24Z",
+                          "publishedAt": "2022-06-05T23:07:24Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "by performance hit I mean dont re-partition. Adaptivity should be fine though keep an eye out since it s experimental as mentioned in the message",
+                          "url": "https://github.com/idaholab/moose/discussions/21213#discussioncomment-2909863",
+                          "updatedAt": "2022-06-09T01:50:31Z",
+                          "publishedAt": "2022-06-09T01:50:30Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "TimeStepper not updating dt after --recover",
+          "author": {
+            "login": "KhaledNabilSharafeldin"
+          },
+          "bodyText": "I am currently running a long run with checkpoints enabled. When the run is stopped, and then recovered using the flag --recover in the command line it starts back up again at the last checkpoint and starts solving seemingly fine.\nHowever, the problem is that the TimeStepper that updates dt based on postprocessor information does not update the dt anymore, and is constant at the initial guess of dt.\nis there a specific reason why this is the case? and how can I enable it?\nThanks in advance",
+          "url": "https://github.com/idaholab/moose/discussions/21131",
+          "updatedAt": "2022-06-25T05:40:09Z",
+          "publishedAt": "2022-05-25T12:36:11Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nI just checked on the test we have for it and it works.\nThe time stepper should not have changed, it should keep using the postprocessor value.\nWhat does your executioner block look like ?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21131#discussioncomment-2823073",
+                  "updatedAt": "2022-05-25T20:45:30Z",
+                  "publishedAt": "2022-05-25T20:45:28Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "KhaledNabilSharafeldin"
+                          },
+                          "bodyText": "I have multiple subapps\nthis is the main\n[Executioner]\n  type = Transient\n  solve_type = 'PJFNK'    # PJFNK JFNK NEWTON FD LINEAR\n  petsc_options_iname = '-pc_type -pc_hypre_type -ksp_gmres_restart -pc_hypre_boomeramg_strong_threshold'\n  petsc_options_value = 'hypre    boomeramg      31                 0.7'\n  nl_rel_tol = 1e-10  # first iteration tolerance/current\n  nl_abs_tol = 1e-5 # current iteration tolerance\n  l_max_its = 1000\n  num_steps = 100000\n  start_time = 5000\n  # dtmin = .1\n  [./TimeStepper]\n    type = TransientTransport\n    postprocessor = rss_max\n    cfl = 0.45\n    dt = 1e-6\n    dt_max = 50\n    n = 20\n    n_slip = 12\n  [../]  \n[]\n\n1st subapp\n[Executioner]\n  type = Transient\n  solve_type = 'LINEAR'                  # PJFNK JFNK NEWTON FD LINEAR\n  l_tol = 1.0e-10                         # Linear Tolerance         : 1.0e-5\n  l_abs_tol = 1.0e-8\n  l_max_its = 10000                       # Max Linear Iterations    : 10000\n  petsc_options_iname = '-pc_type -pc_hypre_type -ksp_gmres_restart -pc_hypre_boomeramg_strong_threshold'\n  petsc_options_value = 'hypre    boomeramg      31                 0.7'\n  [./TimeStepper]\n    type = TransientTransport\n    postprocessor = rss_max\n    cfl = 0.45\n    dt = 1e-6\n    dt_max = 50\n    n_slip = 12\n  [../] \n  num_steps = 1000\n\n  automatic_scaling = true\n  compute_scaling_once = true \n[]\n\n2nd subapp\n[Executioner]\n  type = Transient\n  solve_type = 'LINEAR'                  # PJFNK JFNK NEWTON FD LINEAR\n  l_tol = 1.0e-11                         # Linear Tolerance         : 1.0e-5\n  l_max_its = 10000                       # Max Linear Iterations    : 10000\n  petsc_options_iname = '-pc_type   -pc_hypre_type  -pc_hypre_boomeramg_strong_threshold'\n  petsc_options_value = 'hypre      boomeramg       0.7'\n\n  [./TimeIntegrator]\n    # type = ImplicitEuler\n    # type = BDF2\n    #type = CrankNicolson\n    # type = ImplicitMidpoint\n    # type = LStableDirk2\n    # type = LStableDirk3\n    # type = LStableDirk4\n    # type = AStableDirk4\n    #\n    # Explicit methods\n    type = ActuallyExplicitEuler\n    # type = ExplicitEuler\n    #type = ExplicitMidpoint\n    # type = Heun\n    # type = Ralston\n  [../]\n  [./TimeStepper]\n    type = TransientTransport\n    postprocessor = rss_maxs\n    cfl = 0.45\n    dt = 1e-6\n    dt_max = 50\n    n_slip = 12\n  [../] \n  # scheme = implicit-euler\n[]\n\npardon the long reply.\nThe time stepping seems to be working fine when it is launched properly, and stops functioning when I recover it. by stops working I mean it uses the initial dt=1e-6 all the time.\nThis timestepper is custom, and I have it print out the calculated dt in the terminal, so it does calculate a new dt, but is not used.\nlet me know if I need to provide more details.",
+                          "url": "https://github.com/idaholab/moose/discussions/21131#discussioncomment-2827456",
+                          "updatedAt": "2022-05-26T12:51:18Z",
+                          "publishedAt": "2022-05-26T12:51:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "So when you print the time step, do all 3 timesteppers return something bigger than 1e-6 ?\nThe main app is usually the one that imposes the shortest timestep, though the subapps may be subcycling.\nI think at this point I would want to see the log of the execution.",
+                          "url": "https://github.com/idaholab/moose/discussions/21131#discussioncomment-2828628",
+                          "updatedAt": "2022-05-26T15:51:32Z",
+                          "publishedAt": "2022-05-26T15:51:31Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@KhaledNabilSharafeldin any update on this?",
+                          "url": "https://github.com/idaholab/moose/discussions/21131#discussioncomment-2909825",
+                          "updatedAt": "2022-06-09T01:41:13Z",
+                          "publishedAt": "2022-06-09T01:41:12Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Plastic parameters that depend on space and time",
+          "author": {
+            "login": "Hadrien89"
+          },
+          "bodyText": "Hello,\nI\u2019m trying to run slope stability simulations in tensor mechanics. In particular, I\u2019m using the shear strength reduction method on a heterogenous material. For this method, I would need to have the friction angle and the cohesion in the Mohr-Coulomb model that both depend on space (given by a csv file) and time (all the Mohr-Coulomb parameters are reduced by the same factor at every time step).\nI have tried to follow the solution used in Porous Flow to produce a heterogeneous reservoir:\nhttps://mooseframework.inl.gov/modules/porous_flow/heterogeneous_models.html\nThis solution does not to be directly applicable in my case as the materials properties in this example that change with space (permeability and porosity) are declared as Auxvariables and are used in a Material. However, it seems that I cannot used Auxvariables in a UserObject, which is the current way to define the Mohr-Coulomb properties. I get the following error when compiling if I try to create a Userobject that could use the Auxvariable of the friction angle:\nerror: use of undeclared identifier 'coupledValue'; did you mean 'coupledScalar'?\nIt seems that only Scalar variables can be used in a UserObject.\nDo you have some ideas how I could have those parameters depending on space and time (without changing the whole return map algorithm)?\nThanks for your help!",
+          "url": "https://github.com/idaholab/moose/discussions/21063",
+          "updatedAt": "2022-06-25T05:40:21Z",
+          "publishedAt": "2022-05-20T21:24:40Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYou need your class to be using the Coupleable interface to be able to use the coupledValue routine. This interface is inherited by Element/Side/Interface/etcUserObject, not by UserObject the parent class of all of these.\nIf your UO fits in one of these categories, please inherit those instead.\nFor parameters depending on space and time, you can use a Function if they are known at the time you are writing your input file. If they are to be computed during the simulation you can use:\n\na material property\nan auxiliary variable if you dont need to take derivatives into account / the terms are not part of forming a Jacobian with automatic differentiation. OR if you need tight control on when to update the quantity (linear / nonlinear iterations / once a timestep etc)\n\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21063#discussioncomment-2796291",
+                  "updatedAt": "2022-05-21T15:43:27Z",
+                  "publishedAt": "2022-05-21T15:34:28Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Hadrien89"
+                          },
+                          "bodyText": "Hi Guillaume,\nThanks a lot for your quick reply!\nRegarding the solution you propose for the parameters that depend on space and time, it is what I\u2019m trying to do. I\u2019m using a function that is changing an AuxVariable for each parameter, but I\u2019m stuck at using this AuxVar in a UO\u2026\nTo be more precise, the UO I have created to have the plastic properties coming from an AuxVariable is a modified copy of the UO \u201cTensorMechanicsHardeningConstant\u201d (which takes constant parameters as input). The parent class of all UO that defines plastic parameters is \u201cTensorMechanicsHardeningModel\u201d, which inherits from GeneralUserObject and, as you suggested, it seems to be the issue here.\nI have tried to have \u201cTensorMechanicsHardeningModel\u201d inherit from Element/Side/Interface/etcUserObject instead of GeneralUserObject, but it is creating 20 errors when compiling.\nI also tried to #include different files (like \"MooseVariable.h\" and others) directly in the UO I have created, but it didn\u2019t change anything.\nI apologise my knowledge of C++ is quite limited...\nHadrien",
+                          "url": "https://github.com/idaholab/moose/discussions/21063#discussioncomment-2800779",
+                          "updatedAt": "2022-05-22T23:09:37Z",
+                          "publishedAt": "2022-05-22T23:09:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nThe easiest way might just be to add the Coupleable interface as a parent class for your class then.\nCan you try that?\nSideUserObject.h/C or any of the others I mentioned will show the two lines you need to add to do this.\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/21063#discussioncomment-2800808",
+                          "updatedAt": "2022-05-22T23:27:34Z",
+                          "publishedAt": "2022-05-22T23:27:33Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@Hadrien89 any luck with this?",
+                          "url": "https://github.com/idaholab/moose/discussions/21063#discussioncomment-2909813",
+                          "updatedAt": "2022-06-09T01:39:05Z",
+                          "publishedAt": "2022-06-09T01:39:03Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "About ComputeSmearedCrackingStress",
+          "author": {
+            "login": "Xelver"
+          },
+          "bodyText": "Hi,\nI'd like to use ComputeSmearedCrackingStress with AbruptSoftening to compute the failure of ceramic materials. I tried to familiarize myself with this function through the test example  \"cracking.i\".  The mesh file used in this example was a 1x1x1 cube with single element and the failure stress was 1.68e6 Pa.\nWhen I tried to replace the mesh file with another one, which was also a 1x1x1 cube but with more elements, the failure stress decreased. The more elements, the more the stress dropped (The failure stress was 4.17e5 Pa for 1000 elements).  I'm confused, because normally the failure stress should not change.",
+          "url": "https://github.com/idaholab/moose/discussions/20546",
+          "updatedAt": "2022-06-25T05:40:37Z",
+          "publishedAt": "2022-03-14T09:14:40Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@jiangwen84",
+                  "url": "https://github.com/idaholab/moose/discussions/20546#discussioncomment-2504970",
+                  "updatedAt": "2022-06-25T05:40:25Z",
+                  "publishedAt": "2022-04-05T03:19:59Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@Xelver is this solved?\nIs the failure stress converging as you refine the mesh?\nAre you using the uniform refinement feature?\nWhat value do you expect for the failure stress?",
+                          "url": "https://github.com/idaholab/moose/discussions/20546#discussioncomment-2754453",
+                          "updatedAt": "2022-06-25T05:40:25Z",
+                          "publishedAt": "2022-05-15T15:17:40Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Xelver"
+                          },
+                          "bodyText": "Thanks for your reply.\nActually, I then have tried another way instead of ComputeSmearedCrackingStress.\nThe failure stress is converging as the mesh refinement, and I'm using the uniform refinement.\nFrom my point of view, the failure stress should remain the same as the mesh is refined (1.68e6 Pa).",
+                          "url": "https://github.com/idaholab/moose/discussions/20546#discussioncomment-2756086",
+                          "updatedAt": "2022-06-25T05:40:25Z",
+                          "publishedAt": "2022-05-16T01:28:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@dschwen thoughts on this?",
+                          "url": "https://github.com/idaholab/moose/discussions/20546#discussioncomment-2760245",
+                          "updatedAt": "2022-06-25T05:40:26Z",
+                          "publishedAt": "2022-05-16T14:28:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "@Xelver Could you send us your input file with ComputeSmearedCrackingStress? @bwspenc and I would like to take a look.",
+                          "url": "https://github.com/idaholab/moose/discussions/20546#discussioncomment-2760725",
+                          "updatedAt": "2022-06-25T05:40:28Z",
+                          "publishedAt": "2022-05-16T15:28:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Xelver"
+                          },
+                          "bodyText": "OK, here's the input file. The output corresponding to the input file is as follow:\n\n# Simple pull test for cracking.\n# The stress increases for two steps and then drops to zero.\n\n[Mesh]\n  type = GeneratedMesh\n  dim = 3\n  nx = 10\n  ny = 10\n  nz = 10\n  #file = cracking_test.e\n[]\n\n[GlobalParams]\n  displacements = 'disp_x disp_y disp_z'\n[]\n\n[Functions]\n  [./displ]\n    type = PiecewiseLinear\n    x = '0 1 2 3  4'\n    y = '0 1 0 -1 0'\n  [../]\n[]\n\n[Modules/TensorMechanics/Master]\n  [./all]\n    strain = FINITE\n    add_variables = true\n    generate_output = 'stress_xx stress_yy stress_zz stress_xy stress_yz stress_zx strain_xx'\n  [../]\n[]\n\n[BCs]\n  [./pull]\n    type = FunctionPresetBC\n    variable = disp_x\n    boundary = right #4\n    function = displ\n  [../]\n  [./left]\n    type = PresetBC\n    variable = disp_x\n    boundary = left#1\n    value = 0.0\n  [../]\n  [./bottom]\n    type = PresetBC\n    variable = disp_y\n    boundary = bottom#2\n    value = 0.0\n  [../]\n  [./back]\n    type = PresetBC\n    variable = disp_z\n    boundary = back#3\n    value = 0.0\n  [../]\n[]\n\n[Materials]\n  [./elasticity_tensor]\n    type = ComputeIsotropicElasticityTensor\n    youngs_modulus = 2.8e7\n    poissons_ratio = 0\n  [../]\n  [./elastic_stress]\n    type = ComputeSmearedCrackingStress\n    cracking_stress = 1.68e6\n    softening_models = abrupt_softening\n  [../]\n  [./abrupt_softening]\n    type = AbruptSoftening\n  [../]\n[]\n\n[Postprocessors]\n  [./strain_xx]\n    type = ElementAverageValue\n    variable = strain_xx\n    execute_on = 'initial TIMESTEP_END'\n  [../]\n  [./stress_xx]\n    type = ElementAverageValue\n    variable = stress_xx  #In this case, the maximum stress_xx is 4.168e5 at 0.015s.\n    execute_on = 'initial TIMESTEP_END'\n  [../]\n[]\n\n[Executioner]\n  type = Transient\n\n  petsc_options_iname = '-ksp_gmres_restart -pc_type -sub_pc_type'\n  petsc_options_value = '101                asm      lu'\n\n  line_search = 'none'\n\n  l_max_its = 100\n  nl_max_its = 100\n  nl_rel_tol = 1e-8\n  nl_abs_tol = 1e-8\n  l_tol = 1e-5\n  start_time = 0.0\n  end_time = 0.1\n  dt = 0.005\n[]\n\n[Outputs]\n  exodus = true\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/20546#discussioncomment-2763851",
+                          "updatedAt": "2022-06-25T05:40:28Z",
+                          "publishedAt": "2022-05-17T01:29:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "any updates on this?",
+                          "url": "https://github.com/idaholab/moose/discussions/20546#discussioncomment-2909778",
+                          "updatedAt": "2022-06-09T01:31:09Z",
+                          "publishedAt": "2022-06-09T01:31:09Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Problems with usage of Abaqus mesh in Global strain calculations",
+          "author": {
+            "login": "abarun22"
+          },
+          "bodyText": "Dear all,\nI am running a multiapp problem with my sub-app considered a submodel of the main model. The 'submodel' effectively is a cut out of the main model sharing the same spatial coordinates. It essentially acts as an RVE enforcing the strain periodicity conditions in the model. Eventually I am interested in coupling these two models together at each load step and thinking to update the deformation of the main model based on the micro-beheviour of the submodel. Just for the case of proper creation of the submodel I had to use ABAQUS for modelling the FE. However the submodel runs an empty simulation with ABAQUS input file and i am getting the following lines.\n\nsub0: Time Step 1, time = 0.01, dt = 0.01\nsub0:  0 Nonlinear |R| = 0.000000e+00\nsub0:  Solve Converged!\n\nI need to make couple of adjustments in the input file when i am using an ABAQUS mesh. The 'auto_direction' command in periodic BC is unusable and so i manually defined and matched the periodic boundaries. A nodeset consisting of a single node (node closest to centroid) created to model the reference point needed for constraining the model. The attached files could used as a reference to diagnose the problem. Any advise on fixing the problem would be highly appreciated.\n04012022.zip",
+          "url": "https://github.com/idaholab/moose/discussions/19945",
+          "updatedAt": "2022-06-25T05:40:44Z",
+          "publishedAt": "2022-01-04T13:04:14Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@dschwen on Abaqus",
+                  "url": "https://github.com/idaholab/moose/discussions/19945#discussioncomment-2093516",
+                  "updatedAt": "2022-06-16T19:39:23Z",
+                  "publishedAt": "2022-02-02T05:20:14Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@abarun22 is this solved?\nThis 0 residual means there is nothing to solve, we're already at the solution. What is imposing a load / disturbing the equilibrium?",
+                          "url": "https://github.com/idaholab/moose/discussions/19945#discussioncomment-2909740",
+                          "updatedAt": "2022-06-09T01:19:04Z",
+                          "publishedAt": "2022-06-09T01:19:03Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Question about MOOSE Creep",
+          "author": {
+            "login": "echo1115"
+          },
+          "bodyText": "Hi all:\nBased on RadialReturnCreepStressUpdateBase  or  PowerLawCreepStressUpdate in MOOSE, we can realize creep calculation related to Von Mises stress . I want to know how to  realize  the creep calculation in MOOSE if the creep rate is related to the principal stress but not to Von Mises stress.\nThanks a lot!",
+          "url": "https://github.com/idaholab/moose/discussions/18254",
+          "updatedAt": "2022-06-09T01:34:15Z",
+          "publishedAt": "2021-07-05T02:29:36Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "ngrilli"
+                  },
+                  "bodyText": "Dear @echo1115\nI think you need to change the expression for \"effective_trial_stress\" in RadialReturnStressUpdate\nYou can create another class with a different expression for the trial stress,\nthen two new classes derived from it like RadialReturnCreepStressUpdateBase and  PowerLawCreepStressUpdate\nNicol\u00f2",
+                  "url": "https://github.com/idaholab/moose/discussions/18254#discussioncomment-964867",
+                  "updatedAt": "2022-06-09T01:34:21Z",
+                  "publishedAt": "2021-07-05T09:01:27Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "echo1115"
+                          },
+                          "bodyText": "Dear @ngrilli\nThank you for your reply.\nActually the creep rate I am considering is related to  the principal stresses in three directions, i.e. \u03ad=f(\u03c31,\u03c32,\u03c33).\nThe question may not be solved by just changing the expression for \"effective_trial_stress\" in RadialReturnStressUpdate.\nBesides, i tried to realize this creep calculation by creating a  new class \"CreepTest\" derived from RadialReturnCreepStressUpdateBase  as shown in the following codes\uff0cbut the calculation didn't converge.\nReal\nCreepTest::computeResidual(const Real effective_trial_stress, const Real scalar)\n{\n  _stress1[_qp] = RankTwoScalarTools::maxPrincipal(_stress[_qp], _input_direction);\n  _stress2[_qp] = RankTwoScalarTools::midPrincipal(_stress[_qp], _input_direction);\n  _stress3[_qp] = RankTwoScalarTools::minPrincipal(_stress[_qp], _input_direction);\n\n  _creep_rate[_qp] = function(_stress1[_qp] ,_stress2[_qp] ,_stress3[_qp] )\n  return _creep_rate[_qp] - scalar/_dt;\n}\n\nReal\nCreepTest::computeDerivative(const Real effective_trial_stress, const Real scalar)\n{\n  return 0.0 - 1/_dt;\n}",
+                          "url": "https://github.com/idaholab/moose/discussions/18254#discussioncomment-966553",
+                          "updatedAt": "2022-06-09T01:34:24Z",
+                          "publishedAt": "2021-07-05T15:32:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Right, I was expecting this. The isotropic creep model in tensor_mechanics assumes J2 plasticity. So if you modify the expression for effective trial stress, you also need to modify the discrete update. Your expression is equivalent to having a flow direction as a function of the spectrum of the stress, from which the discrete update should follow. There might be something tricky to implement though, because your flow direction isn't constant during the plasticity update.",
+                          "url": "https://github.com/idaholab/moose/discussions/18254#discussioncomment-967020",
+                          "updatedAt": "2022-06-09T01:34:25Z",
+                          "publishedAt": "2021-07-05T18:10:51Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "I am not sure exactly which creep model are you using. For some cases, e.g. eqn 15 in https://www.sciencedirect.com/science/article/pii/S0022311521000180 it is possible to derive an analytical expression in principal coordinate system, and then transform it back to the global coordinate system. For general case, you need to use a return mapping algorithm as suggested by @hugary1995  and @ngrilli",
+                          "url": "https://github.com/idaholab/moose/discussions/18254#discussioncomment-970813",
+                          "updatedAt": "2022-06-09T01:34:26Z",
+                          "publishedAt": "2021-07-06T15:48:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "echo1115"
+                          },
+                          "bodyText": "I am not sure exactly which creep model are you using. For some cases, e.g. eqn 15 in https://www.sciencedirect.com/science/article/pii/S0022311521000180 it is possible to derive an analytical expression in principal coordinate system, and then transform it back to the global coordinate system. For general case, you need to use a return mapping algorithm as suggested by @hugary1995 and @ngrilli\n\nDear @jiangwen84 and @hugary1995:\nThank you for all your reply.\nAccording to the suggestion of @jiangwen84 in #18254 (reply in thread) , i read the paper by Wen Jiang et.al.  in https://www.sciencedirect.com/science/article/pii/S0022311521000180 and saw the Eq.(15),\ni.e. \u03adcreep=K*( \u03c31-0.5(\u03c32+\u03c33) )*F. where K and F are parameters depending on temperature and neutron fluence, \u03c3i are the principal stresses.\nIf we want to realize the creep calculation in  Eq.(15), i am not sure whether the \"analytical expression in principal coordinate system\" mentioned by @jiangwen84 in #18254 (reply in thread) refers to  Eq.(15) and then we should transform it  to the global coordinate system.\nBesides, whether the newly created creep class still inherits from RadialReturnCreepStressUpdateBase or ComputeEigenstrainBase in MOOSE?",
+                          "url": "https://github.com/idaholab/moose/discussions/18254#discussioncomment-972705",
+                          "updatedAt": "2022-06-10T16:34:25Z",
+                          "publishedAt": "2021-07-07T02:04:53Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": null,
+                          "bodyText": "Hello @echo1115 did you find a solution to this problem?",
+                          "url": "https://github.com/idaholab/moose/discussions/18254#discussioncomment-2908319",
+                          "updatedAt": "2022-06-08T19:11:55Z",
+                          "publishedAt": "2022-06-08T19:11:54Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Build Issue: Error with 'make' after new update",
+          "author": {
+            "login": "czadeh"
+          },
+          "bodyText": "Hi,\nI am getting errors trying to 'make' MOOSE after the recent update.\nI went through all the steps on these pages:\nhttps://mooseframework.inl.gov/getting_started/installation/conda.html\nhttps://mooseframework.inl.gov/help/troubleshooting.html#buildissues\nI even reinstalled the conda environment. The hello world example executed fine and I cannot figure out what the problem is.\nI am using Arch Linux and basically everything is up to date.\nI have pasted below the output from running 'make -j 8' in ~/projects/moose/test.\nThanks,\nCameron\nRebuilding symlinks in /home/cameron/projects/moose/framework/build/header_symlinks\nRebuilding symlinks in /home/cameron/projects/moose/test/build/header_symlinks\nCreating Unity Directory /home/cameron/projects/moose/framework/build/unity_src\nChecking if header needs updating: /home/cameron/projects/moose/framework/include/base/MooseRevision.h...\nCopying default MOOSE configuration to: /home/cameron/projects/moose/framework/include/base/MooseConfig.h...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_stringpiece.cc...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcrecpp.cc...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_newline.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_ucd.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_get.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_tables.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_xclass.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_ord2utf8.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_config.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_fullinfo.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_study.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_exec.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_chartables.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_compile.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_globals.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_jit_compile.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_refcount.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_byte_order.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_maketables.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_valid_utf8.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_version.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_dfa_exec.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_string_utils.c...\nCompiling C++ /home/cameron/projects/moose/framework/contrib/gtest/gtest-all.cc...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/hit/parse.cc...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/hit/lex.cc...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/hit/braceexpr.cc...\nBuilding and linking /home/cameron/projects/moose/framework/contrib/hit/hit.so...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/check.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/STRINGLIB_tokenize.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/FileInfo.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/SL_tokenize.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/GetLongOpt.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/create_file.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/node_set.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/side_set.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/ED_SystemInterface.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/util.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/exo_entity.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/exo_block.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/iqsort.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/map.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/exoII_read.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/add_to_log.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/stringx.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/Tolerance.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/exodiff.C...\nCreating Unity Directory /home/cameron/projects/moose/test/build/unity_src\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/src_Unity.C\nSymlinking MOOSE configure /home/cameron/projects/moose/framework/build/header_symlinks/MooseConfig.h\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/executors_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/bcs_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/reporters_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/geomsearch_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/splits_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/predictors_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/markers_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/nodalkernels_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/executioners_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/parser_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/userobject_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/interfaces_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/partitioner_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/systems_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/restart_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/fvbcs_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/limiters_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/linesearches_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/transfers_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/multiapps_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/ics_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/loops_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/samplers_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/fviks_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/dampers_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/dirackernels_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/postprocessors_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/functions_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/constraints_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/distributions_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/problems_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/relationshipmanagers_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/controls_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/timesteppers_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/mesh_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/preconditioners_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/variables_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/vectorpostprocessors_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/actions_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/fvkernels_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/timeintegrators_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/materials_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/outputs_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/outputs_formatters_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/outputs_png_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/auxkernels_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/indicators_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/dgkernels_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/interfacekernels_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/meshgenerators_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/kernels_Unity.C\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/ResidualObject.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/MaxVarNDofsPerElem.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/MooseObject.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/MaxVarNDofsPerNode.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/Factory.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/AppFactory.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/SolverParams.C...\nmake[1]: Entering directory '/home/cameron/projects/moose/framework/contrib/hit'\nBuilding hit for python with python3-config\nmpicxx -std=c++17 -g -fvisibility-inlines-hidden  -fmessage-length=0 -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/cameron/miniconda3/envs/moose/include -std=c++17 main.cc parse.cc lex.cc braceexpr.cc -o hit\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/MooseError.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/Registry.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/NeighborResidualObject.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/Attributes.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/Adaptivity.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/Moose.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/MooseInit.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/Assembly.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/MooseApp.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/TheWarehouse.C...\nmake[1]: Leaving directory '/home/cameron/projects/moose/framework/contrib/hit'\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/GriddedData.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/FormattedTable.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MultiDimensionalInterpolation.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/RayTracing.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/BicubicInterpolation.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/RankMap.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MooseMeshUtils.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/BilinearInterpolation.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/InterfaceValueTools.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/RandomData.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/LineSegment.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/ADFParser.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/SerializerGuard.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MonotoneCubicInterpolation.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/BicubicSplineInterpolation.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/ADUtils.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/RankTwoTensor.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/Units.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MooseEnum.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/ExecFlagEnum.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/PerfGraphLivePrint.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/RankThreeTensor.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/ArbitraryQuadrature.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MooseUtils.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/InputParameterWarehouse.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MeshBaseImageSampler.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MathUtils.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MathFVUtils.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/SyntaxTree.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/PerfGraph.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/ExecutablePath.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/LockFile.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/PetscDMMoose.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/Conversion.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/PerfNode.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/ColumnMajorMatrix.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MooseEnumItem.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/TrilinearInterpolation.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MooseEnumBase.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/ComputeLineSearchObjectWrapper.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/LinearInterpolation.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MooseObjectParameterName.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/JsonSyntaxTree.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/PetscSupport.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/NestedSolve.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/FunctionParserUtils.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MooseTypes.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/PerfGraphRegistry.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/PointReduction.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/SplineInterpolation.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/SlepcEigenSolverConfiguration.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MatrixTools.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/ImageSampler.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/RankFourTensor.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MultiMooseEnum.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/FunctionMaterialPropertyDescriptor.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/RotationMatrix.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/ElementsIntersectedByPlane.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MooseObjectName.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/VectorTag.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MortarUtils.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/KDTree.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/PermutationTensor.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/FileRangeBuilder.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/InputParameters.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/DenseMatrixDualReal.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/SlepcSupport.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/DelimitedFileReader.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/FileLineInfo.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MemoryUtils.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/LeastSquaresFitBase.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/PolynomialFit.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/ParallelUniqueId.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/SplineInterpolationBase.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/SystemInfo.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/pugixml/src/pugixml.C...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/mtwist/src/randistrs.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/mtwist/src/mtwist.c...\nLinking Library /home/cameron/projects/moose/framework/contrib/pcre/libpcre-opt.la...\nLinking Library /home/cameron/projects/moose/framework/contrib/gtest/libgtest.la...\nLinking Library /home/cameron/projects/moose/framework/contrib/hit/libhit-opt.la...\nLinking Executable /home/cameron/projects/moose/framework/contrib/exodiff/exodiff...\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/executors_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/bcs_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/reporters_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/markers_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/nodalkernels_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/executioners_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/partitioner_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/fvbcs_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/ics_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/samplers_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/dirackernels_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/postprocessors_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/functions_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/constraints_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/problems_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/controls_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/timesteppers_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/vectorpostprocessors_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/actions_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/fvkernels_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/materials_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/outputs_Unity.C\n/home/cameron/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/miniconda3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libpthread.so.0: undefined reference to `_dl_make_stack_executable@GLIBC_PRIVATE'\n/home/cameron/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/miniconda3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libpthread.so.0: undefined reference to `__libc_dlclose@GLIBC_PRIVATE'\n/home/cameron/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/miniconda3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libpthread.so.0: undefined reference to `__libc_dlopen_mode@GLIBC_PRIVATE'\n/home/cameron/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/miniconda3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libpthread.so.0: undefined reference to `__libc_longjmp@GLIBC_PRIVATE'\n/home/cameron/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/miniconda3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libpthread.so.0: undefined reference to `__libc_dl_error_tsd@GLIBC_PRIVATE'\n/home/cameron/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/miniconda3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libpthread.so.0: undefined reference to `__libc_allocate_rtsig_private@GLIBC_PRIVATE'\n/home/cameron/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/miniconda3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/librt.so.1: undefined reference to `__clock_getres@GLIBC_PRIVATE'\n/home/cameron/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/miniconda3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libpthread.so.0: undefined reference to `__libc_thread_freeres@GLIBC_PRIVATE'\n/home/cameron/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/miniconda3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/librt.so.1: undefined reference to `__clock_getcpuclockid@GLIBC_PRIVATE'\n/home/cameron/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/miniconda3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libdl.so.2: undefined reference to `_dl_addr@GLIBC_PRIVATE'\n/home/cameron/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/miniconda3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libpthread.so.0: undefined reference to `__libc_pthread_init@GLIBC_PRIVATE'\n/home/cameron/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/miniconda3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libpthread.so.0: undefined reference to `__libc_current_sigrtmin_private@GLIBC_PRIVATE'\n/home/cameron/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/miniconda3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libdl.so.2: undefined reference to `_dl_sym@GLIBC_PRIVATE'\n/home/cameron/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/miniconda3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/librt.so.1: undefined reference to `__clock_nanosleep@GLIBC_PRIVATE'\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/auxkernels_Unity.C\n/home/cameron/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/miniconda3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libpthread.so.0: undefined reference to `__libc_dlsym@GLIBC_PRIVATE'\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/indicators_Unity.C\n/home/cameron/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/miniconda3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libpthread.so.0: undefined reference to `__libc_current_sigrtmax_private@GLIBC_PRIVATE'\n/home/cameron/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/miniconda3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libdl.so.2: undefined reference to `_dl_vsym@GLIBC_PRIVATE'\n/home/cameron/miniconda3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/miniconda3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/librt.so.1: undefined reference to `__clock_settime@GLIBC_PRIVATE'\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/dgkernels_Unity.C\ncollect2: error: ld returned 1 exit status\nmake: *** [/home/cameron/projects/moose/framework/moose.mk:375: /home/cameron/projects/moose/framework/contrib/exodiff/exodiff] Error 1\nmake: *** Waiting for unfinished jobs....",
+          "url": "https://github.com/idaholab/moose/discussions/20691",
+          "updatedAt": "2022-06-08T18:53:44Z",
+          "publishedAt": "2022-04-01T16:26:21Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hi Cameron\nCan you make clobberall and try again?\nThen you are still using the miniconda install. Can you remove miniconda and use mambaforge like in the instructions now?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20691#discussioncomment-2487670",
+                  "updatedAt": "2022-05-31T15:05:28Z",
+                  "publishedAt": "2022-04-01T17:50:37Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "czadeh"
+                          },
+                          "bodyText": "I removed miniconda3 and started over with the mamba install.\nThen I used 'make clobberall' and 'make -j 8' and got this:\nRebuilding symlinks in /home/cameron/projects/moose/framework/build/header_symlinks\nRebuilding symlinks in /home/cameron/projects/moose/test/build/header_symlinks\nCreating Unity Directory /home/cameron/projects/moose/framework/build/unity_src\nSymlinking MOOSE configure /home/cameron/projects/moose/framework/build/header_symlinks/MooseConfig.h\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_stringpiece.cc...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcrecpp.cc...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_newline.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_ucd.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_get.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_tables.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_xclass.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_ord2utf8.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_config.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_fullinfo.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_study.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_exec.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_chartables.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_compile.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_globals.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_jit_compile.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_refcount.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_byte_order.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_maketables.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_valid_utf8.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_version.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_dfa_exec.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_string_utils.c...\nCompiling C++ /home/cameron/projects/moose/framework/contrib/gtest/gtest-all.cc...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/hit/parse.cc...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/hit/lex.cc...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/hit/braceexpr.cc...\nBuilding and linking /home/cameron/projects/moose/framework/contrib/hit/hit.so...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/check.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/STRINGLIB_tokenize.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/FileInfo.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/SL_tokenize.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/GetLongOpt.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/create_file.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/node_set.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/side_set.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/ED_SystemInterface.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/util.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/exo_entity.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/exo_block.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/iqsort.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/map.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/exoII_read.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/add_to_log.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/stringx.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/Tolerance.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/exodiff.C...\nCreating Unity Directory /home/cameron/projects/moose/test/build/unity_src\nCompiling C++ (in opt mode) /home/cameron/projects/moose/test/src/base/MooseTestApp.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/test/src/base/MooseTestAppTypes.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/test/src/main.C...\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/src_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/executors_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/bcs_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/reporters_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/geomsearch_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/splits_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/predictors_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/markers_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/nodalkernels_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/executioners_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/parser_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/userobject_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/interfaces_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/partitioner_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/systems_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/restart_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/fvbcs_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/limiters_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/linesearches_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/transfers_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/multiapps_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/ics_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/loops_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/samplers_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/fviks_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/dampers_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/dirackernels_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/postprocessors_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/functions_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/constraints_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/distributions_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/problems_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/relationshipmanagers_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/controls_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/timesteppers_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/mesh_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/preconditioners_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/variables_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/vectorpostprocessors_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/actions_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/fvkernels_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/timeintegrators_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/materials_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/outputs_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/outputs_formatters_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/outputs_png_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/auxkernels_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/indicators_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/dgkernels_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/interfacekernels_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/meshgenerators_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/kernels_Unity.C\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/ResidualObject.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/MaxVarNDofsPerElem.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/MooseObject.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/MaxVarNDofsPerNode.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/Factory.C...\nmake[1]: Entering directory '/home/cameron/projects/moose/framework/contrib/hit'\nBuilding hit for python with python3-config\nmake[1]: 'hit' is up to date.\nmake[1]: Leaving directory '/home/cameron/projects/moose/framework/contrib/hit'\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/AppFactory.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/SolverParams.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/MooseError.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/Registry.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/NeighborResidualObject.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/Attributes.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/Adaptivity.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/Moose.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/MooseInit.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/Assembly.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/MooseApp.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/TheWarehouse.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/GriddedData.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/FormattedTable.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MultiDimensionalInterpolation.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/RayTracing.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/BicubicInterpolation.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/RankMap.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MooseMeshUtils.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/BilinearInterpolation.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/InterfaceValueTools.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/RandomData.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/LineSegment.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/ADFParser.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/SerializerGuard.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MonotoneCubicInterpolation.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/BicubicSplineInterpolation.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/ADUtils.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/RankTwoTensor.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/Units.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MooseEnum.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/ExecFlagEnum.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/PerfGraphLivePrint.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/RankThreeTensor.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/ArbitraryQuadrature.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MooseUtils.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/InputParameterWarehouse.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MeshBaseImageSampler.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MathUtils.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MathFVUtils.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/SyntaxTree.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/PerfGraph.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/ExecutablePath.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/LockFile.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/PetscDMMoose.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/Conversion.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/PerfNode.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/ColumnMajorMatrix.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MooseEnumItem.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/TrilinearInterpolation.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MooseEnumBase.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/ComputeLineSearchObjectWrapper.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/LinearInterpolation.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MooseObjectParameterName.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/JsonSyntaxTree.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/PetscSupport.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/NestedSolve.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/FunctionParserUtils.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MooseTypes.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/PerfGraphRegistry.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/PointReduction.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/SplineInterpolation.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/SlepcEigenSolverConfiguration.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MatrixTools.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/ImageSampler.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/RankFourTensor.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MultiMooseEnum.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/FunctionMaterialPropertyDescriptor.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/RotationMatrix.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/ElementsIntersectedByPlane.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MooseObjectName.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/VectorTag.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MortarUtils.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/KDTree.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/PermutationTensor.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/FileRangeBuilder.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/InputParameters.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/DenseMatrixDualReal.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/SlepcSupport.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/DelimitedFileReader.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/FileLineInfo.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MemoryUtils.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/LeastSquaresFitBase.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/PolynomialFit.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/ParallelUniqueId.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/SplineInterpolationBase.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/SystemInfo.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/pugixml/src/pugixml.C...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/mtwist/src/randistrs.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/mtwist/src/mtwist.c...\nLinking Library /home/cameron/projects/moose/framework/contrib/pcre/libpcre-opt.la...\nLinking Library /home/cameron/projects/moose/framework/contrib/gtest/libgtest.la...\nLinking Library /home/cameron/projects/moose/framework/contrib/hit/libhit-opt.la...\nLinking Executable /home/cameron/projects/moose/framework/contrib/exodiff/exodiff...\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/executors_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/bcs_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/reporters_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/markers_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/nodalkernels_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/executioners_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/partitioner_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/fvbcs_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/ics_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/samplers_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/dirackernels_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/postprocessors_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/functions_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/constraints_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/problems_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/controls_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/timesteppers_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/vectorpostprocessors_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/actions_Unity.C\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libpthread.so.0: undefined reference to `_dl_make_stack_executable@GLIBC_PRIVATE'\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libpthread.so.0: undefined reference to `__libc_dlclose@GLIBC_PRIVATE'\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libpthread.so.0: undefined reference to `__libc_dlopen_mode@GLIBC_PRIVATE'\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libpthread.so.0: undefined reference to `__libc_longjmp@GLIBC_PRIVATE'\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libpthread.so.0: undefined reference to `__libc_dl_error_tsd@GLIBC_PRIVATE'\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/fvkernels_Unity.C\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libpthread.so.0: undefined reference to `__libc_allocate_rtsig_private@GLIBC_PRIVATE'\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/librt.so.1: undefined reference to `__clock_getres@GLIBC_PRIVATE'\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libpthread.so.0: undefined reference to `__libc_thread_freeres@GLIBC_PRIVATE'\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/librt.so.1: undefined reference to `__clock_getcpuclockid@GLIBC_PRIVATE'\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libdl.so.2: undefined reference to `_dl_addr@GLIBC_PRIVATE'\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libpthread.so.0: undefined reference to `__libc_pthread_init@GLIBC_PRIVATE'\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libpthread.so.0: undefined reference to `__libc_current_sigrtmin_private@GLIBC_PRIVATE'\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libdl.so.2: undefined reference to `_dl_sym@GLIBC_PRIVATE'\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/librt.so.1: undefined reference to `__clock_nanosleep@GLIBC_PRIVATE'\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libpthread.so.0: undefined reference to `__libc_dlsym@GLIBC_PRIVATE'\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libpthread.so.0: undefined reference to `__libc_current_sigrtmax_private@GLIBC_PRIVATE'\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libdl.so.2: undefined reference to `_dl_vsym@GLIBC_PRIVATE'\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/librt.so.1: undefined reference to `__clock_settime@GLIBC_PRIVATE'\ncollect2: error: ld returned 1 exit status\nmake: *** [/home/cameron/projects/moose/framework/moose.mk:375: /home/cameron/projects/moose/framework/contrib/exodiff/exodiff] Error 1\nmake: *** Waiting for unfinished jobs....",
+                          "url": "https://github.com/idaholab/moose/discussions/20691#discussioncomment-2488111",
+                          "updatedAt": "2022-05-31T15:05:28Z",
+                          "publishedAt": "2022-04-01T18:56:08Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@milljm @cticenhour seen this before?",
+                          "url": "https://github.com/idaholab/moose/discussions/20691#discussioncomment-2488478",
+                          "updatedAt": "2022-05-31T15:05:38Z",
+                          "publishedAt": "2022-04-01T20:29:48Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cticenhour"
+                          },
+                          "bodyText": "It appears as though there is an issue with the conda provided sysroot. We stopped pinning that as a conda dependency during the last update (as we now get MPICH from conda-forge). Could you provide the output of conda list in your MOOSE conda environment?",
+                          "url": "https://github.com/idaholab/moose/discussions/20691#discussioncomment-2488501",
+                          "updatedAt": "2022-05-31T15:05:43Z",
+                          "publishedAt": "2022-04-01T20:35:04Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "czadeh"
+                          },
+                          "bodyText": "Here is what I got:\n# packages in environment at /home/cameron/mambaforge3/envs/moose:\n#\n# Name                    Version                   Build  Channel\n_libgcc_mutex             0.1                 conda_forge    conda-forge\n_openmp_mutex             4.5                       1_gnu    conda-forge\n_sysroot_linux-64_curr_repodata_hack 3                   h5bd9786_13    conda-forge\nalsa-lib                  1.2.3                h516909a_0    conda-forge\naom                       3.3.0                h27087fc_1    conda-forge\nappdirs                   1.4.4              pyh9f0ad1d_0    conda-forge\nbeautifulsoup4            4.9.3              pyhb0f4dca_0    conda-forge\nbinutils_impl_linux-64    2.36.1               h193b22a_2    conda-forge\nbinutils_linux-64         2.36                 hf3e587d_9    conda-forge\nblosc                     1.21.0               h9c3ff4c_0    conda-forge\nbrotli                    1.0.9                h7f98852_6    conda-forge\nbrotli-bin                1.0.9                h7f98852_6    conda-forge\nbrotlipy                  0.7.0           py39h3811e60_1003    conda-forge\nbrunsli                   0.1                  h9c3ff4c_0    conda-forge\nbzip2                     1.0.8                h7f98852_4    conda-forge\nc-ares                    1.18.1               h7f98852_0    conda-forge\nc-blosc2                  2.0.4                h5f21a17_1    conda-forge\nca-certificates           2021.10.8            ha878542_0    conda-forge\ncertifi                   2021.10.8        py39hf3d152e_2    conda-forge\ncffi                      1.15.0           py39h4bc2ebd_0    conda-forge\ncfitsio                   4.1.0                hd9d235c_0    conda-forge\ncharls                    2.3.4                h9c3ff4c_0    conda-forge\ncharset-normalizer        2.0.12             pyhd8ed1ab_0    conda-forge\nclang-format              13.0.1          default_hc23dcda_0    conda-forge\nclang-format-13           13.0.1          default_hc23dcda_0    conda-forge\nclang-tools               13.0.1          default_hc23dcda_0    conda-forge\ncloudpickle               2.0.0              pyhd8ed1ab_0    conda-forge\ncmake                     3.23.0               h5432695_1    conda-forge\ncryptography              36.0.2           py39hd97740a_0    conda-forge\ncurl                      7.82.0               h7bff187_0    conda-forge\ncycler                    0.11.0             pyhd8ed1ab_0    conda-forge\ncytoolz                   0.11.2           py39h3811e60_1    conda-forge\ndask-core                 2022.4.0           pyhd8ed1ab_0    conda-forge\ndbus                      1.13.6               h5008d03_3    conda-forge\ndeepdiff                  5.5.0              pyhd8ed1ab_0    conda-forge\ndouble-conversion         3.1.7                h9c3ff4c_0    conda-forge\neigen                     3.4.0                h4bd325d_0    conda-forge\nexpat                     2.4.8                h27087fc_0    conda-forge\nffmpeg                    4.3.2                h37c90e5_3    conda-forge\nfont-ttf-dejavu-sans-mono 2.37                 hab24e00_0    conda-forge\nfont-ttf-inconsolata      3.000                h77eed37_0    conda-forge\nfont-ttf-source-code-pro  2.038                h77eed37_0    conda-forge\nfont-ttf-ubuntu           0.83                 hab24e00_0    conda-forge\nfontconfig                2.13.96              h8e229c2_2    conda-forge\nfonts-conda-ecosystem     1                             0    conda-forge\nfonts-conda-forge         1                             0    conda-forge\nfreetype                  2.10.4               h0708190_1    conda-forge\nfsspec                    2022.3.0           pyhd8ed1ab_0    conda-forge\ngcc_impl_linux-64         10.3.0              hf2f2afa_14    conda-forge\ngcc_linux-64              10.3.0               hc39de41_9    conda-forge\ngettext                   0.19.8.1          h73d1719_1008    conda-forge\ngfortran_impl_linux-64    10.3.0              h73f4979_14    conda-forge\ngfortran_linux-64         10.3.0               hb09a455_9    conda-forge\ngiflib                    5.2.1                h36c2ea0_2    conda-forge\ngl2ps                     1.4.2                h0708190_0    conda-forge\nglew                      2.1.0                h9c3ff4c_2    conda-forge\ngmp                       6.2.1                h58526e2_0    conda-forge\ngmpy2                     2.1.2            py39h78fa15d_0    conda-forge\ngnutls                    3.6.13               h85f3911_1    conda-forge\ngst-plugins-base          1.20.1               hcf0ee16_1    conda-forge\ngstreamer                 1.20.1               hd4edc92_1    conda-forge\ngxx_impl_linux-64         10.3.0              hf2f2afa_14    conda-forge\ngxx_linux-64              10.3.0               h2593f52_9    conda-forge\nhdf4                      4.2.15               h10796ff_3    conda-forge\nhdf5                      1.10.6          nompi_h6a2412b_1114    conda-forge\nicu                       69.1                 h9c3ff4c_0    conda-forge\nidna                      3.3                pyhd8ed1ab_0    conda-forge\nimagecodecs               2022.2.22        py39hd807fc7_1    conda-forge\nimageio                   2.16.1             pyhcf75d05_0    conda-forge\nimportlib-metadata        4.11.3           py39hf3d152e_1    conda-forge\nimportlib_metadata        4.11.3               hd8ed1ab_1    conda-forge\njbig                      2.1               h7f98852_2003    conda-forge\njinja2                    3.0.1              pyhd8ed1ab_0    conda-forge\njpeg                      9e                   h7f98852_0    conda-forge\njsoncpp                   1.9.4                h4bd325d_3    conda-forge\njsonpickle                2.1.0              pyhd8ed1ab_0    conda-forge\njxrlib                    1.1                  h7f98852_2    conda-forge\nkernel-headers_linux-64   3.10.0              h4a8ded7_13    conda-forge\nkeyutils                  1.6.1                h166bdaf_0    conda-forge\nkiwisolver                1.4.2            py39hf939315_0    conda-forge\nkrb5                      1.19.3               h3790be6_0    conda-forge\nlame                      3.100             h7f98852_1001    conda-forge\nlatexcodec                2.0.1              pyh9f0ad1d_0    conda-forge\nlcms2                     2.12                 hddcbb42_0    conda-forge\nld_impl_linux-64          2.36.1               hea4e1c9_2    conda-forge\nlerc                      3.0                  h9c3ff4c_0    conda-forge\nlibaec                    1.0.6                h9c3ff4c_0    conda-forge\nlibavif                   0.9.3                h166bdaf_1    conda-forge\nlibblas                   3.9.0           13_linux64_openblas    conda-forge\nlibbrotlicommon           1.0.9                h7f98852_6    conda-forge\nlibbrotlidec              1.0.9                h7f98852_6    conda-forge\nlibbrotlienc              1.0.9                h7f98852_6    conda-forge\nlibcblas                  3.9.0           13_linux64_openblas    conda-forge\nlibclang                  13.0.1          default_hc23dcda_0    conda-forge\nlibclang-cpp13            13.0.1          default_hc23dcda_0    conda-forge\nlibcurl                   7.82.0               h7bff187_0    conda-forge\nlibdeflate                1.10                 h7f98852_0    conda-forge\nlibdrm-cos7-x86_64        2.4.97            h9b0a68f_1105    conda-forge\nlibedit                   3.1.20191231         he28a2e2_2    conda-forge\nlibev                     4.33                 h516909a_1    conda-forge\nlibevent                  2.1.10               h9b69904_4    conda-forge\nlibffi                    3.4.2                h7f98852_5    conda-forge\nlibgcc-devel_linux-64     10.3.0              he6cfe16_14    conda-forge\nlibgcc-ng                 11.2.0              h1d223b6_14    conda-forge\nlibgfortran-ng            11.2.0              h69a702a_14    conda-forge\nlibgfortran5              11.2.0              h5c6108e_14    conda-forge\nlibglib                   2.70.2               h174f98d_4    conda-forge\nlibglu                    9.0.0             hf484d3e_1000    conda-forge\nlibglvnd-cos7-x86_64      1.0.1             h9b0a68f_1105    conda-forge\nlibglvnd-glx-cos7-x86_64  1.0.1             h9b0a68f_1105    conda-forge\nlibgomp                   11.2.0              h1d223b6_14    conda-forge\nlibice-cos7-x86_64        1.0.9             h9b0a68f_1105    conda-forge\nlibice-devel-cos7-x86_64  1.0.9             h9b0a68f_1105    conda-forge\nlibiconv                  1.16                 h516909a_0    conda-forge\nliblapack                 3.9.0           13_linux64_openblas    conda-forge\nlibllvm13                 13.0.1               hf817b99_2    conda-forge\nlibnetcdf                 4.8.0           nompi_hcd642e3_103    conda-forge\nlibnghttp2                1.47.0               h727a467_0    conda-forge\nlibnsl                    2.0.0                h7f98852_0    conda-forge\nlibogg                    1.3.4                h7f98852_1    conda-forge\nlibopenblas               0.3.18          pthreads_h8fe5266_0    conda-forge\nlibopus                   1.3.1                h7f98852_1    conda-forge\nlibpng                    1.6.37               hed695b0_2    conda-forge\nlibpq                     14.2                 hd57d9b9_0    conda-forge\nlibsanitizer              10.3.0              h26c7422_14    conda-forge\nlibsm-cos7-x86_64         1.2.2             h9b0a68f_1105    conda-forge\nlibsm-devel-cos7-x86_64   1.2.2             h9b0a68f_1105    conda-forge\nlibssh2                   1.10.0               ha56f1ee_2    conda-forge\nlibstdcxx-devel_linux-64  10.3.0              he6cfe16_14    conda-forge\nlibstdcxx-ng              11.2.0              he4da1e4_14    conda-forge\nlibtheora                 1.1.1             h7f98852_1005    conda-forge\nlibtiff                   4.3.0                h542a066_3    conda-forge\nlibuuid                   2.32.1            h7f98852_1000    conda-forge\nlibuv                     1.43.0               h7f98852_0    conda-forge\nlibvorbis                 1.3.7                h9c3ff4c_0    conda-forge\nlibwebp                   1.2.2                h3452ae3_0    conda-forge\nlibwebp-base              1.2.2                h7f98852_1    conda-forge\nlibx11-common-cos7-x86_64 1.6.7             h9b0a68f_1105    conda-forge\nlibx11-cos7-x86_64        1.6.7             h9b0a68f_1105    conda-forge\nlibx11-devel-cos7-x86_64  1.6.7             h9b0a68f_1105    conda-forge\nlibxcb                    1.13              h7f98852_1004    conda-forge\nlibxext-cos7-x86_64       1.3.3             h9b0a68f_1105    conda-forge\nlibxext-devel-cos7-x86_64 1.3.3             h9b0a68f_1105    conda-forge\nlibxkbcommon              1.0.3                he3ba5ed_0    conda-forge\nlibxml2                   2.9.12               h885dcf4_1    conda-forge\nlibxslt                   1.1.33               h0ef7038_3    conda-forge\nlibxt-cos7-x86_64         1.1.5             h9b0a68f_1105    conda-forge\nlibxt-devel-cos7-x86_64   1.1.5             h9b0a68f_1105    conda-forge\nlibzip                    1.8.0                h4de3113_1    conda-forge\nlibzlib                   1.2.11            h166bdaf_1014    conda-forge\nlibzopfli                 1.0.3                h9c3ff4c_0    conda-forge\nlivereload                2.6.3              pyh9f0ad1d_0    conda-forge\nlocket                    0.2.0                      py_2    conda-forge\nloguru                    0.5.3            py39hf3d152e_3    conda-forge\nlxml                      4.6.3            py39h107f48f_0    conda-forge\nlz4-c                     1.9.3                h9c3ff4c_1    conda-forge\nmako                      1.1.4              pyh44b312d_0    conda-forge\nmarkupsafe                2.1.1            py39hb9d737c_1    conda-forge\nmatplotlib                3.4.2            py39hf3d152e_0    conda-forge\nmatplotlib-base           3.4.2            py39h2fa2bec_0    conda-forge\nmesa-khr-devel-cos7-x86_64 18.3.4            h9b0a68f_1105    conda-forge\nmesa-libgl-cos7-x86_64    18.3.4            h9b0a68f_1105    conda-forge\nmesa-libgl-devel-cos7-x86_64 18.3.4            h9b0a68f_1105    conda-forge\nmesa-libglapi-cos7-x86_64 18.3.4            h9b0a68f_1105    conda-forge\nmesalib                   18.3.1               h590aaf7_0    conda-forge\nmock                      4.0.3            py39hf3d152e_1    conda-forge\nmoose-libmesh             2022.03.18              build_0    https://conda.software.inl.gov/public\nmoose-libmesh-vtk         9.1.0                   build_5    https://conda.software.inl.gov/public\nmoose-mpich               4.0.1                   build_0    https://conda.software.inl.gov/public\nmoose-petsc               3.16.5                  build_0    https://conda.software.inl.gov/public\nmoose-tools               2022.03.15       py39h44dc8d9_0    https://conda.software.inl.gov/public\nmpc                       1.2.1                h9f54685_0    conda-forge\nmpfr                      4.1.0                h9202a9a_1    conda-forge\nmpi                       1.0                       mpich    conda-forge\nmpich                     4.0.1              h846660c_100    conda-forge\nmpich-mpicc               4.0.1              hb600da9_100    conda-forge\nmpich-mpicxx              4.0.1              h166bdaf_100    conda-forge\nmpich-mpifort             4.0.1              h924138e_100    conda-forge\nmpmath                    1.2.1              pyhd8ed1ab_0    conda-forge\nmysql-common              8.0.28               haf5c9bc_2    conda-forge\nmysql-libs                8.0.28               h28c427c_2    conda-forge\nncurses                   6.3                  h9c3ff4c_0    conda-forge\nnettle                    3.6                  he412f7d_0    conda-forge\nnetworkx                  2.7.1              pyhd8ed1ab_1    conda-forge\nnspr                      4.32                 h9c3ff4c_1    conda-forge\nnss                       3.77                 h2350873_0    conda-forge\nnumpy                     1.21.1           py39hdbf815f_0    conda-forge\nopenh264                  2.1.1                h780b84a_0    conda-forge\nopenjpeg                  2.4.0                hb52868f_1    conda-forge\nopenssl                   1.1.1n               h166bdaf_0    conda-forge\nordered-set               4.1.0              pyhd8ed1ab_0    conda-forge\npackaging                 21.3               pyhd8ed1ab_0    conda-forge\npandas                    1.3.1            py39hde0f152_0    conda-forge\npartd                     1.2.0              pyhd8ed1ab_0    conda-forge\npcre                      8.45                 h9c3ff4c_0    conda-forge\npillow                    9.0.1            py39hae2aec6_2    conda-forge\npip                       22.0.4             pyhd8ed1ab_0    conda-forge\npkg-config                0.29.2            h36c2ea0_1008    conda-forge\npooch                     1.6.0              pyhd8ed1ab_0    conda-forge\nproj                      7.2.0                h277dcde_2    conda-forge\npthread-stubs             0.4               h36c2ea0_1001    conda-forge\npugixml                   1.11.4               h9c3ff4c_0    conda-forge\npybtex                    0.24.0           py39hf3d152e_0    conda-forge\npycparser                 2.21               pyhd8ed1ab_0    conda-forge\npylatexenc                2.10               pyhd8ed1ab_0    conda-forge\npyopenssl                 22.0.0             pyhd8ed1ab_0    conda-forge\npyparsing                 3.0.7              pyhd8ed1ab_0    conda-forge\npyqt                      5.12.3           py39hf3d152e_7    conda-forge\npyqt-impl                 5.12.3           py39h0fcd23e_7    conda-forge\npyqt5-sip                 4.19.18          py39he80948d_7    conda-forge\npyqtchart                 5.12             py39h0fcd23e_7    conda-forge\npyqtwebengine             5.12.1           py39h0fcd23e_7    conda-forge\npysocks                   1.7.1            py39hf3d152e_4    conda-forge\npython                    3.9.12          h9a8a25e_1_cpython    conda-forge\npython-dateutil           2.8.2              pyhd8ed1ab_0    conda-forge\npython_abi                3.9                      2_cp39    conda-forge\npytz                      2022.1             pyhd8ed1ab_0    conda-forge\npywavelets                1.3.0            py39hd257fcd_0    conda-forge\npyyaml                    5.4.1            py39h3811e60_0    conda-forge\nqt                        5.12.9               h1304e3e_6    conda-forge\nreadline                  8.1                  h46c0cb4_0    conda-forge\nrequests                  2.27.1             pyhd8ed1ab_0    conda-forge\nrhash                     1.4.1                h7f98852_0    conda-forge\nscikit-image              0.18.2           py39hde0f152_0    conda-forge\nscipy                     1.8.0            py39hee8e79c_1    conda-forge\nsetuptools                59.8.0           py39hf3d152e_1    conda-forge\nsix                       1.16.0             pyh6c4a22f_0    conda-forge\nsnappy                    1.1.8                he1b5a44_3    conda-forge\nsoupsieve                 2.3.1              pyhd8ed1ab_0    conda-forge\nsqlite                    3.37.1               h4ff8645_0    conda-forge\nsympy                     1.9              py39hf3d152e_0    conda-forge\nsysroot_linux-64          2.17                h4a8ded7_13    conda-forge\ntbb                       2020.2               h4bd325d_4    conda-forge\ntbb-devel                 2020.2               h4bd325d_4    conda-forge\ntifffile                  2022.3.25          pyhd8ed1ab_0    conda-forge\ntk                        8.6.12               h27826a3_0    conda-forge\ntoolz                     0.11.2             pyhd8ed1ab_0    conda-forge\ntornado                   6.1              py39hb9d737c_3    conda-forge\ntzdata                    2022a                h191b570_0    conda-forge\nurllib3                   1.26.9             pyhd8ed1ab_0    conda-forge\nutfcpp                    3.2.1                ha770c72_0    conda-forge\nvtk                       9.0.3           no_osmesa_py39h801044d_100    conda-forge\nwheel                     0.37.1             pyhd8ed1ab_0    conda-forge\nx264                      1!161.3030           h7f98852_1    conda-forge\nxorg-kbproto              1.0.7             h7f98852_1002    conda-forge\nxorg-libice               1.0.10               h7f98852_0    conda-forge\nxorg-libsm                1.2.3             hd9c2040_1000    conda-forge\nxorg-libx11               1.7.2                h7f98852_0    conda-forge\nxorg-libxau               1.0.9                h7f98852_0    conda-forge\nxorg-libxdmcp             1.1.3                h7f98852_0    conda-forge\nxorg-libxext              1.3.4                h7f98852_1    conda-forge\nxorg-libxt                1.2.1                h7f98852_2    conda-forge\nxorg-x11-proto-devel-cos7-x86_64 2018.4            h9b0a68f_1105    conda-forge\nxorg-xextproto            7.3.0             h7f98852_1002    conda-forge\nxorg-xproto               7.0.31            h7f98852_1007    conda-forge\nxz                        5.2.5                h516909a_1    conda-forge\nyaml                      0.2.5                h516909a_0    conda-forge\nzfp                       0.5.5                h9c3ff4c_8    conda-forge\nzipp                      3.7.0              pyhd8ed1ab_1    conda-forge\nzlib                      1.2.11            h166bdaf_1014    conda-forge\nzstd                      1.5.2                ha95c52a_0    conda-forge",
+                          "url": "https://github.com/idaholab/moose/discussions/20691#discussioncomment-2488537",
+                          "updatedAt": "2022-06-09T12:54:39Z",
+                          "publishedAt": "2022-04-01T20:45:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cticenhour"
+                          },
+                          "bodyText": "That output is consistent with the sysroot we were providing before. OK, next suggestion - You did a make clobberall, but I would also recommend trying a clean using git as well. You need to commit any outstanding changes you have that you might want to keep - this will clear all of that out. Perform the command git clean -xfd in your moose directory, and then start a fresh Terminal window (to make sure your environment is clean as well). Then activate your moose environment and try again.",
+                          "url": "https://github.com/idaholab/moose/discussions/20691#discussioncomment-2488547",
+                          "updatedAt": "2022-06-09T12:54:37Z",
+                          "publishedAt": "2022-04-01T20:48:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "czadeh"
+                          },
+                          "bodyText": "I did that, then tried make -j 8 in moose/test and got this:\nRebuilding symlinks in /home/cameron/projects/moose/test/build/header_symlinks\nCreating Unity Directory /home/cameron/projects/moose/framework/build/unity_src\nChecking if header needs updating: /home/cameron/projects/moose/framework/include/base/MooseRevision.h...\nCopying default MOOSE configuration to: /home/cameron/projects/moose/framework/include/base/MooseConfig.h...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_stringpiece.cc...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcrecpp.cc...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_newline.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_ucd.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_get.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_tables.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_xclass.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_ord2utf8.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_config.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_fullinfo.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_study.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_exec.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_chartables.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_compile.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_globals.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_jit_compile.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_refcount.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_byte_order.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_maketables.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_valid_utf8.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_version.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_dfa_exec.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/pcre/src/pcre_string_utils.c...\nCompiling C++ /home/cameron/projects/moose/framework/contrib/gtest/gtest-all.cc...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/hit/parse.cc...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/hit/lex.cc...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/hit/braceexpr.cc...\nBuilding and linking /home/cameron/projects/moose/framework/contrib/hit/hit.so...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/check.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/STRINGLIB_tokenize.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/FileInfo.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/SL_tokenize.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/GetLongOpt.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/create_file.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/node_set.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/side_set.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/ED_SystemInterface.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/util.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/exo_entity.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/exo_block.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/iqsort.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/map.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/exoII_read.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/add_to_log.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/stringx.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/Tolerance.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/exodiff/exodiff.C...\nCreating Unity Directory /home/cameron/projects/moose/test/build/unity_src\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/src_Unity.C\nSymlinking MOOSE configure /home/cameron/projects/moose/framework/build/header_symlinks/MooseConfig.h\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/executors_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/bcs_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/reporters_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/geomsearch_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/splits_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/predictors_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/markers_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/nodalkernels_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/executioners_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/parser_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/userobject_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/interfaces_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/partitioner_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/systems_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/restart_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/fvbcs_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/limiters_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/linesearches_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/transfers_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/multiapps_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/ics_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/loops_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/samplers_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/fviks_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/dampers_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/dirackernels_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/postprocessors_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/functions_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/constraints_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/distributions_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/problems_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/relationshipmanagers_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/controls_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/timesteppers_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/mesh_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/preconditioners_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/variables_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/vectorpostprocessors_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/actions_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/fvkernels_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/timeintegrators_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/materials_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/outputs_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/outputs_formatters_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/outputs_png_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/auxkernels_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/indicators_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/dgkernels_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/interfacekernels_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/meshgenerators_Unity.C\nCreating Unity /home/cameron/projects/moose/framework/build/unity_src/kernels_Unity.C\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/ResidualObject.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/MaxVarNDofsPerElem.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/MooseObject.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/MaxVarNDofsPerNode.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/Factory.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/AppFactory.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/SolverParams.C...\nmake[1]: Entering directory '/home/cameron/projects/moose/framework/contrib/hit'\nBuilding hit for python with python3-config\nmpicxx -std=c++17 -g -fvisibility-inlines-hidden  -fmessage-length=0 -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/cameron/mambaforge3/envs/moose/include -std=c++17 main.cc parse.cc lex.cc braceexpr.cc -o hit\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/MooseError.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/Registry.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/NeighborResidualObject.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/Attributes.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/Adaptivity.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/Moose.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/MooseInit.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/Assembly.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/MooseApp.C...\nmake[1]: Leaving directory '/home/cameron/projects/moose/framework/contrib/hit'\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/base/TheWarehouse.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/GriddedData.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/FormattedTable.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MultiDimensionalInterpolation.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/RayTracing.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/BicubicInterpolation.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/RankMap.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MooseMeshUtils.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/BilinearInterpolation.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/InterfaceValueTools.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/RandomData.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/LineSegment.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/ADFParser.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/SerializerGuard.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MonotoneCubicInterpolation.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/BicubicSplineInterpolation.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/ADUtils.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/RankTwoTensor.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/Units.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MooseEnum.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/ExecFlagEnum.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/PerfGraphLivePrint.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/RankThreeTensor.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/ArbitraryQuadrature.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MooseUtils.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/InputParameterWarehouse.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MeshBaseImageSampler.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MathUtils.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MathFVUtils.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/SyntaxTree.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/PerfGraph.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/ExecutablePath.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/LockFile.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/PetscDMMoose.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/Conversion.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/PerfNode.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/ColumnMajorMatrix.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MooseEnumItem.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/TrilinearInterpolation.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MooseEnumBase.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/ComputeLineSearchObjectWrapper.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/LinearInterpolation.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MooseObjectParameterName.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/JsonSyntaxTree.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/PetscSupport.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/NestedSolve.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/FunctionParserUtils.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MooseTypes.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/PerfGraphRegistry.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/PointReduction.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/SplineInterpolation.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/SlepcEigenSolverConfiguration.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MatrixTools.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/ImageSampler.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/RankFourTensor.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MultiMooseEnum.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/FunctionMaterialPropertyDescriptor.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/RotationMatrix.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/ElementsIntersectedByPlane.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MooseObjectName.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/VectorTag.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MortarUtils.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/KDTree.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/PermutationTensor.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/FileRangeBuilder.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/InputParameters.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/DenseMatrixDualReal.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/SlepcSupport.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/DelimitedFileReader.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/FileLineInfo.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/MemoryUtils.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/LeastSquaresFitBase.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/PolynomialFit.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/ParallelUniqueId.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/SplineInterpolationBase.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/src/utils/SystemInfo.C...\nCompiling C++ (in opt mode) /home/cameron/projects/moose/framework/contrib/pugixml/src/pugixml.C...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/mtwist/src/randistrs.c...\nCompiling C (in opt mode) /home/cameron/projects/moose/framework/contrib/mtwist/src/mtwist.c...\nLinking Library /home/cameron/projects/moose/framework/contrib/pcre/libpcre-opt.la...\nLinking Library /home/cameron/projects/moose/framework/contrib/gtest/libgtest.la...\nLinking Library /home/cameron/projects/moose/framework/contrib/hit/libhit-opt.la...\nLinking Executable /home/cameron/projects/moose/framework/contrib/exodiff/exodiff...\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/executors_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/bcs_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/reporters_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/markers_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/nodalkernels_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/executioners_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/partitioner_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/fvbcs_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/ics_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/samplers_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/dirackernels_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/postprocessors_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/functions_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/constraints_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/problems_Unity.C\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/controls_Unity.C\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libpthread.so.0: undefined reference to `_dl_make_stack_executable@GLIBC_PRIVATE'\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/timesteppers_Unity.C\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libpthread.so.0: undefined reference to `__libc_dlclose@GLIBC_PRIVATE'\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libpthread.so.0: undefined reference to `__libc_dlopen_mode@GLIBC_PRIVATE'\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libpthread.so.0: undefined reference to `__libc_longjmp@GLIBC_PRIVATE'\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libpthread.so.0: undefined reference to `__libc_dl_error_tsd@GLIBC_PRIVATE'\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libpthread.so.0: undefined reference to `__libc_allocate_rtsig_private@GLIBC_PRIVATE'\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/librt.so.1: undefined reference to `__clock_getres@GLIBC_PRIVATE'\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libpthread.so.0: undefined reference to `__libc_thread_freeres@GLIBC_PRIVATE'\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/librt.so.1: undefined reference to `__clock_getcpuclockid@GLIBC_PRIVATE'\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/vectorpostprocessors_Unity.C\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libdl.so.2: undefined reference to `_dl_addr@GLIBC_PRIVATE'\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libpthread.so.0: undefined reference to `__libc_pthread_init@GLIBC_PRIVATE'\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libpthread.so.0: undefined reference to `__libc_current_sigrtmin_private@GLIBC_PRIVATE'\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libdl.so.2: undefined reference to `_dl_sym@GLIBC_PRIVATE'\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/librt.so.1: undefined reference to `__clock_nanosleep@GLIBC_PRIVATE'\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libpthread.so.0: undefined reference to `__libc_dlsym@GLIBC_PRIVATE'\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libpthread.so.0: undefined reference to `__libc_current_sigrtmax_private@GLIBC_PRIVATE'\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/libdl.so.2: undefined reference to `_dl_vsym@GLIBC_PRIVATE'\n/home/cameron/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/10.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /home/cameron/mambaforge3/envs/moose/bin/../x86_64-conda-linux-gnu/sysroot/lib/librt.so.1: undefined reference to `__clock_settime@GLIBC_PRIVATE'\nCreating Unity /home/cameron/projects/moose/test/build/unity_src/actions_Unity.C\ncollect2: error: ld returned 1 exit status\nmake: *** [/home/cameron/projects/moose/framework/moose.mk:375: /home/cameron/projects/moose/framework/contrib/exodiff/exodiff] Error 1\nmake: *** Waiting for unfinished jobs....",
+                          "url": "https://github.com/idaholab/moose/discussions/20691#discussioncomment-2488572",
+                          "updatedAt": "2022-06-09T12:54:37Z",
+                          "publishedAt": "2022-04-01T20:56:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cticenhour"
+                          },
+                          "bodyText": "In your environment, could you give me the output of echo $CXXFLAGS?",
+                          "url": "https://github.com/idaholab/moose/discussions/20691#discussioncomment-2488598",
+                          "updatedAt": "2022-06-09T12:54:35Z",
+                          "publishedAt": "2022-04-01T21:03:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "czadeh"
+                          },
+                          "bodyText": "Here is the output:\n-fvisibility-inlines-hidden -fmessage-length=0 -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/cameron/mambaforge3/envs/moose/include -std=c++17",
+                          "url": "https://github.com/idaholab/moose/discussions/20691#discussioncomment-2488623",
+                          "updatedAt": "2022-06-09T12:54:34Z",
+                          "publishedAt": "2022-04-01T21:10:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cticenhour"
+                          },
+                          "bodyText": "Alright, looking good. How about mpicc -show? Looking for traces of there the system sysroot might be conflicting somehow with the one provided by conda.",
+                          "url": "https://github.com/idaholab/moose/discussions/20691#discussioncomment-2488646",
+                          "updatedAt": "2022-06-09T12:54:35Z",
+                          "publishedAt": "2022-04-01T21:16:09Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "czadeh"
+                          },
+                          "bodyText": "I got this:\nx86_64-conda-linux-gnu-cc -I/home/cameron/mambaforge3/envs/moose/include -I/home/cameron/mambaforge3/envs/moose/include -L/home/cameron/mambaforge3/envs/moose/lib -Wl,-rpath,/home/cameron/mambaforge3/envs/moose/lib -I/home/cameron/mambaforge3/envs/moose/include -L/home/cameron/mambaforge3/envs/moose/lib -Wl,-rpath -Wl,/home/cameron/mambaforge3/envs/moose/lib -Wl,--enable-new-dtags -lmpi",
+                          "url": "https://github.com/idaholab/moose/discussions/20691#discussioncomment-2488660",
+                          "updatedAt": "2022-06-09T12:54:35Z",
+                          "publishedAt": "2022-04-01T21:19:15Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "fdkong"
+                  },
+                  "bodyText": "I am not sure how #20755 relates to the current issue.\n\nPlease see the post from @milljm\n\nEdit: blah... this was supposed to be posted in another discussion: #20755 sorry... But I suppose this is still sorta related.",
+                  "url": "https://github.com/idaholab/moose/discussions/20691#discussioncomment-2639380",
+                  "updatedAt": "2022-05-31T15:05:43Z",
+                  "publishedAt": "2022-04-26T14:05:28Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "fdkong"
+                  },
+                  "bodyText": "What do you advice for Arch users?\n\nWe need to resolve the actual issue instead of jumping to a new PETSc.  We do not officially support 3.17 yet.",
+                  "url": "https://github.com/idaholab/moose/discussions/20691#discussioncomment-2639396",
+                  "updatedAt": "2022-05-31T15:05:43Z",
+                  "publishedAt": "2022-04-26T14:07:45Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Closing this.\nTemporary fix is to use:\n./update_and_rebuild_petsc.sh --LIBS=-lmpicxx",
+                          "url": "https://github.com/idaholab/moose/discussions/20691#discussioncomment-2908236",
+                          "updatedAt": "2022-06-08T18:53:43Z",
+                          "publishedAt": "2022-06-08T18:53:42Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "AC equation in phase field module",
+          "author": {
+            "login": "LiuPengPeter"
+          },
+          "bodyText": "Hello guys,\nI want to use this AC equation, but it is too complex, especially  the x in it.\nAC equation:\n\nNp:\n\nx:\n\nThe number of terms of this AC equation is related to x.\nMy scheme is to use for and if in the residual to sum every term of etas( if eta_j>0).\nIt's not easy because M and other coefficients are constants but are different according to different phases...So tough.\nWhat I could think of is to let them be added as arrays in the input file.  While there is only three phases and 3 different values, but for n grains, the array will be n*n.\nLike M in .i file:\nM_ij = '7e-8 7e-8 7e-8 7e-8\n7e-8 7e-8 7e-8 e-6\n7e-8 7e-8 7e-8 e-6\n7e-8 e-6 e-6 7e-8'\nCould anyone give me some ideas about there coefficients?",
+          "url": "https://github.com/idaholab/moose/discussions/16118",
+          "updatedAt": "2022-06-10T02:21:44Z",
+          "publishedAt": "2020-11-09T03:07:24Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Answering this for the sake of closing the post since this was years ago.\nMOOSE will let you input vectors and arrays in the input parameters. You can then unfold the vector in the matrix of coefficients you need in your user-code.\nWith regards to the model being complex, MOOSE can handle arbitrary numbers of variables and fully couple the equation solves. I think you will find this to be an advantage for your problem.\nI would first start with a lot of repetition in the kernels to build the system, then once you have something working and correct if you need to shorten the syntax you can look into either:\n\nusing an action to generate the system\nor\nusing array variables and array kernels to have less objects in the input file",
+                  "url": "https://github.com/idaholab/moose/discussions/16118#discussioncomment-2908015",
+                  "updatedAt": "2022-06-08T18:13:25Z",
+                  "publishedAt": "2022-06-08T18:13:24Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

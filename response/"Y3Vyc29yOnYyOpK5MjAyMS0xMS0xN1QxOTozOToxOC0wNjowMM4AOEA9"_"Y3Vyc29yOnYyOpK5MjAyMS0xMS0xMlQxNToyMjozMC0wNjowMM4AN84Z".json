@@ -1,0 +1,710 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMS0xMS0xMlQxNToyMjozMC0wNjowMM4AN84Z"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Solve the convergence problem",
+          "author": {
+            "login": "amosaha"
+          },
+          "bodyText": "hello,\nI made a thermal expansion model, but its results have not converged. I have tried to modify it many times, but I still can't get the result. I wonder if I have missed some important conditions?\nthemal expansion.txt\nThe general content of my model is: block2 is the heat source, and the thermal expansion of the material needs to be observed.\nThe code and graphics are attached here.\nThe pink area is block2.",
+          "url": "https://github.com/idaholab/moose/discussions/19407",
+          "updatedAt": "2022-06-20T08:41:25Z",
+          "publishedAt": "2021-11-16T08:14:57Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "sapitts"
+                  },
+                  "bodyText": "Hi @amosaha,\nYou will need to add some displacement boundary conditions to your input file, along with the temperature DirchletBCs you currently have included. I'd recommend taking a look at the [TensorMechanics Introductory Tutorial)[https://mooseframework.inl.gov/modules/tensor_mechanics/tutorials/introduction/index.html] and the documentation page for ComputeThermalExpansionEigenstrain for examples of how to set up this type of problem.\nHope this helps,\nStephanie",
+                  "url": "https://github.com/idaholab/moose/discussions/19407#discussioncomment-1652225",
+                  "updatedAt": "2022-06-20T08:41:38Z",
+                  "publishedAt": "2021-11-16T15:36:53Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "See #19314, we discussed this for a cylindrical case",
+                          "url": "https://github.com/idaholab/moose/discussions/19407#discussioncomment-1652273",
+                          "updatedAt": "2022-06-20T08:41:41Z",
+                          "publishedAt": "2021-11-16T15:44:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "amosaha"
+                          },
+                          "bodyText": "I have added  the displacement boundary conditions to my my input file,but this problem has not been solved.Do I need to add other parts if I want to couple thermal diffusion and thermal expansion? My input file does not have this description.",
+                          "url": "https://github.com/idaholab/moose/discussions/19407#discussioncomment-1655225",
+                          "updatedAt": "2022-06-20T08:41:41Z",
+                          "publishedAt": "2021-11-17T02:16:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I dont see them in your input.\nDid you manage to get convergence for a thermal diffusion only problem first?",
+                          "url": "https://github.com/idaholab/moose/discussions/19407#discussioncomment-1659094",
+                          "updatedAt": "2022-06-20T08:41:41Z",
+                          "publishedAt": "2021-11-17T16:07:45Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Linking external C library/program into MOOSE App",
+          "author": {
+            "login": "bielsnohr"
+          },
+          "bodyText": "I am creating a MOOSE app that calls an external C program (ASCOT5), and I am having difficulty getting my app to compile. Here is my Makefile:\n# ... nothing changed until after the MODULE declarations\n###############################################################################\n\n# Additional libraries for HDF5 support\nifdef CONDA_DEFAULT_ENV\nADDITIONAL_LIBS     := -lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5\nelse\nADDITIONAL_INCLUDES := -I/usr/include/hdf5/serial\nADDITIONAL_LIBS     := -lhdf5_hl_cpp -lhdf5_cpp -lhdf5_serial_hl -lhdf5_serial\nendif\n\n# ASCOT5\nADDITIONAL_INCLUDES += -I./ascot5\nADDITIONAL_DEPEND_LIBS += libascot_main\nADDITIONAL_LIBS += -lascot_main\nASCOT5_OPT = \"NOGIT=true CC=h5cc MPI=0 FLAGS=-foffload=disable\"\n\nlibascot_main:\n\t$(MAKE) $(ASCOT5_OPT) -C ascot5 libascot_main\n\n# dep apps\nAPPLICATION_DIR    := $(CURDIR)\nAPPLICATION_NAME   := phaethon\nBUILD_EXEC         := yes\nGEN_REVISION       := no\ninclude            $(FRAMEWORK_DIR)/app.mk\n\n###############################################################################\n# Additional special case targets should be added here\nThe ASCOT5 C code is fairly unstructured, so there are just a bunch of header files in the ./ascot5 directory that is referenced in the makefile. None of these are protected by extern \"C\" {} which I think might be the problem.\nI'm adding the ADDITIONAL_DEPEND_LIBS such that this external \"library\" (it's not really a library) gets compiled and created since I include it as a git submodule of my MOOSE app repo.\nHere is a sample of the output I am getting from building. There is much more, but not practical to put it all here. I think the errors are suggesting that there are clashes between things defined in my ASCOT5 header files and those used by other parts of MOOSE.\ndev@b5a145b5c3c5:/workspaces/phaethon$ make -j 4\nUsing HIT from /home/dev/moose/framework/contrib/hit\nChecking if header needs updating: /home/dev/moose/framework/include/base/MooseRevision.h...\nLinking Library /home/dev/moose/modules/module_loader/lib/libmodule_loader_with_ray_hc-devel.la...\nCreating Unity /workspaces/phaethon/build/unity_src/problems_Unity.C\nmake \"NOGIT=true CC=h5cc MPI=0 FLAGS=-foffload=disable\" -C ascot5 libascot_main\nmake[1]: Entering directory '/workspaces/phaethon/ascot5'\ntrue\nmake[1]: Leaving directory '/workspaces/phaethon/ascot5'\nCompiling C++ (in devel mode) /workspaces/phaethon/build/unity_src/problems_Unity.C...\nLinking Library /workspaces/phaethon/test/lib/libphaethon_test-devel.la...\nIn file included from /home/dev/moose/framework/build/header_symlinks/InputParameters.h:18,\n                 from /home/dev/moose/framework/build/header_symlinks/MooseObject.h:13,\n                 from /home/dev/moose/framework/build/header_symlinks/Problem.h:12,\n                 from /home/dev/moose/framework/build/header_symlinks/SubProblem.h:12,\n                 from /home/dev/moose/framework/build/header_symlinks/FEProblemBase.h:13,\n                 from /home/dev/moose/framework/build/header_symlinks/ExternalProblem.h:12,\n                 from /workspaces/phaethon/build/header_symlinks/AscotProblem.h:12,\n                 from /workspaces/phaethon/src/problems/AscotProblem.C:11,\n                 from /workspaces/phaethon/build/unity_src/problems_Unity.C:2:\n/home/dev/moose/framework/build/header_symlinks/Conversion.h:115:69: error: macro \"stringify\" passed 3 arguments, but takes just 1\n  115 | stringify(const std::pair<T, U> & p, const std::string & delim = \":\")\n      |                                                                     ^\nIn file included from ./ascot5/math.h:7,\n                 from /home/dev/petsc/include/petscmath.h:13,\n                 from /home/dev/petsc/include/petscsys.h:410,\n                 from /home/dev/petsc/include/petscbag.h:4,\n                 from /home/dev/petsc/include/petsc.h:5,\n                 from /home/dev/moose/scripts/../libmesh/installed/include/libmesh/petsc_macro.h:66,\n                 from /home/dev/moose/framework/build/header_symlinks/MooseTypes.h:21,\n                 from /home/dev/moose/framework/build/header_symlinks/InputParameters.h:15,\n                 from /home/dev/moose/framework/build/header_symlinks/MooseObject.h:13,\n                 from /home/dev/moose/framework/build/header_symlinks/Problem.h:12,\n                 from /home/dev/moose/framework/build/header_symlinks/SubProblem.h:12,\n                 from /home/dev/moose/framework/build/header_symlinks/FEProblemBase.h:13,\n                 from /home/dev/moose/framework/build/header_symlinks/ExternalProblem.h:12,\n                 from /workspaces/phaethon/build/header_symlinks/AscotProblem.h:12,\n                 from /workspaces/phaethon/src/problems/AscotProblem.C:11,\n                 from /workspaces/phaethon/build/unity_src/problems_Unity.C:2:\n./ascot5/ascot5.h:62: note: macro \"stringify\" defined here\n   62 | #define stringify(c) #c\n      | \nIn file included from /home/dev/moose/framework/build/header_symlinks/InputParameters.h:18,\n                 from /home/dev/moose/framework/build/header_symlinks/MooseObject.h:13,\n                 from /home/dev/moose/framework/build/header_symlinks/Problem.h:12,\n                 from /home/dev/moose/framework/build/header_symlinks/SubProblem.h:12,\n                 from /home/dev/moose/framework/build/header_symlinks/FEProblemBase.h:13,\n                 from /home/dev/moose/framework/build/header_symlinks/ExternalProblem.h:12,\n                 from /workspaces/phaethon/build/header_symlinks/AscotProblem.h:12,\n                 from /workspaces/phaethon/src/problems/AscotProblem.C:11,\n                 from /workspaces/phaethon/build/unity_src/problems_Unity.C:2:\n/home/dev/moose/framework/build/header_symlinks/Conversion.h:138:52: error: macro \"stringify\" passed 4 arguments, but takes just 1\n  138 |           bool enclose_list_in_curly_braces = false)\n      |                                                    ^\n\nAny suggestions about where I should go from here are appreciated.",
+          "url": "https://github.com/idaholab/moose/discussions/19413",
+          "updatedAt": "2022-05-31T15:05:13Z",
+          "publishedAt": "2021-11-16T17:25:22Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "bielsnohr"
+                  },
+                  "bodyText": "After quite a bit of reading up on C/C++ libraries and linking, and then some trial and error, I was finally able to figure this out myself. For any poor future soul that might be struggling with something similar, I will document my solution here.\nAs I suspected in my question, there was some name clashing going on between the normal MOOSE framework headers and those in this \"library\" I was attempting to link to. Because ASCOT5 is in C but none of the headers are protected with extern \"C\", there was name mangling of some internal routines that overrode definitions from the MOOSE framework. However, I also realised that I didn't actually want to expose any of these routines to my MOOSE app, getting back to the point that ASCOT5 isn't really designed to be used as a library.\nThe way to sidestep this was to declare my own (really simple) header for the ASCOT5 library that looks like this:\n#ifdef __cplusplus\nextern \"C\" {\n#endif\nint main(int argc, char** argv);\n#ifdef __cplusplus\n}\n#endif\nWhich meant I only expose the main() function that I want to call and I limit what I have to wrap in extern \"C\". I then placed this header in its own directory so that I could add only this file as an additional include, rather than all the header files in ASCOT5 which were causing the trouble. My MOOSE app makefile now looks like:\n# ... unchanged from normal MOOSE app makefile ...\n# ASCOT5\nADDITIONAL_DEPEND_LIBS += libascot_main\nADDITIONAL_LIBS += -L$(CURDIR)/ascot5 -lascot_main\nADDITIONAL_INCLUDES += -I$(CURDIR)/ascot5/include\nASCOT5_OPT = \"NOGIT=true CC=h5cc MPI=0 FLAGS=-foffload=disable\"\n\nlibascot_main:\n\t$(MAKE) $(ASCOT5_OPT) -C ascot5 libascot_main\n\n# dep apps\nAPPLICATION_DIR    := $(CURDIR)\nAPPLICATION_NAME   := phaethon\nBUILD_EXEC         := yes\nGEN_REVISION       := no\ninclude            $(FRAMEWORK_DIR)/app.mk\n\n###############################################################################\n# Additional special case targets should be added here\n\nAlthough this is mostly just a basic exercise in calling C from C++, the complexity of the MOOSE build system (and which Make variables to set) certainly makes this a more arduous task.",
+                  "url": "https://github.com/idaholab/moose/discussions/19413#discussioncomment-1659021",
+                  "updatedAt": "2022-05-31T15:05:19Z",
+                  "publishedAt": "2021-11-17T15:53:41Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello, thanks a lot for letting us know and documenting this here. I ll keep your answer in the back of my mind if anyone comes to us with a similar problem.\nCheers,\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/19413#discussioncomment-1659031",
+                          "updatedAt": "2022-05-31T15:05:20Z",
+                          "publishedAt": "2021-11-17T15:55:30Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Muliapps with Picard iteration",
+          "author": {
+            "login": "Xelver"
+          },
+          "bodyText": "Hi,\nI'm now using TransientMultiApp to solve a \"Tight Coupling\" problem.  It contains a masterapp and two subapps. Normally, the order that I wished the simulation to progress is \"sub1 -> master -> sub2 -> sub1 ......\". So i set execute_on  = 'initial timestep_begin' for sub1 while execute_on  = 'initial timestep_end' for sub2, and I used Picard iteration to reach a stationary point at each timestep.\nHowever, here come's the problem. I found that the values that sub1 got from sub2 and master were those of a timestep before. Is there any way to solve the problem?\nBesides, I used the Picard iteration by setting picard_max_its in the Executioner  while I found that in many moose test examples, fixed_point_max_its was set instead of  picard_max_its. So I'm wondering which one is the correct way to use Picard iteration.\nThanks a lot!",
+          "url": "https://github.com/idaholab/moose/discussions/19408",
+          "updatedAt": "2022-07-10T05:19:00Z",
+          "publishedAt": "2021-11-16T09:04:55Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nyou should have gotten deprecation warnings for picard_max_its.\nPicard is a fixed point algorithm, fixed_point_max_its is the new name for that.\nIf you dont want sub1 to get values from the previous timestep then dont execute it at timestep_begin, execute it at timestep_end.\nIf you want to be converging values in sub1 with output from sub2 and iterating on this coupling, you should consider making a chain: main -> sub1 -> sub2\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/19408#discussioncomment-1652284",
+                  "updatedAt": "2022-07-10T05:19:00Z",
+                  "publishedAt": "2021-11-16T15:46:03Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Xelver"
+                          },
+                          "bodyText": "I see. Thanks! It really helps!",
+                          "url": "https://github.com/idaholab/moose/discussions/19408#discussioncomment-1656085",
+                          "updatedAt": "2022-07-10T05:19:36Z",
+                          "publishedAt": "2021-11-17T07:03:29Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Qausi-steady state simulation [Porous flow]",
+          "author": {
+            "login": "Traiwit"
+          },
+          "bodyText": "Hi guys,\nJust wondering is it possible to set up a simulation such that, we let it run till it reaches the steady-state then we move on to the next time step.\nFor our mining-hydro simulation, we want to change the BCs once the simulation reaches the steady-state using Controls\n[water_grad_drain1]\n    type = ConditionalFunctionEnableControl\n    enable_objects = 'BCs::water_grad_drain1'\n    conditional_function = 'if(t>=12 & t<13,1,0)'\n    execute_on = 'initial timestep_begin'\n  []\n  #\n  [water_grad_drain2]\n    type = ConditionalFunctionEnableControl\n    enable_objects = 'BCs::water_grad_drain2'\n    conditional_function = 'if(t>=13 & t<14,1,0)'\n    execute_on = 'initial timestep_begin'\n  []\n.\n.\n\n  [Executioner]\n    type = Transient\n    start_time = 0\n    end_time = 19\n    dt = 1\n.\n.\n\nI read this https://mooseframework.inl.gov/source/executioners/Transient.html (both Load steps and Quasi-Transient)\nIt makes sense for mechanical stimulation, but for hydro, fluid is moving with respect to time.\nI check the results of my simulation, it doesn't work as I want it to, for example at T=1, we only set the BCs at the 4 walls, we expect to see pwp becomes flat by the end of that time-step, but it actually takes 10 time-steps to reach what we want.\nt=1\n\nt=3\n\nt=10\n\nis there any suggestion?\nKind regards,\nTraiwit",
+          "url": "https://github.com/idaholab/moose/discussions/19389",
+          "updatedAt": "2022-06-16T10:31:03Z",
+          "publishedAt": "2021-11-15T06:55:43Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "Traiwit"
+                  },
+                  "bodyText": "This is the result after a steady-state run\n  [Executioner]\n    type = Steady\n\n\nI know I could reload and run the next steady-state simulation, but this will take time to set up the problem/read the input mesh (it's huge!) and stuff\nIdeally, I'd like to do it the way I described above: reach SS > change BCs > reach SS > change BC > reach SS ...",
+                  "url": "https://github.com/idaholab/moose/discussions/19389#discussioncomment-1643209",
+                  "updatedAt": "2022-06-16T10:31:08Z",
+                  "publishedAt": "2021-11-15T09:01:36Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "if you remove all the time derivative kernels, the solver will effectively be doing steady state solves every time step (with a transient executioner).\nBut a lot of problems need a transient to relax to the steady state.\nAnd maybe you need the time derivatives for the true transient with the changing BCs?\nThe clean way to do this is to work with Controls imo.",
+                          "url": "https://github.com/idaholab/moose/discussions/19389#discussioncomment-1645422",
+                          "updatedAt": "2022-06-16T10:31:09Z",
+                          "publishedAt": "2021-11-15T15:32:44Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "Hi @GiudGiud, I'm not sure how to remove all the time derivative kernels, I'm using PorousFlowUnsaturated, I don't see any time-term in this action. https://mooseframework.inl.gov/source/actions/PorousFlowUnsaturated.html\nand yes, I'm already using Controls, to change the BCs",
+                          "url": "https://github.com/idaholab/moose/discussions/19389#discussioncomment-1647876",
+                          "updatedAt": "2022-07-08T07:28:54Z",
+                          "publishedAt": "2021-11-15T23:16:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "ok there arent any if you are using a Steady executioner already anyway.\nIn the action you would not get an option to turn them on/off anyway.\nI think using a MultiApp set up might be the move here.\nMain app: transient solve with the number of different BCs you are trying to use as the number of timesteps\nSubapp: steady solve with all the BCs defined and a single one active at a time (using Controls). The subapp is a FullSolveMultiApp, that is being executed on timestep_end\nTransfer: some parameter (a postprocessor for example, use a Receiver in the subapp) from main app to subapp, that is then used by the Controls in the subapp to do the switch",
+                          "url": "https://github.com/idaholab/moose/discussions/19389#discussioncomment-1648190",
+                          "updatedAt": "2022-07-08T07:28:55Z",
+                          "publishedAt": "2021-11-16T00:56:51Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "Hi @GiudGiud, Thanks! I will give it a go\nNever touched 'MultiApp' ever before, looks very complex to me, but ill give it a try.",
+                          "url": "https://github.com/idaholab/moose/discussions/19389#discussioncomment-1648198",
+                          "updatedAt": "2022-07-08T07:28:58Z",
+                          "publishedAt": "2021-11-16T00:59:40Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "@GiudGiud now sure how this works, I need a porous flow expert to explain this to me but when I changed time_unit under PorousFlowUnsaturated to years (default is second), it gives me the SS result that I want",
+                          "url": "https://github.com/idaholab/moose/discussions/19389#discussioncomment-1654784",
+                          "updatedAt": "2022-07-08T07:28:59Z",
+                          "publishedAt": "2021-11-16T23:39:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "ah makes sense, glad you figured this out.",
+                          "url": "https://github.com/idaholab/moose/discussions/19389#discussioncomment-1654854",
+                          "updatedAt": "2022-07-08T07:28:59Z",
+                          "publishedAt": "2021-11-16T23:57:09Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Convergence with multiple processors",
+          "author": {
+            "login": "erikgus94"
+          },
+          "bodyText": "Hi,\nThis is a follow up question for Boussinesq convergence problem.\nI can get convergence when I'm adjusting the mesh that @GiudGiud helped me to generate, see input file here, but only when I run the code on one or two processors. When I try using more than 2 processors the residuals just wont go down for the first time step. I wonder if there is something I can do to be able to use more processors because currently the code takes about 8 hours to run and I have a cluster with 32 processors available that I can't use to it's full extent.",
+          "url": "https://github.com/idaholab/moose/discussions/19412",
+          "updatedAt": "2022-11-28T20:30:44Z",
+          "publishedAt": "2021-11-16T12:06:32Z",
+          "category": {
+            "name": "Q&A Modules: Navier-Stokes"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nCan you please paste your convergence (or non-convergence) history here?\nThe problem is likely the preconditioning is getting worse with an increasing number of processes. If you copied over some examples, you likely have LU preconditioner, which wont scale. What is your [Executioner] block?\nThere's more information on this page\nhttps://mooseframework.inl.gov/source/executioners/Steady.html\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/19412#discussioncomment-1652256",
+                  "updatedAt": "2023-02-23T21:50:18Z",
+                  "publishedAt": "2021-11-16T15:41:44Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "erikgus94"
+                          },
+                          "bodyText": "You were right. I had the lu preconditioner and changing it to bjacobi solved the problem.\nThank you for the help!",
+                          "url": "https://github.com/idaholab/moose/discussions/19412#discussioncomment-1652675",
+                          "updatedAt": "2023-02-23T21:50:20Z",
+                          "publishedAt": "2021-11-16T16:29:47Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Initial conditions for phase field simulations",
+          "author": {
+            "login": "Giovar6"
+          },
+          "bodyText": "Dear MOOSE developers,\nI would like to ask for some information about the initial conditions.\nI am currently simulating the sintering of some powder particles. At present day I have found that a possible way to specify the initial conditions is to use the SmoothCircleIC to specify the initial conditions for the eta parameter of each particle and then the SpecifiedSmoothCircleIC to specify in one function all the initial conditions for the \"c\" field.\nSo, now I have two main questions:\n\nIf I would like to include in the same model some circular powder particles and a box, how I can specify the initial conditions for the \"c\" field? Is there a possibility to combine the SmoothCirlceIC with the BoundingBoxIC, just as an example?\nIf I would like to specify the initial conditions for powder particles that do not have a regular shape, what type of function should I use? Should I have to write the code from scratch?\nThank you in advance to anyone that will help me.",
+          "url": "https://github.com/idaholab/moose/discussions/19333",
+          "updatedAt": "2022-07-20T16:27:22Z",
+          "publishedAt": "2021-11-09T16:57:51Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "dschwen"
+                  },
+                  "bodyText": "You can use function ICs or CoupledValueFunctionIC. The latter can couple variables that are initialized by other ICs.\nWriting from scratch is always an option. But take a look at ImageFunction, which can load images that you can prepare with any paint program. Together with (again) FunctionIC you can use this to \"draw\" your initial condition, which seems suitable for irregular particle ICs.",
+                  "url": "https://github.com/idaholab/moose/discussions/19333#discussioncomment-1615636",
+                  "updatedAt": "2022-07-20T16:27:23Z",
+                  "publishedAt": "2021-11-09T22:04:03Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Giovar6"
+                          },
+                          "bodyText": "Thank you very much for your precious help.\nAs regards question number 1 I  have followed your suggestion and I have correctly implemented the two different initial conditions.\nAs regards question number 2, I am now facing an issue.\nI would like to specify a threshold, in order to apply a certain value outside and inside the particles. When I do this operation, though I have an 8-bit black and white image with a threshold of 255 I have some problems.\nIf I use the following code for the function:\n[ICFromImagec]\n   type = ImageFunction\n   file = Cbedt.png\n   threshold = 255\n   upper_value = 0.999\n   lower_value = 1e-10\n [../]\n\nThe simulation converge but I obtain ICS opposite to what I was expecting, with 1 outside the material and 0 inside.\nIf I switch upper and lower values, the simulation does not converge.\nIf I use as a upper_value = 0.001 and as a lower_value = 0.999, the simulation converges and the ICS are set properly,\nbut, strangely, this does not depend on the threshold value I specify.\nI assume I am doing some mistakes with threshold values, but I do not know what is this mistake.\nCould you give some suggestions or provide further details on how the image thresholding works?\nThank you in advance!",
+                          "url": "https://github.com/idaholab/moose/discussions/19333#discussioncomment-1646350",
+                          "updatedAt": "2022-07-20T16:27:24Z",
+                          "publishedAt": "2021-11-15T18:09:25Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Which objects are proper to compute the equations (Auxvariable, postprocessor, etc)?",
+          "author": {
+            "login": "hokonkim"
+          },
+          "bodyText": "Hello, I would like to compute the equations like below.\n\nFrom several dicussions I made at here, I knew\nV_Em: local volume of Element,\ncan be computed by VolumeAux (recently made)\nBut, I'm confused about computing dV_cr/dt *delta_t and V_act.\ndV_cr/dt has parameters such as S_D,Cr2O3 (changeable) * V_Em (constant) * V_mol_Cr2O3 (constant) * 1/zF (constant).\nIn S_D,Cr2O3, V_act (changeable), V_Em(constant), and eta (changeable, AuxVariable).\nTo compute V_cr/dt*delta_t and V_act, which objects are needed?\nI tried to compute as Material Properties.. because it can use Auxvariable and Postprocessors, but I'm stuck..\n(struggling to implement V_cr_last, delta_t, and V_act)\nHow can I do compute this?\n[Materials]\n  [./CrDeposition]\n    type  = ParsedMaterial\n    block = 'PT_TPB_TET4'\n    f_name = 'CrDepoActivity_SD'\n    constant_names        = 'R          T        z     F          x_CrO2OH2   x_H2O  V_molar_Cr2O3'\n                        # (J/K/mol),  (K), (# of e-), (C/mol),    (non),      (non), (cm^3)\n    constant_expressions  = '8.3144598  1073.0   4   96485.3329   1e-8        0.01   29.12'\n    function = 'V_cr_last +\n                (274.626 * VolumeCoverage * x_CrO2OH2^(0.5) * x_H2O^(0.5) * 2 * sinh(F * 2 / R / T * aux_eta_tpb)) *\n                aux_vol_em * V_molar_Cr2O3 / z / F'\n    args = 'aux_eta_tpb aux_vol_em'\n    postprocessor_names = 'V_cr_last VolumeCoverage'\n    # Make values see at output(*.e) file\n    # outputs = exodus\n  [../]\n[]\n\n[AuxVariables]\n  [./aux_vol_em]\n    order = CONSTANT\n    family = MONOMIAL\n    block = 'PT_TPB_TET4'\n  [../]\n[]\n\n[AuxKernels]\n  [./volume_element]\n    type = VolumeAux\n    variable = aux_vol_em\n    block = 'PT_TPB_TET4'\n  [../]\n[]\n\nAlso,\n\nI'm not sure I need \"Material properties\" in AuxKernel expression like this.\n(Material properties are currently not supported, but it would be really easy to add it so feel free to contact us.)\nBut, how can I do this?\nLastly, what is the best way to compute delta t?\nThanks.\nSincerely,\nHokon Kim",
+          "url": "https://github.com/idaholab/moose/discussions/19381",
+          "updatedAt": "2022-09-01T03:08:35Z",
+          "publishedAt": "2021-11-14T05:39:23Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "To compute V_cr/dt*delta_t and V_act, which objects are needed?\n\nIs V_cr a main variable? If so you just need to form equation number 3 with kernels. Equation number 2 will naturally happen with an Euler time stepper (default is Implicit Euler)\nV_act seems fairly simple to compute from 2 variables, it s just a difference. A ParsedAux will do it.\n\nI'm not sure I need \"Material properties\" in AuxKernel expression like this.\n\nYou pretty much have a choice between using AuxVariables and MaterialProperties, unless you are using Automatic Differentiation in which case you should prefer to use Material Properties.\nUse [Materials] to compute Material properties, and [AuxKernels] to compute aux-variables. There's parsed formulations for both.\n\nLastly, what is the best way to compute delta t?\n\ndelta t is usually accessible using simply _dt.\nIf not, it can be retrieved from the problem object with _problem_ptr->dt()",
+                  "url": "https://github.com/idaholab/moose/discussions/19381#discussioncomment-1642101",
+                  "updatedAt": "2022-09-02T08:19:10Z",
+                  "publishedAt": "2021-11-15T02:53:35Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hokonkim"
+                          },
+                          "bodyText": "So far, I dealt V_cr as a AuxVariable. I'm confused about which objects are proper for my application.\nKernel is needed to do something related to physics for reaction, as far as I know.\nDo you think dealing equation 3 (dV_cr/dt = S_D * V_Em * ...) as Kernel would be proper for my purpose?",
+                          "url": "https://github.com/idaholab/moose/discussions/19381#discussioncomment-1642479",
+                          "updatedAt": "2022-09-02T08:19:12Z",
+                          "publishedAt": "2021-11-15T05:54:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "A kernel is usually used for each term of the equation. So dV_cr/dt is a TimeDerivative kernel on variable V_cr, and the other term is another kernel (you ll have to add that one, there is no parsedKernel afaik, only a parsedAux)\nNote that kernels are used to describe equations you want to solve using a numerical solver. If the equations are made up of terms you already know from a different solve, then you use AuxKernels to describe them, since it s not a real solve, just a substitution\nIf V_cr is not a nonlinear variable (eg a main variable, that you want to solve for), then my answer here will help you create the auxkernel you need #19292",
+                          "url": "https://github.com/idaholab/moose/discussions/19381#discussioncomment-1642500",
+                          "updatedAt": "2022-09-02T08:19:11Z",
+                          "publishedAt": "2021-11-15T06:01:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hokonkim"
+                          },
+                          "bodyText": "In this case, I don't know V_Cr unless I compute the V_cr.\nSo, V_Cr needs to be dealt as Variable.\nAt a previous discussion, local volume of Element can be access with\n _current_elem_volume\n\n(how did you make a block for only this word?)\nIn Equation.3, S_D,Cr2O3 needs to be updated with (V_Em - V_Cr) / V_Em.\nEven though I can use V_em as _current_elem_volume in ComputeQpresidual,\nhow can I V_cr in ComputeQpresidual?\nStill.. I have a lot on my mind.",
+                          "url": "https://github.com/idaholab/moose/discussions/19381#discussioncomment-1642552",
+                          "updatedAt": "2022-09-02T08:19:20Z",
+                          "publishedAt": "2021-11-15T06:22:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "If the kernel is for variable V_cr then you can access its value using _u[_qp] . _u is the predefined name for the variable that the kernel applies to. It s defined for most kernels.\nIf the kernel is for another variable, you will need to add V_cr as a coupled variable in the kernel before being able to access it. See CoupledForce kernel for example",
+                          "url": "https://github.com/idaholab/moose/discussions/19381#discussioncomment-1642619",
+                          "updatedAt": "2022-09-02T08:19:25Z",
+                          "publishedAt": "2021-11-15T06:46:22Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Friction factor in PINS module",
+          "author": {
+            "login": "liangyu-psi"
+          },
+          "bodyText": "How to set the friction factor when I use Finite Volume Incompressible Porous media Navier Stokes module?\nBecause this module only supports constant properties and friction factors. I set the darcy friction factor as 0.02. But the frictional pressure seems much smaller than the pressure drop calculated by hand. I don't know if the method I used is wrong.\nHope to get your anwser.",
+          "url": "https://github.com/idaholab/moose/discussions/19371",
+          "updatedAt": "2023-02-03T16:13:34Z",
+          "publishedAt": "2021-11-12T14:11:31Z",
+          "category": {
+            "name": "Q&A Modules: Navier-Stokes"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "liangyu-psi"
+                  },
+                  "bodyText": "@GiudGiud Master Guid, please help.",
+                  "url": "https://github.com/idaholab/moose/discussions/19371#discussioncomment-1632143",
+                  "updatedAt": "2023-02-03T16:13:38Z",
+                  "publishedAt": "2021-11-12T14:17:11Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYeah we keep the friction correlations in pronghorn, an EC-ed code. But they are not that complicated.\nSo the Darcy friction factor is supposed to have a mu/rho prefactor and then a coefficient. Are you sure the 0.2 amounts to those?\nPlease just call me Guillaume\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/19371#discussioncomment-1632671",
+                  "updatedAt": "2023-02-03T16:13:38Z",
+                  "publishedAt": "2021-11-12T15:49:28Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "liangyu-psi"
+                          },
+                          "bodyText": "Hello Guillaume\nThanks for your reply.\nI check the momentum equation. It seems that _f_darcy=f*u_superficial/2/De, not mu/rho.\nDoes it right? I plan to multiply \u2018u_superficial/2/De\u2019 on the real fricition factor which is 0.02.",
+                          "url": "https://github.com/idaholab/moose/discussions/19371#discussioncomment-1632854",
+                          "updatedAt": "2023-04-18T20:00:31Z",
+                          "publishedAt": "2021-11-12T16:20:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "liangyu-psi"
+                          },
+                          "bodyText": "mu/rho is too small, so I guess it is not the correct prefactor .",
+                          "url": "https://github.com/idaholab/moose/discussions/19371#discussioncomment-1632864",
+                          "updatedAt": "2023-04-18T20:00:31Z",
+                          "publishedAt": "2021-11-12T16:21:56Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "liangyu-psi"
+                          },
+                          "bodyText": "In addition, I counted the friction pressure drop calculated by hand and the value calculated by MOOSE. They are exactly \u2018u_superficial/2/De\u2019 times apart.",
+                          "url": "https://github.com/idaholab/moose/discussions/19371#discussioncomment-1632878",
+                          "updatedAt": "2023-02-03T16:13:38Z",
+                          "publishedAt": "2021-11-12T16:24:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "depends on the definition.\nIn the kernel we have this:\n    friction_term += (*_cL)(_current_elem)(_index)*_rho(_current_elem) * _u_functor(_current_elem) /\n                     _eps(_current_elem);\n\nso basically f (the ones you are inputting) * rho * u_interstitial\nSo just adjust your f to be 1/(2De) * old_f (* porosity maybe?)",
+                          "url": "https://github.com/idaholab/moose/discussions/19371#discussioncomment-1632990",
+                          "updatedAt": "2023-02-03T16:13:38Z",
+                          "publishedAt": "2021-11-12T16:45:28Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I'll go read Pronghorn manual to see how we got to our formulation and report back",
+                          "url": "https://github.com/idaholab/moose/discussions/19371#discussioncomment-1633108",
+                          "updatedAt": "2023-02-03T16:13:38Z",
+                          "publishedAt": "2021-11-12T17:07:24Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "liangyu-psi"
+                          },
+                          "bodyText": "Thank you so much Guillaume. Please check if it is old_f * u_superficial/(2De).",
+                          "url": "https://github.com/idaholab/moose/discussions/19371#discussioncomment-1634533",
+                          "updatedAt": "2023-02-03T16:13:40Z",
+                          "publishedAt": "2021-11-12T22:56:59Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "So in MOOSE we write the friction term as the sum of a linear and quadratic term. You could be talking about a linear friction model since you want the Darcy friction coefficient? There's also a quadratic term, which uses a Forchheimer friction coefficient.\nThe linear term is W rho V, and we use a correlation for W. Same for Forchheimer, and we actually place the velocity inside that coefficient (so that the term in the equation is quadratic). None of these two actually simplify to what you are usually. We use correlations developed for pebble beds.\nYour model looks like it's quadratic, maybe more along the lines of the Darcy Weisbach equation.\nSo you should simply add the velocity inside the definition of the coefficient.",
+                          "url": "https://github.com/idaholab/moose/discussions/19371#discussioncomment-1642156",
+                          "updatedAt": "2023-02-03T16:13:40Z",
+                          "publishedAt": "2021-11-15T03:15:28Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Index Into Vector",
+          "author": {
+            "login": "DamynChipman"
+          },
+          "bodyText": "How do I index into a vector value such as ADRealVectorValue? For example, I need the x- and y-components of _normal for a class derived from FVFluxKernel.\nHoping this is a quick question, I can't find the solution in tutorials or documentation. Thanks.",
+          "url": "https://github.com/idaholab/moose/discussions/19380",
+          "updatedAt": "2023-02-28T09:25:55Z",
+          "publishedAt": "2021-11-13T16:46:26Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\niirc, something like that:\nADRealVectorValue u;\nauto u_x = u(0);\n\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/19380#discussioncomment-1636557",
+                  "updatedAt": "2023-02-28T09:26:03Z",
+                  "publishedAt": "2021-11-13T17:10:05Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Real vs. complex arithmetic - modeling acoustic wave equation in frequency domain",
+          "author": {
+            "login": "aaelmeli"
+          },
+          "bodyText": "Hi\nI have the following differential equation which is the acoustic wave equation in the frequency domain, so the primary variable U , the forcing function, and the boundary conditions are complex functions in space.\nOmega, c are the frequency and the acoustic wave velocity.\n\nMy question is, given that most, if not all, of the kernels in moose support only the real arithmetic, how is it difficult to implement the former equation within moose? is it easier to go with real arithmetics and have an alternative formulation for the problem or we should stick to the complex arithmetic and implement our own kernels?\nAny suggestions?",
+          "url": "https://github.com/idaholab/moose/discussions/19259",
+          "updatedAt": "2022-08-14T22:15:01Z",
+          "publishedAt": "2021-10-29T18:26:19Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@somu15 @cbolisetti any idea on this?",
+                  "url": "https://github.com/idaholab/moose/discussions/19259#discussioncomment-1616334",
+                  "updatedAt": "2022-08-14T22:15:01Z",
+                  "publishedAt": "2021-11-10T01:55:20Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cbolisetti"
+                          },
+                          "bodyText": "Unfortunately, I don't know. I had this very question myself when I was thinking about the implementation of an absorbing boundary called perfectly matched layer. Perhaps @dschwen or @fdkong has some ideas?",
+                          "url": "https://github.com/idaholab/moose/discussions/19259#discussioncomment-1625932",
+                          "updatedAt": "2022-08-14T22:15:18Z",
+                          "publishedAt": "2021-11-11T13:40:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "fdkong"
+                          },
+                          "bodyText": "PETSc support complex arithmetic operations very well, and it is easy to get that setup. The challenging part is in libmesh/moose since we do not really have many cases needing complex operations.\nI think that a possible way would be to separate the system into two parts: Real and Image, and then use multiapp or other systems to couple them together. You literally do two \"real\" solves.\n@cticenhour How did you do for the Navier-Stokes-Maxwell system?",
+                          "url": "https://github.com/idaholab/moose/discussions/19259#discussioncomment-1626589",
+                          "updatedAt": "2022-08-14T22:15:19Z",
+                          "publishedAt": "2021-11-11T15:39:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aaelmeli"
+                          },
+                          "bodyText": "Unfortunately, I don't know. I had this very question myself when I was thinking about the implementation of an absorbing boundary called perfectly matched layer. Perhaps @dschwen or @fdkong has some ideas?\n\nThat is very similar t what I am intending to do, implementing absorber layers of PML type.\nHow far have you reached w.r.t this? or it was just a question that came to your mind?; I am curious.",
+                          "url": "https://github.com/idaholab/moose/discussions/19259#discussioncomment-1627427",
+                          "updatedAt": "2022-08-14T22:15:20Z",
+                          "publishedAt": "2021-11-11T18:23:21Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cbolisetti"
+                          },
+                          "bodyText": "I was looking into one specific formulation for PML and just wanted to see how much effort that would be. I think it might be quite a bit of effort mainly since we don't have anything like it in MOOSE currently. So I didn't really proceed from there.",
+                          "url": "https://github.com/idaholab/moose/discussions/19259#discussioncomment-1634254",
+                          "updatedAt": "2022-08-14T22:16:00Z",
+                          "publishedAt": "2021-11-12T21:22:30Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

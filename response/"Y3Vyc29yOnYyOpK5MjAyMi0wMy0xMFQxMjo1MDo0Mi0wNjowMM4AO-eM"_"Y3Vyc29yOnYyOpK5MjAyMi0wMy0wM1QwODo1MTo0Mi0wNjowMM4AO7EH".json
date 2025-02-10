@@ -1,0 +1,755 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMi0wMy0wM1QwODo1MTo0Mi0wNjowMM4AO7EH"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Help with output of program",
+          "author": {
+            "login": "xchengood"
+          },
+          "bodyText": "Hi Moose experts or users,\nRecently, I develop a custom class inherited with the base class of 'CrystalPlasticityStressUpdateBase' to study thermal creep behavior based on one creep model ('A physics-based crystallographic modeling framework for describing the thermal creep behavior of Fe-Cr alloys'). \"Creep testing is conducted using a tensile specimen to which a constant stress is applied at a constant temperature, often by the simple method of suspending weights from it.\" According to this test method, the boundary conditions in my test file with .i extension are set as follows: a constant tensile pressure is applied on the top surface of a single element; a constant temperature is applied on the top and bottom surface. The left and back are fixed. The program can be successfully performed. But the output of stress and strain are zero. Could you share any thoughts or suggestions with me to solve it?",
+          "url": "https://github.com/idaholab/moose/discussions/20450",
+          "updatedAt": "2022-06-02T14:52:17Z",
+          "publishedAt": "2022-03-01T23:32:32Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "sapitts"
+                  },
+                  "bodyText": "Without seeing your code and input file, I would guess that you have not fully connected the constitutive model to the stress and strain measures calculated in ComputeMultipleCrystalPlasticityStress. Have you made sure to override all of the virtual functions in CrystalPlasticityStressUpdateBase, like calculateSlipRate and calculateConstitutiveSlipDerivative?",
+                  "url": "https://github.com/idaholab/moose/discussions/20450#discussioncomment-2283498",
+                  "updatedAt": "2022-06-02T14:52:27Z",
+                  "publishedAt": "2022-03-02T21:32:47Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xchengood"
+                          },
+                          "bodyText": "Hi @sapitts. Thank you for your response. Could you share more with me about how to make sure override all of the virtual functions in 'CrystalPlasticityStressUpdateBase', like 'calculateSlipRate' and 'calculateConstitutiveSlipDerivative' you mentioned? Thank you.",
+                          "url": "https://github.com/idaholab/moose/discussions/20450#discussioncomment-2283567",
+                          "updatedAt": "2022-06-02T14:52:31Z",
+                          "publishedAt": "2022-03-02T21:43:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sapitts"
+                          },
+                          "bodyText": "In the base class header file, look for method definitions that are equal to zero, e.g.\n  /**\n   * This virtual method is called to calculate the slip system slip\n   * increment based on the constitutive model defined in the child class.\n   * This method must be overwritten in the child class.\n   */\n  virtual bool calculateSlipRate() = 0;\n\nYour inheriting classes should then provide a (non zero) definition for these methods, e.g. from CrystalPlasticityHCPDislocationSlipBeyerleinUpdate.h\nand then define the appropriate constitutive model in the source file, e.g. CrystalPlasticityHCPDislocationSlipBeyerleinUpdate.C\nOnce you have made sure that you have overrides for all of the methods, I'd recommend printing out the material properties like slip_increment and the plastic_deformation_gradient.\nCrystal plasticity models are difficult to debug and often take a long time to get all the bugs worked out. I often work on single element models, with A LOT of print statements, to debug and verify my crystal plasticity models",
+                          "url": "https://github.com/idaholab/moose/discussions/20450#discussioncomment-2283679",
+                          "updatedAt": "2022-06-02T14:52:29Z",
+                          "publishedAt": "2022-03-02T22:05:09Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xchengood"
+                          },
+                          "bodyText": "Appreciate your information. I will carefully check if all of the methods have been overridden and try to print out those variables. Thank you again.",
+                          "url": "https://github.com/idaholab/moose/discussions/20450#discussioncomment-2283720",
+                          "updatedAt": "2022-06-02T14:52:44Z",
+                          "publishedAt": "2022-03-02T22:13:54Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xchengood"
+                          },
+                          "bodyText": "Hi @sapitts. Sorry for bothering you again. Now I know how to use the lldb debugger, how to set a breakpoint in a certain location, and how to print out the content of a variable. Could you use 'CrystalPlasticityHCPDislocationSlipBeyerleinUpdate.C' for example to resolve the following questions.\n\nI have no experience on how to set an appropriate breakpoint in somewhere the source file. I think it is important if I want to check the value of the variable.\nSome variables are defined by vector (e.g. _slip_increment). How can I display the content of this vector using lldb? What I did was to specify one, for example, _slip_increment[_qp][1], and then print out one by one. Do you have good advice?\nI can only print out global variables but have no idea how to display the local variables defined in a function.\n\nThank you.",
+                          "url": "https://github.com/idaholab/moose/discussions/20450#discussioncomment-2291486",
+                          "updatedAt": "2022-07-08T00:24:40Z",
+                          "publishedAt": "2022-03-03T22:50:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sapitts"
+                          },
+                          "bodyText": "Hi @xchengood, I'm glad to help as I can! I must admit, I generally don't use anything as sophisticated as lldb. Instead, I usually have a bunch of old fashioned std::cout <<  statements all over my code, and I try to have these print statements for each qp and each slip system.\n\nMaybe @dewenyushu or @dschwen have some suggestions on setting breakpoints for looking at the values of variables\nWhen I print out the value of variables with std::cout I try to be inside of a loop over the slip systems to use the loop to index the vector. For example, in the calculateSlipRate method of CrystalPlasticityTwinningKalidindiUpdate, I used the following to print out the value of the slip increment, lines 150-164 plus a few extra print statements:\n\nfor (const auto i : make_range(_number_slip_systems))\n    total_twin_volume_fraction += _twin_volume_fraction[_qp][i];\n\n  if (total_twin_volume_fraction < _limit_twin_volume_fraction)\n  {\n    for (const auto i : make_range(_number_slip_systems))\n    {\n      if (_tau[_qp][i] > 0.0)\n      {\n        const Real driving_force = (_tau[_qp][i] / _slip_resistance[_qp][i]);\n        _slip_increment[_qp][i] = std::pow(driving_force, (1.0 / _rate_sensitivity_exponent)) *\n                                  _reference_strain_rate * _substep_dt;\n      }\n      else // twin propagation is directional\n        _slip_increment[_qp][i] = 0.0;\n\n   std::cout << \" On qp \" << _qp << \" and twin system number \" << i << \":\\n\";\n   std::cout << \"   the value of the slip increment is \" << _slip_increment[_qp][i] << \"\\n\";\n\nAt least this way you don't have to explicitly call each entry in the vector (which could be a large pain if you have the 24 or 48 slip systems!)\n3. Using the unsophisticated std::cout method listed above will also work for local variables!\nGood luck!",
+                          "url": "https://github.com/idaholab/moose/discussions/20450#discussioncomment-2291897",
+                          "updatedAt": "2022-07-08T00:24:55Z",
+                          "publishedAt": "2022-03-04T00:33:53Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xchengood"
+                          },
+                          "bodyText": "Hi @sapitts. Thank you for your helpful suggestions very much. I forget I can use this simple code to show the content of any variables. I will try more and check the variables. Appreciate.",
+                          "url": "https://github.com/idaholab/moose/discussions/20450#discussioncomment-2295897",
+                          "updatedAt": "2022-07-08T00:25:13Z",
+                          "publishedAt": "2022-03-04T15:29:04Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xchengood"
+                          },
+                          "bodyText": "Hi @sapitts. Thank you for giving me helpful instructions on debugging. Now, I got the following errors. Could you look through and share any advice with me to fix it?\nerrors.txt",
+                          "url": "https://github.com/idaholab/moose/discussions/20450#discussioncomment-2298244",
+                          "updatedAt": "2022-07-08T00:25:12Z",
+                          "publishedAt": "2022-03-04T22:52:44Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@xchengood the time step is being cut down, eventually leading to an error for minimum time step size, because of the constitutive failure in ComputeMultipleCrystalPlasticityStress.\nNamely this routine is failing to reach convergence:\nComputeMultipleCrystalPlasticityStress::updateStress\ncan you check that your initial conditions are physically acceptable?\nI recommend you place a few print statement in that routine to see if something is off.\nAlternatively, use a debugger, place a breakpoint on this routine and step through it, printing variables regularly",
+                          "url": "https://github.com/idaholab/moose/discussions/20450#discussioncomment-2298810",
+                          "updatedAt": "2022-07-08T00:25:18Z",
+                          "publishedAt": "2022-03-05T03:12:09Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sapitts"
+                          },
+                          "bodyText": "Hi @xchengood, in addition to the initial condition check @GiudGiud recommended, I'd also recommend looking at your dislocation density values, slip (and related) system resistance, and the applied shear stress.  Try printing out your constitutive model quantities to ensure that those values are inline with your expectations (e.g. only positive dislocation densities and slip system resistances)",
+                          "url": "https://github.com/idaholab/moose/discussions/20450#discussioncomment-2311922",
+                          "updatedAt": "2022-07-08T00:25:26Z",
+                          "publishedAt": "2022-03-07T21:33:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xchengood"
+                          },
+                          "bodyText": "@GiudGiud and @sapitts. I appreciate your information. You help me a lot indeed. I will do more attempts according to your advice. Thank you.",
+                          "url": "https://github.com/idaholab/moose/discussions/20450#discussioncomment-2311992",
+                          "updatedAt": "2022-07-08T00:25:53Z",
+                          "publishedAt": "2022-03-07T21:46:31Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "there is an error in example_01 intputfile",
+          "author": {
+            "login": "xiaojbing"
+          },
+          "bodyText": "this is a snippet of example_01 inputfile\n[Executioner]\n  type = Steady\n  solve_type = 'PJFNK'\n  file_base = 'out'\n[]\n\nI think the parameter file_base='out' should put in the output block. Because when I run the inputfile,there is a warning like\n*** Warning ***\n/home/xjb/projects/moose/examples/ex01_inputfile/run_by_xiao/ex01.i:40: unused parameter 'Executioner/file_base'",
+          "url": "https://github.com/idaholab/moose/discussions/20510",
+          "updatedAt": "2022-08-09T15:14:58Z",
+          "publishedAt": "2022-03-09T10:53:22Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThanks a lot for reporting this!\nI ll fix it in an upcoming PR with other deprecated and unused syntaxes.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20510#discussioncomment-2325353",
+                  "updatedAt": "2022-08-09T15:14:58Z",
+                  "publishedAt": "2022-03-09T16:23:19Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThanks a lot for reporting this!\nI ll fix it in an upcoming PR with other deprecated and unused syntaxes.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20510#discussioncomment-2325361",
+                  "updatedAt": "2022-08-09T15:14:58Z",
+                  "publishedAt": "2022-03-09T16:24:02Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Possibility of doing postprocessing after finishing a simulation",
+          "author": {
+            "login": "YvesLing"
+          },
+          "bodyText": "Hi Moose experts,\nI am new for moose and trying to go through some tutorials. However, I am wondering if there is a way to do postprocessing after finishing a simulation rather than at the end of each iteration, for example to compute the maximum value of the solution variable. If yes, is there some introduction?",
+          "url": "https://github.com/idaholab/moose/discussions/20509",
+          "updatedAt": "2022-07-09T08:26:25Z",
+          "publishedAt": "2022-03-09T04:34:40Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "YvesLing"
+                  },
+                  "bodyText": "Hi Moose experts, I am new for moose and trying to go through some tutorials. However, I am wondering if there is a way to do postprocessing after finishing a simulation rather than at the end of each iteration, for example to compute the maximum value of the solution variable. If yes, is there some introduction?\n\nSorry, maybe not clear, the question. What I mean is: after finising a simulation, can I do postprocessing by reading data from the output file xxx_out.e? Sometimes, it is time consuming to re-run the simulation adding a post-processing block in the input file.",
+                  "url": "https://github.com/idaholab/moose/discussions/20509#discussioncomment-2321265",
+                  "updatedAt": "2022-07-09T08:26:39Z",
+                  "publishedAt": "2022-03-09T04:51:28Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nI usually use the restart/recover system to do this (see https://mooseframework.inl.gov/application_usage/restart_recover.html). You load the final variables from a previous solve, using either the checkpoint files or using an exodus output, then set\n[Problem]\n  solve = false\n[]\n\nto avoid having another solve.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20509#discussioncomment-2321730",
+                  "updatedAt": "2022-07-09T08:26:39Z",
+                  "publishedAt": "2022-03-09T06:37:32Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ABallisat"
+                          },
+                          "bodyText": "If you are happy to do the analysis outside MOOSE you can also the SEACAS library (https://github.com/gsjaardema/seacas) which has some Python wrappers for reading EXODUS files. You can then do any arbitrary analysis on the outputted data using it, I've found it to be very useful for wrangling large numbers of output files.\nAlex",
+                          "url": "https://github.com/idaholab/moose/discussions/20509#discussioncomment-2322681",
+                          "updatedAt": "2022-07-09T08:26:42Z",
+                          "publishedAt": "2022-03-09T09:30:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "YvesLing"
+                          },
+                          "bodyText": "I got it. Thanks.",
+                          "url": "https://github.com/idaholab/moose/discussions/20509#discussioncomment-2323093",
+                          "updatedAt": "2022-07-09T08:26:42Z",
+                          "publishedAt": "2022-03-09T10:41:52Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "An issue of conda moose environment installation",
+          "author": {
+            "login": "EthanDeng07"
+          },
+          "bodyText": "Hello everyone,\nI'm working on Ubuntu 18.04.5 LTS system and recently met an issue when installing moose follow the link below:\nhttps://mooseframework.inl.gov/getting_started/installation/conda.html\nThe issue appears in the following step:\ncd ~/projects/moose/test\nmake -j 4\n...\nCreating Unity /home/qdeng/projects/moose/test/build/unity_src/indicators_Unity.C\nCreating Unity /home/qdeng/projects/moose/test/build/unity_src/outputs_Unity.C\n/home/qdeng/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/9.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /opt/moose/gcc-9.2.0/lib/../lib64/libquadmath.so: undefined reference to `__signgam@GLIBC_2.23'\n/home/qdeng/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/9.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /opt/moose/gcc-9.2.0/lib/../lib64/libgfortran.so: undefined reference to `getentropy@GLIBC_2.25'\n/home/qdeng/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/9.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /opt/moose/gcc-9.2.0/lib/../lib64/libstdc++.so: undefined reference to `__cxa_thread_atexit_impl@GLIBC_2.18'\n/home/qdeng/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/9.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /opt/moose/gperftools-2.7/lib/libtcmalloc_and_profiler.so: undefined reference to `glob@GLIBC_2.27'\n/home/qdeng/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/9.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /opt/moose/gcc-9.2.0/lib/../lib64/libgfortran.so: undefined reference to `expf@GLIBC_2.27'\n/home/qdeng/mambaforge3/envs/moose/bin/../lib/gcc/x86_64-conda-linux-gnu/9.3.0/../../../../x86_64-conda-linux-gnu/bin/ld: /opt/moose/gcc-9.2.0/lib/../lib64/libgfortran.so: undefined reference to `logf@GLIBC_2.27'\ncollect2: error: ld returned 1 exit status\n/home/qdeng/projects/moose/framework/moose.mk:374: recipe for target '/home/qdeng/projects/moose/framework/contrib/exodiff/exodiff' failed\nmake: *** [/home/qdeng/projects/moose/framework/contrib/exodiff/exodiff] Error 1\nmake: *** Waiting for unfinished jobs....\nmake: *** wait: No child processes.  Stop.\nWhether we tried to clean it using 'make clobberall' or reinstalled it from the beginning, the same issue always exists.\nWe are now stuck and if anyone knows how to fix this, we would highly appreciate it!\nBest regards,\nQinglin",
+          "url": "https://github.com/idaholab/moose/discussions/20497",
+          "updatedAt": "2022-08-10T02:42:53Z",
+          "publishedAt": "2022-03-08T16:20:53Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "milljm"
+                  },
+                  "bodyText": "Looks like you are still using the old moose-environment packages (deprecated, and they are conflicting with your Conda installation). You'll want to either delete the old package environment (dpkg -r moose-environment), or remove the portion of your profile that sources this location (check your ~/.bash_profile, ~/.profile, or ~/.bashrc).\nEdit: I mean to say the old environment located in /opt/moose which was created by the installation of the now deprecated package: moose-environment.deb)",
+                  "url": "https://github.com/idaholab/moose/discussions/20497#discussioncomment-2317929",
+                  "updatedAt": "2022-08-10T02:42:53Z",
+                  "publishedAt": "2022-03-08T16:30:11Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "EthanDeng07"
+                          },
+                          "bodyText": "Hi Milljm, Thanks for the answer. Indeed it is due to /opt/moose. Just remove this old environment and everything works fine.",
+                          "url": "https://github.com/idaholab/moose/discussions/20497#discussioncomment-2322431",
+                          "updatedAt": "2022-08-10T02:42:53Z",
+                          "publishedAt": "2022-03-09T08:54:30Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Performing Initial Adaptivity and user-object or post-processor?",
+          "author": {
+            "login": "QuangDom"
+          },
+          "bodyText": "Hi,\nI am wondering, is there any way to use the user-object or the post processor during the initial adaptivity?\nIt seems too late to use it for the initial adaptivity, even though I already tried to set execute_on = 'INITIAL', but it doesn't help.\nThanks,\nQD",
+          "url": "https://github.com/idaholab/moose/discussions/20490",
+          "updatedAt": "2022-06-15T22:34:29Z",
+          "publishedAt": "2022-03-07T20:54:07Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThere is no earlier than INITIAL, so if it s not early enough then you may want to run adaptivity later.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20490#discussioncomment-2319900",
+                  "updatedAt": "2022-06-15T22:34:30Z",
+                  "publishedAt": "2022-03-08T22:18:20Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "While it likely wont cover what you need for looking at who is being executed first (we're missing some granularity for this), two ways to examine the ordering of things are to:\n\nlook at Moose.C https://github.com/idaholab/moose/blob/next/framework/src/base/Moose.C\nadd this to the input file\n\n[Debug]\n  show_actions = true\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/20490#discussioncomment-2321794",
+                          "updatedAt": "2022-06-15T22:34:30Z",
+                          "publishedAt": "2022-03-09T06:49:50Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Elemental value output in postprocessor",
+          "author": {
+            "login": "skbarnwal"
+          },
+          "bodyText": "Hi,\nI want all elemental output values for every time step in the postprocessor. Is there any option in moose postprocessor? Like if I have 20 elements in FEM and 20 steps then the total output will be 400.",
+          "url": "https://github.com/idaholab/moose/discussions/20495",
+          "updatedAt": "2022-07-18T12:33:36Z",
+          "publishedAt": "2022-03-08T06:09:17Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nSee if this one works for you:\nhttps://mooseframework.inl.gov/source/vectorpostprocessors/ElementValueSampler.html\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20495#discussioncomment-2314047",
+                  "updatedAt": "2022-07-18T12:33:40Z",
+                  "publishedAt": "2022-03-08T06:18:59Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Interpolate from CSV",
+          "author": {
+            "login": "hsheldon"
+          },
+          "bodyText": "Is there a way to interpolate values stored in a CSV file onto a mesh? e.g. I have a CSV containing xyz coordinates and corresponding values of various parameters at those locations, and I would like to use these to set the values of AuxKernels on my mesh.\nCheers,\nHeather",
+          "url": "https://github.com/idaholab/moose/discussions/20480",
+          "updatedAt": "2022-09-23T17:10:20Z",
+          "publishedAt": "2022-03-07T07:20:54Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "WilkAndy"
+                  },
+                  "bodyText": "Hi @hsheldon , long time no see.... are your values stored at a grid.  If so, PiecewiseMultilinear might be helpful?  https://mooseframework.inl.gov/source/functions/PiecewiseMultilinear.html",
+                  "url": "https://github.com/idaholab/moose/discussions/20480#discussioncomment-2306627",
+                  "updatedAt": "2022-09-23T17:10:20Z",
+                  "publishedAt": "2022-03-07T07:42:31Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hsheldon"
+                          },
+                          "bodyText": "Hi Andy,\nIt's a structured grid but the z-spacing varies. So I don't think PiecewiseMultilinear helps unfortunately. Although I suppose I could perhaps interpolate it onto a regularly spaced grid.",
+                          "url": "https://github.com/idaholab/moose/discussions/20480#discussioncomment-2306644",
+                          "updatedAt": "2022-09-23T17:10:20Z",
+                          "publishedAt": "2022-03-07T07:47:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nAs long as it is a structured grid you can work directly with PiecewiseMultiLinear. See this folder\nhttps://github.com/idaholab/moose/tree/next/test/tests/functions/piecewise_multilinear\nfor examples. twoD1.txt has irregular spacing in X and Y\nThe AXIS Z parameter wont have regular spacing but this is ok\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/20480#discussioncomment-2309468",
+                          "updatedAt": "2022-09-23T17:10:20Z",
+                          "publishedAt": "2022-03-07T15:32:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hsheldon"
+                          },
+                          "bodyText": "Thanks Guillaume,\nThe z spacing varies in x and y so that won't work unfortunately. I think I will have to resample onto a regular grid.",
+                          "url": "https://github.com/idaholab/moose/discussions/20480#discussioncomment-2312264",
+                          "updatedAt": "2022-11-07T18:11:06Z",
+                          "publishedAt": "2022-03-07T22:44:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "ah ok. Does it vary often? If it only varies like 2 or 3 times you could define 3 different functions then take the sum\nI also have a PR up for general CSV interpolation (nearest neighbor), you could use that. No guarantees on when it ll be merged.\n#19118\nIf you do want that, let me know I ll fix the merge conflicts",
+                          "url": "https://github.com/idaholab/moose/discussions/20480#discussioncomment-2313909",
+                          "updatedAt": "2022-11-07T18:11:11Z",
+                          "publishedAt": "2022-03-08T05:48:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hsheldon"
+                          },
+                          "bodyText": "It varies everywhere, it's not predictable at all. Anyway, I wrote a script to interpolate to a regular grid, then PiecewiseMultilinear worked perfectly - very happy with the result.",
+                          "url": "https://github.com/idaholab/moose/discussions/20480#discussioncomment-2313977",
+                          "updatedAt": "2022-11-07T18:11:15Z",
+                          "publishedAt": "2022-03-08T06:06:38Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Solve did not converge after a specific time step",
+          "author": {
+            "login": "kingmantang"
+          },
+          "bodyText": "Hi,\nI am new to MOOSE and trying to apply it for study about thermal pressurization.\nI am trying to study a 2D-quarter of borehole model with DirichletBC of Parsed function which should work with previous version.\nHowever, convergence issue happens after a specific time step of around t = 0.013 with the update version. The error is listed below.\n\nI guess the converge fails when the material changes its state to plastic.\nAre there any way to solve this error to visualize the change of temperature, porepressure and mechanical dissipation in the plastic state?\nThis is the input file I am using. Thank you very much.\nBest regards,\nKowin Tang",
+          "url": "https://github.com/idaholab/moose/discussions/20478",
+          "updatedAt": "2022-07-04T08:20:57Z",
+          "publishedAt": "2022-03-05T12:32:12Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@permcody who may we tag from the Redback team?\n@fdkong these residuals are exactly 1e-10? This seems weird. Have you seen something like that before?\n@kingmantang, with my very little knowledge about your simulation:\n\nI would first try to turn off the line search with line_search = none in the [Executioner] block.\nThen I would add a whole bunch of debug output to try to get more information about what is happening. This block can be helpful:\n\n[Debug]\n  show_var_residual_norms = true\n[]\n\n\nI would also compile in devel mode and see if any assertions are being hit. METHOD=devel make in the code repository then run the input file again\n\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20478#discussioncomment-2305467",
+                  "updatedAt": "2022-07-04T08:20:57Z",
+                  "publishedAt": "2022-03-07T01:22:44Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "@vev001 is the right person to ask about redback questions.",
+                          "url": "https://github.com/idaholab/moose/discussions/20478#discussioncomment-2305694",
+                          "updatedAt": "2022-07-04T08:21:01Z",
+                          "publishedAt": "2022-03-07T02:39:07Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "vev001"
+                  },
+                  "bodyText": "Thanks @hugary1995 . We\u2019ll take it from here with @pou036 .\n@kingmantang, we have a number of solver options and preconditioning in redback, depending on the problem. We\u2019ll have a look at your input file and come back to you for the best solution.",
+                  "url": "https://github.com/idaholab/moose/discussions/20478#discussioncomment-2305716",
+                  "updatedAt": "2022-10-03T14:06:18Z",
+                  "publishedAt": "2022-03-07T02:45:07Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "fdkong"
+                  },
+                  "bodyText": "these residuals are exactly 1e-10? This seems weird. Anything in petsc hard coded to output such a residual\n\nPossibly not. We do not really hard code anything anywhere in PETSc. It seems to me that the residual is corresponding to some constant of equations when considering that the time step is super small.  The time step is so small that the right hand side of the linear system is zero, and then the direction is zero.  Noway to make any progress on the nonlinear level when the direction is zero.\nYou might look into physics before you hit this step time. Check whether or not the physics still looks correct before you reach this time step.",
+                  "url": "https://github.com/idaholab/moose/discussions/20478#discussioncomment-2305785",
+                  "updatedAt": "2022-10-03T14:06:24Z",
+                  "publishedAt": "2022-03-07T03:08:40Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "vev001"
+                          },
+                          "bodyText": "We typically use these options in Redback to indeed tackle the stiff transition to plasticity when the full THMC system is solved (yes, it involves some convincing and often we hardcode PETSc haha). In this case there might be better solver options, the problem is not that stiff. I will check tomorrow and provide a suggested solution. Bear with me",
+                          "url": "https://github.com/idaholab/moose/discussions/20478#discussioncomment-2305805",
+                          "updatedAt": "2022-10-03T14:06:25Z",
+                          "publishedAt": "2022-03-07T03:15:14Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "unit and num processors",
+          "author": {
+            "login": "Salma-Mao"
+          },
+          "bodyText": "Hello everyone!\nHow  can I change the units of mesh in my model?  Such as, unit of mesh in the project Case2DegradEigenBFI3_4um.i is micron.\nWhen I compile the file, I find that num processors is always 1. How can I change this to improve my computing speed.\nParallelism:\nNum Processors:          1\nNum Threads:             1\nThanks",
+          "url": "https://github.com/idaholab/moose/discussions/20464",
+          "updatedAt": "2022-06-14T05:40:13Z",
+          "publishedAt": "2022-03-03T14:40:06Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nif the mesh is in micron, then you will have to make sure every material property and so on is in micron. There are utilities to help you do this from the input file. I ll post a link later.\nWhich module are you trying to use? Some have much better support for different unit systems than others.\nTo change the number of processors you have to use MPI.\nrun mpirun -n XX app-opt -i input_file.i\nwhere app is you app, XX is the number of processors you want to use.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20464#discussioncomment-2288392",
+                  "updatedAt": "2022-06-14T05:40:21Z",
+                  "publishedAt": "2022-03-03T14:53:07Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "here are two pages about units in moose\nhttps://mooseframework.inl.gov/source/utils/Units.html\nand in the input file:\nhttps://mooseframework.inl.gov/application_usage/input_syntax.html",
+                          "url": "https://github.com/idaholab/moose/discussions/20464#discussioncomment-2290781",
+                          "updatedAt": "2022-06-14T05:40:23Z",
+                          "publishedAt": "2022-03-03T20:26:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Salma-Mao"
+                          },
+                          "bodyText": "Thanks for  your help.",
+                          "url": "https://github.com/idaholab/moose/discussions/20464#discussioncomment-2292182",
+                          "updatedAt": "2022-06-28T07:45:22Z",
+                          "publishedAt": "2022-03-04T01:49:03Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Virtual element",
+          "author": {
+            "login": "msayyafuofa"
+          },
+          "bodyText": "Hi,\nI am a newbie here. Over the past two weeks, I have been going through the tutorials and workshops and have been fascinated with this framework and the materials available for learning.\nI have a general question. I am doing research on subsurface flow problems and occasionally dealing with systems with nonconvex meshes. If I am not mistaken, FEM is not the best method for general polygonal elements such as might be found in reservoir simulation. I was wondering if there is any plan in future to incorporate Virtual Element (VEM) in Moose.\nThank you :-)",
+          "url": "https://github.com/idaholab/moose/discussions/20462",
+          "updatedAt": "2023-01-13T21:16:40Z",
+          "publishedAt": "2022-03-03T00:58:57Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "AFAIK MOOSE doesn't support Ansatz shape functions and polygonal elements yet. I think you'll have to start from libMesh if you want to develop it yourself, but I'm afraid that many low level operations assume convex elements.",
+                  "url": "https://github.com/idaholab/moose/discussions/20462#discussioncomment-2284358",
+                  "updatedAt": "2023-02-19T21:02:43Z",
+                  "publishedAt": "2022-03-03T01:19:34Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "msayyafuofa"
+                          },
+                          "bodyText": "Thank you for the clarification. Is there any plan/interest for the implementation of VEM in the near future (in a year or so?)?",
+                          "url": "https://github.com/idaholab/moose/discussions/20462#discussioncomment-2284584",
+                          "updatedAt": "2023-02-19T21:02:49Z",
+                          "publishedAt": "2022-03-03T02:14:56Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "I don't know to be honest. Perhaps you should unmark this as the answer, and others can see and comment on your question.",
+                          "url": "https://github.com/idaholab/moose/discussions/20462#discussioncomment-2284604",
+                          "updatedAt": "2023-02-19T21:02:57Z",
+                          "publishedAt": "2022-03-03T02:20:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "loganharbour"
+                          },
+                          "bodyText": "Ping @roystgnr",
+                          "url": "https://github.com/idaholab/moose/discussions/20462#discussioncomment-2284614",
+                          "updatedAt": "2023-02-19T21:03:04Z",
+                          "publishedAt": "2022-03-03T02:23:33Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "roystgnr"
+                          },
+                          "bodyText": "There's been some interest in adding support for more general polygonal elements (well, hexagons, but if we were to do the work anyway I'd hope to handle general N) to libMesh, but just using macroelement subdivision of convex polygons, not a fancy new weak form, and even for the macroelement implementation I'm not sure if there's any funding/time for it in the next year or two.\nThe first Google hit I find for \"Virtual Element Method\" is someone in the UK who likes the blue Beamer LaTeX theme and the cross benchmark problem for Cahn-Hilliard, so I can already tell we could have been best friends in another life, but I'm afraid that here and now this is the first I've heard of VEM.",
+                          "url": "https://github.com/idaholab/moose/discussions/20462#discussioncomment-2288290",
+                          "updatedAt": "2023-02-19T21:03:04Z",
+                          "publishedAt": "2022-03-03T14:45:50Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "roystgnr"
+                          },
+                          "bodyText": "Oh, and to be clear, this probably is a good answer:\n\nAFAIK MOOSE doesn't support Ansatz shape functions and polygonal elements yet. I think you'll have to start from libMesh if you want to develop it yourself\n\nCorrect and correct.\n\nbut I'm afraid that many low level operations assume convex elements\n\nI think this is only correct for some particular physics implementations (contact in Moose?) not for anything at the libMesh level ... however libMesh does assume that it makes sense to talk about function definitions in \"master\" space cleanly distinct from the transformation between that space and \"physical\" space, and we can get some ugly code (see the Clough-Tocher shape functions for example) in cases where that's not the most sensible description.",
+                          "url": "https://github.com/idaholab/moose/discussions/20462#discussioncomment-2288379",
+                          "updatedAt": "2023-02-19T21:03:08Z",
+                          "publishedAt": "2022-03-03T14:51:42Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

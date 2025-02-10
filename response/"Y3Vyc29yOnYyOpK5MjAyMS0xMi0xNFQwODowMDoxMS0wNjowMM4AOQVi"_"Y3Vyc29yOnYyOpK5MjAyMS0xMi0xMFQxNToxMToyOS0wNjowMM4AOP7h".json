@@ -1,0 +1,881 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMS0xMi0xMFQxNToxMToyOS0wNjowMM4AOP7h"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Read Grain tracker object in tensor mechanics",
+          "author": {
+            "login": "ritamcj"
+          },
+          "bodyText": "Hi everyone,\nI wanted to ask whether it is possible to read grain tracker inside tensor mechanics. Grain tracker inherits from a file such as Graintrackerinterface, which is present in the phase field module. When I tried _grain_tracker(getUserObject<GrainTrackerInterface>(\"grain_tracker\")) in a file in tensor mechanics, I got \"fatal error : no such file\", which is expected. I also tried _grain_tracker(getUserObject<GrainTracker>(\"grain_tracker\")), as shown in OutputEulerAngles, but this also led to the same error. I wonder whether this is possible by reading as a string in the input file. Kindly suggest strategies or relevant examples for reading a user object inside a different module.\nWarm regards,\nRitam",
+          "url": "https://github.com/idaholab/moose/discussions/19616",
+          "updatedAt": "2022-11-21T19:11:17Z",
+          "publishedAt": "2021-12-13T06:07:43Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nfatal error : no such file isn't from _grain_tracker(getUserObject<GrainTrackerInterface>(\"grain_tracker\")). It s probably because a header name was misspelled.\nCould you please paste the entire message?\nAlso, _grain_tracker(getUserObject<GrainTracker>(\"grain_tracker\")) is the correct call. GrainTrackerInterface is an interface. Interfaces are inherited when you need their functionalities, not stored as class member attributes.\nFor using objects from a different module, you first need to make sure both modules are being compiled together. This is usually done by creating an application, and adding both modules in the Makefile.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/19616#discussioncomment-1798794",
+                  "updatedAt": "2022-11-21T19:11:17Z",
+                  "publishedAt": "2021-12-13T14:57:36Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ritamcj"
+                          },
+                          "bodyText": "Hi Guillaume,\nThank you for your reply. I got the following error when I added #include \"GrainTrackerInterface.h\" to ComputeElasticitytensorCP.C. I am pasting the error message here:\nIn file included from /home/ritam/projects_new/moose/modules/tensor_mechanics/build/unity_src/materials_crystal_plasticity_Unity.C:2:\n/home/ritam/projects_new/moose/modules/tensor_mechanics/src/materials/crystal_plasticity/ComputeElasticityTensorCP.C:12:10: fatal error: GrainTrackerInterface.h: No such file or directory\n   12 | #include \"GrainTrackerInterface.h\"\n      |          ^~~~~~~~~~~~~~~~~~~~~~~~~\ncompilation terminated.\n/home/ritam/projects_new/moose/framework/build.mk:122: recipe for target '/home/ritam/projects_new/moose/modules/tensor_mechanics/build/unity_src/materials_crystal_plasticity_Unity.x86_64-conda-linux-gnu.opt.lo' failed\nmake: *** [/home/ritam/projects_new/moose/modules/tensor_mechanics/build/unity_src/materials_crystal_plasticity_Unity.x86_64-conda-linux-gnu.opt.lo] Error 1\n\nI got the same corresponding error when I used #include \"GrainTracker.h\" along with _grain_tracker(getUserObject<GrainTracker>(\"grain_tracker\")). Could you elaborate on \"compiling both modules together\"? I am not aware of this. Can I change something in registerMooseObject(\"TensorMechanicsApp\", ComputeElasticityTensorCP)? I am currently using the Combined module for running my input file.\nRitam",
+                          "url": "https://github.com/idaholab/moose/discussions/19616#discussioncomment-1799333",
+                          "updatedAt": "2021-12-13T15:49:54Z",
+                          "publishedAt": "2021-12-13T15:49:54Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nBoth those files exist. The compiler is not finding them at compile time though.\nWhat is your setup? Did you create your own app or are you modifying MOOSE directly?\nAre you compiling the combined module directly?\nregistering objects is a different thing. That s for bridging to the input file.\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/19616#discussioncomment-1799926",
+                          "updatedAt": "2021-12-13T17:13:46Z",
+                          "publishedAt": "2021-12-13T17:13:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ritamcj"
+                          },
+                          "bodyText": "Hi,\nI didn't create my own app. I am compiling the combined module directly.\nRitam",
+                          "url": "https://github.com/idaholab/moose/discussions/19616#discussioncomment-1800200",
+                          "updatedAt": "2021-12-13T17:59:32Z",
+                          "publishedAt": "2021-12-13T17:59:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Creating your own app is the clean way to do this.\nNow you need to make tensor_mechanics depend on phase_field. I am trying to see if we can get that to compile, since phase_field already depends on tensor_mechanics.\nI ll report back",
+                          "url": "https://github.com/idaholab/moose/discussions/19616#discussioncomment-1800332",
+                          "updatedAt": "2021-12-13T18:25:21Z",
+                          "publishedAt": "2021-12-13T18:25:21Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ritamcj"
+                          },
+                          "bodyText": "Thank you very much. I'll look into how to create apps.",
+                          "url": "https://github.com/idaholab/moose/discussions/19616#discussioncomment-1800830",
+                          "updatedAt": "2021-12-13T19:25:30Z",
+                          "publishedAt": "2021-12-13T19:25:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Ok can confirm you cant easily make tensor_mechanics depend on phase_field since phase_field depends on tensor_mechanics. Getting some errors at link time.\nThe hacky way would be to move the headers you need (GrainTracker.h) in the tensor_mechanics include folder. That way it ll be found by both tensor mechanics and phase field.\nWe would rather you create an app and add the phase field dependency in your Makefile.",
+                          "url": "https://github.com/idaholab/moose/discussions/19616#discussioncomment-1802011",
+                          "updatedAt": "2022-11-21T19:11:46Z",
+                          "publishedAt": "2021-12-13T23:30:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ritamcj"
+                          },
+                          "bodyText": "Thanks for letting me know. I will try create a separate app.",
+                          "url": "https://github.com/idaholab/moose/discussions/19616#discussioncomment-1803022",
+                          "updatedAt": "2022-11-21T19:11:46Z",
+                          "publishedAt": "2021-12-14T05:13:34Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ritamcj"
+                          },
+                          "bodyText": "Hi Guillaume,\nI created a separate app called \"DRX\" as per https://mooseframework.inl.gov/getting_started/new_users.html#create-an-app. As I already have an input file that uses classes from tensor mechanics and phase field, I think I would have to move all .C and .h files (from only these two modules) to DRX and register all classes with the new app. Kindly let me know whether this is correct. Do I also need to move folders with dependent files (such as \"framework\") to DRX?\nRitam",
+                          "url": "https://github.com/idaholab/moose/discussions/19616#discussioncomment-1804557",
+                          "updatedAt": "2022-11-21T19:11:46Z",
+                          "publishedAt": "2021-12-14T11:37:40Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nno you dont need to do that.\nJust make sure MOOSE_DIR is set and in the Makefile for DRX, make sure to put yes for phase_field. Maybe tensor_mechanics as well but phase_field should pull it in already.\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/19616#discussioncomment-1804607",
+                          "updatedAt": "2022-11-21T19:11:46Z",
+                          "publishedAt": "2021-12-14T11:51:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ritamcj"
+                          },
+                          "bodyText": "Hi Guillaume,\nIt did work. When I hit \"make\" in the new app, it compiled with Grain tracker inside ComputeElasticitytensorCP. I now realise that I should've always compiled the combined module instead of compiling tensor mechanics and phase field separately. Many thanks for your guidance. I feel enlightened.\nRitam",
+                          "url": "https://github.com/idaholab/moose/discussions/19616#discussioncomment-1805185",
+                          "updatedAt": "2022-11-21T19:12:44Z",
+                          "publishedAt": "2021-12-14T13:35:01Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Output from TensorMechanicsHardeningModel",
+          "author": {
+            "login": "Fancyshirts"
+          },
+          "bodyText": "In my application, I've written a new TensorMechanicsHardeningModel. It appears that at present, it is not possible to output the values returned from a TensorMechanicsHardeningModel directly, as they are just GeneralUserObjects. I would like to be able to visualise these values on the mesh, as time progresses in my transient simulation to ensure they are being computed correctly.\nWhat is the most straightforward way of getting these properties out of the simulation? It would be nice to use the material properties output system - perhaps the best way would be to modify the TensorMechanicsPlasticModel I am using (Mohr-Coulomb in this case) to accept a vector of internal values and just store my TensorMechanicsHardeningModel parameters in the later elements of this vector?\nUnless I'm missing some already-existing functionality?",
+          "url": "https://github.com/idaholab/moose/discussions/19607",
+          "updatedAt": "2022-06-10T14:37:03Z",
+          "publishedAt": "2021-12-12T01:49:05Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nI can see two possibly existing ways:\n\nthe tensor mechanics action has a lot of direct output-to-exodus shortcuts. Does any of these work for you?https://mooseframework.inl.gov/syntax/Modules/TensorMechanics/Master/index.html#!\nyou can implement spatialValue() for your user object, then use this AuxKernel https://mooseframework.inl.gov/moose/source/auxkernels/SpatialUserObjectAux.html to output the spatial value to an auxiliary variable.\n\nGuillaume\nEDIT: If these quantities you are trying to access are material properties (like stress and strain), there are also auxkernels to do that. Please let us know",
+                  "url": "https://github.com/idaholab/moose/discussions/19607#discussioncomment-1798982",
+                  "updatedAt": "2022-06-10T14:37:50Z",
+                  "publishedAt": "2021-12-13T15:21:09Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "This sounds like a good place to use the compute = false materials (I think they are formally called \"discrete materials\", although I sometimes find that name a little bit confusing). Take a look at the models in this directory. These compute = false materials are very similar to userobject-based models, with a bunch of advantages.",
+                  "url": "https://github.com/idaholab/moose/discussions/19607#discussioncomment-1804492",
+                  "updatedAt": "2022-06-16T19:00:49Z",
+                  "publishedAt": "2021-12-14T11:25:28Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "... including outputting capabilities, e.g.\n[a_fancy_hardening_model]\n  type = YourDiscreteMaterial\n  output_properties = 'plastic_strain'\n  outputs = 'exodus'\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/19607#discussioncomment-1804498",
+                          "updatedAt": "2022-06-16T19:00:48Z",
+                          "publishedAt": "2021-12-14T11:27:17Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to output strain and stress of one / two elastic system/s live/s on same mesh?",
+          "author": {
+            "login": "aaelmeli"
+          },
+          "bodyText": "Hi\nFirst, let's assume we have a regular 2-D elasticity problem with displacement variables are (ux, uy). The boundary conditions are as follows, both displacements are fixed on the left, and there is traction on the right in the x-direction. I wanted to output the strain. What I have tried, I defined the auxvariable for the strain (e.g. strain_xx), and I used the RankTwoAux to compute the strain (0,0)  analogously to the way stress is computed in one of the example provided by MOOSE. However, I am getting an error telling me that the material is not defined as follows:\n\nMaterial property 'strain', requested by 'strain_xx' is not defined on block 0\n\nthe input file associated with this problem is as follows:\n[Mesh]\n    type = GeneratedMesh\n    dim = 2\n    xmin=0\n    xmax=1\n    ymin=0\n    ymax=1\n    nx = 100\n    ny=100\n[]\n\n[Variables]\n    [ux]\n        order = FIRST\n        family = LAGRANGE\n    []\n    [uy]\n        order = FIRST\n        family = LAGRANGE\n    []\n[]\n\n[AuxVariables]\n    [youngs_modulus_dist_auxvariable]\n        order = CONSTANT\n        family = MONOMIAL\n    []\n    [dummy] #the variable that needed for ComputeVariableIsotropicElasticityTensor \n    []\n    #strain aux variables\n    [strain_xx]\n        order = CONSTANT\n        family = MONOMIAL\n    []\n[]\n[Kernels]\n    [ux]\n    type = StressDivergenceTensors\n    variable = ux\n    displacements='ux uy'\n    component = 0\n    base_name = real\n    #volumetric_locking_correction=True\n    []\n    [uy]\n    type = StressDivergenceTensors\n    variable = uy\n    displacements='ux uy'\n    component = 1\n    base_name = real\n    #volumetric_locking_correction=True\n    []\n[]\n\n[AuxKernels]\n    [youngs_modulus_dist_auxkernel]\n        type = FunctionAux \n        function =  youngs_modulus_dist\n        variable = youngs_modulus_dist_auxvariable\n        execute_on = initial\n    []\n    [strain_xx]\n        type=RankTwoAux\n        variable=strain_xx\n        rank_two_tensor=strain\n        index_i = 0\n        index_j = 0\n    []    \n[]\n\n[Functions]\n    [youngs_modulus_dist]\n        type = PiecewiseMulticonstant\n        data_file = youngs_modulus_dist.txt #this holds the spatial distribution of the youngs_modulus\n        direction = 'left left' \n    []\n[]\n\n[BCs]\n#Left\n  [ux_left]\n        type = DirichletBC\n        variable = ux\n        boundary = '3'\n        value=0\n  []\n  [uy_left]\n        type = DirichletBC\n        variable = uy\n        boundary = '3'\n        value=0\n  []\n#Right\n  [ux_right]\n        type = NeumannBC\n        variable = ux\n        boundary = '1'\n        value=10\n  []\n[]\n[Materials]\n    [youngs_modulus]\n        type = GenericFunctionMaterial\n        prop_names = 'youngs_modulus'\n        prop_values = youngs_modulus_dist\n    []\n    [poissons_ratio]\n        type = GenericConstantMaterial\n        prop_names  = 'poissons_ratio'\n        prop_values = 0.0 #for now, use constant poissons ratio\n    []\n\n    [elasticity_tensor]\n        type = ComputeVariableIsotropicElasticityTensor\n        args = dummy\n        youngs_modulus = youngs_modulus\n        poissons_ratio = poissons_ratio\n        base_name = real\n    []          \n    [strain]\n        type = ComputePlaneSmallStrain\n        base_name = real\n        displacements='ux uy'\n    []\n    [stress]\n        type = ComputeLinearElasticStress\n        base_name = real\n    []\n[]\n\n[VectorPostprocessors]\n    [displacements_field_x]\n        type = NodalValueSampler #if not specified which id, this will return the whole reponse\n        variable = 'ux'\n        sort_by = id\n        execute_on=timestep_end\n        outputs='u_all'\n    []\n    [displacements_field_y]\n        type = NodalValueSampler #if not specified which id, this will return the whole reponse\n        variable = 'uy'\n        sort_by = id\n        execute_on=timestep_end\n        outputs='u_all'\n    []\n[]\n\n\n\n[Outputs]\n    [exodus]\n        file_base = '_synthetic_elastic/syntheticdata'\n        type = Exodus\n        execute_on = final\n    []\n    [u_all]\n        file_base = '_synthetic_elastic/_'\n        type = CSV\n        execute_vector_postprocessors_on = 'final'\n    []                  \n        print_perf_log = true\n[]\n\n\n[Executioner]\n    type = Steady\n    solve_type=LINEAR\n    petsc_options_iname = ' -pc_type'\n    petsc_options_value = 'lu'\n[]\n\nsecond, I have a more complex case where there is another elastic system, where the associated displacements variables are (uxi,uyi) live on the same mesh. Now, I want to output the stresses and strain of each system. The way that I have tried is to define another material, such that, in the end, I will end up with two materials as follows, then use the RankTwoAux auxkernel to compute the stresses and strains, E.g. to compute the stress associated with (ux,uy), I set rank_two_tensor=stress_real and so on. This approach fails, so apparently I am doing something wrong. Any suggestion, correction?\n[Materials]\n    [youngs_modulus]\n        type = GenericFunctionMaterial\n        prop_names = 'youngs_modulus'\n        prop_values = youngs_modulus_dist\n    []\n    [poissons_ratio]\n        type = GenericConstantMaterial\n        prop_names  = 'poissons_ratio'\n        prop_values = 0.0 #for now, use constant poissons ratio\n    []\n    #material definition for ux,uy\n    [elasticity_tensor_real]\n        type = ComputeVariableIsotropicElasticityTensor\n        args = dummy\n        youngs_modulus = youngs_modulus\n        poissons_ratio = poissons_ratio\n        base_name = real\n    []          \n    [strain_real]\n        type = ComputePlaneSmallStrain\n        displacements='ux uy'\n        base_name = real\n    []\n    [stress_real]\n        type = ComputeLinearElasticStress\n        base_name = real\n    []\n    #material definition for uxi,uyi\n    [elasticity_tensor_imaginary]\n        type = ComputeVariableIsotropicElasticityTensor\n        args = dummy\n        youngs_modulus = youngs_modulus\n        poissons_ratio = poissons_ratio\n        base_name = imaginary\n    []          \n    [strain_imaginary]\n        type = ComputePlaneSmallStrain\n        displacements='uxi uyi'\n        base_name = imaginary\n    []\n    [stress_imaginary]\n        type = ComputeLinearElasticStress\n        base_name = imaginary\n    []\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/19618",
+          "updatedAt": "2022-07-25T08:48:46Z",
+          "publishedAt": "2021-12-13T21:31:10Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThe easy way to output strain and stresses is to use the Tensor Mechanics action\nhttps://mooseframework.inl.gov/syntax/Modules/TensorMechanics/Master/index.html#!\nSee the example input syntax near the bottom. This is the general recommended approach in general, as a lot of things, such as being careful with the displaced mesh parameters, are done right when using the action.\nSince you dont seem to be using that action, your way is valid but strain is the material name, not the material property name. Since you passed a base name when defining the strain material, the name you should use is real_mechanical_strain.\nmechanical must have been added by ComputePlaneSmallStrain\n    [strain_xx]\n        type=RankTwoAux\n        variable=strain_xx\n        rank_two_tensor=real_mechanical_strain\n        index_i = 0\n        index_j = 0\n    []\n\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/19618#discussioncomment-1802088",
+                  "updatedAt": "2022-09-11T19:07:53Z",
+                  "publishedAt": "2021-12-13T23:58:32Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "\"./run_tests error\"",
+          "author": {
+            "login": "snugook1108"
+          },
+          "bodyText": "When I run the \"./run_test\", I received the error message like this.\nour reference and displaced meshes are not in sync with respect to whether we should delete remote elements.\n\nHow to handle this problem after two applications coupled with installation?",
+          "url": "https://github.com/idaholab/moose/discussions/19610",
+          "updatedAt": "2022-08-24T23:57:37Z",
+          "publishedAt": "2021-12-12T04:30:45Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nIs this for MOOSE? What applications are included?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/19610#discussioncomment-1798906",
+                  "updatedAt": "2022-08-24T23:57:41Z",
+                  "publishedAt": "2021-12-13T15:12:52Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "snugook1108"
+                          },
+                          "bodyText": "Thank you for the reply, It is the MOLE and SAM coupling.",
+                          "url": "https://github.com/idaholab/moose/discussions/19610#discussioncomment-1799689",
+                          "updatedAt": "2022-08-24T23:57:44Z",
+                          "publishedAt": "2021-12-13T16:35:33Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "ok seems it s related to #18736\nTagging @rtaylo45\nI think the test that triggers this has been modified?",
+                          "url": "https://github.com/idaholab/moose/discussions/19610#discussioncomment-1799917",
+                          "updatedAt": "2022-08-24T23:57:44Z",
+                          "publishedAt": "2021-12-13T17:11:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "snugook1108"
+                          },
+                          "bodyText": "Before the coupling, the tests of Mole are working ok, but After the coupling, the tests of Mole are not working",
+                          "url": "https://github.com/idaholab/moose/discussions/19610#discussioncomment-1800187",
+                          "updatedAt": "2022-08-24T23:57:44Z",
+                          "publishedAt": "2021-12-13T17:57:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Unfortunately I dont have access to Mole so I wont be much help here.\nSAM uses the displaced mesh extensively, so they may add by default some custom treatment for it, which you may be missing if the coupled application is not a SAMApp. @travismui do you know what is added in SAM?",
+                          "url": "https://github.com/idaholab/moose/discussions/19610#discussioncomment-1800347",
+                          "updatedAt": "2022-09-01T06:52:53Z",
+                          "publishedAt": "2021-12-13T18:28:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rtaylo45"
+                          },
+                          "bodyText": "this is related to using periodic boundary conditions with SAM displaced mesh. Basically, you can't use periodic BCs as of now. I did not look into why this was happening exactly. @snugook1108",
+                          "url": "https://github.com/idaholab/moose/discussions/19610#discussioncomment-1801299",
+                          "updatedAt": "2022-09-01T06:52:53Z",
+                          "publishedAt": "2021-12-13T20:37:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rtaylo45"
+                          },
+                          "bodyText": "You need to run the test as ./run_tests -g sam_coupled. This will skip any mole test that includes the periodic boundary condition. The -g is for group. Its the current way i use to tell mole which specific test to run when SAM is coupled. In the future it would be nice for Mole to only run test based on makefile variables.",
+                          "url": "https://github.com/idaholab/moose/discussions/19610#discussioncomment-1801694",
+                          "updatedAt": "2022-09-01T06:52:54Z",
+                          "publishedAt": "2021-12-13T21:55:00Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Problem with coupled variable in PenaltyInterfaceDiffusion",
+          "author": {
+            "login": "Chaoyue-Liu"
+          },
+          "bodyText": "Hi,\nI am trying to modify PenaltyInterfaceDiffusion to implement Butler-Volmer function on an interface. The residual is following:\neta = _u[_qp] - _neighbor_value[_qp];\nresidual = _F*_k* sqrt(_csmax-_cs[_qp]) * sqrt(_cs[_qp])* sqrt(_cl[_qp])* (exp(C * eta)-exp(-C*eta));\nF, k, C are constant. _cs and _cl are two coupled value exist in the subdomain of _u and _neighbor_value respectively. _cs and _cl are calculated by simple diffusion. Somehow when feeding them to the PenaltyInterfaceDiffusion kernel as coupled value, the result of cs and cl is changed. I want to ask how to let PenaltyInterface kernel only consume the cs and cl value without affecting the calculation of them.\nAnother question is, how does PenaltyInterfaceDiffusion kernel manage to enforce the diffusion flux equality on the interface without explicitly write it in the residual, like in the InterfaceDiffusion kernel? And where should I modify if I want a different flux formula for PenaltyInterfaceDiffusion?\nThank you!\nChao",
+          "url": "https://github.com/idaholab/moose/discussions/19551",
+          "updatedAt": "2022-06-23T14:37:38Z",
+          "publishedAt": "2021-12-06T10:45:00Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "jiangwen84"
+                  },
+                  "bodyText": "If your cs and cl couple with u, any changes to u will have an effect on cs and cl.\nPenaltyInterfaceDiffusion does not enforce the flux equality. It simply applies the same flux to either sides of the interface. The residual term is actually the flux you apply.",
+                  "url": "https://github.com/idaholab/moose/discussions/19551#discussioncomment-1759575",
+                  "updatedAt": "2022-07-28T12:09:46Z",
+                  "publishedAt": "2021-12-06T16:27:57Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Chaoyue-Liu"
+                          },
+                          "bodyText": "So how do I decouple cs and cl with u? I just want to feed the value to the expression of u. For now what I do is in the header file declare cs:\nconst VariableValue _cl;\nIn the C file:\nparams.addRequiredCoupledVar(\"cl\");\n_cl(coupledValue(\"cl\");\nHow do I change it?",
+                          "url": "https://github.com/idaholab/moose/discussions/19551#discussioncomment-1763447",
+                          "updatedAt": "2022-07-28T12:25:11Z",
+                          "publishedAt": "2021-12-07T08:49:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "Are they coupled in your PDEs? It is better to list your equation systems here.",
+                          "url": "https://github.com/idaholab/moose/discussions/19551#discussioncomment-1767259",
+                          "updatedAt": "2022-07-28T12:25:11Z",
+                          "publishedAt": "2021-12-07T16:34:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Chaoyue-Liu"
+                          },
+                          "bodyText": "The equation on the interface is:\n\nare the variables, others are constants, and i is the flux apply on both sides of the interface.\nI gave the cl and cs a good scaling factor (they are far too large comparing to phis and phil), then I have the good result. It's solved.\nBut I still have another question. Now the PenaltyInterfaceDiffusion assumes that the flux on each side of the interface is :\n\nI would like to change it to:\n\nwhere K is a constant. How can I change that?",
+                          "url": "https://github.com/idaholab/moose/discussions/19551#discussioncomment-1774652",
+                          "updatedAt": "2022-07-28T12:25:16Z",
+                          "publishedAt": "2021-12-08T18:16:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "As I suggested before, you should write your own interfaceKernel instead of modifying PenaltyInterfaceDiffusion.\nIn your new class, you can apply the residual (which is the flux you gave) to either side of the interface. BTW, you provided the flux in both the first and last equation, which one do you want to use?",
+                          "url": "https://github.com/idaholab/moose/discussions/19551#discussioncomment-1775973",
+                          "updatedAt": "2023-02-16T22:55:57Z",
+                          "publishedAt": "2021-12-08T23:55:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Chaoyue-Liu"
+                          },
+                          "bodyText": "Yes I am writing my own interfaceKernel, I'm just using PenaltyInterfaceDiffusion code as a template.\nMaybe I'm didn't express myself clear. The PenaltyInterfaceDiffusion kernel deal with following equation set:\n\nWhat I want to do is change P(u-u_neighbor) to i, which is:\n\nwhere  are the variables, others are constants. Also, to change the flux expression  to\n, and  to . This is the part that troubling me because they are not explicitly written in PenaltyInterfaceDiffusion code, so I don't know how to change it.\nThe equation in master domain will be:\n\nin the neighbor domain:\n\nI hope this is clear, thank you.",
+                          "url": "https://github.com/idaholab/moose/discussions/19551#discussioncomment-1799744",
+                          "updatedAt": "2023-02-16T22:56:00Z",
+                          "publishedAt": "2021-12-13T16:44:38Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to transfer adaptive mesh from an app into sub-apps",
+          "author": {
+            "login": "QuangDom"
+          },
+          "bodyText": "Dear Moosers,\nI do not know is it possible or not, but I'm looking a solution / an example to setup a multi-app that the main app or a first sub-app will do the mesh adaptive, then transfers the newly created mesh into another sub-app(s), and then those sub-app will run without doing adaptive mesh.\nThanks in advance,\n/ Dom Q.",
+          "url": "https://github.com/idaholab/moose/discussions/19600",
+          "updatedAt": "2022-09-15T23:01:56Z",
+          "publishedAt": "2021-12-10T17:25:52Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "jiangwen84"
+                  },
+                  "bodyText": "I do not think we can transfer the mesh from main to sub app. One way to do this is to transfer the adaptivity information from main app to the sub app and let the sub app perform the same adaptivity.\nTake a look at:\nhttps://github.com/idaholab/moose/blob/next/modules/level_set/src/transfers/LevelSetMeshRefinementTransfer.C",
+                  "url": "https://github.com/idaholab/moose/discussions/19600#discussioncomment-1787130",
+                  "updatedAt": "2022-09-15T23:02:03Z",
+                  "publishedAt": "2021-12-10T17:31:42Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "We can clone the mesh from main app to sub app but that is probably only done once at the beginning of the simulation.",
+                          "url": "https://github.com/idaholab/moose/discussions/19600#discussioncomment-1787255",
+                          "updatedAt": "2022-09-15T23:02:27Z",
+                          "publishedAt": "2021-12-10T17:54:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "QuangDom"
+                          },
+                          "bodyText": "@GiudGiud - Do you mean it can be done at the very first time of the simulation, when the mesh was not refine?\nIs there any ways to save the adaptive mesh from main-app into to file (XDR / Exodus) and the sub-apps will load it in?",
+                          "url": "https://github.com/idaholab/moose/discussions/19600#discussioncomment-1787325",
+                          "updatedAt": "2022-09-15T23:02:05Z",
+                          "publishedAt": "2021-12-10T18:07:12Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "QuangDom"
+                          },
+                          "bodyText": "Thanks @jiangwen84 . It seems a solution for me. Do you know is there any input examples?",
+                          "url": "https://github.com/idaholab/moose/discussions/19600#discussioncomment-1787335",
+                          "updatedAt": "2022-09-15T23:02:05Z",
+                          "publishedAt": "2021-12-10T18:09:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Yes. I doubt it clones the mesh at every time step, but i havent tried it.\nJust add clone_master_mesh = true in the multiapps block. If it works or doesnt work, please report back. I ll add it to the documentation",
+                          "url": "https://github.com/idaholab/moose/discussions/19600#discussioncomment-1787388",
+                          "updatedAt": "2022-09-15T23:02:05Z",
+                          "publishedAt": "2021-12-10T18:20:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "QuangDom"
+                          },
+                          "bodyText": "Thanks @GiudGiud - The option clone_master_mesh = true only work for the uniform mesh refirement that we can define from [Mesh] action. It doesn't work for the mesh adaptive that we can define on the [Adaptivity] action.",
+                          "url": "https://github.com/idaholab/moose/discussions/19600#discussioncomment-1790142",
+                          "updatedAt": "2022-09-15T23:02:05Z",
+                          "publishedAt": "2021-12-11T10:35:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Great thanks for looking at this. I ll add that note to the documentation.\nFor your problem, @jiangwen84 's solution is the way to go. Use adaptivity in the app that knows what to refine (main app?) with an AuxVariable indicator (see https://mooseframework.inl.gov/syntax/Adaptivity/Indicators/index.html), Transfer to the other app (the one that needs the refinement but does not know where to do it) and use Adaptivity there too with this same indicator. This should provide the same degree of refinement.\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/19600#discussioncomment-1799013",
+                          "updatedAt": "2022-09-15T23:02:25Z",
+                          "publishedAt": "2021-12-13T15:25:19Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "built rtags",
+          "author": {
+            "login": "xiaojbing"
+          },
+          "bodyText": "I try to build rtags in my ubantu 20.04\uff0c\ngit clone https://github.com/Andersbakken/rtags.git\ncd rtags/\ngit submodule init\ngit submodule update\nmkdir mybuild && cd mybuild\ncmake ..\nmake\nbut when I use the command :make ,an error appeared as followed.\n[  1%] Building CXX object src/CMakeFiles/rtags.dir/ClangIndexer.cpp.o\n[  2%] Building CXX object src/CMakeFiles/rtags.dir/ClangThread.cpp.o\n[  4%] Building CXX object src/CMakeFiles/rtags.dir/ClassHierarchyJob.cpp.o\n[  5%] Building CXX object src/CMakeFiles/rtags.dir/CompilerManager.cpp.o\n[  7%] Building CXX object src/CMakeFiles/rtags.dir/CompletionThread.cpp.o\n[  8%] Building CXX object src/CMakeFiles/rtags.dir/DependenciesJob.cpp.o\n[  9%] Building CXX object src/CMakeFiles/rtags.dir/IncludePathJob.cpp.o\n[ 11%] Building CXX object src/CMakeFiles/rtags.dir/FileManager.cpp.o\n[ 12%] Building CXX object src/CMakeFiles/rtags.dir/FindFileJob.cpp.o\n[ 14%] Building CXX object src/CMakeFiles/rtags.dir/FindSymbolsJob.cpp.o\n[ 15%] Building CXX object src/CMakeFiles/rtags.dir/FollowLocationJob.cpp.o\n[ 16%] Building CXX object src/CMakeFiles/rtags.dir/IncludeFileJob.cpp.o\n[ 18%] Building CXX object src/CMakeFiles/rtags.dir/IndexMessage.cpp.o\n[ 19%] Building CXX object src/CMakeFiles/rtags.dir/IndexParseData.cpp.o\n[ 21%] Building CXX object src/CMakeFiles/rtags.dir/IndexerJob.cpp.o\n[ 22%] Building CXX object src/CMakeFiles/rtags.dir/JobScheduler.cpp.o\n[ 23%] Building CXX object src/CMakeFiles/rtags.dir/ListSymbolsJob.cpp.o\n[ 25%] Building CXX object src/CMakeFiles/rtags.dir/Location.cpp.o\n[ 26%] Building CXX object src/CMakeFiles/rtags.dir/Preprocessor.cpp.o\n[ 28%] Building CXX object src/CMakeFiles/rtags.dir/Project.cpp.o\n[ 29%] Building CXX object src/CMakeFiles/rtags.dir/QueryJob.cpp.o\n[ 30%] Building CXX object src/CMakeFiles/rtags.dir/QueryMessage.cpp.o\n[ 32%] Building CXX object src/CMakeFiles/rtags.dir/RClient.cpp.o\n[ 33%] Building CXX object src/CMakeFiles/rtags.dir/RTags.cpp.o\n[ 35%] Building CXX object src/CMakeFiles/rtags.dir/ReferencesJob.cpp.o\n[ 36%] Building CXX object src/CMakeFiles/rtags.dir/Sandbox.cpp.o\n[ 38%] Building CXX object src/CMakeFiles/rtags.dir/ScanThread.cpp.o\n[ 39%] Building CXX object src/CMakeFiles/rtags.dir/Server.cpp.o\n[ 40%] Building CXX object src/CMakeFiles/rtags.dir/ServerMessageHandlers.cpp.o\n[ 42%] Building CXX object src/CMakeFiles/rtags.dir/Source.cpp.o\n[ 43%] Building CXX object src/CMakeFiles/rtags.dir/StatusJob.cpp.o\n[ 45%] Building CXX object src/CMakeFiles/rtags.dir/Symbol.cpp.o\n[ 46%] Building CXX object src/CMakeFiles/rtags.dir/SymbolInfoJob.cpp.o\n[ 47%] Building CXX object src/CMakeFiles/rtags.dir/Token.cpp.o\n[ 49%] Building CXX object src/CMakeFiles/rtags.dir/TokensJob.cpp.o\n[ 50%] Linking CXX static library librtags.a\n[ 50%] Built target rtags\nScanning dependencies of target rct\n[ 52%] Building CXX object src/CMakeFiles/rct.dir/rct/rct/Buffer.cpp.o\n[ 53%] Building CXX object src/CMakeFiles/rct.dir/rct/rct/Config.cpp.o\n[ 54%] Building CXX object src/CMakeFiles/rct.dir/rct/rct/Connection.cpp.o\n[ 56%] Building CXX object src/CMakeFiles/rct.dir/rct/rct/CpuUsage.cpp.o\n[ 57%] Building CXX object src/CMakeFiles/rct.dir/rct/rct/Date.cpp.o\n[ 59%] Building CXX object src/CMakeFiles/rct.dir/rct/rct/EventLoop.cpp.o\n[ 60%] Building CXX object src/CMakeFiles/rct.dir/rct/rct/FileSystemWatcher.cpp.o\n[ 61%] Building CXX object src/CMakeFiles/rct.dir/rct/rct/Log.cpp.o\n[ 63%] Building CXX object src/CMakeFiles/rct.dir/rct/rct/MemoryMonitor.cpp.o\n[ 64%] Building CXX object src/CMakeFiles/rct.dir/rct/rct/Message.cpp.o\n[ 66%] Building CXX object src/CMakeFiles/rct.dir/rct/rct/MessageQueue.cpp.o\n[ 67%] Building CXX object src/CMakeFiles/rct.dir/rct/rct/Path.cpp.o\n[ 69%] Building CXX object src/CMakeFiles/rct.dir/rct/rct/Plugin.cpp.o\n[ 70%] Building CXX object src/CMakeFiles/rct.dir/rct/rct/Rct.cpp.o\n[ 71%] Building CXX object src/CMakeFiles/rct.dir/rct/rct/ReadWriteLock.cpp.o\n[ 73%] Building CXX object src/CMakeFiles/rct.dir/rct/rct/Semaphore.cpp.o\n[ 74%] Building CXX object src/CMakeFiles/rct.dir/rct/rct/SharedMemory.cpp.o\n[ 76%] Building CXX object src/CMakeFiles/rct.dir/rct/rct/SocketClient.cpp.o\n[ 77%] Building CXX object src/CMakeFiles/rct.dir/rct/rct/SocketServer.cpp.o\n[ 78%] Building CXX object src/CMakeFiles/rct.dir/rct/rct/String.cpp.o\n/home/xjb/rtags/src/rct/rct/String.cpp:3:10: fatal error: zconf.h:No such file or directory\n3 | #include <zconf.h>\n|          ^~~~~~~~~\ncompilation terminated.\nmake[2]: *** [src/CMakeFiles/rct.dir/build.make:310\uff1asrc/CMakeFiles/rct.dir/rct/rct/String.cpp.o] error 1\nmake[1]: *** [CMakeFiles/Makefile2:1110\uff1asrc/CMakeFiles/rct.dir/all] error 2\nmake: *** [Makefile:141\uff1aall] error 2\nso, how should I solve this ?",
+          "url": "https://github.com/idaholab/moose/discussions/19594",
+          "updatedAt": "2022-06-22T12:39:12Z",
+          "publishedAt": "2021-12-10T06:15:54Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "See this answer\nhttps://stackoverflow.com/questions/67621721/zlib-h3419-fatal-error-zconf-h-no-such-file-or-directory-include-zconf-h\nseems you need to install a package for it",
+                  "url": "https://github.com/idaholab/moose/discussions/19594#discussioncomment-1787397",
+                  "updatedAt": "2022-06-22T12:39:19Z",
+                  "publishedAt": "2021-12-10T18:23:27Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xiaojbing"
+                          },
+                          "bodyText": "thanks very much , it works. but when I run\nMOOSE_UNITY=false make compile_commands.json && rc -J .\nin the directory projects/moose/modules, a new error occurred.\n/bin/sh: 1: /home/xjb/projects/moose/libmesh/installed/contrib/bin/libmesh-config: not found\n/bin/sh: 1: /home/xjb/projects/moose/libmesh/installed/contrib/bin/libmesh-config: not found\n/bin/sh: 1: /home/xjb/projects/moose/libmesh/installed/contrib/bin/libmesh-config: not found\n/bin/sh: 1: /home/xjb/projects/moose/libmesh/installed/contrib/bin/libmesh-config: not found\n/bin/sh: 1: /home/xjb/projects/moose/libmesh/installed/contrib/bin/libmesh-config: not found\n/bin/sh: 1: /home/xjb/projects/moose/libmesh/installed/contrib/bin/libmesh-config: not found\n/bin/sh: 1: /home/xjb/projects/moose/libmesh/installed/contrib/bin/libmesh-config: not found\n/bin/sh: 1: /home/xjb/projects/moose/libmesh/installed/contrib/bin/libmesh-config: not found\n/bin/sh: 1: /home/xjb/projects/moose/libmesh/installed/contrib/bin/libmesh-config: not found\n/bin/sh: 1: /home/xjb/projects/moose/libmesh/installed/libtool: not found\n/bin/sh: 1: /home/xjb/projects/moose/libmesh/installed/libtool: not found\n/bin/sh: 1: /home/xjb/projects/moose/libmesh/installed/contrib/bin/libmesh-config: not found\n/bin/sh: 1: /home/xjb/projects/moose/libmesh/installed/contrib/bin/libmesh-config: not found\n/bin/sh: 1: /home/xjb/projects/moose/libmesh/installed/contrib/bin/libmesh-config: not found\nUsing HIT from /home/xjb/projects/moose/framework/contrib/hit\n/bin/sh: 1: /home/xjb/projects/moose/libmesh/installed/contrib/bin/libmesh-config: not found\n[Server] Compilation failed to load.",
+                          "url": "https://github.com/idaholab/moose/discussions/19594#discussioncomment-1792427",
+                          "updatedAt": "2022-07-01T11:08:36Z",
+                          "publishedAt": "2021-12-12T04:06:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xiaojbing"
+                          },
+                          "bodyText": "I forget to use\nconda activate moose\nsorry. . .   there is no problem now.",
+                          "url": "https://github.com/idaholab/moose/discussions/19594#discussioncomment-1796722",
+                          "updatedAt": "2022-07-01T11:08:36Z",
+                          "publishedAt": "2021-12-13T08:59:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "nice glad it works!",
+                          "url": "https://github.com/idaholab/moose/discussions/19594#discussioncomment-1798728",
+                          "updatedAt": "2022-07-01T11:08:49Z",
+                          "publishedAt": "2021-12-13T14:49:39Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Multiphase simulations with grain tracker \"Material has no property named: L\"",
+          "author": {
+            "login": "ritamcj"
+          },
+          "bodyText": "Hi everyone,\nI am attempting to simulate nucleation and grain growth in a dual phase material. Currently, in my input file, I have defined order parameters eta1 and eta2 for the two phases, which evolve according to the Allen-Cahn equation. To incorporate grain growth, as soon as I incorporate grain tracker, I am seeing an error \"Material has no property named: L\". I realize that mobility is required for the Allen-Cahn equation for the grains. I attempted various methods such as defining a generic material with L/ defining L as a global parameter. I also tried to define grains as gr0,gr1 etc. and using the Allen-Cahn kernel as:\n [./dgr0dt]\n    type = TimeDerivative\n    variable = gr0\n    [../]\n\n  [./ACBulk1_gr0]\n    type = AllenCahn\n    variable = gr0\n    args = 'c'\n    mob_name = L1\n    f_name = F\n  [../]\n\nAll these methods haven't worked. I'd be grateful if someone could highlight a mistake in the current approach. A pseudo-code is attached.\nWarm regards,\nRitam Chatterjee\nL_error_test.txt",
+          "url": "https://github.com/idaholab/moose/discussions/18515",
+          "updatedAt": "2022-06-29T05:45:52Z",
+          "publishedAt": "2021-08-03T17:19:32Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "dschwen"
+                  },
+                  "bodyText": "Do you want to simulate a poly crystalline material with many grains where each grain can be one of two phases (and an arbitrary orientation)?\nCheck out ACGrGrMulti and see if that gets you anywhere. It is a multi-phase multi-grain grand potential model.\nhttps://mooseframework.inl.gov/moose/source/kernels/ACGrGrMulti.html\n@laagesen can probably elaborate further if necessary.",
+                  "url": "https://github.com/idaholab/moose/discussions/18515#discussioncomment-1127064",
+                  "updatedAt": "2022-06-29T05:45:52Z",
+                  "publishedAt": "2021-08-03T19:12:51Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ritamcj"
+                          },
+                          "bodyText": "Thank you Daniel, this is really helpful. I will read Aagesen et al. (2018) and then try implement.",
+                          "url": "https://github.com/idaholab/moose/discussions/18515#discussioncomment-1128775",
+                          "updatedAt": "2022-06-29T05:45:55Z",
+                          "publishedAt": "2021-08-04T06:10:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dschwen"
+                          },
+                          "bodyText": "By \"implement\" you mean write an input file? Because the model is already coded up in MOOSE as far as I can see.",
+                          "url": "https://github.com/idaholab/moose/discussions/18515#discussioncomment-1130802",
+                          "updatedAt": "2022-06-29T05:45:55Z",
+                          "publishedAt": "2021-08-04T15:25:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ritamcj"
+                          },
+                          "bodyText": "Yes I will add it to my input file and make modifications in the code if necessary.",
+                          "url": "https://github.com/idaholab/moose/discussions/18515#discussioncomment-1131654",
+                          "updatedAt": "2022-06-29T05:45:56Z",
+                          "publishedAt": "2021-08-04T19:17:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ritamcj"
+                          },
+                          "bodyText": "I just wanted to update that \"Material has no property named: L\" occurred because I had declared a velocity gradient tensor in FiniteStrainUObasedCP as 'L', which caused a mixup of variable names. Silly mistake but I'm glad I noticed that.",
+                          "url": "https://github.com/idaholab/moose/discussions/18515#discussioncomment-1795929",
+                          "updatedAt": "2022-09-01T10:33:37Z",
+                          "publishedAt": "2021-12-13T05:26:00Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Slower when computing across nodes",
+          "author": {
+            "login": "xiekai-mc"
+          },
+          "bodyText": "Hello everyone.\nI find that it is slower when computing across nodes.\nThis is my input file: input.zip\nIt is basically the same as part_1.2.i.\nThere are some changes in the Mesh, BCs and Executioner:\n[Mesh]\n  file = necking_quad4.e\n  uniform_refine = 6\n[]\n[BCs]\n  [./left]\n    type = DirichletBC\n    variable = disp_x\n    boundary = left\n    value = 0.0\n  [../]\n  [./bottom]\n    type = DirichletBC\n    variable = disp_y\n    boundary = bottom\n    value = 0.0\n  [../]\n  [./top]\n    type = FunctionDirichletBC\n    variable = disp_y\n    boundary = top\n    function = 't'\n  [../]\n[]\n[Executioner]\n  type = Transient\n  dt = 0.001\n  end_time = 0.6\n  solve_type = 'NEWTON'\n  petsc_options = '-snes_ksp_ew'\n  petsc_options_iname = '-pc_type -sub_pc_type -pc_asm_overlap -ksp_gmres_restart'\n  petsc_options_value = 'asm lu 1 101'\n[]\n\n26 processors, 52 processors and 104 processors (2 nodes, 52 for each) were used.\nThe following is their performance log:\n\nAnd their full logs: log.zip\nI find that the time of FEProblem::computeResidualInternal and FEProblem::computeJacobianInternal in the Total(s) column is almost doubled when computing across nodes. I guess something's wrong. Please help me.",
+          "url": "https://github.com/idaholab/moose/discussions/19598",
+          "updatedAt": "2022-06-12T09:29:28Z",
+          "publishedAt": "2021-12-10T10:44:43Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThere are many things to be mindful about when doing parallel simulations to get good scaling far out.\nFirst you should try to use a distributed mesh (--distributed-mesh) so that mesh operations are not replicated (here, you are spending most of the time computing the residual, so it should not be the problem)\nThen you should use a preconditioner that scales well. SMP+asm should be ok. I dont know if it s the best fitted for this particular physics.\nHow are the number of iterations evolving as the number of processes is increased?\nYou should make sure you have enough DOFs on every rank. At least 20,000. What does it say in the beginning of the log?\nUniform refine = 6 is quite a bit of refinement, but still good to check.\nGuillaume\nPS: I would also look through other discussions to find more advice previously given on this forum by other devs.",
+                  "url": "https://github.com/idaholab/moose/discussions/19598#discussioncomment-1787308",
+                  "updatedAt": "2022-06-12T09:29:30Z",
+                  "publishedAt": "2021-12-10T18:04:10Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "xiekai-mc"
+                          },
+                          "bodyText": "Thank you for your help. I should use the distributed mesh.\nHere is the result using the distributed mesh. The end_time was changed from 0.6 to 0.3.\n\nIt looks much better. Thank you.",
+                          "url": "https://github.com/idaholab/moose/discussions/19598#discussioncomment-1790506",
+                          "updatedAt": "2022-06-12T09:29:31Z",
+                          "publishedAt": "2021-12-11T13:53:35Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "Comunnication between nodes can have a.fairly large overhead depending on the architecture of your cluster. I observe the same thing on some of the nodes on our university's cluster, if there is a way to improve the speed, I'm all ears.",
+                  "url": "https://github.com/idaholab/moose/discussions/19598#discussioncomment-1789411",
+                  "updatedAt": "2022-06-12T09:29:46Z",
+                  "publishedAt": "2021-12-11T02:21:22Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "MOOSE Build Error",
+          "author": {
+            "login": "aarograh"
+          },
+          "bodyText": "I'm trying get get a MOOSE environment set up for myself.  I'm working in the windows subsystem for linux, so it's ubuntu 20.04.  I had an old environment and tried updating it, but I hit the build error below.  I decided to just completely wipe my MOOSE repo and miniconda installation to start from scratch.  I did that, then exactly followed the instructions here: https://mooseframework.inl.gov/getting_started/installation/conda.html .  I encountered no errors along the way.  However, upon trying to build, I'm still getting the exact same sets of error messages shown below.  Any ideas what's going on?  It seems like it's looking for libmesh in the moose directory instead of in the conda environment?\n(moose) aarograh@PC0123449:~/ag6-windows/repos/moose/test$ make -j 4\n/bin/sh: 1: /home/aarograh/ag6-windows/repos/moose/libmesh/installed/contrib/bin/libmesh-config: not found\n/bin/sh: 1: /home/aarograh/ag6-windows/repos/moose/libmesh/installed/contrib/bin/libmesh-config: not found\n/bin/sh: 1: /home/aarograh/ag6-windows/repos/moose/libmesh/installed/contrib/bin/libmesh-config: not found\n/bin/sh: 1: /home/aarograh/ag6-windows/repos/moose/libmesh/installed/contrib/bin/libmesh-config: not found\n/bin/sh: 1: /home/aarograh/ag6-windows/repos/moose/libmesh/installed/contrib/bin/libmesh-config: not found\n/bin/sh: 1: /home/aarograh/ag6-windows/repos/moose/libmesh/installed/contrib/bin/libmesh-config: not found\n/bin/sh: 1: /home/aarograh/ag6-windows/repos/moose/libmesh/installed/contrib/bin/libmesh-config: not found\n/bin/sh: 1: /home/aarograh/ag6-windows/repos/moose/libmesh/installed/contrib/bin/libmesh-config: not found\n/bin/sh: 1: /home/aarograh/ag6-windows/repos/moose/libmesh/installed/contrib/bin/libmesh-config: not found\n/bin/sh: 1: /home/aarograh/ag6-windows/repos/moose/libmesh/installed/libtool: not found\n/bin/sh: 1: /home/aarograh/ag6-windows/repos/moose/libmesh/installed/libtool: not found\n/bin/sh: 1: /home/aarograh/ag6-windows/repos/moose/libmesh/installed/contrib/bin/libmesh-config: not found\n/bin/sh: 1: /home/aarograh/ag6-windows/repos/moose/libmesh/installed/contrib/bin/libmesh-config: not found\n/bin/sh: 1: /home/aarograh/ag6-windows/repos/moose/libmesh/installed/contrib/bin/libmesh-config: not found\nUsing HIT from /home/aarograh/ag6-windows/repos/moose/framework/contrib/hit\nRebuilding symlinks in /home/aarograh/ag6-windows/repos/moose/framework/build/header_symlinks\nRebuilding symlinks in /home/aarograh/ag6-windows/repos/moose/test/build/header_symlinks\nChecking if header needs updating: /home/aarograh/ag6-windows/repos/moose/framework/include/base/MooseRevision.h...\nCreating Unity Directory /home/aarograh/ag6-windows/repos/moose/framework/build/unity_src\nCopying default MOOSE configuration to: /home/aarograh/ag6-windows/repos/moose/framework/include/base/MooseConfig.h...\n/bin/sh: 1: /home/aarograh/ag6-windows/repos/moose/libmesh/installed/contrib/bin/libmesh-config: not found\nCompiling C++ (in opt mode) /home/aarograh/ag6-windows/repos/moose/framework/contrib/pcre/src/pcrecpp.cc...\n/bin/sh: 1: /home/aarograh/ag6-windows/repos/moose/libmesh/installed/contrib/bin/libmesh-config: not found\n/bin/sh: 1: /home/aarograh/ag6-windows/repos/moose/libmesh/installed/libtool: not found\nCompiling C++ (in opt mode) /home/aarograh/ag6-windows/repos/moose/framework/contrib/pcre/src/pcre_stringpiece.cc...\n/bin/sh: 1: /home/aarograh/ag6-windows/repos/moose/libmesh/installed/contrib/bin/libmesh-config: not found\nmake: *** [/home/aarograh/ag6-windows/repos/moose/framework/build.mk:119: /home/aarograh/ag6-windows/repos/moose/framework/contrib/pcre/src/pcrecpp..opt.lo] Error 127\nmake: *** Waiting for unfinished jobs....\n/bin/sh: 1: /home/aarograh/ag6-windows/repos/moose/libmesh/installed/libtool: not found",
+          "url": "https://github.com/idaholab/moose/discussions/19604",
+          "updatedAt": "2022-06-22T12:36:51Z",
+          "publishedAt": "2021-12-10T20:24:45Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "dschwen"
+                  },
+                  "bodyText": "Try closing your terminal and opening it again. You command line prompt should contain (moose) now. If not then you didn't follow the instructions exactly :-). You might be missing the conda init step or the conda activate moose step.",
+                  "url": "https://github.com/idaholab/moose/discussions/19604#discussioncomment-1788196",
+                  "updatedAt": "2022-06-22T12:36:55Z",
+                  "publishedAt": "2021-12-10T20:30:07Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aarograh"
+                          },
+                          "bodyText": "I did follow the instructions exactly and my terminal contained (moose) like you said (I've done this before, it has just been awhile).\nThat being said, I closed the terminal and tried again and it seems to be working.  Re-reading the instructions, I think this part may have been the source of confusion:\n\n\n\"Where SHELL_NAME is the shell you discovered in the previous step. Once complete, close any terminals you have opened, and re-open them. Then run conda activate moose again. If successful proceed to installing packages:\"\n\n\nThat sounded to me like you only have to reopen the terminals if you encountered errors with your shell, but in light of your comment it seems that you always need to restart the terminal.  I'd recommend rewording that to be a bit more clear if it is expected that the user always needs to reopen their terminal.\nThanks for the suggestion.",
+                          "url": "https://github.com/idaholab/moose/discussions/19604#discussioncomment-1788227",
+                          "updatedAt": "2022-06-22T12:37:14Z",
+                          "publishedAt": "2021-12-10T20:41:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "We totally agree, and are working on those instructions currently: #19453\nThe mock site is available here: https://mooseframework.inl.gov/docs/PRs/19453/site/getting_started/installation/conda.html\nI believe if these instructions were instead made available, you would have had a better experience.",
+                          "url": "https://github.com/idaholab/moose/discussions/19604#discussioncomment-1788252",
+                          "updatedAt": "2022-06-22T12:37:25Z",
+                          "publishedAt": "2021-12-10T20:47:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aarograh"
+                          },
+                          "bodyText": "Jason, thanks, good to know.   That does look a little more clear, and it's nice that the references to conda are being changed to mamba.  I see a few lingering commands that use conda still (adding channels and the uninstall instructions)... have those not been updated yet, or is conda actually the correct command in those instances?",
+                          "url": "https://github.com/idaholab/moose/discussions/19604#discussioncomment-1788300",
+                          "updatedAt": "2022-06-22T12:37:33Z",
+                          "publishedAt": "2021-12-10T20:51:21Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "Mamba has yet to \"wrap\" certain commands unfortunately. So the ones you see still stating conda are necessary :( I am ... like 99% sure we checked them all!\nI think anything relating to a configuration will probably have to remain conda (aside from mamba init), like adding channels and the like. We don't like it... we would love to see 100% mamba. Its faster, would be less confusing, and seem to just \"do\" everything better (like auto-discovering your shell).",
+                          "url": "https://github.com/idaholab/moose/discussions/19604#discussioncomment-1788422",
+                          "updatedAt": "2022-07-04T10:58:10Z",
+                          "publishedAt": "2021-12-10T21:03:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aarograh"
+                          },
+                          "bodyText": "Yes, that's annoying, but obviously outside of your control.  Maybe something will get updated with conda/mamba to clean that up in the near future.  Thank you for the clarifications!",
+                          "url": "https://github.com/idaholab/moose/discussions/19604#discussioncomment-1788457",
+                          "updatedAt": "2022-07-04T10:58:10Z",
+                          "publishedAt": "2021-12-10T21:11:29Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

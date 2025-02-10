@@ -1,0 +1,1139 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMi0wNS0yOVQyMTo0MToyNC0wNTowMM4APeKf"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Huge element deformation for phase field fracture",
+          "author": {
+            "login": "avtarsinghh1991"
+          },
+          "bodyText": "Hello MOOSE Experts\nI am trying to solve phase field fracture equation in chemo-mechanical environment.\nMesh which I am using is structured one.\nAs soon as the fracture evolves, the local elements deforms enormously (Figure attached).\nI am using following solvers\nsolve_type = 'PJFNK'\npetsc_options_iname = '-pc_type -pc_hypre_type -ksp_gmres_restart -snes_type'\npetsc_options_value = 'hypre boomeramg 300 vinewtonrsls'\nautomatic_scaling = true\n\nMesh size is resolved as per the length scale of phase field fracture.\n\nAny thoughts or suggestions?",
+          "url": "https://github.com/idaholab/moose/discussions/21042",
+          "updatedAt": "2022-06-25T05:41:27Z",
+          "publishedAt": "2022-05-17T15:47:31Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "hugary1995"
+                  },
+                  "bodyText": "This could happen if the residual stiffness of the element is too small. Could you show us the definition of your degradation function?",
+                  "url": "https://github.com/idaholab/moose/discussions/21042#discussioncomment-2768861",
+                  "updatedAt": "2022-06-23T12:14:03Z",
+                  "publishedAt": "2022-05-17T15:51:11Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "The crack band is also much wider than I would expect, which also indicates that there may be some issues in the degradation function, e.g. the derivative of the degradation function w.r.t. damage isn't zero when the material is fully damaged.",
+                          "url": "https://github.com/idaholab/moose/discussions/21042#discussioncomment-2768875",
+                          "updatedAt": "2022-06-23T12:14:09Z",
+                          "publishedAt": "2022-05-17T15:53:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "avtarsinghh1991"
+                          },
+                          "bodyText": "Hello @hugary1995\nThanks. Sure, following is the definition of degradation function:\n\n[./define_kappa]\ntype = ParsedMaterial\nmaterial_property_names = 'gc_prop l'\nf_name = kappa_op\nfunction = 'gc_prop * l'\n[../]\n\n[./damage_stress]\ntype = ComputeLinearElasticPFFractureStress\nc = damage\nE_name = 'elastic_energy'\nD_name = 'degradation'\nF_name = 'local_fracture_energy'\ndecomposition_type = stress_spectral\nuse_snes_vi_solver = true\n[../]\n\n[./degradation]\ntype = DerivativeParsedMaterial\nf_name = degradation\nargs = 'damage'\nfunction = '(1.0-damage)^2*(1.0 - eta) + eta'\nconstant_names       = 'eta'\nconstant_expressions = '1.0e-5'\nderivative_order = 2\n[../]\n\n[./pfbulkmat]\ntype = GenericConstantMaterial\nprop_names = 'R T cmax ki'\nprop_values ='8.314             300           48976               1'\n[../]\n\n[./chemical_energy]\ntype = DerivativeParsedMaterial\nf_name = chemical_energy\nargs = 'diffused'\nmaterial_property_names = 'R T cmax ki'\nfunction = 'R*T*cmax*((diffused/cmax)*log(1-diffused/cmax) + (1-diffused/cmax)*log(1-diffused/cmax) + ki*(diffused/cmax)*(1.0-diffused/cmax))'\nderivative_order = 2\n[../]\n\n[./local_fracture_energy]\ntype = DerivativeParsedMaterial\nf_name = local_fracture_energy\nargs = 'damage'\nmaterial_property_names = 'gc_prop l'\nfunction = 'damage^2 * gc_prop / 2 / l'\nderivative_order = 2\n[../]\n\n[./fracture_driving_energy]\ntype = DerivativeSumMaterial\nargs = 'damage diffused'\nsum_materials = 'elastic_energy local_fracture_energy chemical_energy'\nderivative_order = 2\nf_name = F\n[../]\n\nBest\nAvtar",
+                          "url": "https://github.com/idaholab/moose/discussions/21042#discussioncomment-2768887",
+                          "updatedAt": "2022-06-25T05:41:25Z",
+                          "publishedAt": "2022-05-17T15:54:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "avtarsinghh1991"
+                          },
+                          "bodyText": "I am also including chemical energy as the driving force of fracture. Do you think it may be the culprit?\nAlso, My elastic modulus is the function of concentration.",
+                          "url": "https://github.com/idaholab/moose/discussions/21042#discussioncomment-2768932",
+                          "updatedAt": "2022-06-25T05:41:29Z",
+                          "publishedAt": "2022-05-17T15:59:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Okay, thanks. eta is the residual stiffness I was referring to. But usually eta = 1e-5 is large enough to prevent issues like what you see. It seems that the chemical potential and the fracture potential are decoupled, so I don't see how the formulation could cause such huge deformation. The only other thing I can think of is maybe the solution hasn't really converged? What tolerances are you using?",
+                          "url": "https://github.com/idaholab/moose/discussions/21042#discussioncomment-2768940",
+                          "updatedAt": "2022-06-25T05:41:29Z",
+                          "publishedAt": "2022-05-17T16:01:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "I am also including chemical energy as the driving force of fracture. Do you think it may be the culprit? Also, My elastic modulus is the function of concentration.\n\nBut it seems to me your chemical energy is not a function of damage, so I don't think it is actually \"driving\" fracture. Did I miss something?",
+                          "url": "https://github.com/idaholab/moose/discussions/21042#discussioncomment-2768953",
+                          "updatedAt": "2022-06-25T05:41:30Z",
+                          "publishedAt": "2022-05-17T16:02:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "avtarsinghh1991"
+                          },
+                          "bodyText": "Yes, chemical energy is not a function of damage. but the diffusivity is the function of damage. And as soon as fracture occurs, the concentration is trapped within the damage zone (Figure attached). As elastic modulus is concentration dependent, I think it may cause the issue.\n.\nFollowing is the tolerances which I am using\nl_max_its = 100\nnl_max_its = 30\nnl_abs_tol = 5e-3\nl_tol = 1e-04\nnum_steps = 1500",
+                          "url": "https://github.com/idaholab/moose/discussions/21042#discussioncomment-2768997",
+                          "updatedAt": "2022-06-25T05:41:30Z",
+                          "publishedAt": "2022-05-17T16:08:14Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Yeah, just make sure the elastic modulus doesn't drop all the way to zero as concentration increases. The nl_abs_tol is a little bit too high. I usually set nl_abs_tol = 1e-6 at most, assuming variables are unity scaled.",
+                          "url": "https://github.com/idaholab/moose/discussions/21042#discussioncomment-2769214",
+                          "updatedAt": "2022-06-25T05:41:30Z",
+                          "publishedAt": "2022-05-17T16:23:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "avtarsinghh1991"
+                          },
+                          "bodyText": "Thanks. Actually, elastic modulus is not becoming zero at ant point of time. I am using following definition of elastic modulus.\n[./elasticity_tensor_with_Euler_particle]\ntype = Aniso_Elasticity_Tensor\nc = diffused\ncmax =  4.8976e4\nC1_ijkl='235000000000  127000000000   66000000000  235000000000   66000000000  193000000000   39500000000   39500000000   39500000000'\nC0_ijkl='284000000000   70000000000    5800000000  284000000000    5800000000   12500000000    1600000000    1600000000    1600000000'\nfill_method1 = symmetric9\nfill_method0 = symmetric9\nread_prop_user_object = euler_angle_read\nblock='0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19  20  21  22  23  24  25  26  27  28  29  30  31  32  33  34  35  36  37  38  39  40  41  42  43  44  45  46  47  48  49  50  51  52  53  54  55  56  57  58  59  60  61  62  63  64  65  66  67  68  69  70  71  72  73  74  75  76  77  78  79'\n[../]",
+                          "url": "https://github.com/idaholab/moose/discussions/21042#discussioncomment-2769340",
+                          "updatedAt": "2022-06-25T05:41:30Z",
+                          "publishedAt": "2022-05-17T16:41:48Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "avtarsinghh1991"
+                          },
+                          "bodyText": "Hello @hugary1995\nI put nl_abs_tol = 1e-6 for my simulation.\nYou are right. Its a convergence issue. It's not converging now.\nTime Step 251, time = 502, dt = 2\n  Linear solve did not converge due to DIVERGED_ITS iterations 100\n  Linear solve did not converge due to DIVERGED_ITS iterations 100\n Solve Converged!\n  Finished Solving                                                                       [396.00 s] [    0 MB]\n\nTime Step 252, time = 504, dt = 2\n  Linear solve did not converge due to DIVERGED_ITS iterations 100\nNonlinear solve did not converge due to DIVERGED_LINE_SEARCH iterations 1\n Solve Did NOT Converge!\n  Finished Solving                                                                       [133.54 s] [    0 MB]\nAborting as solve did not converge\n\nTime Step 252, time = 503, dt = 1\n  Linear solve did not converge due to DIVERGED_ITS iterations 100\n  Linear solve did not converge due to DIVERGED_ITS iterations 100\n  Linear solve did not converge due to DIVERGED_ITS iterations 100\n  Linear solve did not converge due to DIVERGED_ITS iterations 100\n  Linear solve did not converge due to DIVERGED_ITS iterations 100\n  Linear solve did not converge due to DIVERGED_ITS iterations 100\n  Linear solve did not converge due to DIVERGED_ITS iterations 100\n\n\nAny suggestions?\nBest\nAvtar",
+                          "url": "https://github.com/idaholab/moose/discussions/21042#discussioncomment-2770737",
+                          "updatedAt": "2022-06-25T05:41:30Z",
+                          "publishedAt": "2022-05-17T20:35:44Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "avtarsinghh1991"
+                  },
+                  "bodyText": "Hello @hugary1995\nI tried with nl_abs_tol = 1e-6\nStill the same issue of huge element deformation is coming.\nLength scale for phase field fracture is 4 times the mesh size.\nThere is anisotropy in the system as well.\nI tried with even refined mesh but still no success.\nAny other suggestions?\nBest\nAvtar",
+                  "url": "https://github.com/idaholab/moose/discussions/21042#discussioncomment-2886477",
+                  "updatedAt": "2022-06-05T15:06:55Z",
+                  "publishedAt": "2022-06-05T15:06:15Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "The only other possibility that I can think of is the time step size. I would try reducing the time step size by a factor of 10 and see if the issue persists.",
+                          "url": "https://github.com/idaholab/moose/discussions/21042#discussioncomment-2887331",
+                          "updatedAt": "2022-06-05T20:36:45Z",
+                          "publishedAt": "2022-06-05T20:36:44Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "avtarsinghh1991"
+                          },
+                          "bodyText": "Hi @hugary1995\nThank you very much. I am already running a simulation with reduced time step.\nI will update you with the results soon.\nBest\nAvtar",
+                          "url": "https://github.com/idaholab/moose/discussions/21042#discussioncomment-2887345",
+                          "updatedAt": "2022-06-05T20:42:31Z",
+                          "publishedAt": "2022-06-05T20:42:31Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "A force as a BC for a node",
+          "author": {
+            "login": "AlexSacMorane"
+          },
+          "bodyText": "Hello everyone,\nI am looking to apply some force on a point as boundaries condition. I have seen it is possible to use external pressure on my solid, but I prefer a punctual condition. Is it possible?\nYou will find my mesh and my .i in the following :\nMoose_test.zip\nThanks in advance for any help\nI stay available\nRegards\nAlexandre",
+          "url": "https://github.com/idaholab/moose/discussions/21068",
+          "updatedAt": "2022-06-09T01:45:06Z",
+          "publishedAt": "2022-05-23T14:51:28Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nI think you can do it.\nCreate a nodeset with only 1 point in it and specify it as the boundary parameter of the dirichletBCs to apply the load.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21068#discussioncomment-2807704",
+                  "updatedAt": "2022-05-23T22:28:04Z",
+                  "publishedAt": "2022-05-23T22:28:03Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "AlexSacMorane"
+                          },
+                          "bodyText": "I have added a node set (id : 13) and some boundary condition on stress_xx for this node but I get an error message :\n*** ERROR ***\nThe following error occurred in the object \"MOOSE Problem\", of type \"FEProblem\".\n\nNo nonlinear variable named stress_xx found. Did you specify an auxiliary variable when you meant to specify a nonlinear variable (or vice-versa)?\n\nI generate this variable with the following :\n[Modules/TensorMechanics/Master]\n  [./all]\n    strain = FINITE\n    planar_formulation = PLANE_STRAIN\n    add_variables = true\n    generate_output = 'stress_xx stress_xy stress_yy stress_zz strain_xx strain_xy strain_yy strain_zz'\n  [../]\n[]\n\nI drop the new version of the mesh/.i\nTest_Moose.zip\nThanks",
+                          "url": "https://github.com/idaholab/moose/discussions/21068#discussioncomment-2810396",
+                          "updatedAt": "2022-05-24T08:54:28Z",
+                          "publishedAt": "2022-05-24T08:54:28Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I m not sure you can do that, a BC on stress, like this.\nCan you turn on show_var_residual_norm in The [Debug] block when running the case without this boundary condition to see the list of variables",
+                          "url": "https://github.com/idaholab/moose/discussions/21068#discussioncomment-2813399",
+                          "updatedAt": "2022-05-24T15:59:17Z",
+                          "publishedAt": "2022-05-24T15:59:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "AlexSacMorane"
+                          },
+                          "bodyText": "Thanks, I will take a look at the debug block.\nAnd do you know if there is another way to apply an external mechanical force ?\nRegards\nAlexandre",
+                          "url": "https://github.com/idaholab/moose/discussions/21068#discussioncomment-2847431",
+                          "updatedAt": "2022-05-30T08:50:39Z",
+                          "publishedAt": "2022-05-30T08:50:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lynnmunday"
+                          },
+                          "bodyText": "You can't apply stress_xx as the variable for a dirichlet bc.  The variable for a bc means the variable you are solving for, so it would be disp_x if you want to apply a force in the x direction.  Then you should apply one of the neumann bc's if you want a force.  There might be some examples of using tractions in the tensor mechanics module if you want to use stress.\nYou also are not using automatic differentiation variables so you need change your bc from ADDirichletBC to just DirichletBC.",
+                          "url": "https://github.com/idaholab/moose/discussions/21068#discussioncomment-2850413",
+                          "updatedAt": "2022-05-30T16:43:52Z",
+                          "publishedAt": "2022-05-30T16:43:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "AlexSacMorane"
+                          },
+                          "bodyText": "Thanks for this answer I will look for this",
+                          "url": "https://github.com/idaholab/moose/discussions/21068#discussioncomment-2879291",
+                          "updatedAt": "2022-06-03T15:30:12Z",
+                          "publishedAt": "2022-06-03T15:30:12Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Partitioner System",
+          "author": {
+            "login": "lukuna"
+          },
+          "bodyText": "Hi all,\nI recently found the documentation here: https://mooseframework.inl.gov/syntax/Mesh/Partitioner/index.html to be very interesting and potentially useful for some calculations I am running on HPC.  But I am curious what is the default Partitioner that MOOSE uses?  Is it just GridPartitioner?\nOn the same note, if I were to leave my executioner block as:\n[Executioner]\n  type = Transient\n  solve_type = 'NEWTON'\n  start_time = 0.0\n  end_time = 2800\n[]\n\nfor, lets say, a simple TensorMechanics simulation, what are the default solver options?  Are there any PETSc options being used?\nThanks,\nLukasz",
+          "url": "https://github.com/idaholab/moose/discussions/21207",
+          "updatedAt": "2022-06-09T01:44:56Z",
+          "publishedAt": "2022-06-02T20:17:54Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "loganharbour"
+                  },
+                  "bodyText": "MOOSE by default uses metis for partitioning. With parallel runs you can see the partitioner used in the header:\nMesh:\n  Parallel Type:           replicated\n  Mesh Dimension:          2\n  Spatial Dimension:       2\n  Nodes:\n    Total:                 121\n    Local:                 67\n    Min/Max/Avg:           54/67/60\n  Elems:\n    Total:                 100\n    Local:                 50\n    Min/Max/Avg:           50/50/50\n  Num Subdomains:          1\n  Num Partitions:          2\n  Partitioner:             metis\n\nSimilarly, you can see a generic solver summary:\nExecution Information:\n  Executioner:             Steady\n  Solver Mode:             Preconditioned JFNK\n  PETSc Preconditioner:    hypre boomeramg",
+                  "url": "https://github.com/idaholab/moose/discussions/21207#discussioncomment-2874045",
+                  "updatedAt": "2022-06-02T20:21:26Z",
+                  "publishedAt": "2022-06-02T20:21:24Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lukuna"
+                          },
+                          "bodyText": "Thats pretty interesting.  My job prints the following under Execution:\nExecution Information:\n  Executioner:             Transient\n  TimeStepper:             FunctionDTGrowth\n  Solver Mode:             NEWTON\n  MOOSE Preconditioner:    SMP\n\nEven if I add\n  petsc_options_iname = '-pc_hypre_type'\n  petsc_options_value = 'boomerang'\n\nit doesn't change that execution block (meaning I Don't see the PETSc options).  Though, I do see where the partitioner information is now.",
+                          "url": "https://github.com/idaholab/moose/discussions/21207#discussioncomment-2874139",
+                          "updatedAt": "2022-06-02T20:40:58Z",
+                          "publishedAt": "2022-06-02T20:38:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "loganharbour"
+                          },
+                          "bodyText": "I would rely on querying PETSc to see what options are used. I typically use -options_view but I'm sure there's something better:\n-mat_mffd_type wp\n-options_view\n-PC_HYPRE_TYPE boomeramg\n-PC_TYPE hypre\n-snes_converged_reason ::failed\n-snes_mf_operator\n\nis some example output",
+                          "url": "https://github.com/idaholab/moose/discussions/21207#discussioncomment-2874158",
+                          "updatedAt": "2022-06-02T20:43:39Z",
+                          "publishedAt": "2022-06-02T20:43:39Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Could not import vtk",
+          "author": {
+            "login": "my-hawary"
+          },
+          "bodyText": "Hi,\nI was trying to run the first darcy_thermo_mech included in MOOSE using peacock as illustrated in the Virtual Workshop (summer 2020) using the following command\n~/Desktop/moose/projects/moose/python/peacock/peacock -i step1.i\ni got the following error:\n`Error starting peacock: Could not import vtk\nYou need to use the miniconda module. Run:\nmodule load miniconda`\nI think the issue is the machine i use MacBook Air with M1 chip.",
+          "url": "https://github.com/idaholab/moose/discussions/20720",
+          "updatedAt": "2022-06-02T13:24:25Z",
+          "publishedAt": "2022-03-14T09:34:39Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "cticenhour"
+                  },
+                  "bodyText": "Peacock support on M1 platforms is currently a bit complicated. If you follow the current Getting Started instructions, you'll be running through the Apple Rosetta translation layer for x86. So vtk for Peacock would then be available through the moose-tools (osx-64) package. If using the arm64 version of Mambaforge3, then Peacock is not supported on M1 due to a lack of PyQt5, not vtk.\nBased on the above, I have a couple questions - what version of Mambaforge3 are you running? Then, can you check to see if you have moose-tools installed in your conda environment? You can do this by running the command conda list.",
+                  "url": "https://github.com/idaholab/moose/discussions/20720#discussioncomment-2511413",
+                  "updatedAt": "2022-06-02T08:14:38Z",
+                  "publishedAt": "2022-04-05T21:28:07Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "wangzhaohao"
+                          },
+                          "bodyText": "hello, I would like to add to this question. I also meet the same problem in Manjaro. and the conda list is\n# packages in environment at /home/wang/mambaforge3/envs/moose:\n#\n# Name                    Version                   Build  Channel\n_libgcc_mutex             0.1                 conda_forge    conda-forge\n_openmp_mutex             4.5                       2_gnu    conda-forge\n_sysroot_linux-64_curr_repodata_hack 3                   h5bd9786_13    conda-forge\nalsa-lib                  1.2.6.1              h7f98852_0    conda-forge\naom                       3.3.0                h27087fc_1    conda-forge\nappdirs                   1.4.4              pyh9f0ad1d_0    conda-forge\nbeautifulsoup4            4.9.3              pyhb0f4dca_0    conda-forge\nbinutils_impl_linux-64    2.36.1               h193b22a_2    conda-forge\nbinutils_linux-64         2.36                hf3e587d_10    conda-forge\nblosc                     1.21.1               h83bc5f7_3    conda-forge\nbrotli                    1.0.9                h166bdaf_7    conda-forge\nbrotli-bin                1.0.9                h166bdaf_7    conda-forge\nbrotlipy                  0.7.0           py39hb9d737c_1004    conda-forge\nbrunsli                   0.1                  h9c3ff4c_0    conda-forge\nbzip2                     1.0.8                h7f98852_4    conda-forge\nc-ares                    1.18.1               h7f98852_0    conda-forge\nc-blosc2                  2.1.1                h7a311fb_2    conda-forge\nca-certificates           2022.5.18.1          ha878542_0    conda-forge\ncertifi                   2022.5.18.1      py39hf3d152e_0    conda-forge\ncffi                      1.15.0           py39h4bc2ebd_0    conda-forge\ncfitsio                   4.1.0                hd9d235c_0    conda-forge\ncharls                    2.3.4                h9c3ff4c_0    conda-forge\ncharset-normalizer        2.0.12             pyhd8ed1ab_0    conda-forge\nclang-format              13.0.1          default_hc23dcda_0    conda-forge\nclang-format-13           13.0.1          default_hc23dcda_0    conda-forge\nclang-tools               13.0.1          default_hc23dcda_0    conda-forge\ncloudpickle               2.1.0              pyhd8ed1ab_0    conda-forge\ncmake                     3.23.2               h5432695_0    conda-forge\ncryptography              37.0.2           py39hd97740a_0    conda-forge\ncurl                      7.83.1               h7bff187_0    conda-forge\ncycler                    0.11.0             pyhd8ed1ab_0    conda-forge\ncytoolz                   0.11.2           py39hb9d737c_2    conda-forge\ndask-core                 2022.5.2           pyhd8ed1ab_0    conda-forge\ndbus                      1.13.6               h5008d03_3    conda-forge\ndeepdiff                  5.5.0              pyhd8ed1ab_0    conda-forge\ndouble-conversion         3.2.0                h9c3ff4c_0    conda-forge\neigen                     3.4.0                h4bd325d_0    conda-forge\nexpat                     2.4.8                h27087fc_0    conda-forge\nffmpeg                    4.4.1                hd7ab26d_2    conda-forge\nfont-ttf-dejavu-sans-mono 2.37                 hab24e00_0    conda-forge\nfont-ttf-inconsolata      3.000                h77eed37_0    conda-forge\nfont-ttf-source-code-pro  2.038                h77eed37_0    conda-forge\nfont-ttf-ubuntu           0.83                 hab24e00_0    conda-forge\nfontconfig                2.14.0               h8e229c2_0    conda-forge\nfonts-conda-ecosystem     1                             0    conda-forge\nfonts-conda-forge         1                             0    conda-forge\nfreetype                  2.10.4               h0708190_1    conda-forge\nfsspec                    2022.5.0           pyhd8ed1ab_0    conda-forge\ngcc_impl_linux-64         10.3.0              hf2f2afa_16    conda-forge\ngcc_linux-64              10.3.0              hc39de41_10    conda-forge\ngettext                   0.19.8.1          h73d1719_1008    conda-forge\ngfortran_impl_linux-64    10.3.0              h73f4979_16    conda-forge\ngfortran_linux-64         10.3.0              hb09a455_10    conda-forge\ngiflib                    5.2.1                h36c2ea0_2    conda-forge\ngl2ps                     1.4.2                h0708190_0    conda-forge\nglew                      2.1.0                h9c3ff4c_2    conda-forge\ngmp                       6.2.1                h58526e2_0    conda-forge\ngmpy2                     2.1.2            py39h78fa15d_0    conda-forge\ngnutls                    3.6.13               h85f3911_1    conda-forge\ngst-plugins-base          1.20.2               hf6a322e_1    conda-forge\ngstreamer                 1.20.2               hd4edc92_1    conda-forge\ngxx_impl_linux-64         10.3.0              hf2f2afa_16    conda-forge\ngxx_linux-64              10.3.0              h2593f52_10    conda-forge\nhdf4                      4.2.15               h10796ff_3    conda-forge\nhdf5                      1.12.1          mpi_mpich_h08b82f9_4    conda-forge\nicu                       69.1                 h9c3ff4c_0    conda-forge\nidna                      3.3                pyhd8ed1ab_0    conda-forge\nimagecodecs               2022.2.22        py39h9c0c3a3_5    conda-forge\nimageio                   2.19.2             pyhcf75d05_0    conda-forge\nimportlib-metadata        4.11.4           py39hf3d152e_0    conda-forge\nimportlib_metadata        4.11.4               hd8ed1ab_0    conda-forge\njbig                      2.1               h7f98852_2003    conda-forge\njinja2                    3.0.1              pyhd8ed1ab_0    conda-forge\njpeg                      9e                   h166bdaf_1    conda-forge\njsoncpp                   1.9.5                h4bd325d_1    conda-forge\njsonpickle                2.2.0              pyhd8ed1ab_0    conda-forge\njxrlib                    1.1                  h7f98852_2    conda-forge\nkernel-headers_linux-64   3.10.0              h4a8ded7_13    conda-forge\nkeyutils                  1.6.1                h166bdaf_0    conda-forge\nkiwisolver                1.4.2            py39hf939315_1    conda-forge\nkrb5                      1.19.3               h3790be6_0    conda-forge\nlame                      3.100             h7f98852_1001    conda-forge\nlatexcodec                2.0.1              pyh9f0ad1d_0    conda-forge\nlcms2                     2.12                 hddcbb42_0    conda-forge\nld_impl_linux-64          2.36.1               hea4e1c9_2    conda-forge\nlerc                      3.0                  h9c3ff4c_0    conda-forge\nlibaec                    1.0.6                h9c3ff4c_0    conda-forge\nlibavif                   0.10.1               h166bdaf_0    conda-forge\nlibblas                   3.9.0           14_linux64_openblas    conda-forge\nlibbrotlicommon           1.0.9                h166bdaf_7    conda-forge\nlibbrotlidec              1.0.9                h166bdaf_7    conda-forge\nlibbrotlienc              1.0.9                h166bdaf_7    conda-forge\nlibcblas                  3.9.0           14_linux64_openblas    conda-forge\nlibclang                  13.0.1          default_hc23dcda_0    conda-forge\nlibclang-cpp13            13.0.1          default_hc23dcda_0    conda-forge\nlibcurl                   7.83.1               h7bff187_0    conda-forge\nlibdeflate                1.10                 h7f98852_0    conda-forge\nlibdrm                    2.4.109              h7f98852_0    conda-forge\nlibdrm-cos7-x86_64        2.4.97            h9b0a68f_1105    conda-forge\nlibedit                   3.1.20191231         he28a2e2_2    conda-forge\nlibev                     4.33                 h516909a_1    conda-forge\nlibevent                  2.1.10               h9b69904_4    conda-forge\nlibffi                    3.4.2                h7f98852_5    conda-forge\nlibgcc-devel_linux-64     10.3.0              he6cfe16_16    conda-forge\nlibgcc-ng                 12.1.0              h8d9b700_16    conda-forge\nlibgfortran-ng            12.1.0              h69a702a_16    conda-forge\nlibgfortran5              12.1.0              hdcd56e2_16    conda-forge\nlibglib                   2.70.2               h174f98d_4    conda-forge\nlibglu                    9.0.0             hf484d3e_1000    conda-forge\nlibglvnd-cos7-x86_64      1.0.1             h9b0a68f_1105    conda-forge\nlibglvnd-glx-cos7-x86_64  1.0.1             h9b0a68f_1105    conda-forge\nlibgomp                   12.1.0              h8d9b700_16    conda-forge\nlibice-cos7-x86_64        1.0.9             h9b0a68f_1105    conda-forge\nlibice-devel-cos7-x86_64  1.0.9             h9b0a68f_1105    conda-forge\nlibiconv                  1.16                 h516909a_0    conda-forge\nliblapack                 3.9.0           14_linux64_openblas    conda-forge\nlibllvm13                 13.0.1               hf817b99_2    conda-forge\nlibnetcdf                 4.8.1           mpi_mpich_h319fa22_1    conda-forge\nlibnghttp2                1.47.0               h727a467_0    conda-forge\nlibnsl                    2.0.0                h7f98852_0    conda-forge\nlibogg                    1.3.4                h7f98852_1    conda-forge\nlibopenblas               0.3.20          pthreads_h78a6416_0    conda-forge\nlibopus                   1.3.1                h7f98852_1    conda-forge\nlibpciaccess              0.16                 h516909a_0    conda-forge\nlibpng                    1.6.37               hed695b0_2    conda-forge\nlibpq                     14.3                 hd77ab85_0    conda-forge\nlibsanitizer              10.3.0              h26c7422_16    conda-forge\nlibsm-cos7-x86_64         1.2.2             h9b0a68f_1105    conda-forge\nlibsm-devel-cos7-x86_64   1.2.2             h9b0a68f_1105    conda-forge\nlibssh2                   1.10.0               ha56f1ee_2    conda-forge\nlibstdcxx-devel_linux-64  10.3.0              he6cfe16_16    conda-forge\nlibstdcxx-ng              12.1.0              ha89aaad_16    conda-forge\nlibtheora                 1.1.1             h7f98852_1005    conda-forge\nlibtiff                   4.4.0                h0fcbabc_0    conda-forge\nlibuuid                   2.32.1            h7f98852_1000    conda-forge\nlibuv                     1.43.0               h7f98852_0    conda-forge\nlibva                     2.14.0               h7f98852_0    conda-forge\nlibvorbis                 1.3.7                h9c3ff4c_0    conda-forge\nlibvpx                    1.11.0               h9c3ff4c_3    conda-forge\nlibwebp                   1.2.2                h3452ae3_0    conda-forge\nlibwebp-base              1.2.2                h7f98852_1    conda-forge\nlibx11-common-cos7-x86_64 1.6.7             h9b0a68f_1105    conda-forge\nlibx11-cos7-x86_64        1.6.7             h9b0a68f_1105    conda-forge\nlibx11-devel-cos7-x86_64  1.6.7             h9b0a68f_1105    conda-forge\nlibxcb                    1.13              h7f98852_1004    conda-forge\nlibxext-cos7-x86_64       1.3.3             h9b0a68f_1105    conda-forge\nlibxext-devel-cos7-x86_64 1.3.3             h9b0a68f_1105    conda-forge\nlibxkbcommon              1.0.3                he3ba5ed_0    conda-forge\nlibxml2                   2.9.12               h885dcf4_1    conda-forge\nlibxslt                   1.1.33               h0ef7038_3    conda-forge\nlibxt-cos7-x86_64         1.1.5             h9b0a68f_1105    conda-forge\nlibxt-devel-cos7-x86_64   1.1.5             h9b0a68f_1105    conda-forge\nlibzip                    1.8.0                h4de3113_1    conda-forge\nlibzlib                   1.2.12               h166bdaf_0    conda-forge\nlibzopfli                 1.0.3                h9c3ff4c_0    conda-forge\nlivereload                2.6.3              pyh9f0ad1d_0    conda-forge\nlocket                    1.0.0              pyhd8ed1ab_0    conda-forge\nloguru                    0.6.0            py39hf3d152e_1    conda-forge\nlxml                      4.6.3            py39h107f48f_0    conda-forge\nlz4-c                     1.9.3                h9c3ff4c_1    conda-forge\nmako                      1.1.4              pyh44b312d_0    conda-forge\nmarkupsafe                2.1.1            py39hb9d737c_1    conda-forge\nmatplotlib                3.4.2            py39hf3d152e_0    conda-forge\nmatplotlib-base           3.4.2            py39h2fa2bec_0    conda-forge\nmesa-khr-devel-cos7-x86_64 18.3.4            h9b0a68f_1105    conda-forge\nmesa-libgl-cos7-x86_64    18.3.4            h9b0a68f_1105    conda-forge\nmesa-libgl-devel-cos7-x86_64 18.3.4            h9b0a68f_1105    conda-forge\nmesa-libglapi-cos7-x86_64 18.3.4            h9b0a68f_1105    conda-forge\nmesalib                   18.3.1               h590aaf7_0    conda-forge\nmock                      4.0.3            py39hf3d152e_1    conda-forge\nmoose-libmesh             2022.05.12              build_0    https://conda.software.inl.gov/public\nmoose-libmesh-vtk         9.1.0            py39h1087f53_7    https://conda.software.inl.gov/public\nmoose-mpich               4.0.1                   build_2    https://conda.software.inl.gov/public\nmoose-petsc               3.16.5                  build_3    https://conda.software.inl.gov/public\nmoose-tools               2022.04.18       py39h183c574_0    https://conda.software.inl.gov/public\nmpc                       1.2.1                h9f54685_0    conda-forge\nmpfr                      4.1.0                h9202a9a_1    conda-forge\nmpi                       1.0                       mpich    conda-forge\nmpich                     4.0.1              h846660c_100    conda-forge\nmpich-mpicc               4.0.1              hb600da9_100    conda-forge\nmpich-mpicxx              4.0.1              h166bdaf_100    conda-forge\nmpich-mpifort             4.0.1              h924138e_100    conda-forge\nmpmath                    1.2.1              pyhd8ed1ab_0    conda-forge\nmysql-common              8.0.29               haf5c9bc_1    conda-forge\nmysql-libs                8.0.29               h28c427c_1    conda-forge\nncurses                   6.3                  h27087fc_1    conda-forge\nnettle                    3.6                  he412f7d_0    conda-forge\nnetworkx                  2.8.2              pyhd8ed1ab_0    conda-forge\nnspr                      4.32                 h9c3ff4c_1    conda-forge\nnss                       3.78                 h2350873_0    conda-forge\nnumpy                     1.21.1           py39hdbf815f_0    conda-forge\nopenh264                  2.1.1                h780b84a_0    conda-forge\nopenjpeg                  2.4.0                hb52868f_1    conda-forge\nopenssl                   1.1.1o               h166bdaf_0    conda-forge\nordered-set               4.1.0              pyhd8ed1ab_0    conda-forge\npackaging                 21.3               pyhd8ed1ab_0    conda-forge\npandas                    1.3.1            py39hde0f152_0    conda-forge\npartd                     1.2.0              pyhd8ed1ab_0    conda-forge\npcre                      8.45                 h9c3ff4c_0    conda-forge\npillow                    9.1.1            py39hae2aec6_1    conda-forge\npip                       22.1.2             pyhd8ed1ab_0    conda-forge\npkg-config                0.29.2            h36c2ea0_1008    conda-forge\npooch                     1.6.0              pyhd8ed1ab_0    conda-forge\nproj                      9.0.0                h93bde94_1    conda-forge\npthread-stubs             0.4               h36c2ea0_1001    conda-forge\npugixml                   1.11.4               h9c3ff4c_0    conda-forge\npybtex                    0.24.0           py39hf3d152e_0    conda-forge\npycparser                 2.21               pyhd8ed1ab_0    conda-forge\npylatexenc                2.10               pyhd8ed1ab_0    conda-forge\npyopenssl                 22.0.0             pyhd8ed1ab_0    conda-forge\npyparsing                 3.0.9              pyhd8ed1ab_0    conda-forge\npyqt                      5.12.3           py39hf3d152e_7    conda-forge\npyqt-impl                 5.12.3           py39h0fcd23e_7    conda-forge\npyqt5-sip                 4.19.18          py39he80948d_7    conda-forge\npyqtchart                 5.12             py39h0fcd23e_7    conda-forge\npyqtwebengine             5.12.1           py39h0fcd23e_7    conda-forge\npysocks                   1.7.1            py39hf3d152e_5    conda-forge\npython                    3.9.13          h9a8a25e_0_cpython    conda-forge\npython-dateutil           2.8.2              pyhd8ed1ab_0    conda-forge\npython_abi                3.9                      2_cp39    conda-forge\npytz                      2022.1             pyhd8ed1ab_0    conda-forge\npywavelets                1.3.0            py39hd257fcd_1    conda-forge\npyyaml                    5.4.1            py39h3811e60_0    conda-forge\nqt                        5.12.9               h1304e3e_6    conda-forge\nreadline                  8.1                  h46c0cb4_0    conda-forge\nrequests                  2.27.1             pyhd8ed1ab_0    conda-forge\nrhash                     1.4.1                h7f98852_0    conda-forge\nscikit-image              0.18.2           py39hde0f152_0    conda-forge\nscipy                     1.8.1            py39he49c0e8_0    conda-forge\nsetuptools                59.8.0           py39hf3d152e_1    conda-forge\nsix                       1.16.0             pyh6c4a22f_0    conda-forge\nsnappy                    1.1.9                hbd366e4_1    conda-forge\nsoupsieve                 2.3.1              pyhd8ed1ab_0    conda-forge\nsqlite                    3.38.5               h4ff8645_0    conda-forge\nsvt-av1                   1.1.0                h27087fc_1    conda-forge\nsympy                     1.9              py39hf3d152e_0    conda-forge\nsysroot_linux-64          2.17                h4a8ded7_13    conda-forge\ntbb                       2021.5.0             h924138e_1    conda-forge\ntbb-devel                 2021.5.0             h924138e_1    conda-forge\ntifffile                  2022.5.4           pyhd8ed1ab_0    conda-forge\ntk                        8.6.12               h27826a3_0    conda-forge\ntoolz                     0.11.2             pyhd8ed1ab_0    conda-forge\ntornado                   6.1              py39hb9d737c_3    conda-forge\ntzdata                    2022a                h191b570_0    conda-forge\nurllib3                   1.26.9             pyhd8ed1ab_0    conda-forge\nutfcpp                    3.2.1                ha770c72_0    conda-forge\nvtk                       9.1.0           qt_py39hd359688_208    conda-forge\nwheel                     0.37.1             pyhd8ed1ab_0    conda-forge\nx264                      1!161.3030           h7f98852_1    conda-forge\nx265                      3.5                  h924138e_3    conda-forge\nxorg-fixesproto           5.0               h7f98852_1002    conda-forge\nxorg-kbproto              1.0.7             h7f98852_1002    conda-forge\nxorg-libice               1.0.10               h7f98852_0    conda-forge\nxorg-libsm                1.2.3             hd9c2040_1000    conda-forge\nxorg-libx11               1.7.2                h7f98852_0    conda-forge\nxorg-libxau               1.0.9                h7f98852_0    conda-forge\nxorg-libxdmcp             1.1.3                h7f98852_0    conda-forge\nxorg-libxext              1.3.4                h7f98852_1    conda-forge\nxorg-libxfixes            5.0.3             h7f98852_1004    conda-forge\nxorg-libxt                1.2.1                h7f98852_2    conda-forge\nxorg-x11-proto-devel-cos7-x86_64 2018.4            h9b0a68f_1105    conda-forge\nxorg-xextproto            7.3.0             h7f98852_1002    conda-forge\nxorg-xproto               7.0.31            h7f98852_1007    conda-forge\nxz                        5.2.5                h516909a_1    conda-forge\nyaml                      0.2.5                h516909a_0    conda-forge\nzfp                       0.5.5                h9c3ff4c_8    conda-forge\nzipp                      3.8.0              pyhd8ed1ab_0    conda-forge\nzlib                      1.2.12               h166bdaf_0    conda-forge\nzlib-ng                   2.0.6                h166bdaf_0    conda-forge\nzstd                      1.5.2                h8a70e8d_1    conda-forge\n\nI have update by mamba update --all\nmy compute information is\nOperating System: Manjaro Linux\nKDE Plasma Version: 5.24.5\nKDE Frameworks Version: 5.94.0\nQt Version: 5.15.4\nKernel Version: 5.17.1-3-rt17-MANJARO (64-bit)\nGraphics Platform: X11\nProcessors: 8 \u00d7 Intel\u00ae Core\u2122 i5-8250U CPU @ 1.60GHz\nMemory: 7.7 GiB of RAM\nGraphics Processor: Mesa Intel\u00ae UHD Graphics 620\n```",
+                          "url": "https://github.com/idaholab/moose/discussions/20720#discussioncomment-2869701",
+                          "updatedAt": "2022-06-02T08:27:03Z",
+                          "publishedAt": "2022-06-02T08:27:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "Peacock is up in the air at the moment on whether or not we can continue to support it. There are other tools available to open results. I suggest using Paraview for now.\nThe error being displayed by the original poster is a pretty generic one... If you are interested in troubleshooting we can try to dig a bit deeper. The following should produce some output, and create a few image files (by using VTK, which also uses/depends on Qt):\nmamba activate moose\nexport PYTHONPATH=/your/path/to/moose/python\ncd /your/path/to/moose/python/chigger/tests/writers\ngit clean -xfd\n./writers.py\nExecuting writers.py should produce the following output, and create multiple images:\n\u276f ./writers.py\ntestError (__main__.TestVTKWriters)\nTest that error message is given with an unknown extension. ... ok\ntestFormats (__main__.TestVTKWriters)\nTest that the images are created. ... ok\n\n----------------------------------------------------------------------\nRan 2 tests in 0.294s\n\nOK\nThe following files should be created:\nwriters.bmp\nwriters.jpg\nwriters.png\nwriters.ps\nwriters.tiff\n\nIf we can run this simple test up front, it should help prove the basics are functioning.",
+                          "url": "https://github.com/idaholab/moose/discussions/20720#discussioncomment-2871513",
+                          "updatedAt": "2022-06-02T13:24:26Z",
+                          "publishedAt": "2022-06-02T13:24:25Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "SideSetsFromNormalsGenerator support for distributed mesh",
+          "author": {
+            "login": "KhaledNabilSharafeldin"
+          },
+          "bodyText": "Hello,\nWhen using SideSetsFromNormalsGenerator with --distributed-mesh flag, it result in an error:\n[2] ./include/libmesh/remote_elem.h, line 123, compiled Mar 22 2022 at 20:48:06\n\n[0] ./include/libmesh/remote_elem.h, line 123, compiled Mar 22 2022 at 20:48:06\n\n[1] ./include/libmesh/remote_elem.h, line 123, compiled Mar 22 2022 at 20:48:06\n\n\n*** ERROR ***\nError: not implemented!\n\n\n\n*** ERROR ***\nError: not implemented!\n\n\n\n*** ERROR ***\nError: not implemented!\n\n--------------------------------------------------------------------------\nMPI_ABORT was invoked on rank 0 in communicator MPI_COMM_WORLD\nwith errorcode 1.\n\nNOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.\nYou may or may not see output from other processes, depending on\nexactly when Open MPI kills them.\n--------------------------------------------------------------------------\n[bell-a094.rcac.purdue.edu:104207] PMIX ERROR: UNREACHABLE in file server/pmix_server.c at line 2193\n------------------------------------------------------------\nA process or daemon was unable to complete a TCP connection\nto another process:\n  Local host:    bell-a094\n  Remote host:   bell-a095\nThis is usually caused by a firewall on the remote host. Please\ncheck that any firewall (e.g., iptables) has been disabled and\ntry again.\n\n\nYou can recreate this problem by running moose/test/tests/meshgenerators/sidesets_from_normals_generator/sidesets_cylinder_normals_fixed.i using --distributed-mesh flag.\nAlternatives or quick solutions would be very helpful!\nThanks in advance!\nKhaled",
+          "url": "https://github.com/idaholab/moose/discussions/21182",
+          "updatedAt": "2022-06-01T15:43:29Z",
+          "publishedAt": "2022-05-31T17:07:30Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "If you just need to get going with adding a sideset you can load the mesh in serial, add it then, then use this new file in your distributed script.\nYou can also add sidesets in cubit.",
+                  "url": "https://github.com/idaholab/moose/discussions/21182#discussioncomment-2858177",
+                  "updatedAt": "2022-05-31T17:53:07Z",
+                  "publishedAt": "2022-05-31T17:53:05Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@KhaledNabilSharafeldin this mesh generator was only implemented for replicated meshes.\nIn the code you can see that there is an error message for distributed meshes, but it s broken right now. I ll fix it.",
+                          "url": "https://github.com/idaholab/moose/discussions/21182#discussioncomment-2859029",
+                          "updatedAt": "2022-05-31T20:20:07Z",
+                          "publishedAt": "2022-05-31T20:20:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "KhaledNabilSharafeldin"
+                          },
+                          "bodyText": "I can see that, thanks, this also goes for similar functions as well, I'll look into how mesh generators create them right away/manually adding them.\nAny plans to extend the functionality? or is it unlikely?",
+                          "url": "https://github.com/idaholab/moose/discussions/21182#discussioncomment-2865143",
+                          "updatedAt": "2022-06-01T15:36:40Z",
+                          "publishedAt": "2022-06-01T15:36:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "No plans that I know of",
+                          "url": "https://github.com/idaholab/moose/discussions/21182#discussioncomment-2865184",
+                          "updatedAt": "2022-06-01T15:43:32Z",
+                          "publishedAt": "2022-06-01T15:43:29Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Crystal plasticity Kalidini model error says you need to provide deformation gradient",
+          "author": {
+            "login": "mahyarmalek"
+          },
+          "bodyText": "Hello,\nI'm trying to use the \"ComputeMultipleCrytalPlasticity\" model for Kalidini type and im getting these errors:\nMaterial property 'deformation_gradient', requested by 'stress_ice' is not defined on block 0\nMaterial property 'deformation_gradient', requested by 'stress_ice_face' is not defined on block 0\nMaterial property 'deformation_gradient', requested by 'stress_ice_neighbor' is not defined on block 0\n\nNote that I have added \"ComputeFiniteStrain\" method to provide this and also I'm using this stress inside my own kernel, therefore I cannot use the tensor mechanics action here. I think the ComputeFiniteStrain method is not providing those info to the plasticity model. here's the input file for my material and kernel (I just put  those parts which might be usefull to read since it's a hige file)\n[Materials]\n [./elasticity_tensor_ice]\n    type = ComputeElasticityTensorConstantRotationCP\n    C_ijkl = '1.684e3 1.214e3 1.214e3 1.684e3 1.214e3 1.684e3 0.754e3 0.754e3 0.754e3'\n    fill_method = symmetric9\n    block = 0\n    base_name = ice\n  [../]\n  [./stress_ice]\n    type = ComputeMultipleCrystalPlasticityStress\n    crystal_plasticity_models = 'trial_xtalpl'\n    tan_mod_type = exact\n    maximum_substep_iteration = 200\n    use_line_search = true\n    min_line_search_step_size = 0.01\n    block = 0\n    base_name = ice\n  [../]\n  [./trial_xtalpl]\n    type = CrystalPlasticityKalidindiUpdate\n    number_slip_systems = 12\n    slip_sys_file_name = input_slip_sys.txt\n    resistance_tol = 0.01\n  [../]\n    [./strain_ice]\n    type = ComputeFiniteStrain\n    displacements = 'u_f_x u_f_y'\n    base_name = ice\n    block = 0\n   #volumetric_locking_correction=true\n  [../]\n  \n\nBest,\nMahyar",
+          "url": "https://github.com/idaholab/moose/discussions/20928",
+          "updatedAt": "2022-06-01T23:39:15Z",
+          "publishedAt": "2022-05-01T19:39:02Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nHave you tried using the TensorMechanicsAction instead of adding the computeFiniteStrain material?\n[Modules/TensorMechanics/Master/all]\n  strain = FINITE\n  add_variables = true\n[]\n\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20928#discussioncomment-2670685",
+                  "updatedAt": "2022-06-01T23:39:29Z",
+                  "publishedAt": "2022-05-01T22:58:20Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mahyarmalek"
+                          },
+                          "bodyText": "I mentioned in the quation that i cannot use the action since my kernel is coupled with another variables. Is there any way to use the TensorMechanicsAction while my equation looks like this====> (div(sigma*phi) )= 0 in which sigma is stress and phi is phasefield variable coupled to this equation?",
+                          "url": "https://github.com/idaholab/moose/discussions/20928#discussioncomment-2670772",
+                          "updatedAt": "2022-06-01T23:39:29Z",
+                          "publishedAt": "2022-05-01T23:49:56Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "jiangwen84"
+                  },
+                  "bodyText": "are you using any interface kernel, e.g. cohesive zone materials? I asked this because I saw \"neighbor\" material is being asked.\nIf you have only one block, you do not need to use \"base_name\". Leave it as blank or default.",
+                  "url": "https://github.com/idaholab/moose/discussions/20928#discussioncomment-2670747",
+                  "updatedAt": "2022-06-01T23:40:12Z",
+                  "publishedAt": "2022-05-01T23:31:05Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mahyarmalek"
+                          },
+                          "bodyText": "thank you for answering, I'm not using any cohesive zone material but my linear momentum equation is not a simple stress divergence. it is coupled with a phasefield variable which makes it impossible to use tensor mechanics master action. Also im using three different stresses with three different base_names in this equations (since im modeling a multiphase material). For the ice part I wanted to use the crystal plasticity model. So I imagine if ComputeFiniteStress cannot feed my ice_stress the proper deformation gradient then I will not be able to use this model.",
+                          "url": "https://github.com/idaholab/moose/discussions/20928#discussioncomment-2670764",
+                          "updatedAt": "2022-06-01T23:40:12Z",
+                          "publishedAt": "2022-05-01T23:42:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "If you could attach your input file here, we can take a close look.",
+                          "url": "https://github.com/idaholab/moose/discussions/20928#discussioncomment-2670770",
+                          "updatedAt": "2022-06-01T23:40:12Z",
+                          "publishedAt": "2022-05-01T23:45:12Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mahyarmalek"
+                          },
+                          "bodyText": "Sure here is the input file:\nmain.txt",
+                          "url": "https://github.com/idaholab/moose/discussions/20928#discussioncomment-2670779",
+                          "updatedAt": "2022-06-01T23:40:12Z",
+                          "publishedAt": "2022-05-01T23:53:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "I cannot directly run your input file because there are a few customized objects.\nI took a close look at the codes. It seems that we need to make a change in line 92 and 93 in ComputeMultipleCrystalPlasticityStress by adding a base_name.\n_deformation_gradient(getMaterialProperty<RankTwoTensor>(_base_name + \"deformation_gradient\")), _deformation_gradient_old(getMaterialPropertyOld<RankTwoTensor>(_base_name +\"deformation_gradient\")), \n\nCould you make the change on your local branch and see if it fixes your problem?",
+                          "url": "https://github.com/idaholab/moose/discussions/20928#discussioncomment-2688667",
+                          "updatedAt": "2022-06-01T23:40:18Z",
+                          "publishedAt": "2022-05-04T17:01:44Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mahyarmalek"
+                          },
+                          "bodyText": "Hello,\nSorry for getting back to you late, I have noticed this problem and compiled the codes again with the base_name and it started working. It's better to take a look at all the plasticity classes since I observed this problem in other crystal plasticity codes too. However I could not make the code converge and it stops due to convergence inside the crystal plasticty model. I would blame it on complexity of my model and not being able to use the exact jacobians like AD provides.\nBest,",
+                          "url": "https://github.com/idaholab/moose/discussions/20928#discussioncomment-2695083",
+                          "updatedAt": "2022-06-01T23:40:20Z",
+                          "publishedAt": "2022-05-05T16:11:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "@mahyarmalek Could you submit an ISSUE on GitHub? We would like to fix it.",
+                          "url": "https://github.com/idaholab/moose/discussions/20928#discussioncomment-2695696",
+                          "updatedAt": "2022-06-01T23:40:20Z",
+                          "publishedAt": "2022-05-05T17:31:28Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@jiangwen84 any update on this fix?\nI reckon we can create the issue ourselves if needed",
+                          "url": "https://github.com/idaholab/moose/discussions/20928#discussioncomment-2755406",
+                          "updatedAt": "2022-06-01T23:40:20Z",
+                          "publishedAt": "2022-05-15T21:03:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jiangwen84"
+                          },
+                          "bodyText": "Looks like @mahyarmalek found similar issues in other CP codes. I would suggest him add a MOOSE issue to list all issues.",
+                          "url": "https://github.com/idaholab/moose/discussions/20928#discussioncomment-2756443",
+                          "updatedAt": "2022-06-01T23:40:19Z",
+                          "publishedAt": "2022-05-16T03:22:50Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@mahyarmalek would be great to create an issue with what you observed. This is how we track development needs and limitations so it would be really valuable",
+                          "url": "https://github.com/idaholab/moose/discussions/20928#discussioncomment-2760224",
+                          "updatedAt": "2022-06-01T23:40:19Z",
+                          "publishedAt": "2022-05-16T14:27:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mahyarmalek"
+                          },
+                          "bodyText": "Sorry for getting back to you late, I have created an issue, however other than ComputeMultipleCrystalPlasticity.C which I remember needed modification I can't recall where else did I see the problem but anyway I made the issue and for my case that was enough to work.\nThank you for your guidance!\nMahyar",
+                          "url": "https://github.com/idaholab/moose/discussions/20928#discussioncomment-2764185",
+                          "updatedAt": "2022-06-01T23:40:20Z",
+                          "publishedAt": "2022-05-17T02:48:51Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Add multiple points as boundaries",
+          "author": {
+            "login": "Joseph-0123"
+          },
+          "bodyText": "Hello everyone, I want to add multiple points (~1k) as boundaries.\nI get used to using the ExtraNodesetGenerator to create point boundaries. But it's a huge task for thousands point,\nIs there a similar way like ReporterPointSource for adding multiple points (~1k) as boundaries?\nhttps://mooseframework.inl.gov/blackbear/source/dirackernels/ReporterPointSource.html\nThanks a lot,",
+          "url": "https://github.com/idaholab/moose/discussions/21046",
+          "updatedAt": "2022-05-31T09:07:53Z",
+          "publishedAt": "2022-05-18T11:30:01Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYou're right that it's too much to do manually. Is there anything in common between those points ? Like they are nodes on faces with the same normal? Or they are between two separate subdomains? Or on the outside of known subdomains?\nTypically we use these geometric characteristics in the mesh generator system to generate sidesets. Nodesets can be obtained from sidesets with just a parameter to Mesh.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/21046#discussioncomment-2776623",
+                  "updatedAt": "2022-06-14T08:46:16Z",
+                  "publishedAt": "2022-05-18T14:48:59Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Joseph-0123"
+                          },
+                          "bodyText": "Hello, Guillaume, thanks for your responses.\nYes. A thousand points set as boundaries are located at the 'Line block' (in red color).  Their interval distance is 10m. They belong to the same block.\nThanks for your help again,",
+                          "url": "https://github.com/idaholab/moose/discussions/21046#discussioncomment-2776736",
+                          "updatedAt": "2022-05-31T09:07:41Z",
+                          "publishedAt": "2022-05-18T15:00:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nI'd say there's two options :\n\nmake the inner cube a different block (it s totally ok wrt to defining materials and kernels to spread them on two blocks rather than one) then use a sidesetbetweensubdomaingenerator\nhttps://mooseframework.inl.gov/source/meshgenerators/SideSetsBetweenSubdomainsGenerator.html\nOR\nuse one (or more) parsed expressions to specify the sidesets. Since it's straight it's just  'x<1000.1 & x>999.9 & y>-3000.1' for example for the expression\nhttps://mooseframework.inl.gov/source/meshgenerators/ParsedGenerateSideset.html\n\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/21046#discussioncomment-2777062",
+                          "updatedAt": "2022-05-18T15:43:00Z",
+                          "publishedAt": "2022-05-18T15:43:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Joseph-0123"
+                          },
+                          "bodyText": "Great. They all look useful. Thanks, Guillaume, I will follow their way.\nCheers,",
+                          "url": "https://github.com/idaholab/moose/discussions/21046#discussioncomment-2777500",
+                          "updatedAt": "2022-05-31T09:07:29Z",
+                          "publishedAt": "2022-05-18T16:39:24Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "MOOSE parallelsation doesn't scale linearly for my problem?",
+          "author": {
+            "login": "Traiwit"
+          },
+          "bodyText": "Hi guys,\nI'm doing sensitivity analysis to see what would be the optimum number of mpi-cores/threads I should use for my problem:\nso below is the size and general info of my model, the module is [Porousflow].\n\nby the look in here, it's supposed to scale linearly with the number of mpi-core: https://mooseframework.inl.gov/getting_started/examples_and_tutorials/tutorial01_app_development/step07_parallel.html\nbut this is what I got for run-time in second (the first number is mpicore, the second number is threads)\n11+0\t1125.03\n11+2\t956.082\n11+4\t931.994\n11+6\t1064.535\n11+8\t1254.079\n11+12\t2192.663\n8+2          1001.693\n4+2\t        1220.607\n4+4\t        1043.648\n2+2\t        1667.109\n6+4\t        967.795\n3+4\t        1169.202\nmy system: AMD\u00ae Ryzen threadripper 3970x 32-core processor \u00d7 64 , 251.6 GB of RAM\nThe  max mpi-core I can use is ~11 cores, my simulation requires ~20gb per mpi-core due to heavy linear_constraints.\nin this case, I could have just run 3 simulations with 3 cores simultaneously to save time? or something isn't right with my setup?\nKind regards,\nTraiwit",
+          "url": "https://github.com/idaholab/moose/discussions/20822",
+          "updatedAt": "2022-06-12T18:58:49Z",
+          "publishedAt": "2022-04-20T05:37:00Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThreading parallelization is hard to get right. Some sections are easier to do than others, so not all of your simulation may be multithreaded. For example, mesh generation is often not multithreaded. Many solve methods (petsc parts) are not multithreaded either. If you want to spend time on evaluating this, I recommend you use the perf graph https://mooseframework.inl.gov/source/utils/PerfGraph.html and plot the timings for all the sections of your simulation. Then you can identify what scales and what does not.\nMPI or distributed parallelization should work a lot better in MOOSE. It does look like your simulation is capping out at 3 MPI ranks, which is not normal. So again, let's use the PerfGraph and figure out what part of your simulation is not scaling.\nFrom other threads, I gather you are using replicated meshes? This typically wont scale very far. Not at all in memory but also limited in CPU time.\nDo you have a list of objects that do not work for you for distributed meshes?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/20822#discussioncomment-2602821",
+                  "updatedAt": "2022-06-12T18:58:51Z",
+                  "publishedAt": "2022-04-20T16:35:49Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "Hi @GiudGiud\nI have done some testing there are two main objects that stop me from using distributed meshes.\nfirst of all the LinearNodalConstraints action:\nThis is the error\n===================================================================================\n=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES\n=   PID 2823469 RUNNING AT moose-System-Product-Name\n=   EXIT CODE: 139\n=   CLEANING UP REMAINING PROCESSES\n=   YOU CAN IGNORE THE BELOW CLEANUP MESSAGES\n===================================================================================\nYOUR APPLICATION TERMINATED WITH THE EXIT STRING: Segmentation fault (signal 11)\nThis typically refers to a problem with your application.\nPlease see the FAQ page for debugging suggestions\n\nAs I suspect, node-pair might be on the different meshes (after splitting)\nSecond, so I ran the simulation without LinearNodalConstraints action, this is the new error that I just found\nit is the use of assigning element properties from the CSV files (combination of ElementPropertyReadFile and my own version of perm/porosity) [the example is shown below]\n      [./permeability_1]\n        type = PorousFlowPermeabilityConstCSV\n        read_prop_user_object = perm_read\n        damage = damage\n      [../]\n\nand this is the error:\n*** ERROR ***\nThe following error occurred in the object \"poro_read\", of type \"ElementPropertyReadFile\".\n\nElement ID18928880 greater than than total number of element in mesh 4598664\n\n\nI suspect that after the mesh is split, each of the small meshes contains a portion of elements, hence the number of properties values from ElementPropertyReadFile and the material properties are not matched.\nWithout these 2 objects (removing constraints and using the default homogenous material properties), my simulation can be run using the distributed-mesh option with no problem.\nDo you think these are possible to solve? feel like this is more of a fundamental/core system problem rather than modifying the objects kinda problem.\nnote: I will post perf graph output from the replicated parallel shortly\nThank you!\nKind regards,\nTraiwit",
+                          "url": "https://github.com/idaholab/moose/discussions/20822#discussioncomment-2606163",
+                          "updatedAt": "2022-06-12T18:58:52Z",
+                          "publishedAt": "2022-04-21T04:54:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "This is the perf graph output from run with the replicated parallel (3 mpi-cores and 4 threads)\nPerformance Graph:\n----------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n|                                 Section                                | Calls |   Self(s)  |   Avg(s)   |    %   | Mem(MB) |  Total(s)  |   Avg(s)   |    %   | Mem(MB) |\n----------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n| traiTestApp (main)                                                     |     1 |      0.035 |      0.035 |   0.00 |       4 |   1580.082 |   1580.082 | 100.00 |   20957 |\n|   RankMap::construct                                                   |     1 |      0.000 |      0.000 |   0.00 |       1 |      0.000 |      0.000 |   0.00 |       1 |\n|   MooseApp::setup                                                      |     1 |      0.000 |      0.000 |   0.00 |       0 |    320.839 |    320.839 |  20.31 |   19107 |\n|     Action::SetupMeshAction::Mesh::SetupMeshAction::act::setup_mesh    |     1 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|     Action::SetupMeshAction::Mesh::SetupMeshAction::act::set_mesh_base |     2 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|       MeshGeneratorMesh::init                                          |     1 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|     Action::SetupMeshCompleteAction::Mesh::completeSetupUndisplaced    |     2 |      0.000 |      0.000 |   0.00 |       0 |     11.209 |      5.605 |   0.71 |     109 |\n|       MeshGeneratorMesh::prepare                                       |     2 |      0.801 |      0.400 |   0.05 |       0 |     11.209 |      5.605 |   0.71 |     109 |\n|     Action::SetupMeshCompleteAction::Mesh::uniformRefine               |     1 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|     Action::SetupMeshCompleteAction::Mesh::deleteRemoteElems           |     1 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|     MooseApp::executeMeshGenerators                                    |     1 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|     FEProblem::init                                                    |     1 |      0.119 |      0.119 |   0.01 |     127 |     45.270 |     45.270 |   2.87 |    1247 |\n|       FEProblem::EquationSystems::Init                                 |     1 |     23.222 |     23.222 |   1.47 |     883 |     29.152 |     29.152 |   1.84 |    1100 |\n|   MooseApp::execute                                                    |     1 |      0.000 |      0.000 |   0.00 |       0 |   1259.207 |   1259.207 |  79.69 |    1845 |\n|     FEProblem::initialSetup                                            |     1 |      0.001 |      0.001 |   0.00 |       0 |     51.274 |     51.274 |   3.25 |    1359 |\n|       FEProblem::projectSolution                                       |     1 |      4.647 |      4.647 |   0.29 |       0 |      4.647 |      4.647 |   0.29 |       0 |\n|       NonlinearSystemBase::nlInitialSetup                              |     1 |      0.000 |      0.000 |   0.00 |       0 |      0.006 |      0.006 |   0.00 |       0 |\n|         NonlinearSystemBase::kernelsInitialSetup                       |     1 |      0.006 |      0.006 |   0.00 |       0 |      0.006 |      0.006 |   0.00 |       0 |\n|         NonlinearSystemBase::mortarSetup                               |     1 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|       FEProblem::initialSetupTransfers                                 |     1 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|     FEProblem::outputStep                                              |     1 |      0.035 |      0.035 |   0.00 |       0 |      0.101 |      0.101 |   0.01 |       0 |\n|       Console::outputStep                                              |     2 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|       Exodus::outputStep                                               |     1 |      0.066 |      0.066 |   0.00 |       0 |      0.066 |      0.066 |   0.00 |       0 |\n|     Steady::PicardSolve                                                |     1 |      0.000 |      0.000 |   0.00 |       0 |   1185.522 |   1185.522 |  75.03 |     271 |\n|       FEProblem::outputStep                                            |     2 |      0.068 |      0.034 |   0.00 |       0 |      0.068 |      0.034 |   0.00 |       0 |\n|         Console::outputStep                                            |     2 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|       FEProblem::solve                                                 |     1 |    346.052 |    346.052 |  21.90 |      68 |   1182.552 |   1182.552 |  74.84 |     271 |\n|         Console::outputStep                                            |   438 |     59.453 |      0.136 |   3.76 |       0 |     59.453 |      0.136 |   3.76 |       0 |\n|         FEProblem::computeResidualInternal                             |     1 |      0.000 |      0.000 |   0.00 |       0 |      7.843 |      7.843 |   0.50 |     127 |\n|         FEProblem::computeResidualInternal                             |    59 |      0.001 |      0.000 |   0.00 |       0 |    444.198 |      7.529 |  28.11 |       1 |\n|         NonlinearSystemBase::initialBCs                                |     1 |      0.114 |      0.114 |   0.01 |       0 |      0.114 |      0.114 |   0.01 |       0 |\n|         FEProblem::computeJacobianInternal                             |    43 |      0.001 |      0.000 |   0.00 |       0 |    324.890 |      7.556 |  20.56 |      75 |\n|     Steady::final                                                      |     1 |      0.000 |      0.000 |   0.00 |       0 |     22.302 |     22.302 |   1.41 |     215 |\n|       FEProblem::outputStep                                            |     1 |      0.034 |      0.034 |   0.00 |       0 |     22.302 |     22.302 |   1.41 |     215 |\n|         Console::outputStep                                            |     1 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|         Exodus::outputStep                                             |     1 |     22.268 |     22.268 |   1.41 |     215 |     22.268 |     22.268 |   1.41 |     215 |\n----------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n\nHeaviest Branch:\n----------------------------------------------------------------------------------------------------------------------------------------------------------------------\n|                              Section                             | Calls |   Self(s)  |   Avg(s)   |    %   | Mem(MB) |  Total(s)  |   Avg(s)   |    %   | Mem(MB) |\n----------------------------------------------------------------------------------------------------------------------------------------------------------------------\n| traiTestApp (main)                                               |     1 |      0.035 |      0.035 |   0.00 |       4 |   1580.082 |   1580.082 | 100.00 |   20957 |\n|   MooseApp::run                                                  |     1 |      0.000 |      0.000 |   0.00 |       0 |   1580.047 |   1580.047 | 100.00 |   20952 |\n|     MooseApp::execute                                            |     1 |      0.000 |      0.000 |   0.00 |       0 |   1259.207 |   1259.207 |  79.69 |    1845 |\n|       MooseApp::executeExecutioner                               |     1 |      0.007 |      0.007 |   0.00 |       0 |   1259.207 |   1259.207 |  79.69 |    1845 |\n|         Steady::PicardSolve                                      |     1 |      0.000 |      0.000 |   0.00 |       0 |   1185.522 |   1185.522 |  75.03 |     271 |\n|           FEProblem::solve                                       |     1 |    346.052 |    346.052 |  21.90 |      68 |   1182.552 |   1182.552 |  74.84 |     271 |\n|             FEProblem::computeResidualSys                        |    59 |      0.001 |      0.000 |   0.00 |       0 |    444.199 |      7.529 |  28.11 |       1 |\n|               FEProblem::computeResidualInternal                 |    59 |      0.001 |      0.000 |   0.00 |       0 |    444.198 |      7.529 |  28.11 |       1 |\n|                 FEProblem::computeResidualTags                   |    59 |      0.015 |      0.000 |   0.00 |       0 |    444.197 |      7.529 |  28.11 |       1 |\n|                   NonlinearSystemBase::nl::computeResidualTags   |    59 |      0.751 |      0.013 |   0.05 |       1 |    254.352 |      4.311 |  16.10 |       1 |\n|                     NonlinearSystemBase::computeResidualInternal |    59 |     41.840 |      0.709 |   2.65 |       0 |    246.928 |      4.185 |  15.63 |       0 |\n|                       NonlinearSystemBase::Kernels               |    59 |    203.653 |      3.452 |  12.89 |       0 |    203.653 |      3.452 |  12.89 |       0 |\n----------------------------------------------------------------------------------------------------------------------------------------------------------------------\n\nHeaviest Sections:\n-------------------------------------------------------------------------------------------------\n|                  Section                 | Calls |   Self(s)  |    Avg.    |    %   | Mem(MB) |\n-------------------------------------------------------------------------------------------------\n| FEProblem::solve                         |     1 |    346.052 |    346.052 |  21.90 |      68 |\n| NonlinearSystemBase::computeJacobianTags |    43 |    283.396 |      6.591 |  17.94 |      75 |\n| NonlinearSystemBase::Kernels             |    60 |    207.236 |      3.454 |  13.12 |     127 |\n| AuxiliarySystem::computeElementalVars    |   107 |    193.693 |      1.810 |  12.26 |       0 |\n| Action::ExecuteMeshGenerators::act       |     1 |    134.774 |    134.774 |   8.53 |    1580 |\n| Console::outputStep                      |   443 |     59.453 |      0.134 |   3.76 |       0 |\n| Action::MPCbe::MPCbe::act                |     1 |     52.677 |     52.677 |   3.33 |   14037 |\n-------------------------------------------------------------------------------------------------",
+                          "url": "https://github.com/idaholab/moose/discussions/20822#discussioncomment-2606222",
+                          "updatedAt": "2022-06-12T18:59:09Z",
+                          "publishedAt": "2022-04-21T05:13:28Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "if you post 4 MPI 1 thread and 1 MPI 1 thread we can have a basic look at what is scaling and what is not.\nNote that the PerfGraphOutput can help you process this data easily if you want to draw scalability plots:\nhttps://mooseframework.inl.gov/source/outputs/PerfGraphOutput.html\nwrt to these 2 objects, I think they are both adaptable to distributed meshes. The second one trivially so. We just need to relax some of the bounds checking on the mesh vs the CSV file.\nFor the LinearNodalConstraint we need to take a serious look at it. It should work, there is code inside it aimed at working in parallel.",
+                          "url": "https://github.com/idaholab/moose/discussions/20822#discussioncomment-2606376",
+                          "updatedAt": "2022-06-12T18:59:34Z",
+                          "publishedAt": "2022-04-21T06:03:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "will get back with 4 MPI 1 thread and 1 MPI 1 thread soon, thank you @GiudGiud!\nLet's have a look into both objects as well after that (if you have time)\nRegards,\nTraiwit",
+                          "url": "https://github.com/idaholab/moose/discussions/20822#discussioncomment-2606388",
+                          "updatedAt": "2022-06-12T18:59:53Z",
+                          "publishedAt": "2022-04-21T06:06:50Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "**edit: the one above was 3 mpi 4 threads.\nso 1 MPI 1 thread >>  7229.056 sec\nand 3 MPI 1 thread >> 3430.557 sec (also converged better, for some reason)\nPerformance Graph:\n----------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n|                                 Section                                | Calls |   Self(s)  |   Avg(s)   |    %   | Mem(MB) |  Total(s)  |   Avg(s)   |    %   | Mem(MB) |\n----------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n| traiTestApp (main)                                                     |     1 |      0.039 |      0.039 |   0.00 |       5 |   7229.056 |   7229.056 | 100.00 |   21545 |\n|   RankMap::construct                                                   |     1 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|   MooseApp::setup                                                      |     1 |      0.000 |      0.000 |   0.00 |       0 |    245.984 |    245.984 |   3.40 |   19623 |\n|     Action::SetupMeshAction::Mesh::SetupMeshAction::act::setup_mesh    |     1 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|     Action::SetupMeshAction::Mesh::SetupMeshAction::act::set_mesh_base |     2 |      0.003 |      0.001 |   0.00 |       0 |      0.003 |      0.001 |   0.00 |       0 |\n|       MeshGeneratorMesh::init                                          |     1 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|     Action::SetupMeshCompleteAction::Mesh::completeSetupUndisplaced    |     2 |      0.001 |      0.000 |   0.00 |       0 |     10.681 |      5.341 |   0.15 |     137 |\n|       MeshGeneratorMesh::prepare                                       |     2 |      0.960 |      0.480 |   0.01 |       0 |     10.680 |      5.340 |   0.15 |     137 |\n|     Action::SetupMeshCompleteAction::Mesh::uniformRefine               |     1 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|     Action::SetupMeshCompleteAction::Mesh::deleteRemoteElems           |     1 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|     MooseApp::executeMeshGenerators                                    |     1 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|     FEProblem::init                                                    |     1 |      0.014 |      0.014 |   0.00 |       0 |     40.806 |     40.806 |   0.56 |    1757 |\n|       FEProblem::EquationSystems::Init                                 |     1 |     23.832 |     23.832 |   0.33 |    1422 |     29.276 |     29.276 |   0.40 |    1737 |\n|   MooseApp::execute                                                    |     1 |      0.000 |      0.000 |   0.00 |       0 |   6983.034 |   6983.034 |  96.60 |    1917 |\n|     FEProblem::initialSetup                                            |     1 |      0.001 |      0.001 |   0.00 |       0 |     58.967 |     58.967 |   0.82 |       0 |\n|       FEProblem::projectSolution                                       |     1 |     39.463 |     39.463 |   0.55 |       0 |     39.463 |     39.463 |   0.55 |       0 |\n|       NonlinearSystemBase::nlInitialSetup                              |     1 |      0.000 |      0.000 |   0.00 |       0 |      0.005 |      0.005 |   0.00 |       0 |\n|         NonlinearSystemBase::kernelsInitialSetup                       |     1 |      0.005 |      0.005 |   0.00 |       0 |      0.005 |      0.005 |   0.00 |       0 |\n|         NonlinearSystemBase::mortarSetup                               |     1 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|       FEProblem::initialSetupTransfers                                 |     1 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|     FEProblem::outputStep                                              |     1 |      0.013 |      0.013 |   0.00 |       0 |      0.076 |      0.076 |   0.00 |       9 |\n|       Console::outputStep                                              |     2 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|       Exodus::outputStep                                               |     1 |      0.062 |      0.062 |   0.00 |       9 |      0.062 |      0.062 |   0.00 |       9 |\n|     Steady::PicardSolve                                                |     1 |      0.000 |      0.000 |   0.00 |       0 |   6881.051 |   6881.051 |  95.19 |    1832 |\n|       FEProblem::outputStep                                            |     2 |      0.029 |      0.014 |   0.00 |       0 |      0.029 |      0.014 |   0.00 |       0 |\n|         Console::outputStep                                            |     2 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|       FEProblem::solve                                                 |     1 |    421.155 |    421.155 |   5.83 |    -859 |   6852.621 |   6852.621 |  94.79 |    1832 |\n|         Console::outputStep                                            |   406 |    189.606 |      0.467 |   2.62 |    1473 |    189.606 |      0.467 |   2.62 |    1473 |\n|         FEProblem::computeResidualInternal                             |     1 |      0.000 |      0.000 |   0.00 |       0 |     67.603 |     67.603 |   0.94 |    1042 |\n|         FEProblem::computeResidualInternal                             |    58 |      0.001 |      0.000 |   0.00 |       0 |   3870.429 |     66.732 |  53.54 |       7 |\n|         NonlinearSystemBase::initialBCs                                |     1 |      0.378 |      0.378 |   0.01 |       0 |      0.378 |      0.378 |   0.01 |       0 |\n|         FEProblem::computeJacobianInternal                             |    42 |      0.001 |      0.000 |   0.00 |       0 |   2303.447 |     54.844 |  31.86 |     169 |\n|     Steady::final                                                      |     1 |      0.000 |      0.000 |   0.00 |       0 |     42.934 |     42.934 |   0.59 |      76 |\n|       FEProblem::outputStep                                            |     1 |      0.016 |      0.016 |   0.00 |       0 |     42.934 |     42.934 |   0.59 |      76 |\n|         Console::outputStep                                            |     1 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|         Exodus::outputStep                                             |     1 |     42.918 |     42.918 |   0.59 |      76 |     42.918 |     42.918 |   0.59 |      76 |\n----------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n\nHeaviest Branch:\n----------------------------------------------------------------------------------------------------------------------------------------------------------------------\n|                              Section                             | Calls |   Self(s)  |   Avg(s)   |    %   | Mem(MB) |  Total(s)  |   Avg(s)   |    %   | Mem(MB) |\n----------------------------------------------------------------------------------------------------------------------------------------------------------------------\n| traiTestApp (main)                                               |     1 |      0.039 |      0.039 |   0.00 |       5 |   7229.056 |   7229.056 | 100.00 |   21545 |\n|   MooseApp::run                                                  |     1 |      0.000 |      0.000 |   0.00 |       0 |   7229.018 |   7229.018 | 100.00 |   21540 |\n|     MooseApp::execute                                            |     1 |      0.000 |      0.000 |   0.00 |       0 |   6983.034 |   6983.034 |  96.60 |    1917 |\n|       MooseApp::executeExecutioner                               |     1 |      0.006 |      0.006 |   0.00 |       0 |   6983.034 |   6983.034 |  96.60 |    1917 |\n|         Steady::PicardSolve                                      |     1 |      0.000 |      0.000 |   0.00 |       0 |   6881.051 |   6881.051 |  95.19 |    1832 |\n|           FEProblem::solve                                       |     1 |    421.155 |    421.155 |   5.83 |    -859 |   6852.621 |   6852.621 |  94.79 |    1832 |\n|             FEProblem::computeResidualSys                        |    58 |      0.001 |      0.000 |   0.00 |       0 |   3870.430 |     66.732 |  53.54 |       7 |\n|               FEProblem::computeResidualInternal                 |    58 |      0.001 |      0.000 |   0.00 |       0 |   3870.429 |     66.732 |  53.54 |       7 |\n|                 FEProblem::computeResidualTags                   |    58 |      0.010 |      0.000 |   0.00 |       0 |   3870.428 |     66.732 |  53.54 |       7 |\n|                   NonlinearSystemBase::nl::computeResidualTags   |    58 |      0.090 |      0.002 |   0.00 |       0 |   2032.153 |     35.037 |  28.11 |       7 |\n|                     NonlinearSystemBase::computeResidualInternal |    58 |     43.217 |      0.745 |   0.60 |       7 |   2009.771 |     34.651 |  27.80 |       7 |\n|                       NonlinearSystemBase::Kernels               |    58 |   1966.239 |     33.901 |  27.20 |       0 |   1966.239 |     33.901 |  27.20 |       0 |\n----------------------------------------------------------------------------------------------------------------------------------------------------------------------\n\nHeaviest Sections:\n-------------------------------------------------------------------------------------------------\n|                  Section                 | Calls |   Self(s)  |    Avg.    |    %   | Mem(MB) |\n-------------------------------------------------------------------------------------------------\n| NonlinearSystemBase::computeJacobianTags |    42 |   2303.232 |     54.839 |  31.86 |     169 |\n| NonlinearSystemBase::Kernels             |    59 |   2000.882 |     33.913 |  27.68 |    1017 |\n| AuxiliarySystem::computeElementalVars    |   105 |   1898.357 |     18.080 |  26.26 |       0 |\n| FEProblem::solve                         |     1 |    421.155 |    421.155 |   5.83 |    -859 |\n| Console::outputStep                      |   411 |    189.606 |      0.461 |   2.62 |    1473 |\n| Action::ExecuteMeshGenerators::act       |     1 |    102.167 |    102.167 |   1.41 |    1555 |\n| Action::MPCbe::MPCbe::act                |     1 |     49.306 |     49.306 |   0.68 |   14035 |\n-------------------------------------------------------------------------------------------------\n\n\nPerformance Graph:\n----------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n|                                 Section                                | Calls |   Self(s)  |   Avg(s)   |    %   | Mem(MB) |  Total(s)  |   Avg(s)   |    %   | Mem(MB) |\n----------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n| traiTestApp (main)                                                     |     1 |      0.048 |      0.048 |   0.00 |       4 |   3430.557 |   3430.557 | 100.00 |   20837 |\n|   RankMap::construct                                                   |     1 |      0.000 |      0.000 |   0.00 |       1 |      0.000 |      0.000 |   0.00 |       1 |\n|   MooseApp::setup                                                      |     1 |      0.000 |      0.000 |   0.00 |       0 |    287.476 |    287.476 |   8.38 |   18926 |\n|     Action::SetupMeshAction::Mesh::SetupMeshAction::act::setup_mesh    |     1 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|     Action::SetupMeshAction::Mesh::SetupMeshAction::act::set_mesh_base |     2 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|       MeshGeneratorMesh::init                                          |     1 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|     Action::SetupMeshCompleteAction::Mesh::completeSetupUndisplaced    |     2 |      0.000 |      0.000 |   0.00 |       0 |     11.118 |      5.559 |   0.32 |     109 |\n|       MeshGeneratorMesh::prepare                                       |     2 |      0.793 |      0.397 |   0.02 |       0 |     11.118 |      5.559 |   0.32 |     109 |\n|     Action::SetupMeshCompleteAction::Mesh::uniformRefine               |     1 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|     Action::SetupMeshCompleteAction::Mesh::deleteRemoteElems           |     1 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|     MooseApp::executeMeshGenerators                                    |     1 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|     FEProblem::init                                                    |     1 |      0.106 |      0.106 |   0.00 |     127 |     44.171 |     44.171 |   1.29 |    1080 |\n|       FEProblem::EquationSystems::Init                                 |     1 |     25.317 |     25.317 |   0.74 |     691 |     31.402 |     31.402 |   0.92 |     933 |\n|   MooseApp::execute                                                    |     1 |      0.000 |      0.000 |   0.00 |       0 |   3143.033 |   3143.033 |  91.62 |    1906 |\n|     FEProblem::initialSetup                                            |     1 |      0.001 |      0.001 |   0.00 |       0 |     63.526 |     63.526 |   1.85 |    1363 |\n|       FEProblem::projectSolution                                       |     1 |     13.898 |     13.898 |   0.41 |       0 |     13.898 |     13.898 |   0.41 |       0 |\n|       NonlinearSystemBase::nlInitialSetup                              |     1 |      0.000 |      0.000 |   0.00 |       0 |      0.006 |      0.006 |   0.00 |       0 |\n|         NonlinearSystemBase::kernelsInitialSetup                       |     1 |      0.006 |      0.006 |   0.00 |       0 |      0.006 |      0.006 |   0.00 |       0 |\n|         NonlinearSystemBase::mortarSetup                               |     1 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|       FEProblem::initialSetupTransfers                                 |     1 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|     FEProblem::outputStep                                              |     2 |      0.069 |      0.035 |   0.00 |       0 |      1.416 |      0.708 |   0.04 |       0 |\n|       Console::outputStep                                              |     3 |      1.278 |      0.426 |   0.04 |       0 |      1.278 |      0.426 |   0.04 |       0 |\n|       Exodus::outputStep                                               |     1 |      0.069 |      0.069 |   0.00 |       0 |      0.069 |      0.069 |   0.00 |       0 |\n|     Steady::PicardSolve                                                |     1 |      0.001 |      0.001 |   0.00 |       0 |   3054.898 |   3054.898 |  89.05 |     255 |\n|       FEProblem::outputStep                                            |     1 |      0.033 |      0.033 |   0.00 |       0 |      0.033 |      0.033 |   0.00 |       0 |\n|         Console::outputStep                                            |     1 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|       FEProblem::solve                                                 |     1 |    844.542 |    844.542 |  24.62 |     247 |   3033.303 |   3033.303 |  88.42 |     255 |\n|         Console::outputStep                                            |   463 |     60.398 |      0.130 |   1.76 |       0 |     60.398 |      0.130 |   1.76 |       0 |\n|         FEProblem::computeResidualInternal                             |     1 |      0.000 |      0.000 |   0.00 |       0 |     25.251 |     25.251 |   0.74 |       0 |\n|         FEProblem::computeResidualInternal                             |    48 |      0.001 |      0.000 |   0.00 |       0 |   1188.957 |     24.770 |  34.66 |       0 |\n|         NonlinearSystemBase::initialBCs                                |     1 |      0.122 |      0.122 |   0.00 |       0 |      0.122 |      0.122 |   0.00 |       0 |\n|         FEProblem::computeJacobianInternal                             |    45 |      0.001 |      0.000 |   0.00 |       0 |    914.032 |     20.312 |  26.64 |       8 |\n|       FEProblem::computeUserObjects                                    |     2 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|     Steady::final                                                      |     1 |      0.000 |      0.000 |   0.00 |       0 |     23.169 |     23.169 |   0.68 |     288 |\n|       FEProblem::outputStep                                            |     1 |      0.041 |      0.041 |   0.00 |       0 |     23.169 |     23.169 |   0.68 |     288 |\n|         Console::outputStep                                            |     1 |      0.000 |      0.000 |   0.00 |       0 |      0.000 |      0.000 |   0.00 |       0 |\n|         Exodus::outputStep                                             |     1 |     23.128 |     23.128 |   0.67 |     288 |     23.128 |     23.128 |   0.67 |     288 |\n----------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n\nHeaviest Branch:\n----------------------------------------------------------------------------------------------------------------------------------------------------------------------\n|                              Section                             | Calls |   Self(s)  |   Avg(s)   |    %   | Mem(MB) |  Total(s)  |   Avg(s)   |    %   | Mem(MB) |\n----------------------------------------------------------------------------------------------------------------------------------------------------------------------\n| traiTestApp (main)                                               |     1 |      0.048 |      0.048 |   0.00 |       4 |   3430.557 |   3430.557 | 100.00 |   20837 |\n|   MooseApp::run                                                  |     1 |      0.000 |      0.000 |   0.00 |       0 |   3430.509 |   3430.509 | 100.00 |   20832 |\n|     MooseApp::execute                                            |     1 |      0.000 |      0.000 |   0.00 |       0 |   3143.034 |   3143.034 |  91.62 |    1906 |\n|       MooseApp::executeExecutioner                               |     1 |      0.023 |      0.023 |   0.00 |       0 |   3143.034 |   3143.034 |  91.62 |    1906 |\n|         Steady::PicardSolve                                      |     1 |      0.001 |      0.001 |   0.00 |       0 |   3054.898 |   3054.898 |  89.05 |     255 |\n|           FEProblem::solve                                       |     1 |    844.542 |    844.542 |  24.62 |     247 |   3033.303 |   3033.303 |  88.42 |     255 |\n|             FEProblem::computeResidualSys                        |    48 |      0.001 |      0.000 |   0.00 |       0 |   1188.958 |     24.770 |  34.66 |       0 |\n|               FEProblem::computeResidualInternal                 |    48 |      0.001 |      0.000 |   0.00 |       0 |   1188.957 |     24.770 |  34.66 |       0 |\n|                 FEProblem::computeResidualTags                   |    48 |      0.010 |      0.000 |   0.00 |       0 |   1188.956 |     24.770 |  34.66 |       0 |\n|                   NonlinearSystemBase::nl::computeResidualTags   |    48 |      0.600 |      0.013 |   0.02 |       0 |    641.161 |     13.358 |  18.69 |       0 |\n|                     NonlinearSystemBase::computeResidualInternal |    48 |     34.229 |      0.713 |   1.00 |       0 |    635.008 |     13.229 |  18.51 |       0 |\n|                       NonlinearSystemBase::Kernels               |    48 |    600.470 |     12.510 |  17.50 |       0 |    600.470 |     12.510 |  17.50 |       0 |\n----------------------------------------------------------------------------------------------------------------------------------------------------------------------\n\nHeaviest Sections:\n-------------------------------------------------------------------------------------------------\n|                  Section                 | Calls |   Self(s)  |    Avg.    |    %   | Mem(MB) |\n-------------------------------------------------------------------------------------------------\n| NonlinearSystemBase::computeJacobianTags |    45 |    913.823 |     20.307 |  26.64 |       8 |\n| FEProblem::solve                         |     1 |    844.542 |    844.542 |  24.62 |     247 |\n| NonlinearSystemBase::Kernels             |    49 |    613.280 |     12.516 |  17.88 |       0 |\n| AuxiliarySystem::computeElementalVars    |    99 |    580.843 |      5.867 |  16.93 |       0 |\n| Action::ExecuteMeshGenerators::act       |     1 |    135.038 |    135.038 |   3.94 |    1582 |\n| Console::outputStep                      |   468 |     61.676 |      0.132 |   1.80 |       0 |\n| Action::MPCbe::MPCbe::act                |     1 |     52.237 |     52.237 |   1.52 |   14036 |\n-------------------------------------------------------------------------------------------------",
+                          "url": "https://github.com/idaholab/moose/discussions/20822#discussioncomment-2608411",
+                          "updatedAt": "2022-06-12T18:59:54Z",
+                          "publishedAt": "2022-04-21T12:07:51Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "so summarizing this:\n\n\n\n\n\n\n<style>\n\n</style>\n\n\n\n\n\n\n\u00a0\navg\n\u00a0\n\u00a0\n\u00a0\n\u00a0\n\n\n\n\nSection\n3 MPI 1 thread\n3 MPI 4 threads\n1 MPI 1 thread\nSpeedup - MPI\nSpeedup - threads\n\n\ncomputeJacobinaTags\n20.307\n6.591\n54.839\n2.700497365\n2.70049737\n\n\nkernels\n12.516\n3.454\n33.913\n2.709571748\n2.70957175\n\n\ncomputeElementalVars\n5.867\n1.81\n18.08\n3.081643088\n3.08164309\n\n\nsolve\n844.542\n346\n421.155\n0.498678574\n0.49867857\n\n\noutputStep\n0.132\n0.134\n0.461\n3.492424242\n3.49242424\n\n\nmeshGen\n135.038\n134.774\n102.167\n0.756579629\n0.75657963\n\n\nMPCbe\n52.237\n52.677\n49.306\n0.943890346\n0.94389035\n\n\n\n\n\nthe solve isnt scaling like it should.\nWhat s your Executioner block like?",
+                          "url": "https://github.com/idaholab/moose/discussions/20822#discussioncomment-2610063",
+                          "updatedAt": "2022-06-12T19:00:04Z",
+                          "publishedAt": "2022-04-21T16:18:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "mesh generation and constraint action dont scale at all because they are replicated right now. So that is expected.\nScaling is pretty good to 3 otherwise.\nLet s not get too deep / spend too much time in studying scalability though if we want to improve this by going distributed.",
+                          "url": "https://github.com/idaholab/moose/discussions/20822#discussioncomment-2610088",
+                          "updatedAt": "2022-06-12T19:00:05Z",
+                          "publishedAt": "2022-04-21T16:21:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "the solve isnt scaling like it should. What s your Executioner block like?\n\n[Executioner]\n  type = Steady\n  solve_type = NEWTON\n  petsc_options = '-snes_converged_reason'\n  petsc_options_iname = '-pc_type -pc_hypre_type'\n  petsc_options_value = 'hypre    boomeramg'\n\n  nl_rel_tol = 1e-15\n  nl_abs_tol = 1.65e3\n  l_tol = 1e-06\n  l_max_its = 150\n  nl_max_its = 50\n[]\n\nit's very specific to this particular case, I cannot relax it otherwise the results won't match Abaqus, so basically most of my simulations I run it until it fails then I use this block to extra the results just before it fails\n    [./run_abaqus_compare_step9_v1_new]\n      file_base = GNKT_short_9steps/step_1\n      type = Exodus\n      execute_on = 'final'\n    [../]\n\n\nLet s not get too deep / spend too much time in studying scalability though if we want to improve this by going distributed.\n\nI think so @GiudGiud\nRegards,\nTraiwit",
+                          "url": "https://github.com/idaholab/moose/discussions/20822#discussioncomment-2612506",
+                          "updatedAt": "2022-06-12T19:00:06Z",
+                          "publishedAt": "2022-04-22T01:50:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Well multigrid methods should scale, so something isnt going right.\nInside the solve method you have these timed sections:\n|       FEProblem::solve                                                 |     1 |    844.542 |    844.542 |  24.62 |     247 |   3033.303 |   3033.303 |  88.42 |     255 |\n|         Console::outputStep                                            |   463 |     60.398 |      0.130 |   1.76 |       0 |     60.398 |      0.130 |   1.76 |       0 |\n|         FEProblem::computeResidualInternal                             |     1 |      0.000 |      0.000 |   0.00 |       0 |     25.251 |     25.251 |   0.74 |       0 |\n|         FEProblem::computeResidualInternal                             |    48 |      0.001 |      0.000 |   0.00 |       0 |   1188.957 |     24.770 |  34.66 |       0 |\n|         NonlinearSystemBase::initialBCs                                |     1 |      0.122 |      0.122 |   0.00 |       0 |      0.122 |      0.122 |   0.00 |       0 |\n|         FEProblem::computeJacobianInternal                             |    45 |      0.001 |      0.000 |   0.00 |       0 |    914.032 |     20.312 |  26.64 |       8 |\n|\n\ndo you mind doing what I did to see which ones dont scale?\nGood news is my PR for reworking the ElementPropertyReadFile got in (in next, devel maybe by tomorrow), so we can rework it again now.\nThis object should actually work in parallel. As long as you pass allow_renumbering = false to the [Mesh] block.\nCould you please try that?",
+                          "url": "https://github.com/idaholab/moose/discussions/20822#discussioncomment-2616996",
+                          "updatedAt": "2022-06-12T19:00:21Z",
+                          "publishedAt": "2022-04-22T16:33:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "Sorry for the late reply @GiudGiud it was a public holiday in Australia yesterday.\nFirst of all regarding PropertyReadFile with distributed mesh, when I set allow_renumbering = false I got this error\nThe following error occurred in the object \"poro_read\", of type \"PropertyReadFile\".\n\nElement ID 4598847 greater than than total number of element in mesh: 4598664. Elements should be numbered consecutively.\n\nbut when I have allow_renumbering = true I got this warning, but it still let me go into solving stage:\n*** Warning ***\nThe following warning occurred in the object \"perm_read\", of type \"PropertyReadFile\".\n\nCSV data is sorted by element, but mesh element renumbering is on, be careful!\n\nHowever, the properties map is defs incorrect\n\nit should look like this",
+                          "url": "https://github.com/idaholab/moose/discussions/20822#discussioncomment-2635873",
+                          "updatedAt": "2022-06-12T19:00:24Z",
+                          "publishedAt": "2022-04-26T05:03:13Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Developement of Solid Beam element formulation",
+          "author": {
+            "login": "abdullah2146"
+          },
+          "bodyText": "Hi,\nI want to develop the three-dimensional Solid beam formulation which is developed in this paper.\nhttps://www.sciencedirect.com/science/article/pii/S0045782513001618\nHas the MOOSE already developed this formulation? If not, can i develop this formulation on MOOSE?\nThis formulation have different matrics which need to define like\n\nCan you please answer this question?\nThanks,",
+          "url": "https://github.com/idaholab/moose/discussions/21049",
+          "updatedAt": "2022-06-09T01:44:41Z",
+          "publishedAt": "2022-05-18T19:56:07Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@jiangwen84 @dschwen",
+                  "url": "https://github.com/idaholab/moose/discussions/21049#discussioncomment-2778966",
+                  "updatedAt": "2022-05-18T20:13:35Z",
+                  "publishedAt": "2022-05-18T20:13:34Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "recuero"
+                  },
+                  "bodyText": "No, MOOSE doesn't have a solid beam formulation. The existing beam formulation makes use of the typical centerline plus cross section rotation approach (i.e. Timoshenko) with torsion (see https://mooseframework.inl.gov/modules/tensor_mechanics/beam_vandv.html).",
+                  "url": "https://github.com/idaholab/moose/discussions/21049#discussioncomment-2785660",
+                  "updatedAt": "2022-05-19T18:18:38Z",
+                  "publishedAt": "2022-05-19T18:18:38Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "abdullah2146"
+                          },
+                          "bodyText": "Thanks for your reply. As it's not developed on MOOSE, Can I develop this Solid beam formulation on my own?",
+                          "url": "https://github.com/idaholab/moose/discussions/21049#discussioncomment-2834993",
+                          "updatedAt": "2022-05-27T15:09:00Z",
+                          "publishedAt": "2022-05-27T15:08:59Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Certainly.\nAnd contributions are always welcome if this goes well.",
+                          "url": "https://github.com/idaholab/moose/discussions/21049#discussioncomment-2838821",
+                          "updatedAt": "2022-05-28T01:23:46Z",
+                          "publishedAt": "2022-05-28T01:23:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "abdullah2146"
+                          },
+                          "bodyText": "@GiudGiud Can you share any C++ files or guidance how we can develop formulation in MOOSE?",
+                          "url": "https://github.com/idaholab/moose/discussions/21049#discussioncomment-2844511",
+                          "updatedAt": "2022-05-29T18:18:07Z",
+                          "publishedAt": "2022-05-29T18:18:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "If you are a beginner in MOOSE you should follow the tutorials here first\nhttps://mooseframework.inl.gov/index.html\nIf not you should consult the tensor mechanics documentation to see how various formulations were implemented\nhttps://mooseframework.inl.gov/modules/tensor_mechanics/index.html",
+                          "url": "https://github.com/idaholab/moose/discussions/21049#discussioncomment-2846225",
+                          "updatedAt": "2022-05-30T04:40:16Z",
+                          "publishedAt": "2022-05-30T04:40:16Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "[Constraints] Feeding multiple secondary nodes to LinearNodalConstraint action",
+          "author": {
+            "login": "Traiwit"
+          },
+          "bodyText": "Hi guys,\nso LinearNodalConstraint typically you can add multiple secondary_node_ids for a single pirmary_node, for example\n  [./pair]\n    type = LinearNodalConstraint\n    variable = porepressure\n    primary_node_ids = 3\n    secondary_node_ids = '5 6 7'\n    weights = 1\n  [../]\n\nI have created an action, so that I can feed multiple Constraint pairs at once (I have more than 500k pairs, so it's better to do it this way)\nHowever my action input can only feed 1 to 1 node pair, so for the example above, it looks like this:\n[MPCbe]\n    primary_node_ids = ' 3 3 3'\n    secondary_node_ids  = '5 6 7'\n[]\n\njust wondering how do I make it such that 1 primary node can take multiple secondary nodes like the original version.\nBelow is my action script, it basically wrap LinearNodalConstraint with a for-loop\nregisterMooseAction(\"traiApp\", MPCbe, \"add_constraint\");\n\nInputParameters\nMPCbe::validParams()\n{\n  InputParameters params = Action::validParams();\n  params.addParam<std::vector<unsigned int>>(\"primary_node_ids\", \"The primary node IDs.\");\n  params.addParam<std::vector<unsigned int>>(\"secondary_node_ids\",\n                                           \"The list of secondary node ids\");\n\n  return params;\n}\nMPCbe::MPCbe(const InputParameters & params)\n  : Action(params),\nprimary_node_ids(getParam<std::vector<unsigned int>>(\"primary_node_ids\")),\nsecondary_node_ids(getParam<std::vector<unsigned int>>(\"secondary_node_ids\"))\n\n{\n}\nvoid\nMPCbe::act()\n\n{\nfor (unsigned cur_num = 0; cur_num<primary_node_ids.size() ; cur_num++)\n{\n\n  std::vector<Real> weights_in (1);\n  std::vector<unsigned int> primary_node_ids_in (1);\n  std::vector<unsigned int> secondary_node_ids_in (1);\n\n  weights_in.at(0) = 1;\n  primary_node_ids_in.at(0) = primary_node_ids[cur_num];\n  secondary_node_ids_in.at(0) = secondary_node_ids[cur_num];\n\n  InputParameters params = _factory.getValidParams(\"LinearNodalConstraint\");\n  params.set<NonlinearVariableName>(\"variable\") = \"porepressure\";\n  params.set<std::vector<Real>>(\"weights\")= weights_in;\n  params.set<std::vector<unsigned int>>(\"primary\") = primary_node_ids_in;\n  params.set<std::vector<unsigned int>>(\"secondary_node_ids\") = secondary_node_ids_in;\n  params.set<Real>(\"penalty\") = 1e10;\n  _problem->addConstraint(\"LinearNodalConstraint\", \"MPCbe\" + Moose::stringify(cur_num), params);\n\n}\n}\n\nI tried secondary_node_ids  = ' \"241 244\" 240 242' or secondary_node_ids  = ' [241 244] 240 242', and none of them works.\ncannot convert '\"241' to int \nmy C++ is very very basic too :(\nPlease help if you have any idea\n@GiudGiud I tag you since you know about general stuff the most here.\nKind regards,\nTraiwit",
+          "url": "https://github.com/idaholab/moose/discussions/20972",
+          "updatedAt": "2022-07-05T06:37:24Z",
+          "publishedAt": "2022-05-06T06:16:25Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "Traiwit"
+                  },
+                  "bodyText": "Hi guys,\nI think instead of directly inputting vectors of nodes into the action, I think it might be easier to feed it via CSV, where column A contains only the primary node and column B contains the list of secondary nodes.\nis there any example of this? Thank you!",
+                  "url": "https://github.com/idaholab/moose/discussions/20972#discussioncomment-2711060",
+                  "updatedAt": "2022-07-05T06:42:27Z",
+                  "publishedAt": "2022-05-09T01:16:14Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "there's examples of CSV reading yes.\nThe CSVReader postprocessor is one, the PropertyReadFile UO is another",
+                          "url": "https://github.com/idaholab/moose/discussions/20972#discussioncomment-2718049",
+                          "updatedAt": "2022-07-05T06:42:28Z",
+                          "publishedAt": "2022-05-09T22:18:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "Hi @GiudGiud, how do I feed data from CSVReader into my action?\nsays I want primary_node_ids to take the first column, then secondary_node_ids takes all the numbers from the second to n columns.\n(please refer to my action code above).\nthis is an example of my CSV:\n\nAlso, I don't think PropertyReadFile works since it has to be assigned as properties (tied to element/nodes/block)\nKind regards,\nTraiwit",
+                          "url": "https://github.com/idaholab/moose/discussions/20972#discussioncomment-2718628",
+                          "updatedAt": "2022-07-05T06:42:28Z",
+                          "publishedAt": "2022-05-10T01:06:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "yeah PropertyReadFile isnt structured the right way.\nActually the CSVReader is an example of using the DelimitedFileReader class in the code. It's not meant to be used directly.\nsome docs\nhttps://mooseframework.inl.gov/source/utils/MooseUtils.html",
+                          "url": "https://github.com/idaholab/moose/discussions/20972#discussioncomment-2719207",
+                          "updatedAt": "2022-07-05T06:42:41Z",
+                          "publishedAt": "2022-05-10T03:38:05Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "any luck with calling the DelimitedFileReader ?",
+                          "url": "https://github.com/idaholab/moose/discussions/20972#discussioncomment-2755451",
+                          "updatedAt": "2022-07-05T20:11:04Z",
+                          "publishedAt": "2022-05-15T21:21:34Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "Hi @GiudGiud yeh took some time to get it to work properly\nit roughly looks like this (not finished yet)\nMPCbe2::act()\n\n{\n\n\n  MooseUtils::DelimitedFileReader csv_reader(getParam<FileName>(\"csv_file\"), &_communicator);\n  if (isParamValid(\"header\"))\n  csv_reader.setHeaderFlag(getParam<bool>(\"header\")\n                               ? MooseUtils::DelimitedFileReader::HeaderFlag::ON\n                               : MooseUtils::DelimitedFileReader::HeaderFlag::OFF);\n\n  csv_reader.read();\n  const std::vector<std::string> & names = csv_reader.getNames();\n    const std::vector<std::vector<double>> & data = csv_reader.getData();\n\n    int column = (sizeof(data)*data.size())+data.size();\n\n // for (unsigned cur_num = 0; cur_num<secondary_node_ids.size() ; cur_num++)\n for (unsigned cur_num = 0; cur_num<column ; cur_num++)\n{\n\n  std::vector<Real> weights_in (1);\n  std::vector<unsigned int> primary_node_ids_in (1);\n  std::vector<unsigned int> secondary_node_ids_in_1 (1);\n  std::vector<unsigned int> secondary_node_ids_in_2 (1);\n\n\n  weights_in.at(0) = 1;\n  primary_node_ids_in.at(0) = data[0][cur_num];\n  secondary_node_ids_in_1.at(0) =  data[1][cur_num];\n\nbut funny that it seems like my CVS got transposed, as you can see from the CSV input above it should loop at the row, but I got the correct solution when I loop the column instead.\n  primary_node_ids_in.at(0) = data[0][cur_num];\n  secondary_node_ids_in_1.at(0) =  data[1][cur_num];\n\nOne super quick question though, is there a way to print an integer (for example number of column/row) during the run of the main input file?\nfor example I want to print  int column = (sizeof(data)*data.size())+data.size();, but I don't think I can just simply have printf in my source code.\nAnyways, I'm almost there. Thank you very much!\nKind regards,\nTraiwit",
+                          "url": "https://github.com/idaholab/moose/discussions/20972#discussioncomment-2755969",
+                          "updatedAt": "2022-07-05T20:11:04Z",
+                          "publishedAt": "2022-05-16T00:45:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nSo the way to print in moose is like this:\n_console << \"message\" << std::endl;\nThe header for that routine you are using says:\n  /**\n   * Return the rows/columns of data.\n   *\n   * The outer vector is column and the inner the rows.\n   */\n  const std::vector<std::vector<double>> & getData() const;\n\nso indeed this seems flipped.",
+                          "url": "https://github.com/idaholab/moose/discussions/20972#discussioncomment-2760274",
+                          "updatedAt": "2022-07-05T20:11:04Z",
+                          "publishedAt": "2022-05-16T14:33:14Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "@GiudGiud a stupid question, so what do I do to make it not flip?",
+                          "url": "https://github.com/idaholab/moose/discussions/20972#discussioncomment-2763628",
+                          "updatedAt": "2022-07-05T20:11:05Z",
+                          "publishedAt": "2022-05-17T00:02:45Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "@GiudGiud I just noticed that I cannot compile with\n    for (std::size_t i = 0; i < data.size(); ++i)\n    {\n      _column_data[names[i]] = &declareVector(names[i]);\n      _column_data[names[i]]->assign(data[i].begin(), data[i].end());\n    }\n\nsimilar to what in CSVReader source code\ni got this error\nerror: 'declareVector' was not declared in this scope\n   92 |       _column_data[names[i]] = &declareVector(names[i]);\n      |                                 ^~~~~~~~~~~~~\n/home/moose/projects/trai/src/kernels/MPCbe2.C:93:31: error: 'class MPCbe2' has no member named 'assign'\n   93 |       _column_data[names[i]]->assign(data[i].begin(), data[i].end());\n\nKind regards,\nTraiwit",
+                          "url": "https://github.com/idaholab/moose/discussions/20972#discussioncomment-2764567",
+                          "updatedAt": "2022-07-05T20:11:05Z",
+                          "publishedAt": "2022-05-17T04:40:41Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "okay guys, so this is the current version of the code\nApparently, the  FEProblem::computeJacobianInternal takes significantly longer than the original version of the code, however, the RAM usage is 1/5 of the previous version. not sure what is the issue here\nso the new version, the number of loops (number of actions) is 1/5 smaller than before but the number of secondary node id for each loop increases [as explained in the original post at the top].\nregisterMooseAction(\"traiApp\", MPCbe2, \"add_constraint\");\n\nInputParameters\nMPCbe2::validParams()\n{\n  InputParameters params = Action::validParams();\n  params.addRequiredParam<FileName>(\"csv_file\",\n                                    \"The name of the CSV file to read. Currently, with \"\n                                    \"the exception of the header row, only numeric \"\n                                    \"values are supported.\");\nparams.addParam<bool>(\"header\",\n                              \"When true it is assumed that the first row contains column headers, these \"\n                              \"headers are used as the VectorPostprocessor vector names. If false the \"\n                              \"file is assumed to contain only numbers and the vectors are named \"\n                             \"automatically based on the column number (e.g., 'column_0000', \"\n                              \"'column_0001'). If not supplied the reader attempts to auto detect the \"\n                              \"headers.\");\n\n  return params;\n}\n\nMPCbe2::MPCbe2(const InputParameters & params)\n  : Action(params)\n{\n}\nvoid\nMPCbe2::act()\n\n{\n  MooseUtils::DelimitedFileReader csv_reader(getParam<FileName>(\"csv_file\"), &_communicator);\n  if (isParamValid(\"header\"))\n  csv_reader.setHeaderFlag(getParam<bool>(\"header\")\n                               ? MooseUtils::DelimitedFileReader::HeaderFlag::ON\n                               : MooseUtils::DelimitedFileReader::HeaderFlag::OFF);\n\n  csv_reader.read();\n    const std::vector<std::string> & names = csv_reader.getNames();\n    const std::vector<std::vector<double>> & data = csv_reader.getData();\n\n\n    int column =  119178; // number of row\n    int row = data.size();\n\n    _console << \"number of row   \" << column << std::endl;\n\n    _console << \"number of column   \" <<  row << std::endl;\n\n for (unsigned cur_num = 0; cur_num<column ; cur_num++)\n{\n\n  std::vector<Real> weights_in (1);\n  std::vector<unsigned int> primary_node_ids_in (1);\n  std::vector<unsigned int> secondary_node_ids_in_1 (1);\n  std::vector<unsigned int> secondary_node_ids_in_2 (1);\n\n\n  weights_in.at(0) = 1;\n  primary_node_ids_in.at(0) = data[0][cur_num];\n  secondary_node_ids_in_1.at(0) =  data[1][cur_num];\n  std::vector<unsigned int> secondary_node_ids_in_final(secondary_node_ids_in_1);\n\n  for (unsigned n = 2; n<row ; n++)\n  {\n\n  secondary_node_ids_in_2.at(0) =  data[n][cur_num];\n\n  secondary_node_ids_in_final.insert(secondary_node_ids_in_final.end(), secondary_node_ids_in_2.begin(), secondary_node_ids_in_2.end());\n  }\n\n  sort( secondary_node_ids_in_final.begin(), secondary_node_ids_in_final.end() );\n  secondary_node_ids_in_final.erase( unique( secondary_node_ids_in_final.begin(), secondary_node_ids_in_final.end() ), secondary_node_ids_in_final.end() );\n\n  InputParameters params = _factory.getValidParams(\"LinearNodalConstraint\");\n  params.set<NonlinearVariableName>(\"variable\") = \"porepressure\";\n  params.set<std::vector<Real>>(\"weights\")= weights_in;\n  params.set<std::vector<unsigned int>>(\"primary\") = primary_node_ids_in;\n  params.set<std::vector<unsigned int>>(\"secondary_node_ids\") = secondary_node_ids_in_final;\n  params.set<Real>(\"penalty\") = 1e5;\n  _problem->addConstraint(\"LinearNodalConstraint\", \"MPCbe2\" + Moose::stringify(cur_num), params);\n\n}\n\n\n_console << \"MPC done!\" << std::endl;\n}",
+                          "url": "https://github.com/idaholab/moose/discussions/20972#discussioncomment-2765043",
+                          "updatedAt": "2022-07-05T20:11:05Z",
+                          "publishedAt": "2022-05-17T06:38:48Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\n\n\nnot sure. I d have to check the text in the docstring isnt wrong first\n\n\ndeclareVector is a vector postprocessor routine, using by the CSVReader which is a VPP. It does a few things like make sure the base class keeps track of what to output, or that the problem knows about the name of the vector, so it can be retrieved from elsewhere.\nFor you I suspect you only need storage right? So you just want a standard allocation? Or are you trying to make a VPP?\nIn the case that you are not making a VPP, something like this works\n\n\n    for (std::size_t i = 0; i < data.size(); ++i)\n    {\n      _column_data[names[i]].resize(data[i].size());\n      _column_data[names[i]] = data[i];\n    }\n\nif _column_data is a map or something that will properly allocate when you do _column_data[names[i]] (insert in a map should be preferred)\nand if data is a vector, so that the copy can just be done with =.\n\nSo the change that slowed down the code is going from:\nmany constraints with only 2 nodes specified\nless constraints with groups of nodes specified\nright?\n\nAre they strictly equivalent wrt physics? Or do you end up specifying more inter-node constraints in the second case?\nPS: You should add more comments to your code. It helps us understand what you are doing and it ll help you too in a few months when you look back.",
+                          "url": "https://github.com/idaholab/moose/discussions/20972#discussioncomment-2768460",
+                          "updatedAt": "2022-07-05T20:11:09Z",
+                          "publishedAt": "2022-05-17T14:56:14Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

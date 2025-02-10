@@ -1,0 +1,891 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMS0wOC0zMVQwOTo0NDoxNy0wNTowMM4ANiU7"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "Mesh splitting",
+          "author": {
+            "login": "KhaledNabilSharafeldin"
+          },
+          "bodyText": "Hello,\nI would like to ask about distributed mesh a couple of questions,\nFirst the original problem: Using larger mesh (more elements) with 24 independent variables with 3 subapps uses more than 100gb of memory.\nWhat I am trying to do: use mesh splitting so that it doesnt copy the whole mesh for each processor.\nmpiexec -np 24 app-opt -i inputFile.i --split-mesh 24,48,144 --split-file foo.cpr\nmpiexec -np 24 app-opt -i inputFile.i --use-split --split-file foo.cpr\n\n\nProblem:\nError:\n*** ERROR ***\nThe following error occurred in the object \"PostProcessorValue\", of type \"NodalVariableValue\".\n\nNodalVariableValue should only be used when node renumbering is disabled.\n\nThis solution did nothing:\n[Mesh]\n  [./msh]\n    type = FileMeshGenerator\n    file = ../../test.exo\n    dim = 3\n    **allow_renumbering = false**\n  []\n  [./sidesets]\n    type = SideSetsFromNormalsGenerator\n    input = msh\n    normals = '0 0 1\n    0 0 -1\n    0 1 0\n    0 -1 0\n    1 0 0\n    -1 0 0'\n    fixed_normal = true\n    new_boundary = 'top1 bottom1 front1 back1 right1 left1'\n  []\n  [./ns1]\n    type = ExtraNodesetGenerator\n    input = sidesets\n    new_boundary = 'nodeset1'\n    nodes = '1'\n  [../]\n[]\n\nI these variables were not essential in calculations. So I commented them out for now... but now I get this problem:\n4[22] ./include/libmesh/remote_elem.h, line \n[120, compiled Aug  2 2021 at 10:45:35\n\n\n*** ERROR ***\nError: not implemented!\n\nThis happens in the subapp.\nNo idea where to go from here unfortunately, would appreciate any suggestions.",
+          "url": "https://github.com/idaholab/moose/discussions/18785",
+          "updatedAt": "2022-10-20T17:03:59Z",
+          "publishedAt": "2021-09-07T19:22:04Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYour issue is that the Mesh generators are basically ignored when a split mesh is loaded this way (using the --use-split).\nI will rework the documentation for that soon. In the mean time you could use --distributed-mesh and no split. Splits are typically for very very large runs where IO matters a lot. For 24 processes, you are just trying to distribute the mesh not reduce file system IO\nYou can still use split with a FileMeshGenerator (the documentation I ll be writing) but for the file argument you need to specify the 'foo.cpr' folder.\nHope this helps\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/18785#discussioncomment-1293001",
+                  "updatedAt": "2022-10-20T17:04:09Z",
+                  "publishedAt": "2021-09-07T20:01:03Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I re-read your post. You definitely want to be using --distributed-mesh instead of splitting meshes.",
+                          "url": "https://github.com/idaholab/moose/discussions/18785#discussioncomment-1293085",
+                          "updatedAt": "2023-07-27T15:19:23Z",
+                          "publishedAt": "2021-09-07T20:18:12Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "KhaledNabilSharafeldin"
+                          },
+                          "bodyText": "I'll give that a shot, but any idea on how to solve the last problem? it started showing up after testing with mesh splitting...\n4[22] ./include/libmesh/remote_elem.h, line \n[120, compiled Aug  2 2021 at 10:45:35\n\n\n*** ERROR ***\nError: not implemented!\n\nI tried recompiling all\nmake clobberall\nmake -j8\n\ndoesnt seem to work.",
+                          "url": "https://github.com/idaholab/moose/discussions/18785#discussioncomment-1294401",
+                          "updatedAt": "2022-10-20T17:04:10Z",
+                          "publishedAt": "2021-09-08T06:04:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "We'd need a backtrace to see which function is not implemented. Libmesh is supposed to provide one, but maybe not on asserts.\nIf you could run the code in a debugger and place a breakpoint on MPI_Abort that should work to get a backtrace",
+                          "url": "https://github.com/idaholab/moose/discussions/18785#discussioncomment-1294421",
+                          "updatedAt": "2022-12-09T02:18:48Z",
+                          "publishedAt": "2021-09-08T06:13:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "KhaledNabilSharafeldin"
+                          },
+                          "bodyText": "Thank you! I managed to get it to work, it was unrelated to the original problem. As for --distributed-mesh it worked like a charm. I guess splitting method would work just as well.\nI have a couple of follow up questions,\n\nwould using more subapps require more memory?\nwhen do you consider the problem large enough to use splitting, since i'm only using 24 cores for debugging/testing/setting up the simulation but have access to more computational resources. when does splitting is more advantageous than distributed mesh.\nNot sure exactly the technical differences between distributed mesh and splitting it, so they might be the same thing, so I'd just like to clarify the difference. from what I understood, the mesh can get very large that it wont fit in the RAM, that's when you use pre-splitting. which might be handy to set up for the problem .\n\nAgain, thanks for the very helpful support.",
+                          "url": "https://github.com/idaholab/moose/discussions/18785#discussioncomment-1295919",
+                          "updatedAt": "2022-12-09T02:18:48Z",
+                          "publishedAt": "2021-09-08T12:15:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "KhaledNabilSharafeldin"
+                          },
+                          "bodyText": "Would like to add to this is that I had to add to the mesh block allow_renumbering = false to calculate the Nodal post-processors, and for my subapp I used clone_master_mesh = true in the subapp block\nMesh:\n[Mesh]\n  [./msh]\n    type = FileMeshGenerator\n    file = ../../test.exo\n    dim = 3\n    allow_renumbering = false\n  []\n  [./sidesets]\n    type = SideSetsFromNormalsGenerator\n    input = msh\n    normals = '0 0 1\n    0 0 -1\n    0 1 0\n    0 -1 0\n    1 0 0\n    -1 0 0'\n    fixed_normal = true\n    new_boundary = 'top1 bottom1 front1 back1 right1 left1'\n  []\n  [./ns1]\n    type = ExtraNodesetGenerator\n    input = sidesets\n    new_boundary = 'nodeset1'\n    nodes = '1'\n  [../]\n  allow_renumbering = false # This is the one that worked\n[]\n\nMultiapp:\n[MultiApps]\n  [./cstests_sub]\n    type = TransientMultiApp\n    positions = '0 0 0'\n    input_files = csTests_sub.i\n    execute_on = 'initial timestep_end'\n    clone_master_mesh = true\n  [../]\n[] \n\nCorrect me if this is not the case for using clone_master_mesh or if better solution exists.",
+                          "url": "https://github.com/idaholab/moose/discussions/18785#discussioncomment-1296231",
+                          "updatedAt": "2023-04-13T20:41:05Z",
+                          "publishedAt": "2021-09-08T13:22:31Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "If the subapps are using the same mesh as the main app, clone_master_mesh is great for that.\n\nYes. More subapps will use more memory usually. In your case, if all subapps are defining variables on the same mesh as the main app, then that takes up memory.\nSee this page for more info on splitting.  https://mooseframework.inl.gov/syntax/Mesh/splitting.html\nExpensive mesh work and lots of processors (like >100) on a slow file system make splitting beneficial",
+                          "url": "https://github.com/idaholab/moose/discussions/18785#discussioncomment-1296870",
+                          "updatedAt": "2022-12-09T02:18:54Z",
+                          "publishedAt": "2021-09-08T15:32:53Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Something wrong with the offical website?",
+          "author": {
+            "login": "ZhigangPu"
+          },
+          "bodyText": "Dear,\nIt seems that the offcial website of MOOSE (https://mooseframework.inl.gov/) has crashed? I can not access the website this morning til now.\nDoes that happen to you?",
+          "url": "https://github.com/idaholab/moose/discussions/18787",
+          "updatedAt": "2021-09-08T14:00:26Z",
+          "publishedAt": "2021-09-08T05:59:02Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "WilkAndy"
+                  },
+                  "bodyText": "Yep, i agree",
+                  "url": "https://github.com/idaholab/moose/discussions/18787#discussioncomment-1294398",
+                  "updatedAt": "2021-09-08T06:03:08Z",
+                  "publishedAt": "2021-09-08T06:02:57Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThere are a few technical difficulties on some websites at the lab. We'll keep you posted once we know more.\nYou can build the website locally in the mean time. In the doc/ of your app: python moosedocs.py build --serve\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/18787#discussioncomment-1294427",
+                  "updatedAt": "2021-09-08T06:15:50Z",
+                  "publishedAt": "2021-09-08T06:15:40Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ZhigangPu"
+                          },
+                          "bodyText": "Wow, so cool, thanks very much!\nZhigang",
+                          "url": "https://github.com/idaholab/moose/discussions/18787#discussioncomment-1294447",
+                          "updatedAt": "2021-09-08T06:20:11Z",
+                          "publishedAt": "2021-09-08T06:20:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "Should be up and working now.",
+                          "url": "https://github.com/idaholab/moose/discussions/18787#discussioncomment-1296044",
+                          "updatedAt": "2021-09-08T12:39:45Z",
+                          "publishedAt": "2021-09-08T12:39:45Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ZhigangPu"
+                          },
+                          "bodyText": "Yes, indeed, thanks for your effort!",
+                          "url": "https://github.com/idaholab/moose/discussions/18787#discussioncomment-1296411",
+                          "updatedAt": "2021-09-08T14:00:16Z",
+                          "publishedAt": "2021-09-08T14:00:16Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Cellular Growth | Solidification Modeling",
+          "author": {
+            "login": "rl3fz"
+          },
+          "bodyText": "Hello Everyone!\nI'm looking to simulate cellular growth during solidification. Does MOOSE have any kernels that would be particularly helpful here? I'm familiar with the grand potential examples, but I'm looking for more control over the direction/orientation (and if possible, type) of the growth.\nAny and all advice would be greatly appreciated!",
+          "url": "https://github.com/idaholab/moose/discussions/18717",
+          "updatedAt": "2022-06-17T08:08:17Z",
+          "publishedAt": "2021-08-27T15:04:37Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@laagesen",
+                  "url": "https://github.com/idaholab/moose/discussions/18717#discussioncomment-1269245",
+                  "updatedAt": "2022-06-17T08:08:17Z",
+                  "publishedAt": "2021-09-02T00:48:11Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "SudiptaBiswas"
+                  },
+                  "bodyText": "Grand potential-based solidification model is what we have that can be used here. You will be able to control orientation and growth type by selecting appropriate interfacial properties.",
+                  "url": "https://github.com/idaholab/moose/discussions/18717#discussioncomment-1278210",
+                  "updatedAt": "2022-06-17T08:08:19Z",
+                  "publishedAt": "2021-09-03T17:15:11Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rl3fz"
+                          },
+                          "bodyText": "Got it, thank you!",
+                          "url": "https://github.com/idaholab/moose/discussions/18717#discussioncomment-1290973",
+                          "updatedAt": "2022-06-17T08:08:20Z",
+                          "publishedAt": "2021-09-07T13:15:27Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Converting what you get from auxvariables/auxkernels into material objects/BCs calculation?",
+          "author": {
+            "login": "Traiwit"
+          },
+          "bodyText": "Hi guys\nHow do you convert what you get from auxvariables/auxkernels into material objects/ BCs?\nI want to use the minimum length obtained from ElementLengthAux to calculate drainage (PorousFlowSink), is there any example, where should I start?\nI want to add it here (PorousFlowSink.C)\nReal\nPorousFlowSinkTC::computeQpResidual()\n{\n  Real flux = _test[_i][_qp] * multiplier();\n  if (_use_mobility)\n  {\n    const Real k =\n        ((*_permeability)[_qp] * _normals[_qp]) * _normals[_qp]; // do not upwind permeability\n    flux *= (*_fluid_density_node)[_i][_ph] * k / (*_fluid_viscosity)[_i][_ph]; ***********HERE************\n  }\n\nKind regards,\nTraiwit",
+          "url": "https://github.com/idaholab/moose/discussions/18774",
+          "updatedAt": "2022-07-26T00:52:43Z",
+          "publishedAt": "2021-09-06T01:18:20Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nI dont know about that file in particular but you can use either or both material properties and auxiliary variables in boundary conditions.\nThis object already seems to use material properties so you can look at it for its use of the MaterialPropertyInterface. For coupling in auxiliary variables you can look at the CoupledForce kernel and its use of the Coupleable interface.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/18774#discussioncomment-1284163",
+                  "updatedAt": "2022-07-26T00:52:49Z",
+                  "publishedAt": "2021-09-06T02:14:53Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "Hi @GiudGiud, which would be easier?\n\nAuxvariable > material > BCs\nAuxvariable > BCs\n\nI'm still not sure how to call what I got from ElementLengthAux to PorousFlowSink.C\nThe example below is how density and viscosity (material object) are called\n    _fluid_density_node(_has_mobility ? &getMaterialProperty<std::vector<Real>>(\n                                            \"PorousFlow_fluid_phase_density_nodal\")\n                                      : nullptr),\n    _dfluid_density_node_dvar(_has_mobility ? &getMaterialProperty<std::vector<std::vector<Real>>>(\n                                                  \"dPorousFlow_fluid_phase_density_nodal_dvar\")\n                                            : nullptr),\n    _fluid_viscosity(_has_mobility\n                         ? &getMaterialProperty<std::vector<Real>>(\"PorousFlow_viscosity_nodal\")\n                         : nullptr),\n    _dfluid_viscosity_dvar(_has_mobility ? &getMaterialProperty<std::vector<std::vector<Real>>>(\n                                               \"dPorousFlow_viscosity_nodal_dvar\")\n                                         : nullptr),\n\nis there something like getAuxvariable? also is there a documentary on this stuff? I think I should read more about MOOSE .C and .h file before I start doing stuff like this.\nThank you\nKind regards,\nTraiwit",
+                          "url": "https://github.com/idaholab/moose/discussions/18774#discussioncomment-1284451",
+                          "updatedAt": "2022-07-26T00:52:50Z",
+                          "publishedAt": "2021-09-06T05:02:29Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Auxvariable > BCs for sure.\nFor AuxVariable there is the Coupleable interface. Here's the constructor from CoupledForce (a kernel) where an auxvariable can be coupled in:\nCoupledForce::CoupledForce(const InputParameters & parameters)\n  : Kernel(parameters), _v_var(coupled(\"v\")), **_v(coupledValue(\"v\")),** _coef(getParam<Real>(\"coef\"))\n{\n  if (_var.number() == _v_var)\n    mooseError(\"Coupled variable 'v' needs to be different from 'variable' with CoupledForce, \"\n               \"consider using the CoefReaction kernel or something similar\");\n}\n\nthen the value of the coupled variable (here _v) is obtained with _v[_qp]\nThe variable can also be obtained (instead of the value) using the coupled() routine, but i dont think you need this here.",
+                          "url": "https://github.com/idaholab/moose/discussions/18774#discussioncomment-1284461",
+                          "updatedAt": "2022-08-03T13:46:45Z",
+                          "publishedAt": "2021-09-06T05:07:51Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Are you retrieving the aux variable from the same domain the boundary condition is applied in?\nOr does it 'live' on the other side?",
+                          "url": "https://github.com/idaholab/moose/discussions/18774#discussioncomment-1284465",
+                          "updatedAt": "2022-08-03T13:46:46Z",
+                          "publishedAt": "2021-09-06T05:08:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "@GiudGiud Thank you very much. The auxvariable is obtained from the same domain.\nThe original PorousFlowSink equation is basically darcy's law, but I want to use Abaqus equation for the drainage instead\n\nhttps://abaqus-docs.mit.edu/2017/English/SIMACAEPRCRefMap/simaprc-c-porousflow.htm\nApparently, the c can be calculated using modified ElementLengthAux\nAnyways, I will look into this further by calling auxvariable via  _v(coupledValue(\"v\") then add _v[_qp] into the equation I mentioned above. I will keep you updated, I really appreciate all your help\nKind regards,\nTraiwit",
+                          "url": "https://github.com/idaholab/moose/discussions/18774#discussioncomment-1284560",
+                          "updatedAt": "2022-08-12T08:23:34Z",
+                          "publishedAt": "2021-09-06T05:59:00Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "it's working now, thank you! @GiudGiud",
+                          "url": "https://github.com/idaholab/moose/discussions/18774#discussioncomment-1288878",
+                          "updatedAt": "2022-08-12T08:23:42Z",
+                          "publishedAt": "2021-09-07T03:42:34Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to use Cubit to create a 2D or QUAD9 Element",
+          "author": {
+            "login": "alexchen4ai"
+          },
+          "bodyText": "Hi, I am using cubit to create the mesh for Moose. I download the Cubit-learn version and it seems that there is no option for 2D mesh generation. Also, I can't find the option to adjust the type of elements. For example, use QUAD9 element so that we could use second order interpolation. Can anyone help with this?",
+          "url": "https://github.com/idaholab/moose/discussions/18742",
+          "updatedAt": "2023-09-25T14:22:00Z",
+          "publishedAt": "2021-08-31T16:47:58Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nHere are examples using the python API to generate a 2D mesh (there might be better ones in the documentation btw)\nhttps://github.com/idaholab/virtual_test_bed/tree/main/msfr/mesh\nhttps://github.com/idaholab/virtual_test_bed/blob/main/pbfhr/meshes/generate_core_with_reflectors.py\nAnd selecting quad9 is done here\nhttps://cubit.sandia.gov/15.5/help_manual/WebHelp/finite_element_model/exodus/exodus2_file_specification.htm\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/18742#discussioncomment-1261382",
+                  "updatedAt": "2023-09-25T14:22:00Z",
+                  "publishedAt": "2021-08-31T18:08:06Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "alexchen4ai"
+                          },
+                          "bodyText": "Thank you. This works perfectly.",
+                          "url": "https://github.com/idaholab/moose/discussions/18742#discussioncomment-1283246",
+                          "updatedAt": "2023-09-25T14:22:03Z",
+                          "publishedAt": "2021-09-05T18:30:35Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Design sensitivity analysis (derivative of results w.r. to parameters)",
+          "author": {
+            "login": "WulfHans"
+          },
+          "bodyText": "The derivative of results (e.g. displacements) with respect to parameters (e.g. material parameters) is often needed for parameter identification or optimization. Instead of multiple calls to the FE program and using finite differences (costly!), there is an alternative method that calculates these sensitivities directly in the FE code.\nThe method boils down to: After computing the convergent solution for the current time-step, you have to solve another system with the same system matrix but a different right hand side. If a decomposition is used for solving, it can be re-used resulting in minimal overhead. The additional right-hand-side contains the derivative of the constitutive law w.r.t. the parameter - this has to be provided by an additional subroutine or computed numerically.\nThis method has been implemented in several reasearch FE programs under various names like semi-analytical sensitivity analysis. Recently, it has been implemented in ABAQUS as well under the name \"Design sensitivity analysis\":\nhttps://classes.engineering.wustl.edu/2009/spring/mase5513/abaqus/docs/v6.6/books/stm/default.htm?startat=ch02s18ath57.html\nUnfortunately, ABAQUS does not allow any modifications to the process and is very limited in the choice of material laws. Concerning the homegrown FE codes ... I believe it is time to move to something larger and more professional.\nThe main questions are: Can this be done with MOOSE with a reasonable effort? Is the framework well-suited for this type of modification? Has someone attempted something similar already?\nThe very rough path to implementation looks like:\n\ndefine additional field variables for each derivative (should easy via variable tag)\ncreate an additional interface that represents the derivative of the constitutive law w.r.t. the parameters\ncompute the RHS using this interface (this might be very similar to existing functions)\nMake sure that the equation system is solved again for each parameter with the new right-hand-sides, after NEWTON converged (my first idea is that you might use a custom class derived from Executioner for this)\n\nAny hints concerning this plan are very welcome as well, especially which are the places to start off and which functionality can be easily reused.",
+          "url": "https://github.com/idaholab/moose/discussions/18464",
+          "updatedAt": "2022-06-18T12:02:42Z",
+          "publishedAt": "2021-07-28T16:47:50Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\n@friedmud has this been done before?\n@lindsayad what's your best guess on effort level for this?\nI don't see any road blocks in the path to implementation. We can compute variable derivatives. We would initalize a new simulation with the result of the previous one rather than try to do both parts in a single input file and re-use the Jacobian (not really worth the additional complications imo).\nWe can compute derivatives of the consistutive laws wrt variables using automatic differentiation, but also can declare derivative material properties and write the derivatives manually for those (if other parameters are involved).\nWhat do you mean precisely by RHS here? Which terms?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/18464#discussioncomment-1088723",
+                  "updatedAt": "2022-06-18T12:03:22Z",
+                  "publishedAt": "2021-07-29T20:10:16Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WulfHans"
+                          },
+                          "bodyText": "Thanks for the affirmative replies already!\nConcerning the questions:\nThe RHS in this case is essentially the normal RHS, but derived by the parameter. For the mechanical problem, its nodal forces derived by the parameter (thats why it is often called pseudo-load). It contains two terms, that describe essentially describe\na) how much does the force directly change due to change in stress and\nb) how much does does it indirectly change by changing the solution\nwhen applying a variation to a parameter.\nAt the end, the integrals look very similar to the computation of the normal RHS, but with the derivates wrt the parameters instead.\nI could write down some equations (is some LaTeX supported here?), but in fact the Abaqus manual linked above nicely describes it as well, without too much overhead.\nBtw: If there are some state variables (internal variables of the constitutive law), these need to be stored and retrieved as well. This should be no big problem, right?",
+                          "url": "https://github.com/idaholab/moose/discussions/18464#discussioncomment-1090884",
+                          "updatedAt": "2022-06-18T12:03:24Z",
+                          "publishedAt": "2021-07-30T10:37:45Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dschwen"
+                          },
+                          "bodyText": "If we indeed do this using forward mode automatic differentiation, then all state variables would cary along the derivative w.r.t. the design parameter anyways. I'm not sure there'd even be this special treatment of the RHS. Maybe I'm being overly naive, but in my mind adding the additional parameter derivative entries should make then get carried through the entire solution pretty much automatically.\n@lynnmunday can probably comment more (he's the PI on the project).",
+                          "url": "https://github.com/idaholab/moose/discussions/18464#discussioncomment-1093771",
+                          "updatedAt": "2022-06-18T12:03:32Z",
+                          "publishedAt": "2021-07-31T06:23:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lynnmunday"
+                          },
+                          "bodyText": "@WulfHans We have implemented a system to solve inverse optimization problems for parameter estimation using the adjoint method to compute the gradient.  We only did this for force inversion and haven't completed it for material identification.\nWe are also doing this for discrete measurement points and have not done this for the whole solution field.  Are you only interested in the gradient part of this?  I think that is all you need to compute the sensitivity.\nI think @GiudGiud idea on how to compute this sensitivity might work.  To get the gradient at each node, you need something like the patchrecovery auxKernel that can multiply the derivative of the material property with the gradients of the shape functions.  This will need to be done for all of the elements touching the node.  I think I was told a userObject could also do this.  This new nodal value will then need to be multiplied by the nodal solution from the forward problem to get the gradient.  I think this is the right.\nLike @dschwen mentions, we will eventually compute this gradient with automatic differentiation.",
+                          "url": "https://github.com/idaholab/moose/discussions/18464#discussioncomment-1121519",
+                          "updatedAt": "2022-06-18T12:03:32Z",
+                          "publishedAt": "2021-08-02T17:43:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aaelmeli"
+                          },
+                          "bodyText": "Hi @lynnmunday,\nI have the same problem setting, i.e material identification given discrete responses and utilizing the adjoint formulation to compute the gradient (a derivative of the objective (cost) functional w.r.t material properties). So, if possible, I need some hints on the implementations from you since I think we almost have the same problem.\nsummary of the problem:\nI am defining the spatial distribution of the material properties through an ASCII file (coordinates and material property value). The spatial material distribution is defined such that each material pixel includes one or more finite elements.\nTo compute the gradient vector, each element of the gradient vector will involve computing the derivative of the constitutive equation w.r.t the corresponding material parameter. The computation of the constitutive equation w.r.t that corresponding material parameter would result in a very sparse matrix (nonzero only at the dofs that are located inside that parameter \"pixel\"). So, I was wondering if you could give some pointers on the implementation part of the gradient, in particular, what functions can be reused from moose, and what kernels/interfaces should be implemented.\nThank you.",
+                          "url": "https://github.com/idaholab/moose/discussions/18464#discussioncomment-1269671",
+                          "updatedAt": "2022-08-18T14:31:01Z",
+                          "publishedAt": "2021-09-02T04:15:08Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lynnmunday"
+                          },
+                          "bodyText": "@aaelmeli This current pr is for the patchrecovery auxkernel and userobjects:  #18721 (review)\nI think we need something like this to compute the gradients.\nTo compute this sensitivity at each node you need to be able to compute the following contribitution from each element that touches that node:\nnodal_sensitivty = element_integral (grad_shapefunction*grad_forwardSolution)\nI don't think nodal aux_kernels have access to element data like shape functions.  That is why @hugary1995 added a userObject in the above pr.  He is computing a nodal flux (i.e. nodal stress) based on the element data which is kind of what you need to do.  So Gary's nodal patch recovery could compute grad_forwardSolution at the node but we need to also also include in this integral the multiplication by the derivative of the shape function.   Maybe this will be easy to do now that Gary has added the patch recovery capability.  I haven't had time to look at it.  I think the sensitivity will be simpler than patchRecovery because Gary is also solving a least squares problem and we don't need that.",
+                          "url": "https://github.com/idaholab/moose/discussions/18464#discussioncomment-1273035",
+                          "updatedAt": "2022-08-18T14:31:01Z",
+                          "publishedAt": "2021-09-02T16:44:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Hey Lynn, two possibly dumb questions:\n\nwhy do we need spatial gradients of material properties?\nwhy do we need those gradients at the nodes?",
+                          "url": "https://github.com/idaholab/moose/discussions/18464#discussioncomment-1273202",
+                          "updatedAt": "2022-08-18T14:31:02Z",
+                          "publishedAt": "2021-09-02T17:15:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "aaelmeli"
+                          },
+                          "bodyText": "Hey Lynn, two possibly dumb questions:\n\nwhy do we need spatial gradients of material properties?\nI can reply on this question: in material identification inverse problems (like for example subsurface imaging, biomedical imaging) we are interested in determining the material properties and its spatial distribution. By sending and tracking sound/electromagnetic waves, that inversion was possible. the goal then is to minimize the difference between the measured wavefield and simulated wave field. So, it is optimization problem where the parameters are the material properties and its spatial distribution. Given an objective (cost) functional of your choice, we then need to compute the derivative of that cost functional w.r.t material properties. This requires computing the derivative of the constitutive equation w.r.t the material properties.\nI hope this answers the question.",
+                          "url": "https://github.com/idaholab/moose/discussions/18464#discussioncomment-1273783",
+                          "updatedAt": "2022-08-18T14:31:02Z",
+                          "publishedAt": "2021-09-02T19:22:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hugary1995"
+                          },
+                          "bodyText": "Okay I see. Then you want to use nodal path recovery to get the gradient of material property at quadrature points. To be honest, I think that's pretty difficult to implement for general constitutive laws. If it ever gets implemented in moose, I think it will be using what @dschwen proposed below #18464 (reply in thread) .",
+                          "url": "https://github.com/idaholab/moose/discussions/18464#discussioncomment-1273992",
+                          "updatedAt": "2022-08-18T14:31:02Z",
+                          "publishedAt": "2021-09-02T20:10:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "lynnmunday"
+                          },
+                          "bodyText": "These manual gradients wouldn't be too bad to implement for some simple problems like linear elasticity.  I agree that Daniels approach will be better but I think that might not be ready for a while.  This would be a good check for what Daniel does and would let us work on some other parts of the optimization code while we wait.\nSome more information about the optimization code is available in section 3 of this milestone report:\nhttps://www.osti.gov/biblio/1812088-enhanced-mechanical-property-evaluation-using-innovative-data-analytics-capability",
+                          "url": "https://github.com/idaholab/moose/discussions/18464#discussioncomment-1274507",
+                          "updatedAt": "2022-08-18T14:31:02Z",
+                          "publishedAt": "2021-09-02T23:07:59Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "dschwen"
+                  },
+                  "bodyText": "We have an LDRD where this is on our schedule for the beginning of the coming fiscal year.",
+                  "url": "https://github.com/idaholab/moose/discussions/18464#discussioncomment-1088733",
+                  "updatedAt": "2022-06-18T12:03:33Z",
+                  "publishedAt": "2021-07-29T20:14:12Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dschwen"
+                          },
+                          "bodyText": "We basically need the ability to add custom entries to the AD derivative vector. This could be done by using scalar variables to represent the design parameters for example.",
+                          "url": "https://github.com/idaholab/moose/discussions/18464#discussioncomment-1088823",
+                          "updatedAt": "2022-06-18T12:52:50Z",
+                          "publishedAt": "2021-07-29T20:41:18Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Unable to find appropriate mortar segment during linear search!",
+          "author": {
+            "login": "TLWise"
+          },
+          "bodyText": "I have developed a contact model, and I get the following error when I run the code:\nUnable to find appropriate mortar segment during linear search!\nIs this type of error due to the distance of the colliding parts from each other, or maybe a time stepping issue?",
+          "url": "https://github.com/idaholab/moose/discussions/18724",
+          "updatedAt": "2022-06-02T06:09:32Z",
+          "publishedAt": "2021-08-29T16:10:31Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@jbadger95 @lindsayad",
+                  "url": "https://github.com/idaholab/moose/discussions/18724#discussioncomment-1251741",
+                  "updatedAt": "2022-06-02T06:09:32Z",
+                  "publishedAt": "2021-08-30T02:33:27Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "jbadger95"
+                  },
+                  "bodyText": "I'm going to need more info about your setup, can you provide your input file?",
+                  "url": "https://github.com/idaholab/moose/discussions/18724#discussioncomment-1254828",
+                  "updatedAt": "2022-06-02T06:09:34Z",
+                  "publishedAt": "2021-08-30T15:45:14Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "TLWise"
+                          },
+                          "bodyText": "Yes. Thank you for taking a look.\nParticleCladdClash.e.txt\nParticleCladdClash.i.txt",
+                          "url": "https://github.com/idaholab/moose/discussions/18724#discussioncomment-1262857",
+                          "updatedAt": "2022-06-02T06:09:35Z",
+                          "publishedAt": "2021-09-01T02:15:24Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "jbadger95"
+                  },
+                  "bodyText": "Sorry for the delay, I've been tied up with some other things but I have an answer! The problem is that you have nodes on your primary surface that project to exactly the same place on the secondary surface (mortar subdivides secondary elements where primary elements project so it's trying to subdivide twice at the same point). The problem is where your bottom and sides meet. To fix this you can change your geometry, I'd probably extend the side rectangles to the bottom of the bottom rectangle then merge the all surfaces before you generate your mesh. Alternatively you could leave a small gap between the bottom and sides so that the nodes at the corners don't coincide.\nWe can probably address this case in the source to avoid problems in the future but for now your best bet is just to modify geometry  so there are no redundant nodes.",
+                  "url": "https://github.com/idaholab/moose/discussions/18724#discussioncomment-1274384",
+                  "updatedAt": "2022-06-02T06:09:35Z",
+                  "publishedAt": "2021-09-02T22:18:57Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Grouping test from makefile",
+          "author": {
+            "login": "rtaylo45"
+          },
+          "bodyText": "Hello,\nI was wondering if it is possible to group sets of test based on variables set in the Makefile? Ive used the heavy flag in the test file before, but wasn't sure if there was some sort of more complex system for grouping different test. For example, sometimes i might want to couple with another moose app that provides addition physics kernels, i would like to test the coupled capabilities and have the TestHarness system pickup that they need to be tested automatically.\nThanks\nZack",
+          "url": "https://github.com/idaholab/moose/discussions/18756",
+          "updatedAt": "2022-08-26T20:19:09Z",
+          "publishedAt": "2021-09-01T20:41:57Z",
+          "category": {
+            "name": "Q&A Tools"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYou could:\n\nadd something to the test name or folder to tag it. Then have run_tests be ran as --re <tag> that will only run these tests\nuse the executable_pattern option to restrict tests to a certain name for what executable runs the test\nI did that here https://github.com/idaholab/virtual_test_bed/blob/main/mrad/steady/tests\n\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/18756#discussioncomment-1269212",
+                  "updatedAt": "2022-08-26T20:19:09Z",
+                  "publishedAt": "2021-09-02T00:39:20Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Build issues while using make -j4",
+          "author": {
+            "login": "HarryDrez"
+          },
+          "bodyText": "When I try building the make file inside test using the make -j 4 command, an error pops up saying \"MooseRevision.h: No such file or directory. Since, MooseRevision.h is an auto-generated file, I cannot download this file and place it in the appropriate directory as well. Further, I tried running the 'hello world' example code given in the moose repo and it was successful. How do I get past this error and build moose successfully on my Windows system?\nSpecifications: I am using [WSL]\nI have attached the relevant screenshot",
+          "url": "https://github.com/idaholab/moose/discussions/18723",
+          "updatedAt": "2022-06-11T01:29:09Z",
+          "publishedAt": "2021-08-29T12:41:39Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Please copy paste the error text next time, screenshots are not searchable.\nDid you remember to activate the moose environment?\n@milljm have you seen this one before",
+                  "url": "https://github.com/idaholab/moose/discussions/18723#discussioncomment-1251791",
+                  "updatedAt": "2022-06-11T01:29:09Z",
+                  "publishedAt": "2021-08-30T03:13:05Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "HarryDrez"
+                          },
+                          "bodyText": "Yes, I activated the moose environment",
+                          "url": "https://github.com/idaholab/moose/discussions/18723#discussioncomment-1254075",
+                          "updatedAt": "2022-06-11T01:29:11Z",
+                          "publishedAt": "2021-08-30T13:14:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "Can you provide the results of the following commands:\nconda info --all\nwhich $CC $CXX\n$CC -show\n$CXX -show\nIf you are concerned with exposing your user id you can use post-text processing tools to mask it:\nconda info --all | sed -e 's|youusername|username|g'\nwhich $CC $CXX | sed -e 's|youusername|username|g'\n$CC -show | sed -e 's|youusername|username|g'\n$CXX -show | sed -e 's|youusername|username|g'",
+                          "url": "https://github.com/idaholab/moose/discussions/18723#discussioncomment-1254300",
+                          "updatedAt": "2022-06-11T01:29:11Z",
+                          "publishedAt": "2021-08-30T14:01:31Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "HarryDrez"
+                          },
+                          "bodyText": "(moose) @LAPTOP-S2I62UDE:~/projects/moose$ conda info --all | sed -e 's||username|g'\n\n     active environment : moose\n    active env location : /home/username/miniconda3/envs/moose\n            shell level : 2\n       user config file : /home/username/.condarc\n populated config files : /home/username/.condarc\n          conda version : 4.10.1\n    conda-build version : not installed\n         python version : 3.8.10.final.0\n       virtual packages : __linux=4.4.0=0\n                          __glibc=2.27=0\n                          __unix=0=0\n                          __archspec=1=x86_64\n       base environment : /home/username/miniconda3  (writable)\n      conda av data dir : /home/username/miniconda3/etc/conda\n  conda av metadata url : https://repo.anaconda.com/pkgs/main\n           channel URLs : https://conda.anaconda.org/idaholab/linux-64\n                          https://conda.anaconda.org/idaholab/noarch\n                          https://conda.anaconda.org/conda-forge/linux-64\n                          https://conda.anaconda.org/conda-forge/noarch\n                          https://repo.anaconda.com/pkgs/main/linux-64\n                          https://repo.anaconda.com/pkgs/main/noarch\n                          https://repo.anaconda.com/pkgs/r/linux-64\n                          https://repo.anaconda.com/pkgs/r/noarch\n          package cache : /home/username/miniconda3/pkgs\n                          /home/username/.conda/pkgs\n       envs directories : /home/username/miniconda3/envs\n                          /home/username/.conda/envs\n               platform : linux-64\n             user-agent : conda/4.10.1 requests/2.25.1 CPython/3.8.10 Linux/4.4.0-19041-Microsoft ubuntu/18.04.5 glibc/2.27\n                UID:GID : 1000:1000\n             netrc file : None\n           offline mode : False\n\n# conda environments:\n#\nbase                     /home/username/miniconda3\nmoose                 *  /home/username/miniconda3/envs/moose\n\nsys.version: 3.8.10 | packaged by conda-forge | (defa...\nsys.prefix: /home/username/miniconda3\nsys.executable: /home/username/miniconda3/bin/python\nconda location: /home/username/miniconda3/lib/python3.8/site-packages/conda\nconda-build: None\nconda-env: /home/username/miniconda3/bin/conda-env\nuser site dirs:\n\nCIO_TEST: <not set>\nCMAKE_PREFIX_PATH: /home/username/miniconda3/envs/moose:/home/username/miniconda3/envs/moose/x86_64-conda-linux-gnu/sysroot/usr\nCONDA_BUILD_SYSROOT: /home/username/miniconda3/envs/moose/x86_64-conda-linux-gnu/sysroot\nCONDA_DEFAULT_ENV: moose\nCONDA_EXE: /home/username/miniconda3/bin/conda\nCONDA_PREFIX: /home/username/miniconda3/envs/moose\nCONDA_PREFIX_1: /home/username/miniconda3\nCONDA_PROMPT_MODIFIER: (moose)\nCONDA_PYTHON_EXE: /home/username/miniconda3/bin/python\nCONDA_ROOT: /home/username/miniconda3\nCONDA_SHLVL: 2\nCURL_CA_BUNDLE: <not set>\nPATH: /home/username/miniconda3/bin:/home/username/miniconda3/envs/moose/bin:/home/username/miniconda3/condabin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/mnt/c/Program Files/WindowsApps/CanonicalGroupLimited.Ubuntu18.04onWindows_1804.2020.824.0_x64__79rhkp1fndgsc:/mnt/c/Program Files (x86)/Common Files/Oracle/Java/javapath:/mnt/c/windows/system32:/mnt/c/windows:/mnt/c/windows/System32/Wbem:/mnt/c/windows/System32/WindowsPowerShell/v1.0:/mnt/c/windows/System32/OpenSSH:/mnt/c/Program Files (x86)/NVIDIA Corporation/PhysX/Common:/mnt/c/Program Files/NVIDIA Corporation/NVIDIA NvDLISR:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0:/mnt/c/WINDOWS/System32/OpenSSH:/mnt/c/Program Files/MATLAB/MATLAB Runtime/v910/runtime/win64:/mnt/c/Users/hp/AppData/Local/Programs/Python/Python38-32/Scripts:/mnt/c/Users/hp/AppData/Local/Programs/Python/Python38-32:/mnt/c/Users/hp/AppData/Local/Microsoft/WindowsApps:/mnt/c/Program Files/MPICH2/bin:/mnt/c/Users/hp/AppData/Local/LAMMPS 64-bit 29Oct2020-MPI/bin:/mnt/c/Users/hp/AppData/Local/LAMMPS 64-bit 29Oct2020/bin:/mnt/c/Users/hp/AppData/Local/Programs/Microsoft VS Code/bin:/mnt/c/BURAI1.3.2_Windows/exec.WIN/mpi:/mnt/c/BURAI1.3.2_Windows/exec.WIN/qe:/mnt/c/Program Files (x86)/SSH Communications Security/SSH Secure Shell:/snap/bin\nREQUESTS_CA_BUNDLE: <not set>\nSSL_CERT_FILE: <not set>\n\n(moose) @LAPTOP-S2I62UDE:~/projects/moose$ which $CC $CXX | sed -e 's||username|g'\n/home/username/miniconda3/envs/moose/bin/mpicc\n/home/username/miniconda3/envs/moose/bin/mpicxx\n(moose) @LAPTOP-S2I62UDE:~/projects/moose$ $CC -show | sed -e 's||username|g'\nx86_64-conda-linux-gnu-cc -march=nocona -mtune=haswell -Wl,-O2 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now -Wl,--disable-new-dtags -Wl,--gc-sections -Wl,-rpath,/home/username/miniconda3/envs/moose/lib -Wl,-rpath-link,/home/username/miniconda3/envs/moose/lib -L/home/username/miniconda3/envs/moose/lib -I/home/username/miniconda3/envs/moose/include -L/home/username/miniconda3/envs/moose/lib -Wl,-rpath -Wl,/home/username/miniconda3/envs/moose/lib -Wl,--enable-new-dtags -lmpi\n(moose) @LAPTOP-S2I62UDE:~/projects/moose$ $CXX -show | sed -e 's||username|g'\nx86_64-conda-linux-gnu-c++ -march=nocona -mtune=haswell -Wl,-O2 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now -Wl,--disable-new-dtags -Wl,--gc-sections -Wl,-rpath,/home/username/miniconda3/envs/moose/lib -Wl,-rpath-link,/home/username/miniconda3/envs/moose/lib -L/home/username/miniconda3/envs/moose/lib -I/home/username/miniconda3/envs/moose/include -L/home/username/miniconda3/envs/moose/lib -lmpicxx -Wl,-rpath -Wl,/home/username/miniconda3/envs/moose/lib -Wl,--enable-new-dtags -lmpi",
+                          "url": "https://github.com/idaholab/moose/discussions/18723#discussioncomment-1254491",
+                          "updatedAt": "2022-06-11T01:29:17Z",
+                          "publishedAt": "2021-08-30T14:41:15Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "Sorry about the delay (missed the email)...\nI am installing Ubuntu 18.04 now, to try and reproduce the issue. I won't be installing VcXsrv, as I won't be troubleshooting Peacock. However, just curious, did you choose to install all the 'things' necessary to run Peacock? i.e: sudo apt-get install x11-apps libglu1-mesa?\nNot saying that is the fix. Just curious.",
+                          "url": "https://github.com/idaholab/moose/discussions/18723#discussioncomment-1256721",
+                          "updatedAt": "2022-08-23T22:04:02Z",
+                          "publishedAt": "2021-08-30T23:16:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "Interesting. Running into this error during our installation:\n(moose) milljm@DESKTOP-M0OU23R:~$ conda install moose-tools\nCollecting package metadata (current_repodata.json): failed\n\nCondaHTTPError: HTTP 000 CONNECTION FAILED for url <https://conda.software.inl.gov/public/linux-64/current_repodata.json>\nElapsed: -\n\nAn HTTP error occurred when trying to retrieve this URL.\nHTTP errors are often intermittent, and a simple retry will get you on your way.\n'https://conda.software.inl.gov/public/linux-64'\nAfter narrowing it down, I've come across an open bug for Conda:\nconda/conda#9948.\nJust listing it here for so we may reference HTTP 000 errors (and create some sort of usable fix on our Getting Started instructions)",
+                          "url": "https://github.com/idaholab/moose/discussions/18723#discussioncomment-1256873",
+                          "updatedAt": "2022-08-23T22:04:02Z",
+                          "publishedAt": "2021-08-31T00:03:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "HarryDrez"
+                          },
+                          "bodyText": "Sorry about the delay (missed the email)...\nI am installing Ubuntu 18.04 now, to try and reproduce the issue. I won't be installing VcXsrv, as I won't be troubleshooting Peacock. However, just curious, did you choose to install all the 'things' necessary to run Peacock? i.e: sudo apt-get install x11-apps libglu1-mesa?\nNot saying that is the fix. Just curious.",
+                          "url": "https://github.com/idaholab/moose/discussions/18723#discussioncomment-1257446",
+                          "updatedAt": "2022-08-23T22:04:08Z",
+                          "publishedAt": "2021-08-31T04:01:59Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "HarryDrez"
+                          },
+                          "bodyText": "Hey!\nI haven't installed anything required for peacock",
+                          "url": "https://github.com/idaholab/moose/discussions/18723#discussioncomment-1257447",
+                          "updatedAt": "2022-08-23T22:04:08Z",
+                          "publishedAt": "2021-08-31T04:02:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "Well, I can't seem to replicate this. Things build, tests pass.\nWhat version of MOOSE are you using at the moment?\ncd ~/projects/moose\ngit log -1\nfor reference:\n(moose) milljm@DESKTOP-M0OU23R:~/projects/moose$ git log -1\ncommit e84e5d8728d08e7c51ff5a844a6a66e9aacd46a5 (HEAD -> master, origin/master)\nMerge: 5d553f48ea 71be571730\nAuthor: moosetest <bounces@inl.gov>\nDate:   Tue Aug 31 02:11:54 2021 -0600\n\n    Merge commit '71be571730a043205f54b74b5f4845e1cd437902'",
+                          "url": "https://github.com/idaholab/moose/discussions/18723#discussioncomment-1261408",
+                          "updatedAt": "2022-08-23T22:04:09Z",
+                          "publishedAt": "2021-08-31T18:14:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "HarryDrez"
+                          },
+                          "bodyText": "(moose) pseudonymn@LAPTOP-S2I62UDE:~/projects/moose$ git log -1\ncommit 93f03a3f5ff18aaec90d6fc4f744ac2139457cb9 (HEAD -> master, origin/master)\nMerge: 8225b7dd9e 316bf4b788\nAuthor: moosetest <bounces@inl.gov>\nDate:   Tue Aug 24 20:21:59 2021 -0600\n\n    Merge commit '316bf4b7888da21d2caafcddcf98538896c8939f'",
+                          "url": "https://github.com/idaholab/moose/discussions/18723#discussioncomment-1267537",
+                          "updatedAt": "2022-08-23T22:04:09Z",
+                          "publishedAt": "2021-09-01T16:11:59Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "HarryDrez"
+                          },
+                          "bodyText": "Initially, I had a lot of broken symlinks errors. Later on, I updated the git repo of moose and then got the symlinks error rectified.",
+                          "url": "https://github.com/idaholab/moose/discussions/18723#discussioncomment-1267557",
+                          "updatedAt": "2022-08-23T22:04:10Z",
+                          "publishedAt": "2021-09-01T16:15:45Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Finding the location of the NodalMaxValue",
+          "author": {
+            "login": "robfairh"
+          },
+          "bodyText": "Hi All,\nI hope this is a quick question.\nI was trying to find a postprocessor for finding the max value of a variable in a certain domain and its coordinates.\nIs there an easy way of doing this?\nI am looking for something similar to TimeExtremeValue that can report either the extreme value or the time at which it occurred. What I need is the location instead of the time.\nThank you,\nRoberto",
+          "url": "https://github.com/idaholab/moose/discussions/18737",
+          "updatedAt": "2022-09-10T11:49:36Z",
+          "publishedAt": "2021-08-31T14:16:52Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "aeslaughter"
+                  },
+                  "bodyText": "I do not think that this exists, but it could be created within a single Reporter object: https://mooseframework.inl.gov/moose/syntax/Reporters/.",
+                  "url": "https://github.com/idaholab/moose/discussions/18737#discussioncomment-1260147",
+                  "updatedAt": "2022-09-10T11:49:36Z",
+                  "publishedAt": "2021-08-31T14:42:37Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "robfairh"
+                          },
+                          "bodyText": "Great! Thank you.",
+                          "url": "https://github.com/idaholab/moose/discussions/18737#discussioncomment-1260158",
+                          "updatedAt": "2022-09-10T11:49:56Z",
+                          "publishedAt": "2021-08-31T14:44:17Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

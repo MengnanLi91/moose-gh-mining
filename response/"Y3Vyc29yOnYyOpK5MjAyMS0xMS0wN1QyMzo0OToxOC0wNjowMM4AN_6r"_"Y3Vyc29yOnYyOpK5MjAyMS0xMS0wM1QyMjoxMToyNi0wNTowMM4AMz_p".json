@@ -1,0 +1,1044 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyMS0xMS0wM1QyMjoxMToyNi0wNTowMM4AMz_p"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "PorousFlow - init stress when restarting",
+          "author": {
+            "login": "Nuriacor"
+          },
+          "bodyText": "Hi,\nI have a two step simulation with PorousFlow module. I first run my model in steady state and the restart the variables in a second stage to run transient conditions. As shown here (https://mooseframework.inl.gov/modules/porous_flow/restart.html)\nThe model is HM coupled, I'm restarting porepressure and the displacements. I notice that at the beginning (time zero) all variables are zero. Then, in the first time step, variables values are set, but the porepressure is not quite the same that in my steady state output, which generates unwanted dynamic at the beginning of my simulation.\nAfter modifying things for a while it came to my mind that my initial stress may be set wrong. For now I have set ComputeEigenstrainFromInitialStress with a function that depends on density and depth (as in this tutorial https://mooseframework.inl.gov/modules/porous_flow/coal_mining.html).\nIs the initial stress messing my transient simulation? Or is it something else?\nThanks in advance.\nNuria",
+          "url": "https://github.com/idaholab/moose/discussions/19281",
+          "updatedAt": "2022-10-24T22:20:35Z",
+          "publishedAt": "2021-11-02T17:58:54Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "WilkAndy"
+                  },
+                  "bodyText": "Initial stress is a little more complicated than initial porepressure.  The first step of debugging this should be to remove the \"M\" coupling, and see if you can set the porepressure to exactly the steady-state value.  Eg, look at porous_flow/examples/flow_through_fractured_media/fine_thick_fracture_transient.i.  Don't simply assume everything has worked OK if the results look OK in paraview, since often porepressure equilibrates very quickly during the first step of your transient simulation.   Instead, actually check all the significant figures of porepressure somewhere, using, eg, a PointValue Postprocessor.\nThen we can get on to the stresses....\na",
+                  "url": "https://github.com/idaholab/moose/discussions/19281#discussioncomment-1578609",
+                  "updatedAt": "2022-10-24T22:20:41Z",
+                  "publishedAt": "2021-11-02T20:33:54Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Nuriacor"
+                          },
+                          "bodyText": "Hi,\nThanks for your help. I did what you suggest, I also studied the fine_thick_fracture_transient.i example. But I could not debug my problem.\nThe H coupled model works fine, so the problem may come from the HM coupling. See test_H_steady.i and test_H_transient.i files.\nIn the HM model, the pressure difference between the transient and the steady solution is small, but increases significantly when I set different permeability in the layers. Please see test_HM_steady.i and test_HM_transient.i files.\nI also noticed that when I run the simulation in parallel the number of nonlinear and linear steps increases. At the point that is faster to run in only one core.\nhttps://github.com/Nuriacor/porousflow_tests\nThanks again!\nNuria",
+                          "url": "https://github.com/idaholab/moose/discussions/19281#discussioncomment-1580700",
+                          "updatedAt": "2022-10-24T22:20:42Z",
+                          "publishedAt": "2021-11-03T08:54:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "I'm up to my eyeballs in some other work, sorry for being so tardy in replying - i don't think i'll get to this today, but it seems as if something like the stress is not being set correctly, as you already know!",
+                          "url": "https://github.com/idaholab/moose/discussions/19281#discussioncomment-1591164",
+                          "updatedAt": "2023-02-09T14:48:21Z",
+                          "publishedAt": "2021-11-04T20:44:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Oh, i just had a quick look.  You need to set your ini_stress_yy from the steady-state file.  You probably don't want to set the disp_x and disp_y from the steadystate file.",
+                          "url": "https://github.com/idaholab/moose/discussions/19281#discussioncomment-1591180",
+                          "updatedAt": "2023-02-09T14:48:38Z",
+                          "publishedAt": "2021-11-04T20:47:57Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Nuriacor"
+                          },
+                          "bodyText": "Thanks!! So do I need to output the yy stress in the steady simulation and then imported in the transient and assign it to a function?",
+                          "url": "https://github.com/idaholab/moose/discussions/19281#discussioncomment-1593647",
+                          "updatedAt": "2023-02-09T14:48:38Z",
+                          "publishedAt": "2021-11-05T08:53:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Yea, you need to transfer all the stress components (but prob the off-diagonal ones are all zero) into the transient simulation",
+                          "url": "https://github.com/idaholab/moose/discussions/19281#discussioncomment-1602764",
+                          "updatedAt": "2023-02-09T14:48:38Z",
+                          "publishedAt": "2021-11-07T20:40:51Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "Nuriacor"
+                  },
+                  "bodyText": "@WilkAndy I went around this with one single simulation file and using Controls to change the BCs. Thanks!\nI think that would be interesting to know why my simulation was behaving like that.\nCheers!",
+                  "url": "https://github.com/idaholab/moose/discussions/19281#discussioncomment-1588150",
+                  "updatedAt": "2023-02-09T14:48:57Z",
+                  "publishedAt": "2021-11-04T12:02:35Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Nuriacor"
+                          },
+                          "bodyText": "And I am also curios to know why more cores increase the nonlinear steps.",
+                          "url": "https://github.com/idaholab/moose/discussions/19281#discussioncomment-1588176",
+                          "updatedAt": "2023-02-09T14:48:57Z",
+                          "publishedAt": "2021-11-04T12:07:07Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "This is almost definitely because the linear solver is crappier.  You're choosing\n   petsc_options_iname = '-ksp_type -pc_type -sub_pc_type -sub_pc_factor_shift_type -pc_asm_overlap'\n    petsc_options_value = 'gmres      asm      lu           NONZERO                   2             '\n\nwhich will give the exact solution for 1 processor, but for many it'll only give an approximate solution to Ax=b.  Look at https://mooseframework.inl.gov/modules/porous_flow/solvers.html for some more choices.",
+                          "url": "https://github.com/idaholab/moose/discussions/19281#discussioncomment-1591192",
+                          "updatedAt": "2023-02-09T14:48:59Z",
+                          "publishedAt": "2021-11-04T20:50:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "Hi @WilkAndy,\ni've been using Hypre / BoomerAMG for my full-scale hydro simulation (5m+ elements)\n\n    petsc_options_iname = '-pc_type -pc_hypre_type -pc_hypre_boomeramg_strong_threshold -pc_hypre_boomeramg_agg_nl  -pc_hypre_boomeramg_agg_num_paths -pc_hypre_boomeramg_max_levels  -pc_hypre_boomeramg_coarsen_type   -pc_hypre_boomeramg_interp_type -pc_hypre_boomeramg_P_max -pc_hypre_boomeramg_truncfactor'\n    petsc_options_value = 'hypre    boomeramg 0.7 4 5 25 HMIS  ext+i 2 0.3'\n\nany comment on this one? I find it's the fastest so far.",
+                          "url": "https://github.com/idaholab/moose/discussions/19281#discussioncomment-1592707",
+                          "updatedAt": "2023-02-09T14:49:12Z",
+                          "publishedAt": "2021-11-05T04:24:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "looks good to me!  i've used hypre/boomeramg with good results.",
+                          "url": "https://github.com/idaholab/moose/discussions/19281#discussioncomment-1592749",
+                          "updatedAt": "2023-02-09T14:49:12Z",
+                          "publishedAt": "2021-11-05T04:37:28Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Mesh adaptivity problem for multi-scale grain growth simulation",
+          "author": {
+            "login": "PengWei97"
+          },
+          "bodyText": "Dear MOOSE experts,\nRecently, I used the bulit-in grain growth model in moose to conduct multi-scale bicrystal simulation, where the grain size is 20\u03bcm and the grain boudary (GB) width is 15nm. The model mesh diagram at the time step 3 and 7 are as follow,\n\n\nHowever, we found that there are some problems with the subdivided grid after using the mesh adaptive technology. For example, the grid in the green box is finer than the grid in the bule box at the Time Step 3, as show in Fig.1. According to our understanding from the bicrystal grain growth simulation in the nanometer scale, the grid at the GB should be of uniform size. This problm is more obvious in the yellow box in Fig.2, and the change of gr0 at the GB is shown in the figure below,\n\nMoreover, this is the code for the mesh adaptivity technology I used,\n  [./Adaptivity]\n    initial_adaptivity = 7\n    cycles_per_step = 2 # The number of adaptivity cycles per step\n    refine_fraction = 0.5 # The fraction of elements or error to refine.\n    coarsen_fraction = 0.05\n    max_h_level = 10\n  [../]\nIn general, our question is why the grid adaptation is so strange in the process of GB migration. How to better use the mesh adaptive technology in moose to realize such a multi-scale grain growth simulation?\nAny suggestions or recommendations to fix the problem would be greatly appreciated.\nThank you\nWei",
+          "url": "https://github.com/idaholab/moose/discussions/19275",
+          "updatedAt": "2022-06-15T22:34:49Z",
+          "publishedAt": "2021-11-02T13:06:15Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nWhat did you use as the Indicator for this Adaptivity?\nThat will determine how refinement decisions are made.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/19275#discussioncomment-1576674",
+                  "updatedAt": "2022-06-15T22:34:55Z",
+                  "publishedAt": "2021-11-02T15:04:04Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "PengWei97"
+                          },
+                          "bodyText": "I just referred to the mesh adaptivity part in grain_growth_2D_graintracker.i, and I did  not specify the Indicator and marker. So I don't know how the refinement is determined from the *.i file.\nWei",
+                          "url": "https://github.com/idaholab/moose/discussions/19275#discussioncomment-1579461",
+                          "updatedAt": "2022-06-15T22:34:58Z",
+                          "publishedAt": "2021-11-03T01:07:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I think this is the default error estimator (eg indicator of where to refine)\nhttps://libmesh.github.io/doxygen/classlibMesh_1_1KellyErrorEstimator.html\nYou should look at these pages and choose the one you want to use:\nhttps://mooseframework.inl.gov/syntax/Adaptivity/Indicators/index.html",
+                          "url": "https://github.com/idaholab/moose/discussions/19275#discussioncomment-1579535",
+                          "updatedAt": "2022-06-15T22:35:00Z",
+                          "publishedAt": "2021-11-03T01:34:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "PengWei97"
+                          },
+                          "bodyText": "Yeah, I modified my input file, GG_Custom_Indicators.i based on the webpage you shared and GrandPotentialPlanarGrowth.i. The code that contains the adaptation is as,\n[Adaptivity]\n initial_steps = ${my_number_adaptivity}\n max_h_level = ${my_number_adaptivity}\n initial_marker = err_eta\n marker = err_bnds\n[./Markers]\n   [./err_eta]\n     type = ErrorFractionMarker\n     coarsen = 0.3\n     refine = 0.5\n     indicator = ind_eta\n   [../]\n   [./err_bnds]\n     type = ErrorFractionMarker\n     coarsen = 0.3\n     refine = 0.5\n     indicator = ind_bnds\n   [../]\n [../]\n [./Indicators]\n   [./ind_eta]\n     type = GradientJumpIndicator\n     variable = gr0\n    [../]\n    [./ind_bnds]\n      type = GradientJumpIndicator\n      variable = bnds\n   [../]\n [../]\n[]\nIn addition, I also created the GG_default_adaptive.i using the default adaptive technolohy. The code that contains the adaptation is as follows,\n  [./Adaptivity]\n    initial_adaptivity = ${my_number_adaptivity} # 5\n    cycles_per_step = 2 # The number of adaptivity cycles per step\n    refine_fraction = 0.5 # The fraction of elements or error to refine.\n    coarsen_fraction = 0.05\n    max_h_level = 8\n  [../]\n[]\nThen, the mesh results of the two adaptive mesh setting are shown below,\n\nBy comparing the two adaptive grid methods, I think that the custom adaptive grid division (fig.1) is not as perfect as the default grid adaptive method (fig.2). Although the first calculation only took 4.29 minutes, the second calculation took 15.45 minutes. Moreover, the circular grian-time curve of the two simultion outputs is the same,\n\nSo my final question is how to modify my GG_Custom_Indicators.i to make the quality of the adaptive grid better without spending as much time as GG_default_adaptive.i.\nWei",
+                          "url": "https://github.com/idaholab/moose/discussions/19275#discussioncomment-1593190",
+                          "updatedAt": "2022-06-15T22:34:56Z",
+                          "publishedAt": "2021-11-05T07:15:10Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "are the number of elements similar in both runs?\nTo spend less time you usually want to limit the number of elements. So run less adaptivity steps and set a lower max refinement.\nYou will also want to turn on the perf_graph = true in Outputs to see what is actually using the simulation time.",
+                          "url": "https://github.com/idaholab/moose/discussions/19275#discussioncomment-1595910",
+                          "updatedAt": "2022-07-05T08:33:32Z",
+                          "publishedAt": "2021-11-05T15:34:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "PengWei97"
+                          },
+                          "bodyText": "The number of grids initially set is the same, but the first uses bnds as indicators, and the second uses default indicators. However, the first mesh adaptive effect is not as good as the second one, so I would like to ask how to better set Indicators to improve the mesh quality after mesh adaptive division.",
+                          "url": "https://github.com/idaholab/moose/discussions/19275#discussioncomment-1599004",
+                          "updatedAt": "2022-07-05T08:33:33Z",
+                          "publishedAt": "2021-11-06T11:49:31Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "this is very problem dependent.\nYou need to determine what you consider the \"error\" to be, and use that as a criteria for refinement.\nI was saying that the two refinement results dont seem to have the same number of elements, so that s where the runtime difference comes from. If you want the \"better\" refinement to be cheaper, you ll have to limit the number of levels / tune the parameters",
+                          "url": "https://github.com/idaholab/moose/discussions/19275#discussioncomment-1599686",
+                          "updatedAt": "2022-07-05T08:33:29Z",
+                          "publishedAt": "2021-11-06T16:32:52Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "PengWei97"
+                          },
+                          "bodyText": "OK, Thank you for your timely response!\nPerhaps, I need to further modify my indicators block and control the number of elements within an acceptable range.",
+                          "url": "https://github.com/idaholab/moose/discussions/19275#discussioncomment-1600628",
+                          "updatedAt": "2022-07-05T08:33:30Z",
+                          "publishedAt": "2021-11-07T02:09:27Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Contact modeling with mutiple surfaces",
+          "author": {
+            "login": "TLWise"
+          },
+          "bodyText": "I am running a simulation with contact modeling. I have defined motion for a single particle that may interact with one of 10 surfaces in time. I am getting the following error:\nERROR: negative Jacobian -3.29043e-24 at point (x,y,z)=(0.016665, 0.013855, 0.0204749) in element 33771\nStack frames: 37\nWhat should be my focus to help eliminate this particular error?",
+          "url": "https://github.com/idaholab/moose/discussions/19304",
+          "updatedAt": "2022-10-13T18:20:50Z",
+          "publishedAt": "2021-11-05T18:29:43Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "recuero"
+                  },
+                  "bodyText": "The error points to an inverted element. It's not straightforward to know what best to do here without more information, this error can be caused by a multitude of issues. If you know your contact settings are good, I would try reducing the time step.",
+                  "url": "https://github.com/idaholab/moose/discussions/19304#discussioncomment-1597389",
+                  "updatedAt": "2022-10-13T18:20:50Z",
+                  "publishedAt": "2021-11-05T21:06:40Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I would also go look at that element at the beginning of the simulation and keep tracking it in the exodus output, see how its shape evolves. Maybe the starting shape is pretty skewed, maybe it looks fine then gets squished flat in contact\nthe Jacobian is really really small so I think it s likely to have been flattened",
+                          "url": "https://github.com/idaholab/moose/discussions/19304#discussioncomment-1599702",
+                          "updatedAt": "2022-10-13T18:20:50Z",
+                          "publishedAt": "2021-11-06T16:41:01Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to output TimeDerivative value instead of output residual of it?",
+          "author": {
+            "login": "ZhigangPu"
+          },
+          "bodyText": "Dear,\nI wonder how to output time derivative like dx/dt instead of directly using the save_in parameter to output residual of the time derivative kernel?\nThanks\nzhigang",
+          "url": "https://github.com/idaholab/moose/discussions/19292",
+          "updatedAt": "2022-11-30T20:19:20Z",
+          "publishedAt": "2021-11-04T04:03:06Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nNot sure we have that somewhere. But you could use an auxkernel to save that in an auxvariable.\nJust use coupledDot routine.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/19292#discussioncomment-1586232",
+                  "updatedAt": "2023-02-27T23:33:46Z",
+                  "publishedAt": "2021-11-04T04:41:43Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ZhigangPu"
+                          },
+                          "bodyText": "Thanks, I will try that.",
+                          "url": "https://github.com/idaholab/moose/discussions/19292#discussioncomment-1598415",
+                          "updatedAt": "2023-02-27T23:33:50Z",
+                          "publishedAt": "2021-11-06T07:09:59Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "outputting flux (volume flux and mass flux) [PorousFlow]",
+          "author": {
+            "login": "Traiwit"
+          },
+          "bodyText": "Hi guys,\njust wondering, is there a MOOSE object that can calculate flux within the domain?\nI see we have PorousFlowDarcyVelocityComponent which outputting the velocity via AuxVariable/AuxKernel\nhttps://mooseframework.inl.gov/source/auxkernels/PorousFlowDarcyVelocityComponent.html\nbut what about volume flux (m3/s) or mass flux (kg/s)? I'm aware that it might need to be calculated at the surfaces of each element since it has 'A' in its equation.\nDo I need to write my own kernel/object for this? but it's quite standard, I believe MOOSE must have it somewhere.\nKind regards,\nTraiwit",
+          "url": "https://github.com/idaholab/moose/discussions/19235",
+          "updatedAt": "2022-07-29T01:52:42Z",
+          "publishedAt": "2021-10-28T12:14:40Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "I d use a VolumetricFlowRate from the Navier Stokes module for an external (to the variable) boundary\nhttps://mooseframework.inl.gov/source/postprocessors/VolumetricFlowRate.html\nFor an internal sideset\nhttps://mooseframework.inl.gov/source/postprocessors/InternalVolumetricFlowRate.html\nEDIT\nFor porous flow, does any of the postprocessors listed here work for you:\nhttps://mooseframework.inl.gov/modules/porous_flow/additional_objects.html\nseems https://mooseframework.inl.gov/source/postprocessors/PorousFlowPlotQuantity.html can measure fluxes\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/19235#discussioncomment-1554366",
+                  "updatedAt": "2022-07-29T01:52:48Z",
+                  "publishedAt": "2021-10-28T17:19:33Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "There s also a diffusive Flux posptrocessor. Depends on what fluxes you have.\nSince you are using porous flow, the porous flow postprocessors should be tried first",
+                          "url": "https://github.com/idaholab/moose/discussions/19235#discussioncomment-1554369",
+                          "updatedAt": "2022-07-29T01:53:00Z",
+                          "publishedAt": "2021-10-28T17:20:21Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "Hi @GiudGiud,\nThank you for pointing out all these helpful objects.\nUnfortunately, they don't seem to be what I wanted, I think I need to discuss with my team further before proceeding on this.\nThe best bet right now is to take the Darcy vel at each element and multiply it by the average surface area of each element.\nI will get back if I have a better idea about this.\nKind regards,\nTraiwit",
+                          "url": "https://github.com/idaholab/moose/discussions/19235#discussioncomment-1567178",
+                          "updatedAt": "2022-07-29T01:53:00Z",
+                          "publishedAt": "2021-10-31T23:11:05Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "WilkAndy"
+                  },
+                  "bodyText": "It depends on the BC you're using on that boundary (if any: perhaps there are none because it's an internal boundary or because it's a no-flow boundary)\n\nif one of the PorousFlowSinks then you use a save_in to save the contribution to an AuxVariable, then a NodalSum to sum all the contributions.  There are examples of this in the test suite.\nOtherwise, you can probably use a PorousFlowOutflowBC and a save_in to record the flux.   I'm sorry that this is rather convoluted, and i've been meaning to address this for some time, but to record the flux you'll probably need two BCs of this type, one with multiplier = 1 and one with multiplier = -1.  That means the contributions to the residual will sum to zero (these BCs will actually \"do nothing\") but you can save_in for the multiplier = 1 version only, hence recording the flux.  Ugly.... sorry.\n\na",
+                  "url": "https://github.com/idaholab/moose/discussions/19235#discussioncomment-1567214",
+                  "updatedAt": "2022-07-25T02:35:30Z",
+                  "publishedAt": "2021-10-31T23:24:25Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Traiwit"
+                          },
+                          "bodyText": "Thanks @WilkAndy, yes I'm using one of PorousFlowSinks, I will give it a go.\nSo I should expect the results to be the total flux of the particular surface, right?\nKind regards,\nTraiwit",
+                          "url": "https://github.com/idaholab/moose/discussions/19235#discussioncomment-1567255",
+                          "updatedAt": "2022-07-25T02:35:30Z",
+                          "publishedAt": "2021-10-31T23:50:12Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "WilkAndy"
+                          },
+                          "bodyText": "Yes, that is correct.  The NodalSum will be the flux by definition.  Have a look at porous_flow/test/tests/sinks/PorousFlowPiecewiseLinearSink_BC_eg1.i for an example.",
+                          "url": "https://github.com/idaholab/moose/discussions/19235#discussioncomment-1567363",
+                          "updatedAt": "2022-07-25T02:35:44Z",
+                          "publishedAt": "2021-11-01T00:53:56Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Nuriacor"
+                          },
+                          "bodyText": "@WilkAndy does InternalVolumetricFlowRate work in PorousFlow? If not, is there something similar?",
+                          "url": "https://github.com/idaholab/moose/discussions/19235#discussioncomment-1596073",
+                          "updatedAt": "2022-07-25T02:35:45Z",
+                          "publishedAt": "2021-11-05T16:00:17Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Traveling Wave Solution for Double Obstacle Potential",
+          "author": {
+            "login": "Mascsu"
+          },
+          "bodyText": "Hello, everyone\nI want to use MOOSE to solve the phase-field model with double obstacle potential. The equations are as following:\n\nThe free energy density is defined by Eqs.(64) and (65), the governing equation is Eq.(66) and the parameters are expressed by Eq.(70) where eta, sigma, mu and delta_g are input parameters of materials. (The test values are eta = 6, sigma = mu = 1.0, delta_g = 0.05.)  The reference is from: https://iopscience.iop.org/article/10.1088/0965-0393/17/7/073001/pdf (I. Steinbach, Modell. Phase-field models in materials science. Modelling and Simulation in Materials Science and Engineering. 17(7) (2009) 073001.).\nI did not find a suitable built-in kernel to solve this problem. The built-in kernels in phase-field module used double well potential. I have tried to write the custom kernel for double obstacle potential:\n\nwrite a kernel inherited from \"ADTimeDerivative\" kernel to deal with the left-hand side in Eq.(66);\nwrite a kernel inherited from \"ADKernel\" kernel to deal with the first term in the right-hand side;\nwrite a kernel inherited from \"ADKernelValue\" kernel to deal with 2nd and 3rd terms in the right-hand side.\n\nIt did not work. However, I have used the same way to solve the equations with double well potential successfully.\nCould anyone help me solve this equation?\nThanks,\nSa Ma",
+          "url": "https://github.com/idaholab/moose/discussions/19253",
+          "updatedAt": "2022-06-18T06:12:15Z",
+          "publishedAt": "2021-10-29T01:33:36Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nis there any way you could solve a simpler equation first, then build from there?\nLike what s pretty likely is that there is an issue with one of your kernels, and only by doing this progressively and verifying against known solutions can you know that everything's right.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/19253#discussioncomment-1556661",
+                  "updatedAt": "2022-06-18T06:12:17Z",
+                  "publishedAt": "2021-10-29T04:28:36Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Mascsu"
+                          },
+                          "bodyText": "Hello\nThanks for your answer.\nI have tried to solve the equation with double well potential and it was successful. But when I used the same way to solve the equation with double obstacle potential, it failed. The only difference between these two equations is the local free energy.\nThis is the equation with double well potential:\n\nand this is the equation with double obstacle potential:\n\nSo, I want to know if any built-in kernel could handle the phase-field model with double obstacle potential. If there is no built-in kernel, could you give me some suggestions how to solve the equations.\nThank you,\nSa Ma",
+                          "url": "https://github.com/idaholab/moose/discussions/19253#discussioncomment-1558026",
+                          "updatedAt": "2022-06-18T06:12:18Z",
+                          "publishedAt": "2021-10-29T09:59:12Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Ok I dont know the answer to that so we ll ping @laagesen.\nCan you try turning sqrt(phi ( 1 - phi) ) into sqrt(phi ( 1 - phi) + 1e-16) ? The singularity of the square root could be messing with AD",
+                          "url": "https://github.com/idaholab/moose/discussions/19253#discussioncomment-1559770",
+                          "updatedAt": "2022-06-18T06:12:18Z",
+                          "publishedAt": "2021-10-29T15:36:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Mascsu"
+                          },
+                          "bodyText": "Thanks for your answer,. I have tried turning sqrt(phi ( 1 - phi) ) into sqrt(phi ( 1 - phi) + 1e-16), but it did not work.",
+                          "url": "https://github.com/idaholab/moose/discussions/19253#discussioncomment-1568235",
+                          "updatedAt": "2022-06-18T22:09:05Z",
+                          "publishedAt": "2021-11-01T07:40:22Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "laagesen"
+                  },
+                  "bodyText": "Hi Sa Ma - the double obstacle potential is difficult to implement using any code that uses an implicit solution method, including MOOSE. The reason is that most implementation use a free energy that shoots up to infinity outside the range 0 < phi < 1. This huge discontinuity in the free energy makes it very difficult to solve with an implicit method. As far as I know, all codes that use this formulation are explicit codes. MOOSE does have the capability to solve time steps explicitly, but to be totally honest it is not that well suited to phase-field models with the double obstacle potential. That is one of the reasons why we don't have any kernels/materials in the framework for this problem.\nWhat is the physical problem you are interested in? We have alternative formulations that may be able to accomplish what you want to do already implemented.",
+                  "url": "https://github.com/idaholab/moose/discussions/19253#discussioncomment-1560076",
+                  "updatedAt": "2022-06-18T22:09:05Z",
+                  "publishedAt": "2021-10-29T16:33:27Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "There's an explicit time integrator in MOOSE.\nhttps://mooseframework.inl.gov/source/timeintegrators/ActuallyExplicitEuler.html\nbut maybe it doesnt work with phase field?",
+                          "url": "https://github.com/idaholab/moose/discussions/19253#discussioncomment-1561337",
+                          "updatedAt": "2022-06-18T22:09:15Z",
+                          "publishedAt": "2021-10-29T21:45:33Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "laagesen"
+                          },
+                          "bodyText": "It probably does work, but no one has tried it for phase-field that I know of. The problem is that the stability limit for explicit time steps will prevent you from taking large time steps, so the problem will run slowly. Most phase-field problems are much better suited to implicit time integration schemes, but the double obstacle potential is an exception.\nIf others have tried the explicit time integrator on phase-field problems, please chime in.",
+                          "url": "https://github.com/idaholab/moose/discussions/19253#discussioncomment-1561367",
+                          "updatedAt": "2022-06-18T22:09:15Z",
+                          "publishedAt": "2021-10-29T21:57:43Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Mascsu"
+                          },
+                          "bodyText": "Hello, thanks for your answer!\nI want to solve the phase-field model with finite interface dissipation. Different from kks model, this model could deal with the non-equilibrium phase transition. In the model, the double obstacle potential is used. Here is the website of the paper: https://www.sciencedirect.com/science/article/pii/S1359645412000730.\nMaybe I have two ways to deal with the problem.\n(I) I can replace the origin double obstacle potential with the double well poential and re-derive the phase-field model. But I am not sure whether the implicit algorithm could successfully solve the compostion field equation, which includes strongly non-linear terms. The equations are as following\n\n(II) I can try the explicit time integrator. I have used the finite difference method (FDM) to solve the phase-field model with double obstacle potential. I need to cutoff the unphysical value (if phi < 0, make phi = 0; else if phi >1, make phi = 1) when I use the FDM. I am not sure how to make sure the value of phi always between 0 and 1 in MOOOSE framework.\nThanks,\nSa Ma",
+                          "url": "https://github.com/idaholab/moose/discussions/19253#discussioncomment-1568318",
+                          "updatedAt": "2022-06-18T22:09:18Z",
+                          "publishedAt": "2021-11-01T08:06:05Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Hello\nFor (II) you can use the Bounds or the Dampers system to keep the value between 0 and 1\nhttps://mooseframework.inl.gov/source/auxkernels/ConstantBoundsAux.html\nhttps://mooseframework.inl.gov/source/dampers/BoundingValueElementDamper.html\nGuillaume",
+                          "url": "https://github.com/idaholab/moose/discussions/19253#discussioncomment-1570697",
+                          "updatedAt": "2023-04-13T03:18:43Z",
+                          "publishedAt": "2021-11-01T14:55:24Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "laagesen"
+                          },
+                          "bodyText": "I'd recommend starting with the Bounds system, some people have used this for phase-field fracture modeling with success. Please let us know how it goes! You may not need explicit time stepping if you can use Bounds successfully.",
+                          "url": "https://github.com/idaholab/moose/discussions/19253#discussioncomment-1571830",
+                          "updatedAt": "2022-08-26T20:59:56Z",
+                          "publishedAt": "2021-11-01T18:24:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Mascsu"
+                          },
+                          "bodyText": "Thanks for your answers!\nI have used the Bounds system (ConstantBoundsAux) and implicit time stepping, and the results agree well with the analytical solution.",
+                          "url": "https://github.com/idaholab/moose/discussions/19253#discussioncomment-1574461",
+                          "updatedAt": "2022-08-26T20:59:56Z",
+                          "publishedAt": "2021-11-02T08:08:34Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "laagesen"
+                          },
+                          "bodyText": "Very interesting, and thanks for letting us know! Tagging @dschwen FYI",
+                          "url": "https://github.com/idaholab/moose/discussions/19253#discussioncomment-1576444",
+                          "updatedAt": "2022-08-26T20:59:56Z",
+                          "publishedAt": "2021-11-02T14:27:21Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dschwen"
+                          },
+                          "bodyText": "Good to know. It would be really cool if you could contribute your code back. It would make a great example for the use of the double obstacle potential together with the bounds system. We can help you get everything in shape if you make a pull request.",
+                          "url": "https://github.com/idaholab/moose/discussions/19253#discussioncomment-1576592",
+                          "updatedAt": "2022-08-26T20:59:56Z",
+                          "publishedAt": "2021-11-02T14:51:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Mascsu"
+                          },
+                          "bodyText": "I have made a pull request. Next, I will try to solve the phase-field model with finite interface dissipation.\nhttps://www.sciencedirect.com/science/article/pii/S1359645412000730.",
+                          "url": "https://github.com/idaholab/moose/discussions/19253#discussioncomment-1593192",
+                          "updatedAt": "2022-08-26T20:59:56Z",
+                          "publishedAt": "2021-11-05T07:16:05Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "GENERATING INPUT FILE-Generating complex Geometry (trelis)",
+          "author": {
+            "login": "japresa"
+          },
+          "bodyText": "Hello all,\nplanning another project with moose, and I am having a meshed input file with a bunch of different elements. I previously used Trelis software to generate the simulation-meshed-geometry-exodusll-input-files, and made them by hand. However, this next project has too many elements to insert by hand.\nDo you have any recommendations on how to effectively generate an exodus-input-file for moose, that can increase the speed for bigger projects?\nI'm thinking of writing a higher-level-programming-script to interact with the Trelis GUI and automate the \"create object\" and \"move to this location,\" processes. If there's any other way that any of you have discovered lease let me know.\nAnything helps. Thank you!",
+          "url": "https://github.com/idaholab/moose/discussions/19268",
+          "updatedAt": "2023-03-01T10:13:44Z",
+          "publishedAt": "2021-11-01T02:26:31Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "loganharbour"
+                  },
+                  "bodyText": "Can you describe the geometry? Or the process you are trying to automate?",
+                  "url": "https://github.com/idaholab/moose/discussions/19268#discussioncomment-1567535",
+                  "updatedAt": "2023-03-01T10:13:53Z",
+                  "publishedAt": "2021-11-01T02:28:22Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "japresa"
+                          },
+                          "bodyText": "Yes.\nI'm modeling a 3D core/(can) with a bunch of cylinder-holes in it, like in this picture. Its for heat pipes and heat sources that will be inserted.\n\nThe steps that I'm trying to automate are the following:\ncut out cylinder-holes from the core/can at locationX from a CSV file I generated\nreinsert cylinders(heat sources) where the holes were at\nAdd all cylinders(heat sources) to a common-block-object\nDefine side-sets for where the cylinders(heat sources) touch the core/can",
+                          "url": "https://github.com/idaholab/moose/discussions/19268#discussioncomment-1567727",
+                          "updatedAt": "2023-03-01T10:13:53Z",
+                          "publishedAt": "2021-11-01T04:13:34Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Are you meshing the whole domain or are you meshing only the cylindrical holes (are they cylinders? or hexagons like in the picture?)\nStep 3 and 4 of your process seem like they can be done in MOOSE using mesh generators. Let s think about it for the rest",
+                          "url": "https://github.com/idaholab/moose/discussions/19268#discussioncomment-1567757",
+                          "updatedAt": "2023-03-01T10:14:00Z",
+                          "publishedAt": "2021-11-01T04:32:27Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "japresa"
+                          },
+                          "bodyText": "I'm meshing the whole domain. It is a pentagon-shaped-3dCore with a smaller cylinders(not pentagons) inserted in it.\nThat's a relief that steps 3/4 are possible by using MOOSE generators, that's one of the biggest hurdle because step 3 alone would require 1000+ sidesets. Just for clarification, are you implying the following: importing an unmeshed-geometry with no blocks or side sets, and then defining those using the MeshGenerator linked below? I'll take a closer look at the MeshGenerator tomorrow morning.",
+                          "url": "https://github.com/idaholab/moose/discussions/19268#discussioncomment-1573927",
+                          "updatedAt": "2023-03-01T10:14:02Z",
+                          "publishedAt": "2021-11-02T05:01:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "You can add blocks and sidesets in MOOSE with parsed expressions. If you have 1000s of sidesets to add you will want to program a new mesh generator to do it",
+                          "url": "https://github.com/idaholab/moose/discussions/19268#discussioncomment-1573940",
+                          "updatedAt": "2023-03-01T10:14:02Z",
+                          "publishedAt": "2021-11-02T05:09:04Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Mesh generation can also be done in MOOSE in some capacity, though mostly for simple geometries, and lattice-based geometries. See the mesh generator system https://mooseframework.inl.gov/source/meshgenerators/MeshGenerator.html\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/19268#discussioncomment-1567627",
+                  "updatedAt": "2023-03-01T10:14:18Z",
+                  "publishedAt": "2021-11-01T03:19:39Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GregVernon"
+                  },
+                  "bodyText": "I'm thinking of writing a higher-level-programming-script to interact with the Trelis GUI and automate the \"create object\" and \"move to this location,\" processes. If there's any other way that any of you have discovered lease let me know.\n\n@japresa -- Trelis is now Coreform Cubit and it has a Python API.  This API was also available in Trelis.  We (Coreform) recorded a webinar earlier this year on using the Python API: https://www.youtube.com/watch?v=2TCPPO8z5VA",
+                  "url": "https://github.com/idaholab/moose/discussions/19268#discussioncomment-1590848",
+                  "updatedAt": "2023-03-01T10:14:18Z",
+                  "publishedAt": "2021-11-04T19:36:35Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@japresa I think this is the preferred way. I did not remember that trelis was the old name for coreform cubit... We actually use the python API for cubit all the time.\nI have examples online on the virtual test bed, though it s for 2D RZ meshes\nhttps://github.com/idaholab/virtual_test_bed/tree/devel/msr/msfr/mesh\nhttps://github.com/idaholab/virtual_test_bed/blob/devel/pbfhr/meshes/generate_core_with_reflectors.py",
+                          "url": "https://github.com/idaholab/moose/discussions/19268#discussioncomment-1591799",
+                          "updatedAt": "2023-03-01T10:14:20Z",
+                          "publishedAt": "2021-11-04T23:04:38Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "\u201cmake -j 4\u201d is wrong,why?",
+          "author": {
+            "login": "lizuosheng"
+          },
+          "bodyText": "when i enter this command\"make -j 4\" ,there is a wrong pop up.",
+          "url": "https://github.com/idaholab/moose/discussions/19295",
+          "updatedAt": "2022-12-14T17:04:55Z",
+          "publishedAt": "2021-11-04T07:51:31Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "loganharbour"
+                  },
+                  "bodyText": "In the future, please do not create or comment on multiple issues pertaining to the same problem for an initial report.\nTransferring to discussion as an issue is not appropriate.",
+                  "url": "https://github.com/idaholab/moose/discussions/19295#discussioncomment-1588966",
+                  "updatedAt": "2022-12-14T17:04:57Z",
+                  "publishedAt": "2021-11-04T14:16:15Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "loganharbour"
+                  },
+                  "bodyText": "I see that you are running this on a virtual machine. What kind of resources do you have allocated to it (number of processors, total memory, total disk storage)?\nThe issue here is likely that the compiler is failing because your VM is running out of resources.",
+                  "url": "https://github.com/idaholab/moose/discussions/19295#discussioncomment-1588979",
+                  "updatedAt": "2022-12-14T17:05:00Z",
+                  "publishedAt": "2021-11-04T14:18:30Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Error opening ExodusII mesh file",
+          "author": {
+            "login": "amosaha"
+          },
+          "bodyText": "Hello,\nThe mesh is made by trelis and can be opened by the peacockand. I have updated all,but there's an error I can't solve.\nThis is my input file :\n[Mesh]\n  [fmesh]\n    type=FileMeshGenerator\n    file =hollowcylinder_and_cylinder_merge.e\n  []\n[]\n\nand the error :\nError opening ExodusII mesh file: /home/amos/projects/cat/hollowcylinder_and_cylinder_merge.e\nThanks very much\uff0cI hope your help.",
+          "url": "https://github.com/idaholab/moose/discussions/19264",
+          "updatedAt": "2022-07-01T18:34:55Z",
+          "publishedAt": "2021-10-30T03:30:09Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nI cant think of what would be the problem. Would you mind sharing that mesh file with us?\nOtherwise, can you please double check the spelling of the file name in the input.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/19264#discussioncomment-1563830",
+                  "updatedAt": "2022-07-01T18:35:01Z",
+                  "publishedAt": "2021-10-30T18:45:30Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "amosaha"
+                          },
+                          "bodyText": "Hello Guillaume\nI have checked my spelling of the file name,and maybe the problem is the mesh file.\nThis is my mesh file.\nI'm looking forward your suggestion,Thanks.\nhollowcylinder_and_cylinder_merge.zip",
+                          "url": "https://github.com/idaholab/moose/discussions/19264#discussioncomment-1564511",
+                          "updatedAt": "2022-07-01T18:35:02Z",
+                          "publishedAt": "2021-10-31T01:22:08Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I'm getting the error below with your file.\nCould this be that this is an exodus 8 file?\nI m going to defer to @roystgnr who has a lot of expertise on exodus.\nEXODUS: Error: Attempting to open the netcdf-4 file:\n\t'/home/guillaume/projects/moose/test/tests/meshgenerators/file_mesh_generator/hollowcylinder_and_cylinder_merge.e'\n\twith a netcdf library that does not support netcdf-4\nError opening ExodusII mesh file: /home/guillaume/projects/moose/test/tests/meshgenerators/file_mesh_generator/hollowcylinder_and_cylinder_merge.e\nStack frames: 15\n0: libMesh::print_trace(std::ostream&)\n1: libMesh::MacroFunctions::report_error(char const*, int, char const*, char const*)\n2: libMesh::ExodusII_IO_Helper::open(char const*, bool)\n3: libMesh::ExodusII_IO::read(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)\n4: FileMeshGenerator::generate()\n5: MeshGenerator::generateInternal()\n6: MooseApp::executeMeshGenerators()\n7: Action::timedAct()\n8: ActionWarehouse::executeActionsWithAction(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)\n9: ActionWarehouse::executeAllActions()\n10: MooseApp::runInputFile()\n11: MooseApp::run()\n12: ../../..//moose_test-opt(+0x3153) [0x55d262d4a153]\n13: __libc_start_main\n14: ../../..//moose_test-opt(+0x33dd) [0x55d262d4a3dd]\n[0] ../src/mesh/exodusII_io_helper.C, line 551, compiled Sep 14 2021 at 00:15:56",
+                          "url": "https://github.com/idaholab/moose/discussions/19264#discussioncomment-1564531",
+                          "updatedAt": "2022-07-01T18:35:06Z",
+                          "publishedAt": "2021-10-31T01:50:59Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "amosaha"
+                          },
+                          "bodyText": "I made this mesh file by Trelis 16.5. And this is the output format.",
+                          "url": "https://github.com/idaholab/moose/discussions/19264#discussioncomment-1564552",
+                          "updatedAt": "2022-07-01T18:35:20Z",
+                          "publishedAt": "2021-10-31T02:15:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "can you try using the normal format?",
+                          "url": "https://github.com/idaholab/moose/discussions/19264#discussioncomment-1564557",
+                          "updatedAt": "2022-07-14T17:09:55Z",
+                          "publishedAt": "2021-10-31T02:20:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "amosaha"
+                          },
+                          "bodyText": "oh,thanks,moose is working well now.",
+                          "url": "https://github.com/idaholab/moose/discussions/19264#discussioncomment-1564619",
+                          "updatedAt": "2022-07-14T17:09:55Z",
+                          "publishedAt": "2021-10-31T03:18:57Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "roystgnr"
+                          },
+                          "bodyText": "Sorry to have missed this.  libMesh can be built to support HDF5 ExodusII files too, but it takes explicit configure options to do so and Moose's build script doesn't yet add those by default.",
+                          "url": "https://github.com/idaholab/moose/discussions/19264#discussioncomment-1572036",
+                          "updatedAt": "2022-07-14T17:09:55Z",
+                          "publishedAt": "2021-11-01T19:04:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "amosaha"
+                          },
+                          "bodyText": "hello,I want to use a file of HDF5 ,how can make the configuration?",
+                          "url": "https://github.com/idaholab/moose/discussions/19264#discussioncomment-1586104",
+                          "updatedAt": "2022-07-14T17:09:55Z",
+                          "publishedAt": "2021-11-04T03:27:50Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Clang frontend command failed due to signal compilation error",
+          "author": {
+            "login": "souravmat-git"
+          },
+          "bodyText": "Hello,\nAfter installing MOOSE using the Conda environment, I am getting the following error while compiling in MacOS BigSur 11.3.1\n\nPreviously, I was not getting this error. It occurred once I upgraded my macOS.\nAny suggestions are welcome.\nThanks,\nSourav",
+          "url": "https://github.com/idaholab/moose/discussions/17787",
+          "updatedAt": "2022-06-28T11:39:52Z",
+          "publishedAt": "2021-05-10T12:39:07Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "milljm"
+                  },
+                  "bodyText": "You may have better luck by following this thread: #17722\nThe gist of the possible solution, is to downgrade (or possibly reinstall... I had to reinstall) Xcode 12.4, run Xcode (to finalize the installation), and then attempt at rebuilding your Application /or MOOSE.",
+                  "url": "https://github.com/idaholab/moose/discussions/17787#discussioncomment-718533",
+                  "updatedAt": "2022-06-28T11:39:51Z",
+                  "publishedAt": "2021-05-10T13:36:54Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "souravmat-git"
+                          },
+                          "bodyText": "Thanks Jason, it works.",
+                          "url": "https://github.com/idaholab/moose/discussions/17787#discussioncomment-741091",
+                          "updatedAt": "2022-06-28T11:39:52Z",
+                          "publishedAt": "2021-05-15T05:56:34Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "cticenhour"
+                  },
+                  "bodyText": "For those who experience a similar issue in the future, I am re-answering this question now that MOOSE supports Xcode 12.5, 13, and 13.1. Please update your conda packages to the newest versions by performing\nconda update --all\n\nwithin your MOOSE conda environment. See #19289 for more information.",
+                  "url": "https://github.com/idaholab/moose/discussions/17787#discussioncomment-1586072",
+                  "updatedAt": "2022-06-28T11:39:52Z",
+                  "publishedAt": "2021-11-04T03:11:25Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,986 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyNC0xMi0wN1QxMDoyNDo0MS0wNjowMM4AdFEY"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "peacock does not support hit file brace expression",
+          "author": {
+            "login": "dzheng26"
+          },
+          "bodyText": "I just found out that peacock does not support hit file brace expression. You can try any file with brace expression to show the error. For example test/tests/coord_type/coord_type_rz_general.i\nIn the generated tmp files peacock_run_mesh_tmp.i and peacock_run_exe_tmp_coord_type_rz_general.i, the brace expression variable definitions are removed. However all the comment lines are kept. Are the brace expression variable definitions are removed intentionally or this is a bug? If we can keep all the comment lines, I guess it should be easy also to keep the variable definitions.\nOriginal file\n# Tests using different coordinate systems in different blocks:\n#   block1: XYZ translated by (0,-1,0)\n#   block2: RZ with origin=(0,0,0) and direction=(0,1,0)\n#   block3: RZ with origin=(0,0,1) and direction=(1,0,0)\n#   block4: RZ with origin=(-1,-2,-3) and direction=(1,1,0)\n#\n# A transient heat conduction equation is solved with uniform properties.\n# The same power is applied to each block via a uniform heat flux boundary\n# condition on the outer cylindrical surface (top surface for block1).\n# Conservation is checked for each via post-processors.\n# Blocks block2, block3, and block4 should have identical solutions.\n\nrho = 1000.0\ncp = 500.0\nk = 15.0\n\nlength = 1.5\nradius = 0.5\n\nperimeter = ${fparse 2 * pi * radius}\n\nnz = 10\nnr = 5\n\npower = 1e3\nheat_flux = ${fparse power / (perimeter * length)}\n\n[Mesh]\n  # block1\n  [genmesh1]\n......\n\nThe tmp file\n# Tests using different coordinate systems in different blocks:\n# block1: XYZ translated by (0,-1,0)\n# block2: RZ with origin=(0,0,0) and direction=(0,1,0)\n# block3: RZ with origin=(0,0,1) and direction=(1,0,0)\n# block4: RZ with origin=(-1,-2,-3) and direction=(1,1,0)\n#\n# A transient heat conduction equation is solved with uniform properties.\n# The same power is applied to each block via a uniform heat flux boundary\n# condition on the outer cylindrical surface (top surface for block1).\n# Conservation is checked for each via post-processors.\n# Blocks block2, block3, and block4 should have identical solutions.\n[Mesh]\n  # block1\n  # block2\n  # block3\n  # block4\n  coord_block = 'block1 block2 block3 block4'\n  coord_type = 'XYZ RZ RZ RZ'\n  rz_coord_blocks = 'block2 block3 block4'\n  rz_coord_origins = '0 0 0\n                      0 0 1\n                      -1 -2 -3'\n  rz_coord_directions = '0 1 0\n                         1 0 0\n                         1 1 0'\n  [genmesh1]\n......",
+          "url": "https://github.com/idaholab/moose/discussions/29375",
+          "updatedAt": "2024-12-10T11:10:25Z",
+          "publishedAt": "2024-12-06T17:28:58Z",
+          "category": {
+            "name": "Q&A Tools"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nAre you sure the expressions set by ${} have not been automatically replaced with their values?\nthose tmp files are likely generated after processing the input\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/29375#discussioncomment-11491287",
+                  "updatedAt": "2024-12-06T23:52:05Z",
+                  "publishedAt": "2024-12-06T23:52:04Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dzheng26"
+                          },
+                          "bodyText": "I'm sure that is the case. After activate the environment and compile the test app in the moose test folder, I used ../gui/peacock -i tests/coord_type/coord_type_rz_general.i. Then I got the warning and error messages\nWARNING\n Error producing mesh: '/femshare/azure/femdeploy/Users/uf00788/fem/moose/test/moose_test-opt -i /femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp.i --mesh-only /femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp_coord_type_rz_general.e --allow-test-objects' exited with non zero status 1.\n\nPlease make sure your application is built and able to execute the given arguments.\nWorking dir: /femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type\nOutput: \n\n*** ERROR ***\n/femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp.i:29.5: no variable 'nz' found for substitution expression\n/femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp.i:30.5: no variable 'nr' found for substitution expression\n/femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp.i:32.5: no variable 'length' found for substitution expression\n/femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp.i:34.5: \n    no variable 'radius' found for use in function parser expression\n/femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp.i:58.5: no variable 'nr' found for substitution expression\n/femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp.i:59.5: no variable 'nz' found for substitution expression\n/femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp.i:61.5: no variable 'radius' found for substitution expression\n/femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp.i:63.5: no variable 'length' found for substitution expression\n/femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp.i:87.5: no variable 'nz' found for substitution expression\n/femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp.i:88.5: no variable 'nr' found for substitution expression\n/femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp.i:90.5: no variable 'length' found for substitution expression\n/femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp.i:92.5: no variable 'radius' found for substitution expression\n/femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp.i:122.5: no variable 'nz' found for substitution expression\n/femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp.i:123.5: no variable 'nr' found for substitution expression\n/femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp.i:125.5: no variable 'length' found for substitution expression\n/femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp.i:127.5: no variable 'radius' found for substitution expression\n/femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp.i:180.5: no variable 'power' found for substitution expression\n/femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp.i:200.5: \n    no variable 'cp' found for use in function parser expression\n/femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp.i:200.5: \n    no variable 'k' found for use in function parser expression\n/femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp.i:200.5: \n    no variable 'rho' found for use in function parser expression\n/femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp.i:210.5: \n    no variable 'cp' found for use in function parser expression\n/femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp.i:210.5: \n    no variable 'heat_flux' found for use in function parser expression\n/femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp.i:210.5: \n    no variable 'rho' found for use in function parser expression\n/femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp.i:233.5: no variable 'rho' found for substitution expression\n/femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp.i:233.5: no variable 'cp' found for substitution expression\n/femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp.i:233.5: no variable 'perimeter' found for substitution expression\n/femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp.i:257.5: no variable 'rho' found for substitution expression\n/femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp.i:257.5: no variable 'cp' found for substitution expression\n/femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp.i:281.5: no variable 'rho' found for substitution expression\n/femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp.i:281.5: no variable 'cp' found for substitution expression\n/femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp.i:305.5: no variable 'rho' found for substitution expression\n/femshare/azure/femdeploy/Users/uf00788/fem/moose/test/tests/coord_type/peacock_run_mesh_tmp.i:305.5: no variable 'cp' found for substitution expression\n\nI cannot exam the about tmp file since it was removed. Peacock window was shown but no mesh was shown in the window.\n\nWhen I tried to run it, I get the same warning and error messages\n\nIn tmp file peacock_run_exe_tmp_coord_type_rz_general.i,  ${nc}, ${nr}, ${length} etc are still there while the definitions for them are gone.\n# Tests using different coordinate systems in different blocks:\n# block1: XYZ translated by (0,-1,0)\n# block2: RZ with origin=(0,0,0) and direction=(0,1,0)\n# block3: RZ with origin=(0,0,1) and direction=(1,0,0)\n# block4: RZ with origin=(-1,-2,-3) and direction=(1,1,0)\n#\n# A transient heat conduction equation is solved with uniform properties.\n# The same power is applied to each block via a uniform heat flux boundary\n# condition on the outer cylindrical surface (top surface for block1).\n# Conservation is checked for each via post-processors.\n# Blocks block2, block3, and block4 should have identical solutions.\n[Mesh]\n  # block1\n  # block2\n  # block3\n  # block4\n  coord_block = 'block1 block2 block3 block4'\n  coord_type = 'XYZ RZ RZ RZ'\n  rz_coord_blocks = 'block2 block3 block4'\n  rz_coord_origins = '0 0 0\n                      0 0 1\n                      -1 -2 -3'\n  rz_coord_directions = '0 1 0\n                         1 0 0\n                         1 1 0'\n  [genmesh1]\n    type = GeneratedMeshGenerator\n    dim = 2\n    nx = ${nz}\n    ny = ${nr}\n    xmin = 0.0\n    xmax = ${length}\n    ymin = -1.0\n    ymax = '${fparse -1.0 + radius}'\n    boundary_id_offset = 10\n  []\n  [renumberblock1]\n    type = RenameBlockGenerator\n    input = genmesh1\n    old_block = '0'\n    new_block = '1'\n  []\n......",
+                          "url": "https://github.com/idaholab/moose/discussions/29375#discussioncomment-11506248",
+                          "updatedAt": "2024-12-09T09:57:07Z",
+                          "publishedAt": "2024-12-09T09:57:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "@permcody @cticenhour thoughts? Is this a known issue with peacock or did it used to be supported?",
+                          "url": "https://github.com/idaholab/moose/discussions/29375#discussioncomment-11508301",
+                          "updatedAt": "2024-12-09T13:21:09Z",
+                          "publishedAt": "2024-12-09T13:21:08Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "cticenhour"
+                          },
+                          "bodyText": "I am not aware that this was an issue previously. How is HIT integrated in Peacock? It makes me think that it has something to do with the WASP transition, but I honestly have no clue.\nYou might need to workaround this by find-and-replacing these quantities yourself in the input.",
+                          "url": "https://github.com/idaholab/moose/discussions/29375#discussioncomment-11510136",
+                          "updatedAt": "2024-12-09T15:52:14Z",
+                          "publishedAt": "2024-12-09T15:52:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "permcody"
+                          },
+                          "bodyText": "I don't believe that peacock has ever supported this. HIT brace expression was added long after we quit active development on Peacock. I don't know what it would take to fix it, but it's probably not the highest priority. I would suggest a work-around for now. You might also consider using \"Workbench\" from ORNL, which is the supported GUI for MOOSE.",
+                          "url": "https://github.com/idaholab/moose/discussions/29375#discussioncomment-11510578",
+                          "updatedAt": "2024-12-09T16:30:53Z",
+                          "publishedAt": "2024-12-09T16:30:53Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "dzheng26"
+                          },
+                          "bodyText": "Thanks for your replies and the clarification. I will try Workbench to see how it works.",
+                          "url": "https://github.com/idaholab/moose/discussions/29375#discussioncomment-11519408",
+                          "updatedAt": "2024-12-10T11:10:26Z",
+                          "publishedAt": "2024-12-10T11:10:25Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Installing MOOSE with CUDA",
+          "author": {
+            "login": "rnpratoori"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n I have consulted the Posting Guidelines.\n I have searched the Discussions Forum and MOOSE Framework Troubleshooting and have not found what I was looking for\n Q&A Getting Started is the most appropriate category for my question (trouble installing, beginner user, ...)\n\nIssue or question about MOOSE\nI am trying to install MOOSE with CUDA. For this, I followed the HPC installation with MPICH built from source. For the installation of PETSc, I modified the configure_petsc.sh with the following options\npython3 ./configure --with-64-bit-indices CC=$CC CXX=$CXX FC=$FC F77=$F77 F90=$F90\\\n      --with-cxx-dialect=C++17 \\\n      --with-debugging=no \\\n      --with-fortran-bindings=0 \\\n      --with-mpi=1 \\\n      --with-openmp=1 \\\n      --with-strict-petscerrorcode=1 \\\n      --with-shared-libraries=1 \\\n      --with-sowing=0 \\\n      --with-cuda=1 \\\n      --download-fblaslapack=1 \\\n      --download-hpddm=1 \\\n      --download-hypre=1 \\\n      --download-metis=1 \\\n      --download-mumps=1 \\\n      --download-ptscotch=1 \\\n      --download-parmetis=1 \\\n      --download-scalapack=1 \\\n      --download-slate=1 \\\n      --download-slepc=1 \\\n      --download-strumpack=1 \\\n      --download-superlu_dist=1 \\\n      $HDF5_STR \\\n      $MUMPS_ARM_STR \\\n      $MAKE_NP_STR \\\n      \"$@\"\n\nThis runs fine with no errors.\nBut when I verify the PETSc installation using\nmake PETSC_DIR=/home/rnp/Software/MOOSE/projects/moose/scripts/../petsc PETSC_ARCH=arch-moose check\n\nI get the following output\nCH=arch-moose check\nRunning PETSc check examples to verify correct installation\nUsing PETSC_DIR=/home/rnp/Software/MOOSE/projects/moose/scripts/../petsc and PETSC_ARCH=arch-moose\nC/C++ example src/snes/tutorials/ex19 run successfully with 1 MPI process\nC/C++ example src/snes/tutorials/ex19 run successfully with 2 MPI processes\n3,5c3\n<   1 SNES Function norm 4.12227e-06\n<   2 SNES Function norm 6.098e-11\n< Number of SNES iterations = 2\n---\n> Number of SNES iterations = 0\n/home/rnp/Software/MOOSE/projects/moose/petsc/src/snes/tutorials\nPossible problem with ex19 running with HYPRE/CUDA, diffs above\n=========================================\nC/C++ example src/snes/tutorials/ex19 run successfully with CUDA\nC/C++ example src/snes/tutorials/ex19 run successfully with MUMPS\nC/C++ example src/snes/tutorials/ex19 run successfully with SuperLU_DIST\nC/C++ example src/vec/vec/tests/ex47 run successfully with HDF5\nRunning SLEPc check examples to verify correct installation\nUsing SLEPC_DIR=/home/rnp/Software/MOOSE/projects/moose/petsc/arch-moose/externalpackages/git.slepc, PETSC_DIR=/home/rnp/Software/MOOSE/projects/moose/scripts/../petsc, and PETSC_ARCH=arch-moose\nC/C++ example src/eps/tests/test10 run successfully with 1 MPI process\nC/C++ example src/eps/tests/test10 run successfully with 2 MPI processes\nC/C++ example src/eps/tests/test10 run successfully with CUDA\nCompleted SLEPc check examples\nCompleted PETSc check examples\nError while running make check\ngmake[1]: *** [makefile:131: check] Error 1\nmake: *** [GNUmakefile:17: check] Error 2\n\nI also tried proceeding with the install with libmesh and wasp. Everything seems fine with no errors, but the make in moose/test is giving errors. Maybe, this is the cause for it?\n(Optional) code in question / simulation log / errors\nNo response\nEncountering Errors? Please include diagnostic output\nNo response",
+          "url": "https://github.com/idaholab/moose/discussions/28595",
+          "updatedAt": "2024-12-09T20:10:03Z",
+          "publishedAt": "2024-09-10T16:30:59Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nA diff in make check is suspicious but GPU math isnt always reproducible for performance reasons, and the floating point ieee standards are not always obeyed.\nI would say the installation went fine since libmesh installed fine.\nWhat errors did you get from the make command in moose?",
+                  "url": "https://github.com/idaholab/moose/discussions/28595#discussioncomment-10609191",
+                  "updatedAt": "2024-09-11T03:34:54Z",
+                  "publishedAt": "2024-09-11T03:34:53Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rnpratoori"
+                          },
+                          "bodyText": "Here is the error message:\n/usr/bin/ld: /home/rnp/Software/MOOSE/projects/moose/framework/libmoose-opt.so: undefined reference to `FunctorMaterial::FunctorMaterial(InputParameters const&)'\n/usr/bin/ld: /home/rnp/Software/MOOSE/projects/moose/framework/libmoose-opt.so: undefined reference to `FunctorMaterial::validParams()'\ncollect2: error: ld returned 1 exit status\nmake: *** [/home/rnp/Software/MOOSE/projects/moose/framework/app.mk:457: /home/rnp/Software/MOOSE/projects/moose/test/moose_test-opt] Error 1\n\nBefore this error, there were also many warnings -Wmaybe-uninitialized mostly from AD* components.\nI could not figure out how to save the entire output into a file.",
+                          "url": "https://github.com/idaholab/moose/discussions/28595#discussioncomment-10624645",
+                          "updatedAt": "2024-09-12T10:28:32Z",
+                          "publishedAt": "2024-09-12T10:28:31Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "to save the output, you can do this.  make &> log_make.txt\ncan you print the output of the diagnostics script in moose/scripts ?",
+                          "url": "https://github.com/idaholab/moose/discussions/28595#discussioncomment-10625378",
+                          "updatedAt": "2024-09-12T11:49:01Z",
+                          "publishedAt": "2024-09-12T11:49:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rnpratoori"
+                          },
+                          "bodyText": "Are these the files you requested?\nlibmesh_diagnostic.log\nlog_make.txt",
+                          "url": "https://github.com/idaholab/moose/discussions/28595#discussioncomment-10627315",
+                          "updatedAt": "2024-09-12T14:54:56Z",
+                          "publishedAt": "2024-09-12T14:54:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "these help but the diagnostics script is in mosoe\ncd moose/scripts\n./diagnostics.sh",
+                          "url": "https://github.com/idaholab/moose/discussions/28595#discussioncomment-10627402",
+                          "updatedAt": "2024-09-12T15:09:30Z",
+                          "publishedAt": "2024-09-12T15:00:52Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rnpratoori"
+                          },
+                          "bodyText": "I think you meant cd moose/scripts\nlog_diagnostics.txt",
+                          "url": "https://github.com/idaholab/moose/discussions/28595#discussioncomment-10627468",
+                          "updatedAt": "2024-09-12T15:05:48Z",
+                          "publishedAt": "2024-09-12T15:05:48Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "I feel your MOOSE repo is a bit dated. The diagnostic log is incomplete. There are items missing that I added roughly a month ago. While not the reason you have issue, I wanted to make this known to @GiudGiud.",
+                          "url": "https://github.com/idaholab/moose/discussions/28595#discussioncomment-10627843",
+                          "updatedAt": "2024-09-12T15:34:02Z",
+                          "publishedAt": "2024-09-12T15:34:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "is this on WSL?",
+                          "url": "https://github.com/idaholab/moose/discussions/28595#discussioncomment-10628062",
+                          "updatedAt": "2024-09-12T15:51:46Z",
+                          "publishedAt": "2024-09-12T15:51:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rnpratoori"
+                          },
+                          "bodyText": "Yes. With Ubuntu 24.04",
+                          "url": "https://github.com/idaholab/moose/discussions/28595#discussioncomment-10628080",
+                          "updatedAt": "2024-09-12T15:53:16Z",
+                          "publishedAt": "2024-09-12T15:53:15Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "your compiler really does not like our ADRealVectorValue declaration + initialization. Bunch of warnings we dont expect.\nWe might want to look into that @lindsayad\nBut otherwise, there error is here\n/usr/bin/ld: /home/rnp/Software/MOOSE/projects/moose/framework/libmoose-opt.so: undefined reference to `FunctorMaterial::FunctorMaterial(InputParameters const&)'\n/usr/bin/ld: /home/rnp/Software/MOOSE/projects/moose/framework/libmoose-opt.so: undefined reference to `FunctorMaterial::validParams()'\n\nthis should not be, we definitely declare both of these in framework/src/materials/FunctorMaterial.C\ncan you check that you have that file on your system?",
+                          "url": "https://github.com/idaholab/moose/discussions/28595#discussioncomment-10629441",
+                          "updatedAt": "2024-09-12T18:17:50Z",
+                          "publishedAt": "2024-09-12T18:17:50Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rnpratoori"
+                          },
+                          "bodyText": "Interesting... I do not have those files. I also do not have them in 2 other machines (one WSL and one M2 Mac) but those work fine.\nUpdate: I found them in framework/src/functormaterials/",
+                          "url": "https://github.com/idaholab/moose/discussions/28595#discussioncomment-10629728",
+                          "updatedAt": "2024-09-12T18:58:12Z",
+                          "publishedAt": "2024-09-12T18:47:36Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Image Function Capabilities",
+          "author": {
+            "login": "agorgogi"
+          },
+          "bodyText": "Hello,\nI would like to use Moose for simulating heterogeneous materials. I have input images of microstructures, an example is attached, which I want to mesh with Moose so as to accurately capture the geometry of the phases, and create different block IDs for the finite elements belonging to a different phase ( each phase is shown with different color in the image). I could then refer to finite elements based on their block ID, and assign the corresponding phase material properties to them.\n\nMy first approach was the following:\nCreate a uniform mesh with finite element size matching the pixel/voxel size of the image, and then passing this mesh as the input to ImageSubdomain Generator, as follows\n[Mesh]\n    [mesh_define]\n        type = GeneratedMeshGenerator\n        dim = 2\n        nx = 320 # = number of image pixels in x\n        ny = 320 # = number of image pixels in y\n    []\n    [image]\n        input = mesh_define\n        type = ImageSubdomainGenerator\n        file_base = microstructure396_3D_png/0  # all images filenames start with 0\n        file_suffix = png\n        file_range = '0000' # read only one image from the stack for now\n        threshold = 255 # everything above 255 will be assigned to block 1, everything below to block 0\n        upper_value = 1\n        lower_value = 0\n    []  \n[]\n\nThis results in accurate geometry representation and assignment of block IDs to the different phases, as shown below.\n\nThe problem with this approach is that it is very computationally expensive, because of the uniform mesh.\nSo my second approach was to use adaptive mesh refinement with Moose ImageFunction. Moose image function will sample the values of the image (the values of the different pixel colors), and will adaptively refine the mesh until it adequetely captures the geometrical features in the image. In the Moose documentation, it is mentioned that I can then use the result of the Image Function to set the values of a variable, e.g. displacements. However, I do not want that. Instead, what I want is to use the result of the ImageFunction to set the block IDs of the corresponding finite elements. Is there any possible way I could do that? Or is there any other possible way I could create a non-uniform (adaptive) mesh that accurately captures the image geometry, and correctly assigns different block IDs to finite elements belonging to different phases?\n[Mesh]\n    type = GeneratedMesh\n    dim = 2\n    nx = 10\n    ny = 10\n[]\n\n[Functions]\n    [image_func]\n      type = ImageFunction\n      file_base = microstructure396_3D_png/0\n      file_suffix = png\n      file_range = '0000'\n      threshold = 255\n      upper_value = 1\n      lower_value = 0\n    []\n[]\n  \n[Variables]\n    [u]\n    []\n[]\n\n[ICs]\n    [u_ic]\n      type = FunctionIC\n      function = image_func\n      variable = u\n    []\n[]\n  \n[Problem]\n    type = FEProblem\n    solve = false  # that was the other way no to solve the problem, but only generate the mesh\n[]\n  \n[Executioner]\n    type = Transient\n    num_steps = 1\n    dt = 0.1\n[]\n  \n[Adaptivity]\n    max_h_level = 5\n    initial_steps = 5\n    initial_marker = marker\n    [Indicators]\n      [indicator]\n        type = GradientJumpIndicator\n        variable = u\n      []\n    []\n    [Markers]\n      [marker]\n        type = ErrorFractionMarker\n        indicator = indicator\n        refine = 0.9\n      []\n    []\n[]\n  \n[Outputs]\n    exodus = true\n[]\n\n\nLooking forward to any suggestions, thank you!",
+          "url": "https://github.com/idaholab/moose/discussions/26733",
+          "updatedAt": "2024-12-09T15:14:46Z",
+          "publishedAt": "2024-02-04T18:55:58Z",
+          "category": {
+            "name": "Q&A Meshing"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThis might be a little convoluted but you could :\n\n\nuse a FunctionAux to set an auxiliary variable to the local value of the function (executed on INITIAL)\nhttps://mooseframework.inl.gov/source/auxkernels/FunctionAux.html\n\n\nuse this user object on INITIAL to change the subdomain\nhttps://mooseframework.inl.gov/source/userobjects/CoupledVarThresholdElementSubdomainModifier.html",
+                  "url": "https://github.com/idaholab/moose/discussions/26733#discussioncomment-8362602",
+                  "updatedAt": "2024-02-04T19:21:24Z",
+                  "publishedAt": "2024-02-04T19:21:23Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "agorgogi"
+                          },
+                          "bodyText": "Many thanks! Will look into these options!",
+                          "url": "https://github.com/idaholab/moose/discussions/26733#discussioncomment-8362814",
+                          "updatedAt": "2024-02-04T20:02:38Z",
+                          "publishedAt": "2024-02-04T20:02:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Max raised a good question. This won't work if we can't have child elements of a same parent element have different subdomains from that parent element.\nI don't know if we can't have that.",
+                          "url": "https://github.com/idaholab/moose/discussions/26733#discussioncomment-8370723",
+                          "updatedAt": "2024-02-05T14:13:20Z",
+                          "publishedAt": "2024-02-05T14:13:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "maxnezdyur"
+                          },
+                          "bodyText": "@GiudGiud I should have checked before I sent my first comment, which is why I tried to delete it. Relatively new, but it seems like that we actually can have different subdomains. I didn't look too much in the results to see what happens during the run but one of the input file below may do what we want. Not sure how best to link input files.\ntest/tests/userobjects/element_subdomain_modifier/adaptivity_moving_boundary.i",
+                          "url": "https://github.com/idaholab/moose/discussions/26733#discussioncomment-8370785",
+                          "updatedAt": "2024-02-05T14:17:33Z",
+                          "publishedAt": "2024-02-05T14:17:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Awesome. This should work then.",
+                          "url": "https://github.com/idaholab/moose/discussions/26733#discussioncomment-8370938",
+                          "updatedAt": "2024-02-05T14:27:58Z",
+                          "publishedAt": "2024-02-05T14:27:58Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "agorgogi"
+                          },
+                          "bodyText": "@GiudGiud , @maxnezdyur\nThank you both for the help. Yes, it worked now. All I would have to do is to improve the adaptivity part to better capture the geometrical features of the image, but the block IDs did change as I wanted them to.\n\n[Mesh]\n  [gen]\n    type = GeneratedMeshGenerator\n    dim = 2\n    nx = 10\n    ny = 10\n  []\n  [block0]\n    type = SubdomainBoundingBoxGenerator\n    input = 'gen'\n    block_id = 0\n    bottom_left = '0 0 0'\n    top_right = '1 0.5 0'\n  []\n  [block1]\n    type = SubdomainBoundingBoxGenerator\n    input = 'block0'\n    block_id = 1\n    bottom_left = '0 0.5 0'\n    top_right = '1 1 0'\n  []\n[]\n\n[Functions]\n    [image_func]\n      type = ImageFunction\n      file_base = microstructure396_3D_png/0\n      file_suffix = png\n      file_range = '0000'\n      threshold = 255\n      upper_value = 1\n      lower_value = 0\n    []\n[]\n  \n[AuxVariables]\n  [auxBlockID]\n  []\n[]\n\n[AuxKernels]\n  [aux_kern]\n    type = FunctionAux\n    variable = auxBlockID\n    function = image_func\n    execute_on = 'INITIAL'\n  []\n[]\n\n[UserObjects]\n  [change_blockID]\n    type = CoupledVarThresholdElementSubdomainModifier\n    coupled_var = auxBlockID\n    criterion_type = ABOVE\n    threshold = 0\n    subdomain_id = 1\n    complement_subdomain_id = 0\n    execute_on = 'INITIAL'\n  []\n[]\n\n\n[Variables]\n    [u]\n    []\n[]\n\n#Try use the auxillary variable in the adaptivity criterion instead of assigning it to the displacement variable\n[ICs]\n    [u_ic]\n      type = FunctionIC\n      function = image_func\n      variable = u\n    []\n[]\n  \n[Problem]\n    type = FEProblem\n    solve = false  # that was the other way no to solve the problem, but only generate the mesh\n[]\n  \n[Executioner]\n    type = Transient\n    num_steps = 1\n    dt = 0.1\n[]\n  \n[Adaptivity]\n    max_h_level = 10\n    initial_steps = 5\n    initial_marker = marker\n    [Indicators]\n      [indicator]\n        type = GradientJumpIndicator\n        variable = u\n      []\n    []\n    [Markers]\n      [marker]\n        type = ErrorFractionMarker\n        indicator = indicator\n        refine = 0.9\n      []\n    []\n[]\n  \n[Outputs]\n    exodus = true\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/26733#discussioncomment-8372222",
+                          "updatedAt": "2024-02-06T05:20:38Z",
+                          "publishedAt": "2024-02-05T15:57:08Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Awesome",
+                          "url": "https://github.com/idaholab/moose/discussions/26733#discussioncomment-8378156",
+                          "updatedAt": "2024-02-06T05:20:50Z",
+                          "publishedAt": "2024-02-06T05:20:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Rahim-Habibi"
+                          },
+                          "bodyText": "Hi @agorgogi and @GiudGiud ,\nI would like to simulate heterogeneous materials in MOOSE, so after reading the documents \"ImageFunction\" i have endded up with your issue because i wanted to have several blocks as well.\nThus, i tried your input file with my own imahe but i did not get the two block, i only have one block see the figure below\n\nand this the figure i tried to mesh\n\nhere is the input file :\n[Mesh]\n  [gen]\n    type = GeneratedMeshGenerator\n    dim = 2\n    nx = 10\n    ny = 10\n  []\n  [block0]\n    type = SubdomainBoundingBoxGenerator\n    input = 'gen'\n    block_id = 0\n    bottom_left = '0 0 0'\n    top_right = '1 0.5 0'\n  []\n  [block1]\n    type = SubdomainBoundingBoxGenerator\n    input = 'block0'\n    block_id = 1\n    bottom_left = '0 0.5 0'\n    top_right = '1 1 0'\n  []\n[]\n\n[Functions]\n    [image_func]\n      type = ImageFunction\n      file = OIP.png\n      threshold = 255\n      upper_value = 1\n      lower_value = 0\n    []\n[]\n\n[AuxVariables]\n  [auxBlockID]\n  []\n[]\n\n[AuxKernels]\n  [aux_kern]\n    type = FunctionAux\n    variable = auxBlockID\n    function = image_func\n    execute_on = 'INITIAL'\n  []\n[]\n\n[UserObjects]\n  [change_blockID]\n    type = CoupledVarThresholdElementSubdomainModifier\n    coupled_var = auxBlockID\n    criterion_type = ABOVE\n    threshold = 0\n    subdomain_id = 1\n    complement_subdomain_id = 0\n    execute_on = 'INITIAL'\n  []\n[]\n\n\n[Variables]\n    [u]\n    []\n[]\n\n#Try use the auxillary variable in the adaptivity criterion instead of assigning it to the displacement variable\n[ICs]\n    [u_ic]\n      type = FunctionIC\n      function = image_func\n      variable = u\n    []\n[]\n\n[Problem]\n    type = FEProblem\n    solve = false  # that was the other way no to solve the problem, but only generate the mesh\n[]\n\n[Executioner]\n    type = Transient\n    num_steps = 1\n    dt = 0.1\n[]\n\n[Adaptivity]\n    max_h_level = 10\n    initial_steps = 5\n    initial_marker = marker\n    [Indicators]\n      [indicator]\n        type = GradientJumpIndicator\n        variable = auxBlockID\n      []\n    []\n    [Markers]\n      [marker]\n        type = ErrorFractionMarker\n        indicator = indicator\n        refine = 0.9\n      []\n    []\n[]\n\n[Outputs]\n    exodus = true\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/26733#discussioncomment-11486587",
+                          "updatedAt": "2024-12-06T23:55:32Z",
+                          "publishedAt": "2024-12-06T15:54:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "hello\nfirst, I dont think the ImageFunction worked as ewxpected. You should show auxBlockID instead of object_ID in the paraview output to check\nthe adaptivity will have to be figured out next",
+                          "url": "https://github.com/idaholab/moose/discussions/26733#discussioncomment-11491295",
+                          "updatedAt": "2024-12-06T23:56:51Z",
+                          "publishedAt": "2024-12-06T23:56:51Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Rahim-Habibi"
+                          },
+                          "bodyText": "Thnaks @GiudGiud\nhere is auxBlockID in paraview",
+                          "url": "https://github.com/idaholab/moose/discussions/26733#discussioncomment-11505171",
+                          "updatedAt": "2024-12-09T08:18:22Z",
+                          "publishedAt": "2024-12-09T08:18:21Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Are you plotting those at the end of the simulation or after a time step? Parlaview will plot the initial state by default",
+                          "url": "https://github.com/idaholab/moose/discussions/26733#discussioncomment-11507953",
+                          "updatedAt": "2024-12-09T12:52:19Z",
+                          "publishedAt": "2024-12-09T12:52:19Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Linear elastic problem runs too slow",
+          "author": {
+            "login": "Juns-Cheng"
+          },
+          "bodyText": "Hello, everyone. I am new to moose. I am testing the program with a very simple linear elastic problem: a spring with one end fixed and the other subjected to pressure (see attachment). There are 50k nodes in total. CALCULIX and ANSYS can solve the problem in seconds. But MOOSE converges very slow.\nI don't quite understand, because the problem is linear and needs no iteration at all. Any suggestions?\nspring.zip",
+          "url": "https://github.com/idaholab/moose/discussions/29377",
+          "updatedAt": "2024-12-09T11:38:35Z",
+          "publishedAt": "2024-12-08T09:05:37Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nIf you are solving a linear problem, you can use a linear solver (set the solve_type) to shave an extra nonlinear iteration.\nIf you are looking for performance, you will need to set the preconditioner. A common choice in solid mechanics is hypre boomeramg. you set it like this:\n  petsc_options_iname = '-pc_type -pc_hypre_type'\n  petsc_options_value = 'hypre boomeramg'",
+                  "url": "https://github.com/idaholab/moose/discussions/29377#discussioncomment-11499705",
+                  "updatedAt": "2024-12-08T14:32:45Z",
+                  "publishedAt": "2024-12-08T14:32:44Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I can't blindly download a zip on a work computer so if you need to share inputs please use a github repo",
+                          "url": "https://github.com/idaholab/moose/discussions/29377#discussioncomment-11499707",
+                          "updatedAt": "2024-12-08T14:33:14Z",
+                          "publishedAt": "2024-12-08T14:33:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Juns-Cheng"
+                          },
+                          "bodyText": "Thanks for the suggestion. Now I use LINEAR solve type. The LU method works fine, but HYPRE does not converge. I will try tuning the solver parameters.",
+                          "url": "https://github.com/idaholab/moose/discussions/29377#discussioncomment-11507302",
+                          "updatedAt": "2024-12-09T11:38:35Z",
+                          "publishedAt": "2024-12-09T11:38:35Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Convergence criteria",
+          "author": {
+            "login": "jmeier"
+          },
+          "bodyText": "Dear Moose community,\nI'd like to ask a question on the very good explanations given here:\nmooseframework.inl.gov/modules/porous_flow/convergence.html\nIn the section on fluids the following equation is given:\n$R=V \\cdot \\left|\\kappa\\right| \\cdot \\rho \\cdot \\epsilon / \\mu$\nCan you please clarify what $\\left|\\kappa\\right|$ is?\nCross-checking here my guess is, that $\\left|\\kappa\\right|$ is the determinant of the permeability tensor (so, a physical unit of [mass] \u00b7 [length]^5 / [time] ?). For a gravel with a isotropic permeability of 1E-7 m\u00b2 and default SI-units this would lead to $\\left|\\kappa\\right| = 1E-21 m^6$. For water, a volume of interest of 1m\u00b3 and $\\epsilon=1 Pa/m$ this would lead to $R=1E-15 kg \\cdot m^5 / s$.\nBut on the other hand, the value calculated above is much smaller than the $R_{fluid}=10E-9 \\cdot V$ given in section \"Scaling the variables\" in mooseframework.inl.gov/modules/porous_flow/convergence.html.\nThanks for you help in advance.\nEdit: Unit of R.",
+          "url": "https://github.com/idaholab/moose/discussions/29359",
+          "updatedAt": "2024-12-10T06:15:06Z",
+          "publishedAt": "2024-12-05T10:11:22Z",
+          "category": {
+            "name": "Q&A Modules: Porous Flow"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "@rpodgorney @1runer",
+                  "url": "https://github.com/idaholab/moose/discussions/29359#discussioncomment-11475413",
+                  "updatedAt": "2024-12-05T16:13:03Z",
+                  "publishedAt": "2024-12-05T16:13:03Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "cpgr"
+                  },
+                  "bodyText": "Pretty sure it's just an order of magnitude of the permeability, so just 1e-7 in your case.",
+                  "url": "https://github.com/idaholab/moose/discussions/29359#discussioncomment-11502319",
+                  "updatedAt": "2024-12-08T23:04:08Z",
+                  "publishedAt": "2024-12-08T23:04:07Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jmeier"
+                          },
+                          "bodyText": "That is probably really the case. For gravel/sand/clay this gives:\nFor gravel ($\\kappa \\approx 1E-7 m\u00b2$):\n$R = (1 m\u00b3) \\cdot (1E-7 m\u00b2) \\cdot (1000 kg/m\u00b3) \\cdot (1 Pa/m) / (1 mPa \\cdot s) = 1E-1 kg \\cdot m / s $\nFor sand ($\\kappa \\approx 1E-12 m\u00b2$):\n$R = (1 m\u00b3) \\cdot (1E-12 m\u00b2) \\cdot (1000 kg/m\u00b3) \\cdot (1 Pa/m) / (1 mPa \\cdot s) = 1E-6 kg \\cdot m / s $\nFor clay ($\\kappa \\approx 1E-15 m\u00b2$):\n$R = (1 m\u00b3) \\cdot (1E-15 m\u00b2) \\cdot (1000 kg/m\u00b3) \\cdot (1 Pa/m) / (1 mPa \\cdot s) = 1E-9 kg \\cdot m / s $",
+                          "url": "https://github.com/idaholab/moose/discussions/29359#discussioncomment-11504648",
+                          "updatedAt": "2024-12-09T07:51:59Z",
+                          "publishedAt": "2024-12-09T07:09:09Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Add new energy terms to the AC equation",
+          "author": {
+            "login": "YXY101676"
+          },
+          "bodyText": "Dear all,\nI want to add new energy terms to the AC equation, but I'm having trouble understanding the existing code.\nIn the ComputePolycrystalElasticityTensor.C file, the derivative of the elastic modulus with respect to the order parameter, __elastic_tensor(_op_num), is computed, which is an array of the number of active order parameters at the integration point. What I don't understand is the parameter created in the PolycrystalElasticDrivingForceAction.C file, MaterialPropertyName D_stiff_name =derivativePropertyNameFirst(_elasticity_tensor, var_name), can call the derivative of the current kernels variable needed in _D_elastic_tensor(_op_num); it might be due to some misunderstanding of code, and I appreciate your help very much.",
+          "url": "https://github.com/idaholab/moose/discussions/28986",
+          "updatedAt": "2024-12-09T04:04:29Z",
+          "publishedAt": "2024-11-01T02:38:16Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nFor future reference it's better to copy paste text than to screenshot it. From a screenshot I can't copy paste to explain each line.\nderivativePropertyNameFirst gives you the name of the material property that is the derivative of 'elasticity_tensor_name' with regards to var_name. Var_name is the name of the variable for that order parameter.\nIt does not actually compute that derivative here. That derivative (= that material property) is computed by a Material object, but it is declared with that same name.\nThen a kernel is created, and the D_tensor is set to this material property.",
+                  "url": "https://github.com/idaholab/moose/discussions/28986#discussioncomment-11125320",
+                  "updatedAt": "2024-11-01T19:18:23Z",
+                  "publishedAt": "2024-11-01T19:18:22Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "YXY101676"
+                          },
+                          "bodyText": "Dear  GiudGiud\nI'm very sorry for the late reply, I had some minor health issues earlier.And I'm sorry for asking questions in the form of screenshots. I won't do it again in the future. I still have some confusion about the in this file.\nvoid\nComputePolycrystalElasticityTensor::computeQpElasticityTensor()\n{\n  // Get list of active order parameters from grain tracker\n  const auto & op_to_grains = _grain_tracker.getVarToFeatureVector(_current_elem->id());\n\n  // Calculate elasticity tensor\n  _elasticity_tensor[_qp].zero();\n  Real sum_h = 0.0;\n  for (MooseIndex(op_to_grains) op_index = 0; op_index < op_to_grains.size(); ++op_index)\n  {\n    auto grain_id = op_to_grains[op_index];\n    if (grain_id == FeatureFloodCount::invalid_id)\n      continue;\n\n    // Interpolation factor for elasticity tensors\n    Real h = (1.0 + std::sin(libMesh::pi * ((*_vals[op_index])[_qp] - 0.5))) / 2.0;\n\n    // Sum all rotated elasticity tensors\n    _elasticity_tensor[_qp] += _grain_tracker.getData(grain_id) * h;\n    sum_h += h;\n  }\n\n  const Real tol = 1.0e-10;\n  sum_h = std::max(sum_h, tol);\n  _elasticity_tensor[_qp] /= sum_h;\n\n  // Calculate elasticity tensor derivative: Cderiv = dhdopi/sum_h * (Cop - _Cijkl)\n  for (MooseIndex(_op_num) op_index = 0; op_index < _op_num; ++op_index)\n    (*_D_elastic_tensor[op_index])[_qp].zero();\n\n  for (MooseIndex(op_to_grains) op_index = 0; op_index < op_to_grains.size(); ++op_index)\n  {\n    auto grain_id = op_to_grains[op_index];\n    if (grain_id == FeatureFloodCount::invalid_id)\n      continue;\n\n    Real dhdopi = libMesh::pi * std::cos(libMesh::pi * ((*_vals[op_index])[_qp] - 0.5)) / 2.0;\n    RankFourTensor & C_deriv = (*_D_elastic_tensor[op_index])[_qp];\n\n    C_deriv = (_grain_tracker.getData(grain_id) - _elasticity_tensor[_qp]) * dhdopi / sum_h;\n\n    // Convert from XPa to eV/(xm)^3, where X is pressure scale and x is length scale;\n    C_deriv *= _JtoeV * (_length_scale * _length_scale * _length_scale) * _pressure_scale;\n  }\n}\n\nAmong them, the feature ID vector op_to_grains obtained through the getVarToFeatureVector function, does the order of the feature IDs correspond the order of the parameter values:_vals?\nHow is his order determined? I didn't find the sorting method of _vals, which is the order parameter value, in the FeatureFlood.C file.",
+                          "url": "https://github.com/idaholab/moose/discussions/28986#discussioncomment-11503186",
+                          "updatedAt": "2024-12-09T03:58:05Z",
+                          "publishedAt": "2024-12-09T02:35:50Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "you can look at the GrainTracker code for the definition of getVarToFeatureVector which calls the FeatureFloodCount. There you can see the var to feature map being created in the updateFieldInfo\nIt's a map indexed by feature id, containing vectors indexed by variable index, which contain the feature id\n  std::map<dof_id_type, std::vector<unsigned int>> _entity_var_to_features;\n\nThere must be a reason for that design, I think maybe a distinction between local ids and other feature ids",
+                          "url": "https://github.com/idaholab/moose/discussions/28986#discussioncomment-11503666",
+                          "updatedAt": "2024-12-09T04:05:38Z",
+                          "publishedAt": "2024-12-09T04:04:29Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Use the NS module to calculate fluid occurrence",
+          "author": {
+            "login": "shin-chan-cpu"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A Navier Stokes is the most appropriate category for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (avoid screenshots if possible, triple back quotes before/after pasted text, etc)\n\nQuestion\nI used Newton method to calculate the fluid flow in the pipeline. Since no three-dimensional fluid calculation example with energy conservation equation was given on the official website, I could only modify it through two-dimensional calculation example, but the convergence was poor. That is, only the physical properties given by the example can be convergent, and once they are changed, errors or non-convergence will be reported, and they will also exist.I wonder why this is, is it the iteration itself?\nAdditional information\nMesh size and type:Hexahedral grid, about 20,000 meshes\nReynolds number:2.2e8\nDiscretization (finite element CG/DG, finite volume, etc):FV\nModels (turbulence, porous media, etc):noTurb\nSolver method (fully coupled, segregated, multiapps, etc):Newton\nBase input you started from:\n# mu = 1.1\n# rho = 1.1\n# k = 1e-3\n# cp = 1.1\n#alpha = 150\nmu = 1e-6\nrho = 1000\nk = 0.5\ncp = 4222\n# Operating conditions\nw_inlet = 5\nT_inlet = 300\n#T_solid = 300\np_outlet = 15.5e6\n#h_fs = 1\n\n\nadvected_interp_method = 'upwind'\nvelocity_interp_method = 'average'\n\n#pressure_tag = \"pressure_grad\"\n\n[Mesh]\n  # [mesh]\n  #   type = CartesianMeshGenerator\n  #   dim = 3\n  #   dx = '2'\n  #   dy = '2'\n  #   dz = '8'\n  #   ix = '15'\n  #   iy = '15'\n  #   iz = '20'\n  # []\n  [mesh]\n    type = FileMeshGenerator\n    show_info = true\n    file = 1h_sff.e\n[]\n[]\n\n[GlobalParams]\n  rhie_chow_user_object = 'rc'\n[]\n\n# [Problem]\n#   nl_sys_names = 'u_system v_system w_system pressure_system energy_system'\n#   previous_nl_solution_required = true\n#   error_on_jacobian_nonzero_reallocation = true\n# []\n\n[UserObjects]\n  [rc]\n    type = INSFVRhieChowInterpolator\n    u = vel_x\n    v = vel_y\n    w = vel_z\n    pressure = pressure\n  []\n[]\n\n[Variables]\n  [vel_x]\n    type = INSFVVelocityVariable\n    initial_condition = 1e-12\n  #  solver_sys = u_system\n  #  two_term_boundary_expansion = false\n  []\n  [vel_y]\n    type = INSFVVelocityVariable\n    initial_condition = 1e-12\n  #  solver_sys = v_system\n  #  two_term_boundary_expansion = false\n  []\n  [vel_z]\n    type = INSFVVelocityVariable\n    initial_condition = ${w_inlet}\n  #  solver_sys = w_system\n  #  two_term_boundary_expansion = false\n  []\n  [pressure]\n    type = INSFVPressureVariable\n  #  solver_sys = pressure_system\n    initial_condition = ${p_outlet}\n  #  two_term_boundary_expansion = false\n  []\n  [T_fluid]\n    type = INSFVEnergyVariable\n    initial_condition = ${T_inlet}\n  #  solver_sys = energy_system\n  #  two_term_boundary_expansion = false\n  []\n  [T_solid]\n#    type = INSFVEnergyVariable\n    order = CONSTANT\n    family = MONOMIAL\n    fv = true\n  []\n[]\n\n[FVKernels]\n  [mass]\n    type = INSFVMassAdvection\n    variable = pressure\n    advected_interp_method = ${advected_interp_method}\n    velocity_interp_method = ${velocity_interp_method}\n    rho = ${rho}\n  []\n\n  [u_advection]\n    type = INSFVMomentumAdvection\n    variable = vel_x\n    advected_interp_method = ${advected_interp_method}\n    velocity_interp_method = ${velocity_interp_method}\n    rho = ${rho}\n    momentum_component = 'x'\n  []\n  [u_viscosity]\n    type = INSFVMomentumDiffusion\n    variable = vel_x\n    mu = ${mu}\n    momentum_component = 'x'\n  []\n  [u_pressure]\n    type = INSFVMomentumPressure\n    variable = vel_x\n    momentum_component = 'x'\n    pressure = pressure\n  #  extra_vector_tags = ${pressure_tag}\n  []\n  [v_advection]\n    type = INSFVMomentumAdvection\n    variable = vel_y\n    advected_interp_method = ${advected_interp_method}\n    velocity_interp_method = ${velocity_interp_method}\n    rho = ${rho}\n    momentum_component = 'y'\n  []\n  [v_viscosity]\n    type = INSFVMomentumDiffusion\n    variable = vel_y\n    mu = ${mu}\n    momentum_component = 'y'\n  []\n  [v_pressure]\n    type = INSFVMomentumPressure\n    variable = vel_y\n    momentum_component = 'y'\n    pressure = pressure\n  #  extra_vector_tags = ${pressure_tag}\n  []\n  [w_advection]\n    type = INSFVMomentumAdvection\n    variable = vel_z\n    advected_interp_method = ${advected_interp_method}\n    velocity_interp_method = ${velocity_interp_method}\n    rho = ${rho}\n    momentum_component = 'z'\n  []\n  [w_viscosity]\n    type = INSFVMomentumDiffusion\n    variable = vel_z\n    mu = ${mu}\n    momentum_component = 'z'\n  []\n  [w_pressure]\n    type = INSFVMomentumPressure\n    variable = vel_z\n    momentum_component = 'z'\n    pressure = pressure\n  #  extra_vector_tags = ${pressure_tag}\n  []\n  # [p_diffusion]\n  #   type = FVAnisotropicDiffusion\n  #   variable = pressure\n  #   coeff = \"Ainv\"\n  #   coeff_interp_method = 'average'\n  # []\n  # [p_source]\n  #   type = FVDivergence\n  #   variable = pressure\n  #   vector_field = \"HbyA\"\n  #   force_boundary_execution = true\n  # []\n  [energy_advection]\n    type = INSFVEnergyAdvection\n    variable = T_fluid\n    velocity_interp_method = ${velocity_interp_method}\n    advected_interp_method = ${advected_interp_method}\n  []\n  [energy_diffusion]\n    type = FVDiffusion\n    coeff = ${k}\n    variable = T_fluid\n  []\n  # [ambient_convection]\n  #   type = NSFVEnergyAmbientConvection\n  #   variable = T_fluid\n  #   T_ambient = 350\n  #   alpha = 'alpha'\n  # []\n  # [energy_convection]\n  #   type = PINSFVEnergyAmbientConvection\n  #   variable = T_fluid\n  #   is_solid = false\n  #   T_fluid = 'T_fluid'\n  #   T_solid = 'T_solid'\n  #   h_solid_fluid = 'h_cv'\n  # []  \n  [solid_temp_conduction]\n    type = FVDiffusion\n    coeff = 1\n    variable = T_solid\n  []\n[]\n\n[FVBCs]\n  [inlet-u]\n    type = INSFVInletVelocityBC\n    boundary = 'inlet'\n    variable = vel_x\n    function = '0'\n  []\n  [inlet-v]\n    type = INSFVInletVelocityBC\n    boundary = 'inlet'\n    variable = vel_y\n    function = '0'\n  []\n  [inlet-w]\n    type = INSFVInletVelocityBC\n    boundary = 'inlet'\n    variable = vel_z\n    function = ${w_inlet}\n  []\n  [walls-u]\n    type = INSFVNoSlipWallBC\n    boundary = 'walls   '\n    variable = vel_x\n    function = 0.0\n  []\n  [walls-v]\n    type = INSFVNoSlipWallBC\n    boundary = 'walls '\n    variable = vel_y\n    function = 0.0\n  []\n  [walls-w]\n    type = INSFVNoSlipWallBC\n    boundary = 'walls '\n    variable = vel_z\n    function = 0.0\n  []\n\n  [symmetry-u]\n    type = INSFVSymmetryVelocityBC\n    boundary = 'symmetry'\n    variable = vel_x\n    u = vel_x\n    v = vel_y\n    w = vel_z\n    mu = ${mu}\n    momentum_component = 'x'\n  []\n  [symmetry-v]\n    type = INSFVSymmetryVelocityBC\n    boundary = 'symmetry'\n    variable = vel_y\n    u = vel_x\n    v = vel_y\n    w = vel_z\n    mu = ${mu}\n    momentum_component = 'y'\n  []\n  [symmetry-w]\n    type = INSFVSymmetryVelocityBC\n    boundary = 'symmetry'\n    variable = vel_z\n    u = vel_x\n    v = vel_y\n    w = vel_z\n    mu = ${mu}\n    momentum_component = 'z'\n  []  \n  [symmetry-p]\n    type = INSFVSymmetryPressureBC\n    boundary = 'symmetry'\n    variable = pressure\n  []\n\n  [outlet_p]\n    type = INSFVOutletPressureBC\n    boundary = 'outlet'\n    variable = pressure\n    function = '${p_outlet}'\n  []\n  # [zero-grad-pressure]\n  #   type = FVFunctionNeumannBC\n  #   variable = pressure\n  #   boundary = 'back left right top bottom'\n  #   function = 0.0\n  # []\n  [inlet_t]\n    type = FVDirichletBC\n    boundary = 'inlet'\n    variable = T_fluid\n    value = ${T_inlet}\n  []\n\n # [left_Ts]\n #   type = NSFVHeatFluxBC\n #   variable = T_fluid\n #   boundary = 'walls '\n #   phase = 'fluid'\n #   value = 100000\n #   splitting = thermal_conductivity\n  #  locality = global\n #   average_k_fluid='0.04'\n  #  average_k_solid='500'\n #   average_kappa='0.04'  # because of vector matprop, should be kappa\n #   average_kappa_solid='500'   \n # []\n  # [heater]\n  #   type = FVDirichletBC\n  #   variable = 'T_solid'\n  #   boundary = 'left right top bottom'\n  #   value = 300\n  # []\n[]\n\n# [FVInterfaceKernels]\n#   [convection]\n#     type = FVConvectionCorrelationInterface\n#     variable1 = T_fluid\n#     variable2 = T_solid\n#     boundary = 'left right top bottom'\n#     h = 0.1\n#     T_solid = T_solid\n#     T_fluid = T_fluid\n#     subdomain1 = 0\n#     subdomain2 = 1\n#     wall_cell_is_bulk = true\n#   []\n# []\n\n[FunctorMaterials]\n  # [constants]\n  #   type = ADGenericFunctorMaterial\n  #   prop_names = 'h_cv T_solid'\n  #   prop_values = '${h_fs} ${T_solid}'\n  # [] \n  [const_functor]\n    type = ADGenericFunctorMaterial\n    prop_names = 'cp'\n    prop_values = '${cp}'\n  []\n  [ins_fv]\n    type = INSFVEnthalpyFunctorMaterial\n    rho = ${rho}\n    temperature = 'T_fluid'\n  []\n[]\n\n[Executioner]\n  type = Steady\n  solve_type = 'NEWTON'\n  petsc_options_iname = '-pc_type -pc_factor_shift_type'\n  petsc_options_value = 'lu NONZERO'\n#  petsc_options_iname = '-ksp_gmres_restart -pc_type -pc_hypre_type -pc_hypre_boomeramg_max_iter'\n#  petsc_options_value = '201    hypre   boomeramg    4'  \n  nl_rel_tol = 7e-5\n  nl_abs_tol = 1e-9\n  nl_max_its = 50\n  line_search = 'none'\n  automatic_scaling = true\n  off_diagonals_in_auto_scaling = true\n  compute_scaling_once = false\n[]\n\n[Outputs]\n  exodus = true\n  csv = true\n  file_base = output/f_constant\n  # perf_graph = false\n  # print_nonlinear_residuals = false\n  # print_linear_residuals = true\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/28862",
+          "updatedAt": "2024-12-09T01:08:18Z",
+          "publishedAt": "2024-10-16T08:57:08Z",
+          "category": {
+            "name": "Q&A Modules: Navier-Stokes"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nWith a Reynolds number of 2.2e8 you need a turbulence model to converge. The additional viscosity from the turbulence will help lower the effective Reynolds number",
+                  "url": "https://github.com/idaholab/moose/discussions/28862#discussioncomment-10959174",
+                  "updatedAt": "2024-10-16T12:05:42Z",
+                  "publishedAt": "2024-10-16T12:05:42Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "shin-chan-cpu"
+                          },
+                          "bodyText": "I did find this problem, but when I reduced the Reynolds number to within 2300 by modifying the inlet velocity, the calculation still did not converge.",
+                          "url": "https://github.com/idaholab/moose/discussions/28862#discussioncomment-10965861",
+                          "updatedAt": "2024-10-17T01:38:31Z",
+                          "publishedAt": "2024-10-17T01:38:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "That's still fairly high.\nTry to do a transient solve and vary the viscosity in a ramp down or the velocity in a ramp up to get a good initial guess",
+                          "url": "https://github.com/idaholab/moose/discussions/28862#discussioncomment-10966415",
+                          "updatedAt": "2024-10-17T03:18:43Z",
+                          "publishedAt": "2024-10-17T03:18:43Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "shin-chan-cpu"
+                          },
+                          "bodyText": "I tried to add the turbulence model, but he would report me this error, I don't know where the problem was, I added the RANS model",
+                          "url": "https://github.com/idaholab/moose/discussions/28862#discussioncomment-11002457",
+                          "updatedAt": "2024-10-21T08:40:23Z",
+                          "publishedAt": "2024-10-21T08:40:22Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "The message tells you exactly what you need to do.\nUsing turbulence models requires a large AD container size",
+                          "url": "https://github.com/idaholab/moose/discussions/28862#discussioncomment-11003392",
+                          "updatedAt": "2024-10-21T09:43:45Z",
+                          "publishedAt": "2024-10-21T09:43:44Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "shin-chan-cpu"
+                          },
+                          "bodyText": "When I set the outlet pressure value to 15.5e6, the pressure drop calculated in my flow channel is extremely large, reaching several hundred MPa. Is there a possible issue with this setting? In MOOSE, is the unit for calculating pressure in Pa? My channel has a diameter of 9 mm, and the liquid flow rate is 23 m/s. Even with the turbulence model enabled, this issue persists.",
+                          "url": "https://github.com/idaholab/moose/discussions/28862#discussioncomment-11220619",
+                          "updatedAt": "2024-11-12T02:32:55Z",
+                          "publishedAt": "2024-11-12T02:32:55Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "In MOOSE, is the unit for calculating pressure in Pa?\n\nby default yes, the fluid properties are implemented for Pa for pressure.\n\nMy channel has a diameter of 9 mm, and the liquid flow rate is 23 m/s\n\nwhat does the analytic calculation return? A pressure drop in a channel should be mostly solvable by pen and paper",
+                          "url": "https://github.com/idaholab/moose/discussions/28862#discussioncomment-11220908",
+                          "updatedAt": "2024-11-12T03:23:40Z",
+                          "publishedAt": "2024-11-12T03:23:40Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "shin-chan-cpu"
+                          },
+                          "bodyText": "Under theoretical calculation, the pressure drop should be within 1 MPa",
+                          "url": "https://github.com/idaholab/moose/discussions/28862#discussioncomment-11221465",
+                          "updatedAt": "2024-11-12T05:20:21Z",
+                          "publishedAt": "2024-11-12T05:20:20Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "can you plot the pressure axial profile? See if it's oscillating maybe",
+                          "url": "https://github.com/idaholab/moose/discussions/28862#discussioncomment-11226027",
+                          "updatedAt": "2024-11-12T13:05:47Z",
+                          "publishedAt": "2024-11-12T13:05:46Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "shin-chan-cpu"
+                          },
+                          "bodyText": "I have outputted the pressure distribution along the axis, which is a straight line sloping downward without any oscillations.",
+                          "url": "https://github.com/idaholab/moose/discussions/28862#discussioncomment-11235909",
+                          "updatedAt": "2024-11-13T06:38:45Z",
+                          "publishedAt": "2024-11-13T06:38:40Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "shin-chan-cpu"
+                          },
+                          "bodyText": "I also encountered a problem where such a warning appears during the calculation. After this, my calculation results have a very small residual, but the deviation is significant. Do you know why this happens?",
+                          "url": "https://github.com/idaholab/moose/discussions/28862#discussioncomment-11236811",
+                          "updatedAt": "2024-11-13T08:21:37Z",
+                          "publishedAt": "2024-11-13T08:21:36Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "<Use a descriptive title here>",
+          "author": {
+            "login": "HPL001"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n I have consulted the Posting Guidelines.\n I have searched the Discussions Forum and MOOSE Framework Troubleshooting and have not found what I was looking for\n Q&A Getting Started is the most appropriate category for my question (trouble installing, beginner user, ...)\n\nIssue or question about MOOSE\nDear developers, I installed moose on wsl and then VScode on Windows. I started the code on wsl, and installed the moose related support plug-in, but I was prompted the following problems, I do not know how to solve. For example, I don't have this file, so I can't go to the definition in VScode.\n\n(Optional) code in question / simulation log / errors\nNo response\nEncountering Errors? Please include diagnostic output\nNo response",
+          "url": "https://github.com/idaholab/moose/discussions/29378",
+          "updatedAt": "2024-12-08T16:32:25Z",
+          "publishedAt": "2024-12-08T14:46:05Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nYou can perform these commands with any moose application executable, preferably your application executable.\nThen place the output in the folder you opened VSCode with\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/29378#discussioncomment-11499902",
+                  "updatedAt": "2024-12-08T15:12:03Z",
+                  "publishedAt": "2024-12-08T15:12:02Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "HPL001"
+                          },
+                          "bodyText": "Thank you very much for your help, I solved this problem under your guidance.",
+                          "url": "https://github.com/idaholab/moose/discussions/29378#discussioncomment-11500301",
+                          "updatedAt": "2024-12-08T16:32:25Z",
+                          "publishedAt": "2024-12-08T16:32:25Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Phase field for sintering || solve converge",
+          "author": {
+            "login": "Judy-22"
+          },
+          "bodyText": "Hello MOOSE community,\nI have tried to create a sintering model for 2 particles, I used all units in SI. I have problem about solve convergence.\nI get this error when I launch the input file.\n*** ERROR ***\nThe following error occurred in the object \"TimeStepper\", of type \"ConstantDT\".\nSolve failed and timestep already at or below dtmin, cannot continue!\nI think the problem is related to scaling, when I try to apply automatic scaling, I get this error.\n*** ERROR ***\nThe following error occurred in the object \"w\", of type \"MooseVariable\".\nVariableAllDoFMap not prepared for w . Check nonlocal coupling requirement for the variable.\nPlease find below the input file.\nThanks for help.\nJudice, PhD student, ICB-COOM Lab.\n_______________________________________________________________________________________\n#   The phase field model to simulate sintering of two particles in 2D with \n#   constant temperature.\n\n[GlobalParams]        # Automatically define order parameters \n  var_name_base = eta\n  op_num = 2\n[]\n\n[Mesh]                # Generate mesh (7/3D X 4/3D) \n  type = GeneratedMesh\n  dim = 2\n  nx = 20             # n\u00b0s element in x. \n  ny = 10             # n\u00b0s element in y.\n  xmin = 0  \n  xmax = 70.0e-6      # m\n  ymin = 0\n  ymax = 40.0e-6      # m\n  elem_type = QUAD4\n  uniform_refine = 1\n[]\n\n[Variables]\n  [./c]               # particle concentration (conserved variable)\n    order = FIRST\n    family = LAGRANGE\n  [../]\n  [./w]               # functional derivative of the total free energy  \n    order = FIRST\n    family = LAGRANGE\n  [../]\n  [./PolycrystalVariables] # Automatically creates order parameter variables\n  [../]\n[]\n\n[Kernels]\n  [./c_res]\n  # compute the residual therm of total free energy as function of c.\n    type = SplitCHParsed\n    variable = c\n    f_name = F\n    kappa_name = kappa_c\n    args = 'eta0 eta1'\n    w = w\n  [../]\n  [./w_res]\n  # compute the residual therm of functional free energy as function of w and M.\n    type = SplitCHWRes\n    variable = w\n    mob_name = M\n  [../]\n  [./time]\n  # compute the time derivative therm of w and c.\n    type = CoupledTimeDerivative\n    variable = w\n    v = c\n  [../]\n  [./motion]\n  # kernel to compute the rigid body motion.\n    type = MultiGrainRigidBodyMotion\n    variable = w\n    c = c\n    v = 'eta0 eta1'\n    grain_force = grain_force\n    grain_tracker_object = grain_center\n    grain_volumes = grain_volumes\n  [../]\n  [./eta0_dot]\n  # Compute the kernel that implements a simple time derivative of eta.\n    type = TimeDerivative\n    variable = eta0\n  [../]\n  [./vadv_eta0]\n  # compute advection velocity of particle with index 0.\n    type = SingleGrainRigidBodyMotion\n    variable = eta0\n    c = c\n    v = 'eta0 eta1'\n    grain_force = grain_force\n    grain_tracker_object = grain_center\n    grain_volumes = grain_volumes\n    op_index = 0\n  [../]\n  [./acint_eta0]\n  # Compute gradient energy Allen-Cahn Kernel\n    type = ACInterface\n    variable = eta0\n    mob_name = L\n    #args = 'T'\n    kappa_name = kappa_eta\n  [../]\n  [./acbulk_eta0]\n  # Compute Allen-Cahn Kernel that uses a DerivativeMaterial Total Free Energy\n    type = AllenCahn\n    variable = eta0\n    mob_name = L\n    f_name = F\n    args = 'c eta1'\n  [../]\n  [./eta1_dot]\n  # Compute the kernel that implements a simple time derivative of eta.\n    type = TimeDerivative\n    variable = eta1\n  [../]\n  [./vadv_eta1]\n  # compute advection velocity of particle with index 1.\n    type = SingleGrainRigidBodyMotion\n    variable = eta1\n    c = c\n    v = 'eta0 eta1'\n    op_index = 1\n    grain_force = grain_force\n    grain_tracker_object = grain_center\n    grain_volumes = grain_volumes\n  [../]\n  [./acint_eta1]\n    type = ACInterface\n    variable = eta1\n    mob_name = L\n    #args = 'T'\n    kappa_name = kappa_eta\n  [../]\n  [./acbulk_eta1]\n    type = AllenCahn\n    variable = eta1\n    mob_name = L\n    f_name = F \n    args = 'c eta0'\n  [../]\n  \n[]\n\n[Materials]  \n  [./constants]\n    type = GenericConstantMaterial\n    prop_names = 'kappa_c   kappa_eta     A      B   \n                    Dvol      Dvap       Dsuf    Dgb\n                    Qvol      Qvap       Qsuf    Qgb\n                    KB         Vm        Mgb     Qm        wGB      T '\n    \n    prop_values = '8.46e-06     2.385e-06    7.1667e+06   0.3533e+06\n                   2.0e-04      0.0          0.4          0.127e-04\n                   2.6          0.0          2.21         0.58\n                   8.61733e-05  1.21e-29     5.53e-08     0.171  5.0e-06   1200'\n                   \n    # SI units    J/m          J/m          J/m\u00b3         J/m\u00b3\n    # SI units    m\u00b3/s         m\u00b3/s         m\u00b3/s         m\u00b3/s\n    # SI units    eV           eV           eV           eV\n    # SI units    eV/K         m\u00b3/mol       m\u2074/J.s       eV    m    K\n  [../]\n  [./free_energy]            # Total free energy function of c and eta.\n    type = DerivativeParsedMaterial\n    f_name = F\n    args = 'c eta0 eta1'          # Must be changed as op_num changes.\n    function = '(A*c^2*(1-c)^2 + B*(c^2+6*(1-c)*(eta0^2+eta1^2)-4*(2-c)*(eta0^3+eta1^3)\n                + 3*(eta0^2+eta1^2)^2))'\n    material_property_names = 'A  B'\n    derivative_order = 2\n  [../]\n  [./CHmobility]    # Cahn and Hilliard Mobility incluing all diffusin path (m^5/J/s)\n    type = DerivativeParsedMaterial\n    f_name = M\n    args = 'c eta0 eta1'\n    function = '(Vm/(KB*T*1.6022e-19))*(Dvol*exp(-Qvol/(KB*T))*c^3*(10 - 15*c + 6*c^2)\n                + Dvap*exp(-Qvap/(KB*T))*(1 - (c^3*(10 - 15*c + 6*c^2))) \n                + Dsuf*exp(-Qs/(KB*T))*(1 - c) + Dgb*exp(-Qgb/(KB*T))*(eta0*eta1))'\n    material_property_names = 'Dvol Qvol Dvap Qvap Dsuf Qs Dgb Qgb KB Vm d2F:=D[F(c),c,c] T'\n    derivative_order = 1\n  [../]\n  [./L]             # Allen and Cahn Mobility or GBMobility (m^3/J/s)\n    type = GBEvolution\n    T = 1200\n    wGB = 5.0e-06\n    GBmob0 = 5.53e-8\n    Q = 0.171\n    GBenergy = 1.06\n    molar_volume = 7.012e-06\n    length_scale = 1.0\n    time_scale   = 1.0\n  [../]\n  [./force_density]  # Force between particles caused by material density.\n    type = ForceDensityMaterial\n    c = c\n    etas ='eta0 eta1'\n  [../]\n[]\n\n[BCs]\n  [./bcs]\n    #zero flux BC\n    type = NeumannBC\n    value = 0\n    variable = c\n    boundary = '0 1 2 3'\n  [../]\n[]\n\n[AuxVariables]\n  [./bnds]\n  # Auxivariables that define the location of grain boundaries in a polycrystalline sample\n  [../]\n  [./df00]\n    order = CONSTANT\n    family = MONOMIAL\n  [../]\n  [./df01]\n    order = CONSTANT\n    family = MONOMIAL\n  [../]\n  [./df10]\n    order = CONSTANT\n    family = MONOMIAL\n  [../]\n  [./df11]\n    order = CONSTANT\n    family = MONOMIAL\n  [../]\n  [./unique_grains]\n    order = CONSTANT\n    family = MONOMIAL\n  [../]\n  [./var_indices]\n    order = CONSTANT\n    family = MONOMIAL\n  [../]\n  [./centroids]\n    order = CONSTANT\n    family = MONOMIAL\n  [../]\n[]\n\n[AuxKernels]\n  [./bnds]\n  # Calculate location of grain boundaries in a polycrystalline sample\n    type = BndsCalcAux\n    variable = bnds\n    var_name_base = eta\n    op_num = 2\n    v = 'eta0 eta1'\n  [../]\n  [./df01]\n    type = MaterialStdVectorRealGradientAux\n    variable = df01\n    index = 0\n    component = 1\n    property = force_density\n  [../]\n  [./df11]\n    type = MaterialStdVectorRealGradientAux\n    variable = df11\n    index = 1\n    component = 1\n    property = force_density\n  [../]\n  [./df00]\n    type = MaterialStdVectorRealGradientAux\n    variable = df00\n    index = 0\n    component = 0\n    property = force_density\n  [../]\n  [./df10]\n    type = MaterialStdVectorRealGradientAux\n    variable = df10\n    index = 1\n    component = 0\n    property = force_density\n  [../]\n  [./unique_grains]\n    type = FeatureFloodCountAux\n    variable = unique_grains\n    flood_counter = grain_center\n    field_display = UNIQUE_REGION\n    execute_on = timestep_begin\n  [../]\n  [./var_indices]\n    type = FeatureFloodCountAux\n    variable = var_indices\n    flood_counter = grain_center\n    field_display = VARIABLE_COLORING\n    execute_on = timestep_begin\n  [../]\n  [./centroids]\n    type = FeatureFloodCountAux\n    variable = centroids\n    execute_on = timestep_begin\n    field_display = CENTROID\n    flood_counter = grain_center\n  [../]\n[]\n\n[ICs]\n  [./ic_eta0]\n  # initial condition for each order parameter \n    type = SmoothCircleIC\n    variable = eta0\n    x1 = 20e-6\n    y1 = 20e-6\n    radius = 15.0e-6\n    invalue = 1.0\n    outvalue = 0.0\n    int_width = 5.0e-6\n  [../]\n  [./IC_eta1]\n    type = SmoothCircleIC\n    variable = eta1\n    x1 = 50e-6\n    y1 = 20e-6\n    radius = 15.0e-6\n    invalue = 1.0\n    outvalue = 0.0\n    int_width = 5.0e-6\n  [../]\n  [./ic_c]\n  # initial condition for conserved parameter \n    type = SpecifiedSmoothCircleIC\n    invalue = 1.0\n    outvalue = 0.0\n    int_width = 5.0e-6\n    x_positions = '20.0e-6 50.0e-6'\n    y_positions = '20.0e-6 20.0e-6'\n    z_positions = '0.0 0.0'\n    radii       = '15.0e-6 15.0e-6'\n    3D_spheres = false\n    variable = c\n    block = 0\n  [../]\n[]\n\n[VectorPostprocessors]\n  [./forces]\n    type = GrainForcesPostprocessor\n    grain_force = grain_force\n  [../]\n  [./grain_volumes]\n    type = FeatureVolumeVectorPostprocessor\n    flood_counter = grain_center\n    execute_on = 'initial timestep_begin'\n  [../]\n[]\n\n[Postprocessors]\n  [./average_c]\n    type = ElementAverageValue\n    variable = c\n    execute_on = 'initial timestep_end'\n  [../]\n[]\n\n[UserObjects]\n  [./grain_center]\n    type = GrainTracker\n    outputs = none\n    compute_var_to_feature_map = true\n    execute_on = 'initial timestep_begin'\n  [../]\n  [./grain_force]\n    type = ComputeGrainForceAndTorque\n    execute_on = 'linear nonlinear'\n    grain_data = grain_center\n    force_density = force_density\n    c = c\n    etas = 'eta0 eta1'\n  [../]\n[]\n\n[Preconditioning]\n  [./SMP]\n    type = SMP\n    full = true\n  [../]\n[]\n\n[Executioner]\n  type = Transient\n  scheme = bdf2\n  solve_type = PJFNK\n  petsc_options_iname = '-pc_type -ksp_gmres_restart -sub_ksp_type\n                         -sub_pc_type -pc_asm_overlap'\n  petsc_options_value = 'asm      31                  preonly\n                         ilu          2'\n  l_tol = 1e-05\n  nl_max_its = 30\n  l_max_its = 30\n  nl_rel_tol = 1e-07\n  nl_abs_tol = 1e-09\n  start_time = 0.0\n  end_time = 0.01\n  dt = 0.00125\n[]\n\n[Outputs]\n  exodus = true\n[]",
+          "url": "https://github.com/idaholab/moose/discussions/20252",
+          "updatedAt": "2024-12-07T16:29:10Z",
+          "publishedAt": "2022-02-08T15:15:59Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "SudiptaBiswas"
+                  },
+                  "bodyText": "Judice, You can not use dimensions in the order of 1e-6 in the finite element model. It's not numerically tractable. Try changing your length scale to micrormeter. You will have to define your domain and parameterize your material properties accordingly.",
+                  "url": "https://github.com/idaholab/moose/discussions/20252#discussioncomment-2135912",
+                  "updatedAt": "2022-06-14T05:37:21Z",
+                  "publishedAt": "2022-02-08T19:22:31Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Judy-22"
+                          },
+                          "bodyText": "Hi Sudipta,\nI have changed my length scale to micrormeter, I have define my domain to \u00b5m.\nIn order to get consistency between units, I kept time (s), Energy (J) but I converted the length (m --> \u00b5m), so I've parameterized the material properties in the following units: s, J, and \u00b5m.\nI run the model like this, the solve converge, but in ParaView I can not see chenging for any variable.",
+                          "url": "https://github.com/idaholab/moose/discussions/20252#discussioncomment-2141516",
+                          "updatedAt": "2022-06-14T05:37:21Z",
+                          "publishedAt": "2022-02-09T13:58:09Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "SudiptaBiswas"
+                          },
+                          "bodyText": "The initial condition looks good. If you are still not capturing the evolution properly, it could mean that the kinetics of the model is still not right or you need to run the simulations longer.",
+                          "url": "https://github.com/idaholab/moose/discussions/20252#discussioncomment-2145483",
+                          "updatedAt": "2022-06-14T05:37:38Z",
+                          "publishedAt": "2022-02-09T23:33:30Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Judy-22"
+                          },
+                          "bodyText": "Hi @SudiptaBiswas,\nNow it's ok, I have defined time, length and energy scale and parameterize my material properties accordingly.\nThanks for your support.",
+                          "url": "https://github.com/idaholab/moose/discussions/20252#discussioncomment-2189157",
+                          "updatedAt": "2022-06-14T05:37:38Z",
+                          "publishedAt": "2022-02-16T14:43:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ibuhari86"
+                          },
+                          "bodyText": "Hello Judy and other experts,\nI hope this message finds you well. I am new to the MOOSE environment; I just finished installing it on my machine and was able to run two of the example problems in MOOSE.\nHowever, I am also working on sintering and was trying to replicate the simulation in Biswas's 2018 paper but I am not really sure where to start. I have seen a tutorial on creating a new application by just copying and modifying the input and mesh files from any of MOOSE's in-built examples. So my question is, where did you find these files (i.e, the folder that contains the input, mesh, src, etc.) for the simulation in the paper? In short, as a beginner, what do you suggest would be a good place to start? Thank you very much.\nRegards\nBuhari.",
+                          "url": "https://github.com/idaholab/moose/discussions/20252#discussioncomment-3075290",
+                          "updatedAt": "2022-07-04T04:42:03Z",
+                          "publishedAt": "2022-07-04T04:42:03Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Judy-22"
+                          },
+                          "bodyText": "Hi @ibuhari86,\nAt this stage you should use the capability of MOOSE, because the phase field module contains almost all the necessary files, you only need to define the input file (although MOOSE also contains some input file examples).\nIn general, I recommend taking some time to understand how MOOSE works (how to create an application, how to write the input file, ...), this will help you scale this learning process.\nThanks.",
+                          "url": "https://github.com/idaholab/moose/discussions/20252#discussioncomment-3083951",
+                          "updatedAt": "2022-07-05T10:41:16Z",
+                          "publishedAt": "2022-07-05T10:41:16Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "ibuhari86"
+                          },
+                          "bodyText": "Thank you, Judy-22, for your response.",
+                          "url": "https://github.com/idaholab/moose/discussions/20252#discussioncomment-3087682",
+                          "updatedAt": "2022-07-05T20:35:24Z",
+                          "publishedAt": "2022-07-05T20:35:21Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "HPL001"
+                          },
+                          "bodyText": "@SudiptaBiswas Excuse me for taking the liberty, but I would like to know how to modify the revision scale you pointed out. I only found time_scale and length_scale in the input file, no energy scale. I am not sure if I can just modify here. Looking forward to your reply.",
+                          "url": "https://github.com/idaholab/moose/discussions/20252#discussioncomment-11470615",
+                          "updatedAt": "2024-12-05T09:02:41Z",
+                          "publishedAt": "2024-12-05T09:02:40Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Judy-22"
+                          },
+                          "bodyText": "@HPL001,\nCompatibility between magnitudes and scales must be taken into account. For your example, you don't need a scale, so it's equal to 1 for both.",
+                          "url": "https://github.com/idaholab/moose/discussions/20252#discussioncomment-11473164",
+                          "updatedAt": "2024-12-05T13:19:57Z",
+                          "publishedAt": "2024-12-05T13:19:57Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "HPL001"
+                          },
+                          "bodyText": "@Judy-22 Thank you for your reply. In fact, I copied your input file above. I have encountered the problem you mentioned above, but I still have no way to solve it now, because I don't understand the problem. In addition, regarding the surface diffusion coefficient here, the coefficient before it is mentioned as c* (1-c) in the literature, but it is all (1-c) in your document, and the derivative is also set to 1. I am not clear about the intention here, please give me some guidance. I look forward to your reply. It will be very meaningful to me. Thank you.",
+                          "url": "https://github.com/idaholab/moose/discussions/20252#discussioncomment-11473368",
+                          "updatedAt": "2024-12-05T13:29:06Z",
+                          "publishedAt": "2024-12-05T13:29:06Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "Judy-22"
+                          },
+                          "bodyText": "@HPL001, I developed some C++ files for the material properties class, which helped me deal with scales, material equations, ...\nMaybe I can help, send me an e-mail with more details and to start a good discussion. judice.cumbunga@utbm.fr",
+                          "url": "https://github.com/idaholab/moose/discussions/20252#discussioncomment-11474047",
+                          "updatedAt": "2024-12-05T14:32:14Z",
+                          "publishedAt": "2024-12-05T14:32:13Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Some questions about external_petsc_problem1.0?",
+          "author": {
+            "login": "Wang-Yihu"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nQ1: What does the problem the \\modules\\external_petsc_solver\\test\\tests\\external_petsc_problem\\petsc_transient_as_sub.i describe?\nQ2: What makes the Picard iteration? What's the meaning of the Picard residual in the moose_as_parent.i and petsc_transient_as_sub.i?\nRecently, I still study the code in \\modules\\external_petsc_solver\\. I encounter some puzzles...\n1.\nIt seems that the moose_as_parent.i tells a story of\n\u2202u/\u2202t - \u2207\u00b7\u2207u \u2013 10000v = 0\nAnd v comes from the transferred value from the u in petsc_transient_as_sub.i. But what does the petsc_transient_as_sub.i say? From the code comment of PETScDiffusionFDM.C, it seems that the govern function is\n\u2202u/\u2202t = \u22022u/\u2202x2 + \u22022u/\u2202y2\nHowever, I have two questions from its other comments.\n1.1 the comment says  At t=0: u(x,y) = exp(crrr), if r=PetscSqrtReal((x-.5)(x-.5) + (y-.5)*(y-.5)) < .125. If that is right, at t = 0, x = 0.5, y = 0.5, the u must be 1, right? However, the initial condition of u at the center point from the *.e file(moose_as_parent_out_sub_app0.e) generated by MOOSE is 0 not 1... What's the wrong with it?\n1.2 the comment also says that\n\nBoundary conditions:\nDrichlet BC:\nAt x=0, x=1, y=0, y=1: u = 0.0\nNeumann BC:\nAt x=0, x=1: du(x,y,t)/dx = 0\nAt y=0, y=1: du(x,y,t)/dy = 0\n\nI also find similar things in the code PETScDiffusionFDM.C\n for (j = ys; j < ys + ym; j++)\n  {\n    for (i = xs; i < xs + xm; i++)\n    {\n      nc = 0;\n      row.j = j;\n      row.i = i;\n      if (PETSC_TRUE && (i == 0 || i == Mx - 1 || j == 0 || j == My - 1))\n      {\n        col[nc].j = j;\n        col[nc].i = i;\n        vals[nc++] = 1.0;\n      }\n      else if (PETSC_FALSE && i == 0)\n      { /* Left Neumann */\n        col[nc].j = j;\n        col[nc].i = i;\n        vals[nc++] = 1.0;\n        col[nc].j = j;\n        col[nc].i = i + 1;\n        vals[nc++] = -1.0;\n      }\n      else if (PETSC_FALSE && i == Mx - 1)\n      { /* Right Neumann */\n        col[nc].j = j;\n        col[nc].i = i;\n        vals[nc++] = 1.0;\n        col[nc].j = j;\n        col[nc].i = i - 1;\n        vals[nc++] = -1.0;\n      }\n      else if (PETSC_FALSE && j == 0)\n      { /* Bottom Neumann */\n        col[nc].j = j;\n        col[nc].i = i;\n        vals[nc++] = 1.0;\n        col[nc].j = j + 1;\n        col[nc].i = i;\n        vals[nc++] = -1.0;\n      }\n      else if (PETSC_FALSE && j == My - 1)\n      { /* Top Neumann */\n        col[nc].j = j;\n        col[nc].i = i;\n        vals[nc++] = 1.0;\n        col[nc].j = j - 1;\n        col[nc].i = i;\n        vals[nc++] = -1.0;\n      }\n      else\n      { /* Interior */\n        col[nc].j = j - 1;\n        col[nc].i = i;\n        vals[nc++] = -sy;\n        col[nc].j = j;\n        col[nc].i = i - 1;\n        vals[nc++] = -sx;\n        col[nc].j = j;\n        col[nc].i = i;\n        vals[nc++] = 2.0 * (sx + sy) + a;\n        col[nc].j = j;\n        col[nc].i = i + 1;\n        vals[nc++] = -sx;\n        col[nc].j = j + 1;\n        col[nc].i = i;\n        vals[nc++] = -sy;\n      }\n      ierr = MatSetValuesStencil(Jpre, 1, &row, nc, col, vals, INSERT_VALUES);\n      CHKERRQ(ierr);\n    }\n  }\nHowever, I find there is a PETSC_FALSE near these Neumaan comment, it seems that program statements of else if (PETSC_FALSE && i == 0), else if (PETSC_FALSE && i == Mx - 1), else if (PETSC_FALSE && j == 0), else if (PETSC_FALSE && j == My - 1), will not be executed by default... is this a paradox???\nI will show Q2 in another discusssion...",
+          "url": "https://github.com/idaholab/moose/discussions/29368",
+          "updatedAt": "2024-12-09T10:32:21Z",
+          "publishedAt": "2024-12-06T12:23:05Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Q1: What does the problem the \\modules\\external_petsc_solver\\test\\tests\\external_petsc_problem\\petsc_transient_as_sub.i describe?\n\nYou have to look into the ExternalPetscProblem class to see what it's doing. It's doing implicit Euler for time integration.\nthen there is a call to  externalPETScDiffusionFDMSolve which is defined here\nhttps://github.com/idaholab/moose/blob/next/modules/external_petsc_solver/src/petscsolver/PETScDiffusionFDM.C\nIt's a finite difference diffusion problem.\n\nWhat makes the Picard iteration? What's the meaning of the Picard residual in the moose_as_parent.i and petsc_transient_as_sub.i?\n\nSee the other post. Picard iteration is from the FixedPointSolve created in the main app\n\nhe comment says At t=0: u(x,y) = exp(crrr), if r=PetscSqrtReal((x-.5)(x-.5) + (y-.5)*(y-.5)) < .125. If that is right, at t = 0, x = 0.5, y = 0.5, the u must be 1, right? However, the initial condition of u at the center point from the *.e file(moose_as_parent_out_sub_app0.e) generated by MOOSE is 0 not 1... What's the wrong with it?\n\nDont read too much into the comments. The code might have evolved without updating the comments. This is one of the main flaws of commenting code.",
+                  "url": "https://github.com/idaholab/moose/discussions/29368#discussioncomment-11494929",
+                  "updatedAt": "2024-12-07T16:24:43Z",
+                  "publishedAt": "2024-12-07T16:24:41Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

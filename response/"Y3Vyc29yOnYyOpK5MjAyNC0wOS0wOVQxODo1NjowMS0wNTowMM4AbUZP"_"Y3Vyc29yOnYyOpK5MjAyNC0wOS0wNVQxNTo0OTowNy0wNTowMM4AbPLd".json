@@ -1,0 +1,1210 @@
+{
+  "discussions": {
+    "pageInfo": {
+      "hasNextPage": true,
+      "endCursor": "Y3Vyc29yOnYyOpK5MjAyNC0wOS0wNVQxNTo0OTowNy0wNTowMM4AbPLd"
+    },
+    "edges": [
+      {
+        "node": {
+          "title": "CP maximum allowable slip rate",
+          "author": {
+            "login": "amassaf"
+          },
+          "bodyText": "Hello, I am running a compression test on a cylindre with 300 grains, a mesh with 111,000 DoF, a height of 72 mm. I want to reach 2% strain I have set the forced displacement at 10^-5 * t and a time step to reach a maximum of 72 (starting at 1 with the help of timestepper) but I keep getting warnings of the form of : 'Maximum allowed slip increment exceeded'. I've set the slip increment to 10. Is there a way to calibrate this slip increment value to optimize the time step and loading rate and still not have to wait forever to reach at least 1% strain. Thanks !!\n[GlobalParams]\n  displacements = 'disp_x disp_y disp_z'\n[]\n\n[Mesh]\n  [file]\n    type = FileMeshGenerator\n    file = n300-id1.msh\n  []\n  [sidesets]\n    type = SideSetsFromNormalsGenerator\n    input =file\n    normals = '0 0 -1\n                0 0 1'\n    fixed_normal = true\n    new_boundary = 'bottom top'\n  []\n[]\n\n\n[Physics/SolidMechanics/QuasiStatic/all]\n  strain = FINITE\n  add_variables = true\n  save_in = 'resid_x resid_y resid_z'\n[]\n\n[BCs]\n  [symmy]\n    type = DirichletBC\n    variable = disp_y\n    boundary = bottom\n    value = 0\n  []\n  [symmx]\n    type = DirichletBC\n    variable = disp_x\n    boundary = bottom\n    value = 0\n  []\n  [symmz]\n    type = DirichletBC\n    variable = disp_z\n    boundary = bottom\n    value = 0\n  []\n  [tdisp]\n    type = FunctionDirichletBC\n    variable = disp_z\n    boundary = top\n    function = '-1e-5*t'\n  []\n[]\n\n[UserObjects]\n  [prop_read]\n    type = PropertyReadFile\n    prop_file_name = 'input_euler.txt'\n    nprop =4\n    ngrain = 300\n  []\n[]\n\n[Materials]\n  [elasticity_tensor]\n    type = ComputeElasticityTensorCP\n    C_ijkl = '48.7e3 11.9e3 11.9e3 48.7e3 11.9e3 48.7e3 13.1e3 13.1e3 13.1e3'\n    fill_method = symmetric9\n    read_prop_user_object = prop_read\n  []\n  [stress]\n    type = ComputeMultipleCrystalPlasticityStress\n    crystal_plasticity_models = 'trial_xtalpl'\n    tan_mod_type = exact\n    maximum_substep_iteration = 10\n  []\n  [trial_xtalpl]\n    type = CrystalPlasticityKalidindiUpdate\n    number_slip_systems = 12\n    slip_sys_file_name = input_slip_sys.txt\n    ao = 2e-3\n    gss_a = 2\n    gss_initial = 10\n    h = 100\n    r = 1.4\n    xm = 0.1\n    t_sat = 100.\n    resistance_tol = 1.0\n    print_state_variable_convergence_error_messages = true\n    slip_increment_tolerance = 10\n  []\n[]\n\n\n[Preconditioning]\n  [smp]\n    type = SMP\n    full = true\n  []\n[]\n\n[Executioner]\n  type = Transient\n  petsc_options_iname = '-pc_type -ksp_type -ksp_gmres_restart'\n  petsc_options_value = ' lu       gmres     200'\n  solve_type = NEWTON\n  automatic_scaling = true\n  line_search = 'none'\n  dtmin = 5e-12\n  dtmax = 72\n  [./TimeStepper]\n    type = IterationAdaptiveDT\n    dt = 1 # Initial time step.  In this simulation it changes.\n        cutback_factor = 0.25\n     growth_factor = 1.2\n     optimal_iterations = 20\n  [../]\n  nl_abs_tol = 1e-8\n  nl_rel_tol = 1e-6\n  nl_max_its = 20\n  end_time = 6e5 \n[]\n\n[Outputs]\n  exodus = true\n  interval = 70\n[]\n\nAlso the dt stopped increasing at 16.5618 is there a way to have better convergence and increase time step.",
+          "url": "https://github.com/idaholab/moose/discussions/28534",
+          "updatedAt": "2024-09-09T10:21:41Z",
+          "publishedAt": "2024-09-04T07:12:15Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nDo you mean the mesh has 110,000 cells? The number of dofs is tied to the number of variables. what does the simulation summary say for the number of DOFs?\nAbove 100k dofs it may be time to look at improving the preconditioning.",
+                  "url": "https://github.com/idaholab/moose/discussions/28534#discussioncomment-10545024",
+                  "updatedAt": "2024-09-04T12:37:44Z",
+                  "publishedAt": "2024-09-04T12:37:43Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "amassaf"
+                          },
+                          "bodyText": "Mesh:\n  Parallel Type:           replicated\n  Mesh Dimension:          3\n  Spatial Dimension:       3\n  Nodes:\n    Total:                 37330\n    Local:                 1438\n    Min/Max/Avg:           1005/1520/1244\n  Elems:\n    Total:                 90191\n    Local:                 3093\n    Min/Max/Avg:           2919/3096/3006\n  Num Subdomains:          300\n  Num Partitions:          30\n  Partitioner:             metis\n\nNonlinear System:\n  Num DOFs:                111990\n  Num Local DOFs:          4314\n  Variables:               { \"disp_x\" \"disp_y\" \"disp_z\" }\n  Finite Element Types:    \"LAGRANGE\"\n  Approximation Orders:    \"FIRST\"\n\nI have 111.9k DoF which is relatively small for a cp computation. What do you mean by improving the preconditioning",
+                          "url": "https://github.com/idaholab/moose/discussions/28534#discussioncomment-10545283",
+                          "updatedAt": "2024-09-04T12:47:24Z",
+                          "publishedAt": "2024-09-04T12:47:23Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Using a different solver package for LU or finding a different method\nI wonder if you are using too many processors at this point. 4k dofs per processor is not a lot. Can you try using half as many processors to see if the performance improves?",
+                          "url": "https://github.com/idaholab/moose/discussions/28534#discussioncomment-10545561",
+                          "updatedAt": "2024-09-04T13:06:16Z",
+                          "publishedAt": "2024-09-04T13:06:11Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "amassaf"
+                          },
+                          "bodyText": "Tried using mumps and 10 processors but it still takes too long.. 25min for 0.0025% strain",
+                          "url": "https://github.com/idaholab/moose/discussions/28534#discussioncomment-10546223",
+                          "updatedAt": "2024-09-04T13:46:36Z",
+                          "publishedAt": "2024-09-04T13:46:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "sapitts"
+                          },
+                          "bodyText": "You've identified the correct parameter to adjust for the slip tolerance, and here's the context in case that helps you decide how much more you want to increase that value:\n\n  \n    \n      moose/modules/solid_mechanics/src/materials/crystal_plasticity/CrystalPlasticityKalidindiUpdate.C\n    \n    \n         Line 99\n      in\n      ad167a6\n    \n  \n  \n    \n\n        \n          \n           if (std::abs(_slip_increment[_qp][i]) * _substep_dt > _slip_incr_tol) \n        \n    \n  \n\n\nI usually balance between the slip increment tolerance, slip_increment_tolerance, (and when appropriate the state variable tolerance, stol, and the slip resistance tolerance, resistance_tol) and the maximum_substep_iteration, but I don't have a good optimization procedure. I have found that keep the maximum_substep_iteration at or below 5 seems to help; after more than 5 substeps the simulations seem to slow down noticeably.",
+                          "url": "https://github.com/idaholab/moose/discussions/28534#discussioncomment-10548365",
+                          "updatedAt": "2024-09-04T16:24:53Z",
+                          "publishedAt": "2024-09-04T16:24:52Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "amassaf"
+                          },
+                          "bodyText": "Ok thank you. Keeping maximum_substep_iteration below 5 has helped the most.",
+                          "url": "https://github.com/idaholab/moose/discussions/28534#discussioncomment-10589346",
+                          "updatedAt": "2024-09-09T10:21:42Z",
+                          "publishedAt": "2024-09-09T10:21:41Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "sapitts"
+                  },
+                  "bodyText": "You may also like to look into the NEML2 submodule (https://mooseframework.inl.gov/modules/solid_mechanics/NEML2.html), which does have full derivatives of the model terms through libTorch. @hugary1995 can better describe the capabilities of NEML2 than I can",
+                  "url": "https://github.com/idaholab/moose/discussions/28534#discussioncomment-10548420",
+                  "updatedAt": "2024-09-04T16:30:02Z",
+                  "publishedAt": "2024-09-04T16:30:00Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Should Moose check block-restriction in FEProblemBase::duplicateVariableCheck",
+          "author": {
+            "login": "jmeier"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nDear Moose-Community,\nMany of my Moose models consit of several subdomains / blocks while not all Variables and/or AuxVariables live on all subdomains/blocks. When setting up my models, I have repeatedly had the problem that variables/aux variables are required by different kernels, but were restricted to different blocks (which is of course a mistake on my part and/or other problems e.g. #28308).\nOn the other hand, Moose checks in FEProblemBase::duplicateVariableCheck whether the variable already exists and is of the same type and thus avoids creating it twice. Unfortunately, Moose does not check that the block restriction is identical. Moose often outputs an error in the further modelling if the block-restriction was not identical, but the error messages often only indirectly indicating the underlying problem.\nIt would have been good if Moose had pointed out the problem of the inconsistent block restriction of the variables/aux variables more directly: Therefore, should Moose check block-restriction in FEProblemBase::duplicateVariableCheck and warn/error?\nIf so, I would like to collect your thoughts on whether this check should always be carried out or only on request.\n\n  \n    \n      moose/framework/src/problems/FEProblemBase.C\n    \n    \n        Lines 2843 to 2844\n      in\n      1926a67\n    \n  \n  \n    \n\n        \n          \n           if (duplicateVariableCheck(var_name, fe_type, /* is_aux = */ true)) \n        \n\n        \n          \n             return; \n        \n    \n  \n\n\n\n  \n    \n      moose/framework/src/problems/FEProblemBase.C\n    \n    \n        Lines 2540 to 2551\n      in\n      1926a67\n    \n  \n  \n    \n\n        \n          \n           if (curr_sys_ptr->hasVariable(var_name)) \n        \n\n        \n          \n           { \n        \n\n        \n          \n             const Variable & var = \n        \n\n        \n          \n                 curr_sys_ptr->system().variable(curr_sys_ptr->system().variable_number(var_name)); \n        \n\n        \n          \n             if (var.type() != type) \n        \n\n        \n          \n               mooseError(error_prefix, \n        \n\n        \n          \n                          \"Variable with name '\", \n        \n\n        \n          \n                          var_name, \n        \n\n        \n          \n                          \"' already exists but is of a differing type!\"); \n        \n\n        \n          \n            \n        \n\n        \n          \n             return true; \n        \n\n        \n          \n           }",
+          "url": "https://github.com/idaholab/moose/discussions/28560",
+          "updatedAt": "2024-09-08T06:21:57Z",
+          "publishedAt": "2024-09-06T15:24:19Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nIf you want the message to be more verbose and give more information (such as the block restriction) then that would work for us. Already it says \"different type\" but it would help the user to say which types are involved\nHowever we can't really allow the check to let two \"identical\" variables be added without some serious checking. There are many variable parameters, we would have to check them all, not just the block restriction.\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/28560#discussioncomment-10577045",
+                  "updatedAt": "2024-09-07T13:17:51Z",
+                  "publishedAt": "2024-09-07T13:17:14Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "jmeier"
+                          },
+                          "bodyText": "I'll try to prepare an PR.",
+                          "url": "https://github.com/idaholab/moose/discussions/28560#discussioncomment-10580364",
+                          "updatedAt": "2024-09-08T06:21:55Z",
+                          "publishedAt": "2024-09-08T06:21:54Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Error while run tests after updates",
+          "author": {
+            "login": "hchen139"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n Q&A General is the most appropriate section for my question\n I have consulted the posting Guidelines on the Discussions front page\n I have searched the Discussions forum and my question has not been asked before\n I have searched the MOOSE website and the documentation does not answer my question\n I have formatted my post following the posting guidelines (screenshots as a last resort, triple back quotes around pasted text)\n\nQuestion\nAfter updating conda moose environment and get the latest updates for moose, I got the following error message while trying to run_test.\n:241: RuntimeWarning: compile time version 3.10 of module 'hit' does not match runtime version 3.11\nSegmentation fault: 11\nAny help on having the issue solved will be much appreciated.",
+          "url": "https://github.com/idaholab/moose/discussions/28340",
+          "updatedAt": "2024-09-08T00:18:33Z",
+          "publishedAt": "2024-08-08T21:17:51Z",
+          "category": {
+            "name": "Q&A General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThe hit warning could be red herring\nLet's run a single input for example in test/tests/kernels/simple_diffusion and see if the error can be isolated there",
+                  "url": "https://github.com/idaholab/moose/discussions/28340#discussioncomment-10280177",
+                  "updatedAt": "2024-08-08T21:51:23Z",
+                  "publishedAt": "2024-08-08T21:51:23Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hchen139"
+                          },
+                          "bodyText": "I run the test as\n../../../moose_test-opt -i simple_diffusion.i\nand got the following error\nIllegal instruction: 4\nBTW, I'm running MacOS Sonoma version14.6.1 (23G93).",
+                          "url": "https://github.com/idaholab/moose/discussions/28340#discussioncomment-10280995",
+                          "updatedAt": "2024-08-09T01:01:33Z",
+                          "publishedAt": "2024-08-09T01:01:32Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "ugh. This does not give us much\nIs this a fresh install? If not then I would git clean -xfD the repo (in moose/) then try again\nIf so, then we ll need to run a debugger and hope we get better information\nhttps://mooseframework.inl.gov/application_development/debugging.html",
+                          "url": "https://github.com/idaholab/moose/discussions/28340#discussioncomment-10281250",
+                          "updatedAt": "2024-08-09T01:52:14Z",
+                          "publishedAt": "2024-08-09T01:52:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "I wonder if this could be folks performing an update with Conda, getting the OpenMPI compilers by accident, and running MOOSE which has some stale libs built with MPICH.\nI think what @GiudGiud mentioned is the right approach. Clean the build, and build anew. But let's also make sure that you are using the 'better' stack. Can you perform the following and report back:\nconda activate moose\ncondo list | grep moose",
+                          "url": "https://github.com/idaholab/moose/discussions/28340#discussioncomment-10314171",
+                          "updatedAt": "2024-08-12T12:51:46Z",
+                          "publishedAt": "2024-08-12T12:51:45Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hchen139"
+                          },
+                          "bodyText": "I did rebuild after clean -xdf, even reinstalled moose and conda. The issue now changed to all tests failed and when ran the simple_diffusion.i test, got the same error. Here is what returned after running 'conda list | grep moose':\nmoose-dev                 2024.07.27                mpich    https://conda.software.inl.gov/public\nmoose-libmesh             2024.07.27              mpich_0    https://conda.software.inl.gov/public\nmoose-libmesh-vtk         9.3.0                   mpich_0    https://conda.software.inl.gov/public\nmoose-mpi                 2024.07.10                mpich    https://conda.software.inl.gov/public\nmoose-peacock             2024.07.10              mpich_0    https://conda.software.inl.gov/public\nmoose-petsc               3.20.3                  mpich_1    https://conda.software.inl.gov/public\nmoose-tools               2024.07.19      py311h09a46a1_0    https://conda.software.inl.gov/public\nmoose-wasp                2024.05.08              build_0    https://conda.software.inl.gov/public",
+                          "url": "https://github.com/idaholab/moose/discussions/28340#discussioncomment-10314624",
+                          "updatedAt": "2024-08-12T13:29:43Z",
+                          "publishedAt": "2024-08-12T13:29:43Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "I think this qualifies for running the diagnostic script in its more \"troubleshooting\" fashion. To see if this machine is having other more serious issues, or if this is an environment issue.\ncd ~/projects/moose/scripts\nexport METHOD=opt METHODS=opt MOOSE_JOBS=6\n./diagnostics.sh --full-build\nDiagnostics will attempt to do everything in a clean environment, all in a temp directory, from scratch. So it may take a while. But it will help tell us if building and running moose is even possible on this machine.\nEdit:\nI am running this on my own, as it's been a while... and I seem to hit a snag when building libMesh. Might happen to you. Working on a fix.\nEdit:\nIf you are running into an issue with the above (failing to build libMesh) try modifying the moose/scripts/diagnostics.sh script like so:\nat line (241) \n  \n    \n      moose/scripts/diagnostics.sh\n    \n    \n         Line 241\n      in\n      e0de659\n    \n  \n  \n    \n\n        \n          \n           MOOSE_PACKAGES=\"${MPI_PACKAGES} packaging pyaml jinja2 python\" \n        \n    \n  \n\n\n-MOOSE_PACKAGES=\"${MPI_PACKAGES} packaging pyaml jinja2 python\"\n+MOOSE_PACKAGES=\"${MPI_PACKAGES} zlib packaging pyaml jinja2 python\"\n(add zlib to the list)",
+                          "url": "https://github.com/idaholab/moose/discussions/28340#discussioncomment-10314912",
+                          "updatedAt": "2024-08-12T15:39:17Z",
+                          "publishedAt": "2024-08-12T13:55:45Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hchen139"
+                          },
+                          "bodyText": "I can run the diagnostics without any changes to the file. But it completed with 7 tests failed, all of which are for the web_server_control:\ncontrols/web_server_control.get_postprocessor ................................................. FAILED (CRASH)\ncontrols/web_server_control.connect_port ...................................................... FAILED (CRASH)\ncontrols/web_server_control.errors/set_controllable_no_exist ................. FAILED (EXPECTED ERROR MISSING)\ncontrols/web_server_control.errors/postprocessor_no_exist .................... FAILED (EXPECTED ERROR MISSING)\ncontrols/web_server_control.errors/set_controllable_unregistered_type ........ FAILED (EXPECTED ERROR MISSING)\ncontrols/web_server_control.errors/set_controllable_bad_convert_json ......... FAILED (EXPECTED ERROR MISSING)\ncontrols/web_server_control.errors/set_controllable_vector_non_array ......... FAILED (EXPECTED ERROR MISSING)",
+                          "url": "https://github.com/idaholab/moose/discussions/28340#discussioncomment-10316272",
+                          "updatedAt": "2024-08-12T15:51:13Z",
+                          "publishedAt": "2024-08-12T15:51:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "Yeah that's normal (the web server tests failing).\nOkay, looks like this means there is going to be something in your environment causing the failures.\nWe will need to take a closer look at the difference between these two environments:\nOpen a new terminal and:\nconda activate moose\nenv | sort > ~/bad_env\nAnd this environment\n/usr/bin/env -i bash --norc --noprofile\n# do the bits to manually source the conda environment. Just a guess if you installed\n# Miniforge as described on our wiki to the letter:\nexport PATH=~/miniforge/bin:$PATH\nsource activate ~/miniforge/envs/moose\nenv | sort > ~/good_env\nAnd then compare the two:\nsdiff ~/good_env ~/bad_env",
+                          "url": "https://github.com/idaholab/moose/discussions/28340#discussioncomment-10316782",
+                          "updatedAt": "2024-08-12T16:42:02Z",
+                          "publishedAt": "2024-08-12T16:42:01Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hchen139"
+                          },
+                          "bodyText": "There is no miniforge directory on my computer, and only miniconda3.",
+                          "url": "https://github.com/idaholab/moose/discussions/28340#discussioncomment-10317216",
+                          "updatedAt": "2024-08-12T17:29:18Z",
+                          "publishedAt": "2024-08-12T17:29:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "In your case then:\n/usr/bin/env -i bash --norc --noprofile\nexport PATH=~/miniconda3/bin:$PATH\nsource activate ~/miniconda3/envs/moose\nenv | sort > ~/good_env",
+                          "url": "https://github.com/idaholab/moose/discussions/28340#discussioncomment-10317261",
+                          "updatedAt": "2024-08-12T17:34:37Z",
+                          "publishedAt": "2024-08-12T17:34:36Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hchen139"
+                          },
+                          "bodyText": "This is the comparison result:",
+                          "url": "https://github.com/idaholab/moose/discussions/28340#discussioncomment-10317329",
+                          "updatedAt": "2024-08-12T17:42:14Z",
+                          "publishedAt": "2024-08-12T17:42:14Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "MinMorsh"
+                  },
+                  "bodyText": "I ran through the same issue when I updated my moose and conda. Initially, I was getting the segmentation fault. Then I tried updating running ./update_and_rebuild_petsc.sh, ./update_and_rebuild_libmesh.sh and update_and_rebuild_wasp.sh which led me to this error while running ./run_tests: Logfile.txt. Seems like libMesh could not locate the VTK.\n@hchen139 Could you find any solution?",
+                  "url": "https://github.com/idaholab/moose/discussions/28340#discussioncomment-10401776",
+                  "updatedAt": "2024-08-21T01:50:36Z",
+                  "publishedAt": "2024-08-21T01:47:35Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "@MinMorsh, your issue not related to Illegal instruction: 4. Please begin a new discussion (if you already have, I apologize... I am simply addressing discussions as I receive them in my email). Your issue is a simple one as well, which I cannot answer here (cannot mark my post as answering this thread as it does not pertain to the original post).",
+                          "url": "https://github.com/idaholab/moose/discussions/28340#discussioncomment-10407182",
+                          "updatedAt": "2024-08-21T12:43:14Z",
+                          "publishedAt": "2024-08-21T12:43:13Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "roystgnr"
+                  },
+                  "bodyText": "I think I have a possible explanation for this, with a fix in libMesh/libmesh#3940\nI'll post a further update once the fix is downstream and we have conda modules with it ready for testing.",
+                  "url": "https://github.com/idaholab/moose/discussions/28340#discussioncomment-10488828",
+                  "updatedAt": "2024-08-29T15:21:19Z",
+                  "publishedAt": "2024-08-29T15:21:19Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "The fix is now in all branches of moose. If you update with\nconda install moose-dev=2024.08.30 mpich\n\nthen:\n\nsave all your work in moose\ngo to moose/\ngit clean -Xfd\nthen recompile with make\nyou should get working binaries",
+                  "url": "https://github.com/idaholab/moose/discussions/28340#discussioncomment-10577024",
+                  "updatedAt": "2024-09-07T13:12:45Z",
+                  "publishedAt": "2024-09-07T13:12:45Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "hchen139"
+                          },
+                          "bodyText": "Problem solved! Much appreciated for the help to the team.",
+                          "url": "https://github.com/idaholab/moose/discussions/28340#discussioncomment-10579428",
+                          "updatedAt": "2024-09-08T00:18:31Z",
+                          "publishedAt": "2024-09-08T00:18:30Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "MOOSE install: successful build, but got failed tests",
+          "author": {
+            "login": "frankwugeo"
+          },
+          "bodyText": "Check these boxes if you have followed the posting rules.\n\n I have consulted the Posting Guidelines.\n I have searched the Discussions Forum and MOOSE Framework Troubleshooting and have not found what I was looking for\n Q&A Getting Started is the most appropriate category for my question (trouble installing, beginner user, ...)\n\nIssue or question about MOOSE\nHi MOOSE community,\nI have followed the tutorial to install MOOSE on MacOS. I seem to have built MOOSE using make, but when I run the tests, it shows a lot of failed tests (50) and none of them pass.\nCould anyone in the community please help with this issue? Some of the error outputs are listed below.\nCheers\n(Optional) code in question / simulation log / errors\nmisc/check_error.dot_integrity_check: Working Directory: /Users/me/projects/moose/test/tests/misc/check_error\nmisc/check_error.dot_integrity_check: Running command: /Users/me/projects/moose/test/moose_test-opt -i dot_integrity_check.i --error --error-override --libtorch-device cpu\nmisc/check_error.dot_integrity_check: ################################################################################\nmisc/check_error.dot_integrity_check: \nmisc/check_error.dot_integrity_check: Unable to match the following pattern against the program's output:\nmisc/check_error.dot_integrity_check: \nmisc/check_error.dot_integrity_check: Calling \"coupled\\[Vector\\]\\[Gradient/Dot\\]Old\\[er\\]\" on variable \"\\S+\" when using a \\\"Steady\\\" executioner is not allowed. This value is available only in transient simulations.\nmisc/check_error.dot_integrity_check: \nmisc/check_error.dot_integrity_check: ################################################################################\nmisc/check_error.dot_integrity_check: Tester failed, reason: EXPECTED ERROR MISSING\nmisc/check_error.dot_integrity_check: \nmisc/check_error.dot_integrity_check ......................................... FAILED (EXPECTED ERROR MISSING)\nmisc/check_error.function_file_test11: Working Directory: /Users/me/projects/moose/test/tests/misc/check_error\nmisc/check_error.function_file_test11: Running command: /Users/me/projects/moose/test/moose_test-opt -i function_file_test11.i --error --error-override --libtorch-device cpu\nmisc/check_error.function_file_test11: ################################################################################\nmisc/check_error.function_file_test11: \nmisc/check_error.function_file_test11: Unable to match the following pattern against the program's output:\nmisc/check_error.function_file_test11: \nmisc/check_error.function_file_test11: In \\S+: Read more than two columns of data from file '\\S+'.  Did you mean to use \"format = rows\" or set \"xy_in_file_only\" to false?\nmisc/check_error.function_file_test11: \nmisc/check_error.function_file_test11: ################################################################################\nmisc/check_error.function_file_test11: Tester failed, reason: EXPECTED ERROR MISSING\nmisc/check_error.function_file_test11: \nmisc/check_error.function_file_test11 ........................................ FAILED (EXPECTED ERROR MISSING)\nmisc/check_error.coupled_nodal_for_non_nodal_variable: Working Directory: /Users/me/projects/moose/test/tests/misc/check_error\nmisc/check_error.coupled_nodal_for_non_nodal_variable: Running command: /Users/me/projects/moose/test/moose_test-opt -i coupled_nodal_for_non_nodal_variable.i --error --error-override --libtorch-device cpu\nmisc/check_error.coupled_nodal_for_non_nodal_variable: ################################################################################\nmisc/check_error.coupled_nodal_for_non_nodal_variable: \nmisc/check_error.coupled_nodal_for_non_nodal_variable: Unable to match the following pattern against the program's output:\nmisc/check_error.coupled_nodal_for_non_nodal_variable: \nmisc/check_error.coupled_nodal_for_non_nodal_variable: m: Trying to get nodal values of variable 'v', but it is not nodal.\nmisc/check_error.coupled_nodal_for_non_nodal_variable: \nmisc/check_error.coupled_nodal_for_non_nodal_variable: ################################################################################\nmisc/check_error.coupled_nodal_for_non_nodal_variable: Tester failed, reason: EXPECTED ERROR MISSING\nmisc/check_error.coupled_nodal_for_non_nodal_variable: \nmisc/check_error.coupled_nodal_for_non_nodal_variable ........................ FAILED (EXPECTED ERROR MISSING)\nmisc/check_error.bad_stateful_material_only_older: Working Directory: /Users/me/projects/moose/test/tests/misc/check_error\nmisc/check_error.bad_stateful_material_only_older: Running command: /Users/me/projects/moose/test/moose_test-opt -i bad_stateful_material.i Materials/stateful_mat/get_older=true --error --error-override --libtorch-device cpu\nmisc/check_error.bad_stateful_material_only_older: ################################################################################\nmisc/check_error.bad_stateful_material_only_older: \nmisc/check_error.bad_stateful_material_only_older: Unable to match the following pattern against the program's output:\nmisc/check_error.bad_stateful_material_only_older: \nmisc/check_error.bad_stateful_material_only_older: One or more Material Properties were not supplied on block\nmisc/check_error.bad_stateful_material_only_older: \nmisc/check_error.bad_stateful_material_only_older: ################################################################################\nmisc/check_error.bad_stateful_material_only_older: Tester failed, reason: EXPECTED ERROR MISSING\nmisc/check_error.bad_stateful_material_only_older: \nmisc/check_error.bad_stateful_material_only_older ............................ FAILED (EXPECTED ERROR MISSING)\nmisc/check_error.incomplete_fvkernel_variable_coverage_test: Working Directory: /Users/me/projects/moose/test/tests/misc/check_error\nmisc/check_error.incomplete_fvkernel_variable_coverage_test: Running command: /Users/me/projects/moose/test/moose_test-opt -i incomplete_fvkernel_variable_coverage_test.i --error --error-override --libtorch-device cpu\nmisc/check_error.incomplete_fvkernel_variable_coverage_test: ################################################################################\nmisc/check_error.incomplete_fvkernel_variable_coverage_test: \nmisc/check_error.incomplete_fvkernel_variable_coverage_test: Unable to match the following pattern against the program's output:\nmisc/check_error.incomplete_fvkernel_variable_coverage_test: \nmisc/check_error.incomplete_fvkernel_variable_coverage_test: The following variable\\(s\\) lack an active kernel:\nmisc/check_error.incomplete_fvkernel_variable_coverage_test: \nmisc/check_error.incomplete_fvkernel_variable_coverage_test: ################################################################################\nmisc/check_error.incomplete_fvkernel_variable_coverage_test: Tester failed, reason: EXPECTED ERROR MISSING\nmisc/check_error.incomplete_fvkernel_variable_coverage_test: \nmisc/check_error.incomplete_fvkernel_variable_coverage_test .................. FAILED (EXPECTED ERROR MISSING)\nmisc/check_error.bad_number: Working Directory: /Users/me/projects/moose/test/tests/misc/check_error\nmisc/check_error.bad_number: Running command: /Users/me/projects/moose/test/moose_test-opt -i bad_number.i --error --error-override --libtorch-device cpu\nmisc/check_error.bad_number: ################################################################################\nmisc/check_error.bad_number: \nmisc/check_error.bad_number: Unable to match the following pattern against the program's output:\nmisc/check_error.bad_number: \nmisc/check_error.bad_number: invalid float syntax for parameter: BCs/right/value\nmisc/check_error.bad_number: \nmisc/check_error.bad_number: ################################################################################\nmisc/check_error.bad_number: Tester failed, reason: EXPECTED ERROR MISSING\nmisc/check_error.bad_number: \nmisc/check_error.bad_number .................................................. FAILED (EXPECTED ERROR MISSING)\nmisc/check_error.add_aux_scalar_variable_multiple_test: Working Directory: /Users/me/projects/moose/test/tests/misc/check_error\nmisc/check_error.add_aux_scalar_variable_multiple_test: Running command: /Users/me/projects/moose/test/moose_test-opt -i add_aux_variable_multiple_test.i Variables/q/family=SCALAR MoreAuxVariables/q/family=SCALAR --error --error-override --libtorch-device cpu\nmisc/check_error.add_aux_scalar_variable_multiple_test: ################################################################################\nmisc/check_error.add_aux_scalar_variable_multiple_test: \nmisc/check_error.add_aux_scalar_variable_multiple_test: Unable to match the following pattern against the program's output:\nmisc/check_error.add_aux_scalar_variable_multiple_test: \nmisc/check_error.add_aux_scalar_variable_multiple_test: AuxVariable with name 'q' already exists but is of a differing type!\nmisc/check_error.add_aux_scalar_variable_multiple_test: \nmisc/check_error.add_aux_scalar_variable_multiple_test: ################################################################################\nmisc/check_error.add_aux_scalar_variable_multiple_test: Tester failed, reason: EXPECTED ERROR MISSING\nmisc/check_error.add_aux_scalar_variable_multiple_test: \nmisc/check_error.add_aux_scalar_variable_multiple_test ....................... FAILED (EXPECTED ERROR MISSING)\nmisc/check_error.nan_no_trap_fpe_test_trans: Working Directory: /Users/me/projects/moose/test/tests/misc/check_error\nmisc/check_error.nan_no_trap_fpe_test_trans: Running command: /Users/me/projects/moose/test/moose_test-opt -i nan_test_transient.i --no-trap-fpe --error --error-override --libtorch-device cpu\nmisc/check_error.nan_no_trap_fpe_test_trans: ################################################################################\nmisc/check_error.nan_no_trap_fpe_test_trans: \nmisc/check_error.nan_no_trap_fpe_test_trans: Unable to match the following pattern against the program's output:\nmisc/check_error.nan_no_trap_fpe_test_trans: \nmisc/check_error.nan_no_trap_fpe_test_trans: Solve Did NOT Converge\nmisc/check_error.nan_no_trap_fpe_test_trans: \nmisc/check_error.nan_no_trap_fpe_test_trans: ################################################################################\nmisc/check_error.nan_no_trap_fpe_test_trans: Tester failed, reason: EXPECTED ERROR MISSING\nmisc/check_error.nan_no_trap_fpe_test_trans: \nmisc/check_error.nan_no_trap_fpe_test_trans .................................. FAILED (EXPECTED ERROR MISSING)\nmisc/check_error.scalar_kernel_with_var: Working Directory: /Users/me/projects/moose/test/tests/misc/check_error\nmisc/check_error.scalar_kernel_with_var: Running command: /Users/me/projects/moose/test/moose_test-opt -i scalar_kernel_with_var.i --error --error-override --libtorch-device cpu\nmisc/check_error.scalar_kernel_with_var: ################################################################################\nmisc/check_error.scalar_kernel_with_var: \nmisc/check_error.scalar_kernel_with_var: Unable to match the following pattern against the program's output:\nmisc/check_error.scalar_kernel_with_var: \nmisc/check_error.scalar_kernel_with_var: Scalar variable 'u' does not exist in this system\nmisc/check_error.scalar_kernel_with_var: \nmisc/check_error.scalar_kernel_with_var: ################################################################################\nmisc/check_error.scalar_kernel_with_var: Tester failed, reason: EXPECTED ERROR MISSING\nmisc/check_error.scalar_kernel_with_var: \nmisc/check_error.scalar_kernel_with_var ...................................... FAILED (EXPECTED ERROR MISSING)\nmisc/check_error.deprecated_block_test: Working Directory: /Users/me/projects/moose/test/tests/misc/check_error\nmisc/check_error.deprecated_block_test: Running command: /Users/me/projects/moose/test/moose_test-opt -i deprecated_block_test.i --error --error-override --libtorch-device cpu\nmisc/check_error.deprecated_block_test: ################################################################################\nmisc/check_error.deprecated_block_test: \nmisc/check_error.deprecated_block_test: Unable to match the following pattern against the program's output:\nmisc/check_error.deprecated_block_test: \nmisc/check_error.deprecated_block_test: Input file block '\\S+' has been deprecated.\nmisc/check_error.deprecated_block_test: \nmisc/check_error.deprecated_block_test: ################################################################################\nmisc/check_error.deprecated_block_test: Tester failed, reason: EXPECTED ERROR MISSING\nmisc/check_error.deprecated_block_test: \nmisc/check_error.deprecated_block_test ....................................... FAILED (EXPECTED ERROR MISSING)\nmisc/check_error.unused_param_test_warn_cli: Working Directory: /Users/me/projects/moose/test/tests/misc/check_error\nmisc/check_error.unused_param_test_warn_cli: Running command: /Users/me/projects/moose/test/moose_test-opt -i unused_param_test.i --allow-unused --error --error-override --libtorch-device cpu\nmisc/check_error.unused_param_test_warn_cli: ################################################################################\nmisc/check_error.unused_param_test_warn_cli: \nmisc/check_error.unused_param_test_warn_cli: Unable to match the following pattern against the program's output:\nmisc/check_error.unused_param_test_warn_cli: \nmisc/check_error.unused_param_test_warn_cli: unused parameter 'Mesh/unused_param'\nmisc/check_error.unused_param_test_warn_cli: \nmisc/check_error.unused_param_test_warn_cli: ################################################################################\nmisc/check_error.unused_param_test_warn_cli: Tester failed, reason: EXPECTED OUTPUT MISSING\nmisc/check_error.unused_param_test_warn_cli: \nmisc/check_error.unused_param_test_warn_cli ................................. FAILED (EXPECTED OUTPUT MISSING)\nmisc/check_error.function_file_test2: Working Directory: /Users/me/projects/moose/test/tests/misc/check_error\nmisc/check_error.function_file_test2: Running command: /Users/me/projects/moose/test/moose_test-opt -i function_file_test2.i --error --error-override --libtorch-device cpu\nmisc/check_error.function_file_test2: ################################################################################\nmisc/check_error.function_file_test2: \nmisc/check_error.function_file_test2: Unable to match the following pattern against the program's output:\nmisc/check_error.function_file_test2: \nmisc/check_error.function_file_test2: In \\S+: Read more than two columns of data from file '\\S+'.  Did you mean to use \"format = rows\"?\nmisc/check_error.function_file_test2: \nmisc/check_error.function_file_test2: ################################################################################\nmisc/check_error.function_file_test2: Tester failed, reason: EXPECTED ERROR MISSING\nmisc/check_error.function_file_test2: \nmisc/check_error.function_file_test2 ......................................... FAILED (EXPECTED ERROR MISSING)\nmisc/check_error.scalar_old_integrity_check: Working Directory: /Users/me/projects/moose/test/tests/misc/check_error\nmisc/check_error.scalar_old_integrity_check: Running command: /Users/me/projects/moose/test/moose_test-opt -i scalar_old_integrity_check.i --error --error-override --libtorch-device cpu\nmisc/check_error.scalar_old_integrity_check: ################################################################################\nmisc/check_error.scalar_old_integrity_check: \nmisc/check_error.scalar_old_integrity_check: Unable to match the following pattern against the program's output:\nmisc/check_error.scalar_old_integrity_check: \nmisc/check_error.scalar_old_integrity_check: Calling 'coupledScalarValueOld' on variable \\S+ when using a \\\"Steady\\\" executioner is not allowed. This value is available only in transient simulations.\nmisc/check_error.scalar_old_integrity_check: \nmisc/check_error.scalar_old_integrity_check: ################################################################################\nmisc/check_error.scalar_old_integrity_check: Tester failed, reason: EXPECTED ERROR MISSING\nmisc/check_error.scalar_old_integrity_check: \nmisc/check_error.scalar_old_integrity_check .................................. FAILED (EXPECTED ERROR MISSING)\nmisc/check_error.coupled_nodal_for_non_nodal_variable_old: Working Directory: /Users/me/projects/moose/test/tests/misc/check_error\nmisc/check_error.coupled_nodal_for_non_nodal_variable_old: Running command: /Users/me/projects/moose/test/moose_test-opt -i coupled_nodal_for_non_nodal_variable.i Materials/m/lag=OLD --error --error-override --libtorch-device cpu\nmisc/check_error.coupled_nodal_for_non_nodal_variable_old: ################################################################################\nmisc/check_error.coupled_nodal_for_non_nodal_variable_old: \nmisc/check_error.coupled_nodal_for_non_nodal_variable_old: Unable to match the following pattern against the program's output:\nmisc/check_error.coupled_nodal_for_non_nodal_variable_old: \nmisc/check_error.coupled_nodal_for_non_nodal_variable_old: m: Trying to get old nodal values of variable 'v', but it is not nodal.\nmisc/check_error.coupled_nodal_for_non_nodal_variable_old: \nmisc/check_error.coupled_nodal_for_non_nodal_variable_old: ################################################################################\nmisc/check_error.coupled_nodal_for_non_nodal_variable_old: Tester failed, reason: EXPECTED ERROR MISSING\nmisc/check_error.coupled_nodal_for_non_nodal_variable_old: \nmisc/check_error.coupled_nodal_for_non_nodal_variable_old .................... FAILED (EXPECTED ERROR MISSING)\nmisc/check_error.function_file_test12: Working Directory: /Users/me/projects/moose/test/tests/misc/check_error\nmisc/check_error.function_file_test12: Running command: /Users/me/projects/moose/test/moose_test-opt -i function_file_test12.i --error --error-override --libtorch-device cpu\nmisc/check_error.function_file_test12: ################################################################################\nmisc/check_error.function_file_test12: \nmisc/check_error.function_file_test12: Unable to match the following pattern against the program's output:\nmisc/check_error.function_file_test12: \nmisc/check_error.function_file_test12: Index out-of-range of the available data in '\\S+', which contains 3 columns of data.\nmisc/check_error.function_file_test12: \nmisc/check_error.function_file_test12: ################################################################################\nmisc/check_error.function_file_test12: Tester failed, reason: EXPECTED ERROR MISSING\nmisc/check_error.function_file_test12: \nmisc/check_error.function_file_test12 ........................................ FAILED (EXPECTED ERROR MISSING)\nEncountering Errors? Please include diagnostic output\nNo response",
+          "url": "https://github.com/idaholab/moose/discussions/28461",
+          "updatedAt": "2024-09-07T13:13:18Z",
+          "publishedAt": "2024-08-23T07:59:46Z",
+          "category": {
+            "name": "Q&A Getting Started"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nCould you please go in test/tests/kernels/simple_diffusion and run that test (using the executable in moose/test) and report the full log?\nThanks\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/28461#discussioncomment-10431407",
+                  "updatedAt": "2024-08-23T14:30:33Z",
+                  "publishedAt": "2024-08-23T14:30:32Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "frankwugeo"
+                          },
+                          "bodyText": "Thanks for the reply. I use the exec in the simple_diffusion case file by\n../../../moose_test-opt -i simple_diffusion.i\n\nand returns\nzsh: illegal hardware instruction\n\nAm I using the correct command for the exec or does it indicate a problem? Thanks.",
+                          "url": "https://github.com/idaholab/moose/discussions/28461#discussioncomment-10432384",
+                          "updatedAt": "2024-08-23T15:58:48Z",
+                          "publishedAt": "2024-08-23T15:58:48Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Ok this is a current failure we are investigating\nThe only solution we have for now is to revert to the moose-dev package of mid July\nSo something like\nConda install moose-dev=2024.07.17\nUse conda search moose-dev to get the exact numbers",
+                          "url": "https://github.com/idaholab/moose/discussions/28461#discussioncomment-10432641",
+                          "updatedAt": "2024-08-23T16:26:50Z",
+                          "publishedAt": "2024-08-23T16:26:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "frankwugeo"
+                          },
+                          "bodyText": "I tried uninstall and use the previous version as\nconda create -n moose moose-dev=2024.07.15 mpich\n\nHowever, the tests still report similar (a lot) errors related to the 'misc/check_error'",
+                          "url": "https://github.com/idaholab/moose/discussions/28461#discussioncomment-10433433",
+                          "updatedAt": "2024-08-23T18:07:18Z",
+                          "publishedAt": "2024-08-23T18:07:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "Did it build well the second time?\nWhat does it do in the simple_diffusion folder again?",
+                          "url": "https://github.com/idaholab/moose/discussions/28461#discussioncomment-10433564",
+                          "updatedAt": "2024-08-23T18:25:39Z",
+                          "publishedAt": "2024-08-23T18:25:38Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "frankwugeo"
+                          },
+                          "bodyText": "An error occurs when I make again.\nIn file included from /Users/me/projects/moose/framework/build/unity_src/systems_Unity.C:10:\n/Users/me/projects/moose/framework/src/systems/NonlinearEigenSystem.C:284:34: error: no viable conversion from '__libcpp_remove_reference_t<unique_ptr<NumericVector<double>, default_delete<NumericVector<double>>> &>' (aka 'std::unique_ptr<libMesh::NumericVector<double>>') to 'NumericVector<double>'\n    solution().restore_subvector(std::move(subvec), _eigen_sys.local_non_condensed_dofs_vector);\n                                 ^~~~~~~~~~~~~~~~~\n/Users/me/miniconda3/envs/moose/libmesh/include/libmesh/numeric_vector.h:126:3: note: candidate constructor not viable: no known conversion from '__libcpp_remove_reference_t<unique_ptr<NumericVector<double>, default_delete<NumericVector<double>>> &>' (aka 'std::unique_ptr<libMesh::NumericVector<double>>') to 'const NumericVector<double> &' for 1st argument\n  NumericVector (const NumericVector &) = default;\n  ^\n/Users/me/miniconda3/envs/moose/libmesh/include/libmesh/numeric_vector.h:77:3: note: explicit constructor is not a candidate\n  NumericVector (const Parallel::Communicator & comm_in,\n  ^\n/Users/me/miniconda3/envs/moose/libmesh/include/libmesh/numeric_vector.h:748:53: note: passing argument to parameter here\n  virtual void restore_subvector(NumericVector<T> &&, const std::vector<numeric_index_type> &)\n                                                    ^\nCompiling C++ (in opt mode) /Users/me/projects/moose/framework/build/unity_src/fviks_Unity.C...\nCompiling C++ (in opt mode) /Users/me/projects/moose/framework/build/unity_src/ics_Unity.C...\nCompiling C++ (in opt mode) /Users/me/projects/moose/framework/build/unity_src/linearfvbcs_Unity.C...\n1 error generated.\nmake: *** [/Users/me/projects/moose/framework/build.mk:151: /Users/me/projects/moose/framework/build/unity_src/systems_Unity.x86_64-apple-darwin13.4.0.opt.lo] Error 1\nmake: *** Waiting for unfinished jobs....\n\nFor the simple diffusion test, I do not find the exec 'moose_test-opt' in moose/test file this time.\nzsh: no such file or directory: ../../../moose_test-opt",
+                          "url": "https://github.com/idaholab/moose/discussions/28461#discussioncomment-10435527",
+                          "updatedAt": "2024-08-24T02:08:46Z",
+                          "publishedAt": "2024-08-24T02:08:45Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "The executable does not build. Probably because moose is relying on libmesh features that are only present in newer versions of the package.\nSo we are toast with current moose.\nYou ll need to check out a version of moose from mid July as well. That one will build with libmesh from mid July",
+                          "url": "https://github.com/idaholab/moose/discussions/28461#discussioncomment-10435756",
+                          "updatedAt": "2024-08-24T03:31:46Z",
+                          "publishedAt": "2024-08-24T03:31:44Z",
+                          "isAnswer": true
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "Linking with #28340 to keep track.",
+                          "url": "https://github.com/idaholab/moose/discussions/28461#discussioncomment-10451239",
+                          "updatedAt": "2024-08-26T12:23:20Z",
+                          "publishedAt": "2024-08-26T12:23:19Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "frankwugeo"
+                          },
+                          "bodyText": "It's finally working by installing the version of 07.19. Almost all tests passed and the simple diffusion case also worked well.\nconda create -n moose moose-dev=2024.07.19 mpich \n\nAlso, be reminded to clean the build before 'make'\ncd moose\ngit clean -xfd; git submodule foreach --recursive git clean -xfd\n\nThank you for your time, Guillaume @GiudGiud  and @milljm.",
+                          "url": "https://github.com/idaholab/moose/discussions/28461#discussioncomment-10454037",
+                          "updatedAt": "2024-08-26T16:38:21Z",
+                          "publishedAt": "2024-08-26T16:38:21Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "Dang... I mean, I am glade its working, but this whole \"install an older package\" thing is certainly not the solution.",
+                          "url": "https://github.com/idaholab/moose/discussions/28461#discussioncomment-10454228",
+                          "updatedAt": "2024-08-26T16:57:54Z",
+                          "publishedAt": "2024-08-26T16:57:54Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "We're identifying the issue: #28484",
+                          "url": "https://github.com/idaholab/moose/discussions/28461#discussioncomment-10477214",
+                          "updatedAt": "2024-08-28T15:43:38Z",
+                          "publishedAt": "2024-08-28T15:43:36Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "EdSheltonUKAEA"
+                  },
+                  "bodyText": "I think I've got a problem related to this having tried to do a conda and moose update.\nI proceeded as normal and got an error while running make and failure running tests.\nI had a look on the forum and found this issue, related threads and what looks like the recent change to the \"new users - staying up-to-date\" advice (https://mooseframework.inl.gov/getting_started/new_users.html). So I have tried to apply the fixes here.\nNow I seem to have removed moose with\nconda env remove -n moose\nbut can't reinstall either the 2024.08.26 or 2024.07.19 versions using the commands:\nconda create -n moose moose-dev=2024.08.26 mpich\nconda create -n moose moose-dev=2024.07.19 mpich\nI'm trying to do this from \"base\" in conda.  I get these messages and then the installation just hangs. I left it overnight for 12+ hours and nothing happened.  It's just sat there waiting to collect a package.\n(base) timodel01@M0239:~$ conda create -n moose moose-dev=2024.08.26 mpich\nCollecting package metadata (current_repodata.json): done\nSolving environment: unsuccessful attempt using repodata from current_repodata.json, retrying with next repodata source.\nCollecting package metadata (repodata.json): /\nHow can I expedite the package delivery?",
+                  "url": "https://github.com/idaholab/moose/discussions/28461#discussioncomment-10530321",
+                  "updatedAt": "2024-09-03T10:17:01Z",
+                  "publishedAt": "2024-09-03T10:15:21Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "hello\nyou have to update conda first : conda update conda\nOlder versions of conda are insanely slow with many packages. The new ones are fine. This is why we switched to mamba and then back to conda",
+                          "url": "https://github.com/idaholab/moose/discussions/28461#discussioncomment-10531500",
+                          "updatedAt": "2024-09-03T12:18:35Z",
+                          "publishedAt": "2024-09-03T12:18:35Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "EdSheltonUKAEA"
+                          },
+                          "bodyText": "Great - thanks I'm trying this.  It seems to be working.\nIs the current recommendation to update moose with the 2024.08.26 or 2024.07.19 version?",
+                          "url": "https://github.com/idaholab/moose/discussions/28461#discussioncomment-10531548",
+                          "updatedAt": "2024-09-03T12:22:48Z",
+                          "publishedAt": "2024-09-03T12:22:47Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "EdSheltonUKAEA"
+                          },
+                          "bodyText": "And I get this warning on the conda update:\n\n==> WARNING: A newer version of conda exists. <==\ncurrent version: 23.5.2\nlatest version: 24.7.1\nPlease update conda by running\n$ conda update -n base -c conda-forge conda\n\nOr to minimize the number of packages updated during conda update use\n conda install conda=24.7.1\n\n\nIs it recommended or necessary to do either of these?",
+                          "url": "https://github.com/idaholab/moose/discussions/28461#discussioncomment-10531565",
+                          "updatedAt": "2024-09-03T12:24:38Z",
+                          "publishedAt": "2024-09-03T12:24:37Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "updating conda further wont hurt\n\nIs the current recommendation to update moose with the 2024.08.26 or 2024.07.19 version?\n\nsome machines are affected by an \"illegal instruction\" error with the latest version. If your machine is brand new you can try the latest.\nRolling back both moose-libmesh and your local version of moose to mid-July will work for older and newer machines",
+                          "url": "https://github.com/idaholab/moose/discussions/28461#discussioncomment-10531597",
+                          "updatedAt": "2024-09-03T12:27:55Z",
+                          "publishedAt": "2024-09-03T12:27:53Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "EdSheltonUKAEA"
+                          },
+                          "bodyText": "I tried the conda update, but it just repeats the same warning that a newer version exists.  It doesn't seem to update with the newer vesion.\nAs I'm using an older machine with existing installations I've tried again with the July version:\n\nconda create -n moose moose-dev=2024.07.19 mpich\n\nIt's now got a step further.  The first attempt at collecting package metadata is \"done\".  But then solving environment is unsucessful with the repodata.  However the second collecting of repodata now worked but it's hung on solving environment for this.\nPrompted by your comment above on conda being slow, and from a bit of googling, I see this is not unusual.  To get this to work quicker, could I retry with mamba, or is there a way I can force conda to update to version 24.7.1?",
+                          "url": "https://github.com/idaholab/moose/discussions/28461#discussioncomment-10531788",
+                          "updatedAt": "2024-09-03T12:45:44Z",
+                          "publishedAt": "2024-09-03T12:45:44Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "so this does not work?\n conda install conda=24.7.1\nYou can try with mamba if you would like\nit's just conda install mamba then open a new tab then mamba install ...\nnote that sometimes it s easier to remove the miniconda/miniforge directory and re-download everything from this page\nhttps://mooseframework.inl.gov/getting_started/installation/conda.html\nIt mostly removes any long dependency solve",
+                          "url": "https://github.com/idaholab/moose/discussions/28461#discussioncomment-10531961",
+                          "updatedAt": "2024-09-03T12:59:58Z",
+                          "publishedAt": "2024-09-03T12:59:57Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "milljm"
+                          },
+                          "bodyText": "There is sometimes not an update path forward available for your installation of Conda. I have found this to be the case in the most recent upgrade process (from 23 to 24).\nThe solution in this case is to completely delete your current installation of Conda and install anew:\nrm -rf ~/miniforge\n\n# Linux\n# curl -L -O https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh\n\n# Intel Mac\n#curl -L -O https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-MacOSX-x86_64.sh\n\n# Apple Si Mac\n# curl -L -O https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-MacOSX-arm64.sh\n\nbash Miniforge3-the-thing-you-downloaded-above -b -p ~/miniforge\nexit\nAnd then re-open your terminal window(s). No need to run conda init routines as those functions are already present in your shell profile.\nAt this point, it doesn't hurt to perform an update in the base environment:\nconda activate base\nconda update --all --yes\nFinally, you should be able to install (quickly) the desired Conda packages.\nWe're still working on getting the \"Illegal Instruction\" issue solved...",
+                          "url": "https://github.com/idaholab/moose/discussions/28461#discussioncomment-10532045",
+                          "updatedAt": "2024-09-03T13:08:17Z",
+                          "publishedAt": "2024-09-03T13:07:15Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "EdSheltonUKAEA"
+                          },
+                          "bodyText": "That's fixed it!  New conda installation.  Moose reinstalled using latest August version with no errors and test passed.  My application updated and now running a model.  (Sort of - it isn't coverging, but fixing that is something I can try to sort out myself.)\nThank you so much!",
+                          "url": "https://github.com/idaholab/moose/discussions/28461#discussioncomment-10532344",
+                          "updatedAt": "2024-09-03T13:31:48Z",
+                          "publishedAt": "2024-09-03T13:31:45Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Assigning different material properties to gauss point",
+          "author": {
+            "login": "manikumd22"
+          },
+          "bodyText": "Hi @GiudGiud\nI am working on a project that requires varying the material properties for different gauss points.\nFor instance 2D plate will have Gauss points, and I want to assign different materials to each Gauss point in order to increase x\nFor instance,\n[Materials]\n[compute_stress1]\ntype = ComputeNeoHookeanStress\nlambda = 40.0\nmu = 67.0\nx = 0.1, all y\n[]\n[compute_stress2]\ntype = ComputeNeoHookeanStress\nlambda = 400.0\nmu = 670.0\nx =0.2, all y\n[]\n[compute_stress3]\ntype = ComputeNeoHookeanStress\nlambda = 4000.0\nmu = 6700.0\nx = 0.3, all y\n[]\n[compute_strain]\ntype = ComputeLagrangianStrain\n[]\n[]\n\nand so on\n\nI am struggling with that as I don't know the location of gauss points coordinate\nOr\n  **if (_large_kinematics)\n  {\n      if ( _q_point[_qp](1) = 0.1;) {\n        RankTwoTensor Cinv = (2 * _E[_qp] + RankTwoTensor::Identity()).inverse();\n        _S[_qp] = 100* (_lambda[_qp] * log(_F[_qp].det()) - _mu[_qp]) * Cinv +\n              _mu[_qp] * RankTwoTensor::Identity();\n        _C[_qp] =100*(\n            -2 * (_lambda[_qp] * log(_F[_qp].det()) - _mu[_qp]) * Cinv.times<i_, k_, l_, j_>(Cinv) +\n            _lambda[_qp] * Cinv.times<i_, j_, k_, l_>(Cinv));\n    }  \n      if ( _q_point[_qp](1) = 0.2;) {\n        RankTwoTensor Cinv = (2 * _E[_qp] + RankTwoTensor::Identity()).inverse();\n        _S[_qp] = 1000* (_lambda[_qp] * log(_F[_qp].det()) - _mu[_qp]) * Cinv +\n              _mu[_qp] * RankTwoTensor::Identity();\n        _C[_qp] =1000*(\n            -2 * (_lambda[_qp] * log(_F[_qp].det()) - _mu[_qp]) * Cinv.times<i_, k_, l_, j_>(Cinv) +\n            _lambda[_qp] * Cinv.times<i_, j_, k_, l_>(Cinv));\n    }  \n      if ( _q_point[_qp](1) = 0.3;){\n        RankTwoTensor Cinv = (2 * _E[_qp] + RankTwoTensor::Identity()).inverse();\n        _S[_qp] = 10000* (_lambda[_qp] * log(_F[_qp].det()) - _mu[_qp]) * Cinv +\n              _mu[_qp] * RankTwoTensor::Identity();\n        _C[_qp] =10000*(\n            -2 * (_lambda[_qp] * log(_F[_qp].det()) - _mu[_qp]) * Cinv.times<i_, k_, l_, j_>(Cinv) +\n            _lambda[_qp] * Cinv.times<i_, j_, k_, l_>(Cinv));\n    }  \n  }**",
+          "url": "https://github.com/idaholab/moose/discussions/28562",
+          "updatedAt": "2024-09-06T22:28:40Z",
+          "publishedAt": "2024-09-06T17:33:27Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nWe dont have very objects to output the quadrature points.\nI think the cleanest might be to create a QuadraturePointsPositions object and get the JSON output from there.\nI ll get started on this right now",
+                  "url": "https://github.com/idaholab/moose/discussions/28562#discussioncomment-10572592",
+                  "updatedAt": "2024-09-06T18:52:05Z",
+                  "publishedAt": "2024-09-06T18:52:04Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "#28565 has a new Positions object that will output the quadrature points to JSON",
+                          "url": "https://github.com/idaholab/moose/discussions/28562#discussioncomment-10572853",
+                          "updatedAt": "2024-09-06T19:29:03Z",
+                          "publishedAt": "2024-09-06T19:29:02Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "manikumd22"
+                          },
+                          "bodyText": "Hi @GiudGiud\nI tried as per that discussion, but I am getting an error\n*** ERROR ***\nA 'QuadraturePointsPositions' is not a registered object.\nIf you are trying to find this object in a dynamically loaded library, make sure that\nthe library can be found either in your \"Problem/library_path\" parameter or in the\nMOOSE_LIBRARY_PATH environment variable.\ufffd[39m\n#Tensor Mechanics tutorial: the basics\n#Step 1, part 1\n#2D simulation of uniaxial tension with linear elasticity\n[GlobalParams]\ndisplacements = 'disp_x disp_y'\n[]\n[Mesh]\n[msh]\ntype = GeneratedMeshGenerator\ndim = 2\nnx = 4\nny = 4\n[]\n[]\n[Positions]\n[all_mesh]\ntype = QuadraturePointsPositions\nauto_sort = true\n[]\n[]\n[Modules/TensorMechanics/Master]\n[all]\nadd_variables = true\nstrain = small\ngenerate_output = 'vonmises_stress stress_xx stress_yy strain_xx strain_yy'\n[]\n[]\n[Materials]\n[elasticity1]\ntype = ComputeIsotropicElasticityTensor\nyoungs_modulus = 9e4\npoissons_ratio = 0.3\n[]\n[./stress]\ntype = ComputeLinearElasticStress\n[../]\n[]\n[BCs]\n[./left]\ntype = DirichletBC\nvariable = disp_x\nboundary = 'top bottom'\nvalue = 0.0\n[../]\n[./bottom]\ntype = DirichletBC\nvariable = disp_y\nboundary = 'top'\nvalue = 1\n[../]\n[./top]\ntype = DirichletBC\nvariable = disp_y\nboundary = 'bottom'\nvalue = 0\n[../]\n[]\n[Preconditioning]\n[./SMP]\ntype = SMP\nfull = true\n[../]\n[]\n[Postprocessors]\n[num_pos]\ntype = NumPositions\npositions = all_mesh\n[]\n[]\n[Executioner]\ntype = Steady\nsolve_type = 'NEWTON'\npetsc_options = '-snes_ksp_ew'\npetsc_options_iname = '-pc_type -sub_pc_type -pc_asm_overlap -ksp_gmres_restart'\npetsc_options_value = 'asm lu 1 101'\n[]\n[Outputs]\ntype = JSON\nexodus = true\nperf_graph = true\nfile_base = ./inputfiles/maniklinearelastic_ir_out12\n[]",
+                          "url": "https://github.com/idaholab/moose/discussions/28562#discussioncomment-10573581",
+                          "updatedAt": "2024-09-06T21:11:26Z",
+                          "publishedAt": "2024-09-06T21:11:25Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "did you pull that branch and built it?\nYou can either do that or add the source and header to your local installation then rebuild",
+                          "url": "https://github.com/idaholab/moose/discussions/28562#discussioncomment-10573601",
+                          "updatedAt": "2024-09-06T21:15:09Z",
+                          "publishedAt": "2024-09-06T21:15:08Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "for clarification, this object is not in the moose source code yet, I just made it this afternoon. So you have to either use my branch or add it to your code",
+                          "url": "https://github.com/idaholab/moose/discussions/28562#discussioncomment-10573607",
+                          "updatedAt": "2024-09-06T21:15:47Z",
+                          "publishedAt": "2024-09-06T21:15:46Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "manikumd22"
+                  },
+                  "bodyText": "Hi @GiudGiud\nI add it to my local moose app,",
+                  "url": "https://github.com/idaholab/moose/discussions/28562#discussioncomment-10573698",
+                  "updatedAt": "2024-09-06T21:30:43Z",
+                  "publishedAt": "2024-09-06T21:30:42Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "did you recompile?",
+                          "url": "https://github.com/idaholab/moose/discussions/28562#discussioncomment-10573707",
+                          "updatedAt": "2024-09-06T21:32:50Z",
+                          "publishedAt": "2024-09-06T21:32:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "manikumd22"
+                          },
+                          "bodyText": "yes",
+                          "url": "https://github.com/idaholab/moose/discussions/28562#discussioncomment-10573709",
+                          "updatedAt": "2024-09-06T21:33:18Z",
+                          "publishedAt": "2024-09-06T21:33:17Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "umm.\nthen I guess:\n\nsave all your work, include this new object, with git commit\ngo in the top folder of your app\ngit clean -Xfd\nrecompile with make -j 6\ntry again",
+                          "url": "https://github.com/idaholab/moose/discussions/28562#discussioncomment-10573727",
+                          "updatedAt": "2024-09-06T21:35:50Z",
+                          "publishedAt": "2024-09-06T21:35:49Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "manikumd22"
+                          },
+                          "bodyText": "Hi @GiudGiud\nI tried but getting the same error",
+                          "url": "https://github.com/idaholab/moose/discussions/28562#discussioncomment-10573832",
+                          "updatedAt": "2024-09-06T21:56:39Z",
+                          "publishedAt": "2024-09-06T21:56:39Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "you can try to re-register the object by changing the registerMooseObject call in QuadraturePointsPositions.C\nwhen you do, check that the object is being properly recompiled",
+                          "url": "https://github.com/idaholab/moose/discussions/28562#discussioncomment-10573886",
+                          "updatedAt": "2024-09-06T22:06:14Z",
+                          "publishedAt": "2024-09-06T22:06:14Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "manikumd22"
+                          },
+                          "bodyText": "Hi @GiudGiud ,\nNow it worked,\nthank you so much\nFor example, I'm getting in this form\n                {\n                    \"x\": 0.052831216351296784,\n                    \"y\": 0.052831216351296784,\n                    \"z\": 0.0\n                },\n                {\n                    \"x\": 0.052831216351296784,\n                    \"y\": 0.19716878364870322,\n                    \"z\": 0.0\n                },\n                {\n                    \"x\": 0.19716878364870322,\n                    \"y\": 0.9471687836487033,\n                    \"z\": 0.0\n                },\n                {\n                    \"x\": 0.30283121635129684,\n                    \"y\": 0.052831216351296784,\n                    \"z\": 0.0\n                },\n\nWill this below material module work, if I define it in this way and will  _q_point_qp =  0.052831216351296784 take all the 9 gauss points corresponding to this or I have to define both _q_point_qp =  0.052831216351296784 and _q_point_qp =  0.052831216351296784\nif (_large_kinematics)\n{\nif ( _q_point_qp = 0.052831216351296784;) {\nRankTwoTensor Cinv = (2 * _E[_qp] + RankTwoTensor::Identity()).inverse();\n_S[_qp] = 100 (_lambda[_qp] * log(_F[_qp].det()) - _mu[_qp]) * Cinv +\n_mu[_qp] * RankTwoTensor::Identity();\n_C[_qp] =100(\n-2 * (lambda[qp] * log(F[qp].det()) - mu[qp]) * Cinv.times<i, k, l, j>(Cinv) +\nlambda[qp] * Cinv.times<i, j, k, l>(Cinv));\n}\nif ( _q_point_qp = 0.19716878364870322;) {\nRankTwoTensor Cinv = (2 * _E[_qp] + RankTwoTensor::Identity()).inverse();\n_S[_qp] = 1000* (_lambda[_qp] * log(_F[_qp].det()) - _mu[_qp]) * Cinv +\n_mu[_qp] * RankTwoTensor::Identity();\n_C[_qp] =1000*(\n-2 * (lambda[qp] * log(F[qp].det()) - mu[qp]) * Cinv.times<i, k, l, j>(Cinv) +\nlambda[qp] * Cinv.times<i, j, k, l>(Cinv));\n}\nif ( _q_point_qp = 0.30283121635129684;){\nRankTwoTensor Cinv = (2 * _E[_qp] + RankTwoTensor::Identity()).inverse();\n_S[_qp] = 10000* (_lambda[_qp] * log(_F[_qp].det()) - _mu[_qp]) * Cinv +\n_mu[_qp] * RankTwoTensor::Identity();\n_C[_qp] =10000*(\n-2 * (lambda[qp] * log(F[qp].det()) - mu[qp]) * Cinv.times<i, k, l, j>(Cinv) +\nlambda[qp] * Cinv.times<i, j, k, l>(Cinv));\n}\n}**",
+                          "url": "https://github.com/idaholab/moose/discussions/28562#discussioncomment-10573961",
+                          "updatedAt": "2024-09-06T22:23:14Z",
+                          "publishedAt": "2024-09-06T22:23:13Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "no this wont work\nif ( _q_point[_qp](https://github.com/idaholab/moose/discussions/1) = 0.052831216351296784;) {\n\nthis sets (single = instead of two ==) the value of the q point\nAND\nthe quadrature point will never be exactly equal to  0.052831216351296784, you need a tolerance.\nSo instead\nif (MooseUtils::absoluteFuzzyEqual(_q_point[_qp](1), 0.052831216351296784))\n\nthis used a 1e-12 tolerance iirc, enough here",
+                          "url": "https://github.com/idaholab/moose/discussions/28562#discussioncomment-10573986",
+                          "updatedAt": "2024-09-06T22:28:53Z",
+                          "publishedAt": "2024-09-06T22:28:40Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Location of gauss points in global coordinate",
+          "author": {
+            "login": "YuanxinXiao"
+          },
+          "bodyText": "Hi @GiudGiud ,\nI am struggling to find out the location of gauss points in global coordinates as I want to assign material property to gauss points.\nIt would be great if you help me to do so",
+          "url": "https://github.com/idaholab/moose/discussions/28564",
+          "updatedAt": "2024-09-06T19:29:25Z",
+          "publishedAt": "2024-09-06T18:01:24Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "hello\nin which object?\nquadrature points are found in _q_point[_qp] in many objects",
+                  "url": "https://github.com/idaholab/moose/discussions/28564#discussioncomment-10572569",
+                  "updatedAt": "2024-09-06T18:48:35Z",
+                  "publishedAt": "2024-09-06T18:48:34Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "YuanxinXiao"
+                  },
+                  "bodyText": "hi\n\nI want to store the location of quadrature points in csv file\n\n Outlook for iOS<https://aka.ms/o0ukef>\n\u2026\n________________________________\nFrom: Guillaume Giudicelli ***@***.***>\nSent: Friday, September 6, 2024 2:48:55 PM\nTo: idaholab/moose ***@***.***>\nCc: XIAO, YUANXIN ***@***.***>; Author ***@***.***>\nSubject: Re: [idaholab/moose] Location of gauss points in global coordinate (Discussion #28564)\n\nYou don't often get email from ***@***.*** Learn why this is important<https://aka.ms/LearnAboutSenderIdentification>\n\nhello\n\nin which object?\nquadrature points are found in _q_point[_qp] in many objects\n\n\u2014\nReply to this email directly, view it on GitHub<#28564 (comment)>, or unsubscribe<https://github.com/notifications/unsubscribe-auth/A5GLX3V3B66BXW4ATPR5SHDZVH2JPAVCNFSM6AAAAABNZBJQDWVHI2DSMVQWIX3LMV43URDJONRXK43TNFXW4Q3PNVWWK3TUHMYTANJXGI2TMOI>.\nYou are receiving this because you authored the thread.Message ID: ***@***.***>",
+                  "url": "https://github.com/idaholab/moose/discussions/28564#discussioncomment-10572600",
+                  "updatedAt": "2024-09-06T18:53:34Z",
+                  "publishedAt": "2024-09-06T18:53:33Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "#28565 has a new Positions object that will output the quadrature points to JSON",
+                          "url": "https://github.com/idaholab/moose/discussions/28564#discussioncomment-10572854",
+                          "updatedAt": "2024-09-06T19:29:10Z",
+                          "publishedAt": "2024-09-06T19:29:09Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "from JSON to csv should be easy with a python script",
+                          "url": "https://github.com/idaholab/moose/discussions/28564#discussioncomment-10572857",
+                          "updatedAt": "2024-09-06T19:29:25Z",
+                          "publishedAt": "2024-09-06T19:29:25Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "How to set target value in eigensolver?",
+          "author": {
+            "login": "rainiscold"
+          },
+          "bodyText": "Is there an interface in Moose to set the target value in eigen solver?\nI know it is possible in SLEPc, I couldn't figure out how to set it in Moose.",
+          "url": "https://github.com/idaholab/moose/discussions/28555",
+          "updatedAt": "2024-09-06T18:44:29Z",
+          "publishedAt": "2024-09-06T03:57:16Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nDo you mean setting a target value then adjusting parameters to make the solution be this target value?\nOr do you mean selecting an eigenmode by selecting a known eigenvalue?",
+                  "url": "https://github.com/idaholab/moose/discussions/28555#discussioncomment-10568681",
+                  "updatedAt": "2024-09-06T12:16:51Z",
+                  "publishedAt": "2024-09-06T12:16:50Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "maxnezdyur"
+                  },
+                  "bodyText": "I would look at this example modules/solid_mechanics/test/tests/modal_analysis/modal.i.\nWe can pass any petsc/slepc options using the interface\npetsc_options_iname = '-st_type -eps_target -st_pc_type -st_pc_factor_mat_solver_type'\npetsc_options_value = 'sinvert 0 lu mumps'",
+                  "url": "https://github.com/idaholab/moose/discussions/28555#discussioncomment-10569476",
+                  "updatedAt": "2024-09-06T13:33:31Z",
+                  "publishedAt": "2024-09-06T13:33:12Z",
+                  "isAnswer": true,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "rainiscold"
+                          },
+                          "bodyText": "Thank you for the info. I didn't realize the solution is right there.",
+                          "url": "https://github.com/idaholab/moose/discussions/28555#discussioncomment-10572525",
+                          "updatedAt": "2024-09-06T18:44:29Z",
+                          "publishedAt": "2024-09-06T18:44:29Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "New Material Definition",
+          "author": {
+            "login": "manikumd22"
+          },
+          "bodyText": "Hi @GiudGiud\nI am trying to define a new material module for my project, but I am getting an error\nFirst I defined the .C and .h in src/materials and then compile the make under the folder myApp\n.C file\n#include \"ComputeMultiscaleStress_circle_less_Stiff.h\"\n#include <random>\n\nregisterMooseObject(\"MooseApp\", ComputeMultiscaleStress_circle_less_Stiff);\n\nInputParameters\nComputeMultiscaleStress_circle_less_Stiff::validParams()\n{\n  InputParameters params = ComputeLagrangianStressPK2::validParams();\n  params.addParam<MaterialPropertyName>(\"lambda\",\n                                        \"lambda\",\n                                        \"Parameter conjugate to Lame parameter\"\n                                        \" for small deformations\");\n....\n\n.h file\n#pragma once\n\n#include \"ComputeLagrangianStressPK2.h\"\n#include \"DenseMatrix.h\"\n\nclass ComputeMultiscaleStress_circle_less_Stiff : public ComputeLagrangianStressPK2\n{\npublic:\n  static InputParameters validParams();\n  ComputeMultiscaleStress_circle_less_Stiff(const InputParameters & parameters);\n\nprotected:\n  /// Actual stress/Jacobian update\n  virtual void computeQpPK2Stress();\n\nprotected:\n\n\ufffd[31m\n*** ERROR ***\nA 'ComputeMultiscaleStress_circle_less_stiff' is not a registered object.\n\nIf you are trying to find this object in a dynamically loaded library, make sure that\nthe library can be found either in your \"Problem/library_path\" parameter or in the\nMOOSE_LIBRARY_PATH environment variable.\ufffd[39m\n\napplication called MPI_Abort(MPI_COMM_WORLD, 1) - process 2",
+          "url": "https://github.com/idaholab/moose/discussions/28533",
+          "updatedAt": "2024-09-06T17:02:54Z",
+          "publishedAt": "2024-09-04T03:34:50Z",
+          "category": {
+            "name": "Q&A Modules: Solid mechanics"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "hello\nThe headers seem to be nested under src/materials. We expect them to be under include/materials here\nThat's probably not the problem.\nDid the application recompile correctly? Can you use the other objects you created?\nGuillaume",
+                  "url": "https://github.com/idaholab/moose/discussions/28533#discussioncomment-10544764",
+                  "updatedAt": "2024-09-04T12:15:43Z",
+                  "publishedAt": "2024-09-04T12:15:42Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "manikumd22"
+                  },
+                  "bodyText": "Hi @GiudGiud\nIt compiled correctly and I am getting the same error \"Not a registered object\".\nI have tried to put in include/materials but the same error persists.\nA few months back, I defined in the same way src/materials and it was working correctly. I re-installed the moose as I was some other issues with login-id\nNow after re-installment I am facing this issue",
+                  "url": "https://github.com/idaholab/moose/discussions/28533#discussioncomment-10546428",
+                  "updatedAt": "2024-09-04T14:03:25Z",
+                  "publishedAt": "2024-09-04T14:03:25Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "ok so:\n\nsave all your work with git commit\ngit clean -Xfd in the root directory of the app\nrecompile\n\nif it still doesnt work, same but git cleaning moose as well before recompiling",
+                          "url": "https://github.com/idaholab/moose/discussions/28533#discussioncomment-10546887",
+                          "updatedAt": "2024-09-04T14:26:21Z",
+                          "publishedAt": "2024-09-04T14:26:20Z",
+                          "isAnswer": true
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "node": {
+                  "author": {
+                    "login": "manikumd22"
+                  },
+                  "bodyText": "Hi @GiudGiud\nIt worked\nThank you so much for the help",
+                  "url": "https://github.com/idaholab/moose/discussions/28533#discussioncomment-10571723",
+                  "updatedAt": "2024-09-06T17:02:40Z",
+                  "publishedAt": "2024-09-06T17:02:39Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": []
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Applying gradient after time interval",
+          "author": {
+            "login": "mdh23rct"
+          },
+          "bodyText": "Dear all,\nI am trying to implement a spatial gradient (DD_Scaling) after a time interval. Part of the code looks like this:\n\"[./Scaling_DD]\n    type = DerivativeParsedMaterial\n    property_name = 'DD_Scaling'\n    material_property_names = 'DD_bl hbl1'\n    expression =  (hbl1*DD_bl )'\n    outputs = exodus\n    derivative_order = 2\n  [../]\n  [./density]\n    type = GenericFunctionMaterial\n    material_property_names = 'DD_Scaling'\n    prop_names = 'density'\n    prop_values = 'if(t<150,0,DD_Scaling)'\n    #outputs = exodus\n  [../]\"\n\nHowever, GenericFunctionMaterial does not allow using a derivativeparsedmaterial into it. So what is the way to use a spatial gradient after a time interval?\nI appreciate your response. Thanks.",
+          "url": "https://github.com/idaholab/moose/discussions/28553",
+          "updatedAt": "2024-09-06T02:02:39Z",
+          "publishedAt": "2024-09-06T00:06:55Z",
+          "category": {
+            "name": "Q&A Modules: Phase field"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nI think a parsedMaterial will do well for defining this 'if' condition, using the expression parameter",
+                  "url": "https://github.com/idaholab/moose/discussions/28553#discussioncomment-10563292",
+                  "updatedAt": "2024-09-06T00:47:15Z",
+                  "publishedAt": "2024-09-06T00:47:14Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mdh23rct"
+                          },
+                          "bodyText": "@GiudGiud changed the code to\n[./Scaling_DD]\n    type = DerivativeParsedMaterial\n    property_name = 'DD_Scaling'\n    material_property_names = 'DD_bl hbl1'\n    expression =  (hbl1*DD_bl )'\n    outputs = exodus\n    derivative_order = 2\n  [../]\n[./density]\n    type = ParsedMaterial\n    property_name = 'density'\n    material_property_names = 'DD_Scaling'\n    expression = 'if(t<150,0,DD_Scaling)'\n    #outputs = exodus\n  [../]\n\nHowever, now showing error:\n*** ERROR ***\nInvalid function\nif(t<150,0,DD_Scaling)\nDD_Scaling\nin ParsedMaterialHelper.\nSyntax error: Unknown identifier\n\nAny solution for that?\nThanks.",
+                          "url": "https://github.com/idaholab/moose/discussions/28553#discussioncomment-10563458",
+                          "updatedAt": "2024-09-06T01:26:48Z",
+                          "publishedAt": "2024-09-06T01:20:15Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "how old is your version of moose?\nI think t is not recognized by the ParsedMaterial\nYou ll need to define t as a function, with a ParsedFunction with use_xyzt set to true for example",
+                          "url": "https://github.com/idaholab/moose/discussions/28553#discussioncomment-10563510",
+                          "updatedAt": "2024-09-06T01:28:18Z",
+                          "publishedAt": "2024-09-06T01:28:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "mdh23rct"
+                          },
+                          "bodyText": "@GiudGiud I did not update MOOSE recently. good news is solved the issue. We need ParsedFunction with FunctionAux. appreciate, cheers.",
+                          "url": "https://github.com/idaholab/moose/discussions/28553#discussioncomment-10563685",
+                          "updatedAt": "2024-09-06T02:03:01Z",
+                          "publishedAt": "2024-09-06T02:02:39Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "node": {
+          "title": "Code developed to Integrate a Gradient on a Surface",
+          "author": {
+            "login": "TLWise"
+          },
+          "bodyText": "I have modified some code to determine the value of the surface integral pictured. The values that are being calculated from the code as developed are not in total agreement with the reference value. Would you be as so kind to review what I have modified and point out the potential errors that I have that may be causing my errors?\nSideDiffusiveFluxDotNormIntegralDotComp_crab_C.txt\nSideDiffusiveFluxDotNormIntegralDotComp_crab_h.txt",
+          "url": "https://github.com/idaholab/moose/discussions/28543",
+          "updatedAt": "2024-09-05T22:25:40Z",
+          "publishedAt": "2024-09-05T04:20:57Z",
+          "category": {
+            "name": "Q&A Modules: General"
+          },
+          "comments": {
+            "edges": [
+              {
+                "node": {
+                  "author": {
+                    "login": "GiudGiud"
+                  },
+                  "bodyText": "Hello\nThere's a lot in this expression. is u_tau the tangeantial component to a vector field, tangeant to the surface? and ns the normal? what is n_y ?",
+                  "url": "https://github.com/idaholab/moose/discussions/28543#discussioncomment-10560254",
+                  "updatedAt": "2024-09-05T16:51:50Z",
+                  "publishedAt": "2024-09-05T16:51:21Z",
+                  "isAnswer": false,
+                  "replies": {
+                    "edges": [
+                      {
+                        "node": {
+                          "author": {
+                            "login": "TLWise"
+                          },
+                          "bodyText": "Thank you for taking a look at it. You are correct, n is the normal, n_y is the normal to the y-axis. I will have to verify u_tau, I believe it is the u component tangential to the surface, where its value may be zero at the surface, but its derivative is not necessarily zero.",
+                          "url": "https://github.com/idaholab/moose/discussions/28543#discussioncomment-10561839",
+                          "updatedAt": "2024-09-05T20:05:43Z",
+                          "publishedAt": "2024-09-05T20:05:42Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "I would recommend you remove the \"diffusivity gradient product\" routines, and write down the expression directly",
+                          "url": "https://github.com/idaholab/moose/discussions/28543#discussioncomment-10561950",
+                          "updatedAt": "2024-09-05T20:19:53Z",
+                          "publishedAt": "2024-09-05T20:19:52Z",
+                          "isAnswer": true
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "TLWise"
+                          },
+                          "bodyText": "Would you be able to provide a simple example of writing down an expression directly that involves a derivative with respect to the normal? I'm not sure of how to write it in the syntax required by MOOSE.",
+                          "url": "https://github.com/idaholab/moose/discussions/28543#discussioncomment-10562005",
+                          "updatedAt": "2024-09-05T20:25:21Z",
+                          "publishedAt": "2024-09-05T20:25:18Z",
+                          "isAnswer": false
+                        }
+                      },
+                      {
+                        "node": {
+                          "author": {
+                            "login": "GiudGiud"
+                          },
+                          "bodyText": "sure, use the chain rule\ndu/dn = du/dx dx/dn + du/dy dy/dn ...\n\nthen dx/dn is 1/n_x",
+                          "url": "https://github.com/idaholab/moose/discussions/28543#discussioncomment-10562167",
+                          "updatedAt": "2024-09-05T20:49:08Z",
+                          "publishedAt": "2024-09-05T20:49:07Z",
+                          "isAnswer": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}
