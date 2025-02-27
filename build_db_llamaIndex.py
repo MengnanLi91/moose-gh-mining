@@ -101,7 +101,7 @@ def save_index(index, db_dir):
 def main():
     parser = argparse.ArgumentParser(description="Choose embedding model and load method.")
     parser.add_argument('--load_local', action='store_true', help="Load model locally.")
-    parser.add_argument('--show_progress', action='store_true', help="Load model locally.")
+    parser.add_argument('--show_progress', action='store_true', help="Show embedding progress.")
     parser.add_argument('--model_path', type=str, default="<model path>", help="Path to the local model.")
     parser.add_argument('--model_name', type=str, default="all-MiniLM-L12-v2", help="Model name for SentenceTransformer.")
     parser.add_argument('--database', type=str, default="database", help="Path to store the index database.")
