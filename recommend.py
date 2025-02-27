@@ -23,7 +23,7 @@ def generate_solution(title, top_n, meta):
     similarities = util.pytorch_cos_sim(question_encoding, encodings)
 
     result = []
-    result.append(f"Here are some previous posts that may related to your question: {title}")
+    result.append(f"Here are some previous posts that may related to your question: {title} \n\n")
 
     # Ensure similarities is a 1-dimensional tensor
     similarities = similarities.squeeze()
@@ -119,7 +119,7 @@ def query_response(model, top_n, meta, encodings):
             concise_solution = generate_solution(title, top_n, meta)
 
             # Construct the response body with the bot tag and warning
-            response_body = f"Hey, `@{author}`\n `{concise_solution}` \nNote: This is an automated response. Please review and verify the solution. `@{username} [BOT]`"
+            response_body = f"Hey, @{author}\n\n {concise_solution} \n\nNote: This is an automated response. Please review and verify the solution. \n @{username} [BOT]"
 
             # Get the discussion ID
             discussion_id = discussion['id']
