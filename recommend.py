@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 # Set up GitHub credentials & variables
 load_dotenv()
-username = 'MengnanLi91'
+username = 'MOOSEbot'
 repo_owner = 'MengnanLi91'
 repo = 'moose-gh-mining'
 end_point = "https://api.github.com/graphql"
@@ -23,8 +23,7 @@ def generate_solution(title, top_n, meta):
     similarities = util.pytorch_cos_sim(question_encoding, encodings)
 
     result = []
-    result.append("-" * 79)
-    result.append(f"Question: {title}")
+    result.append(f"Here are some previous posts that may related to your question: {title}")
 
     # Ensure similarities is a 1-dimensional tensor
     similarities = similarities.squeeze()
@@ -36,8 +35,6 @@ def generate_solution(title, top_n, meta):
         result.append(f"    {j + 1}. Title: {meta['title'].iloc[idx.item()]}")
         result.append(f"        URL: {meta['url'].iloc[idx.item()]}")
         result.append(f"        Similarity: {similarities[idx].item():.4f}")
-
-    result.append("-" * 79)
 
     return "\n".join(result)
 
@@ -122,7 +119,7 @@ def query_response(model, top_n, meta, encodings):
             concise_solution = generate_solution(title, top_n, meta)
 
             # Construct the response body with the bot tag and warning
-            response_body = f"Hey, @{author} {concise_solution} \n\nNote: This is an automated response. Please review and verify the solution. `@{username} [BOT]`"
+            response_body = f"Hey, `@{author}`\n `{concise_solution}` \nNote: This is an automated response. Please review and verify the solution. `@{username} [BOT]`"
 
             # Get the discussion ID
             discussion_id = discussion['id']
