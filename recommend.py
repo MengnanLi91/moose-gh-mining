@@ -5,14 +5,16 @@ import numpy as np
 import requests
 import os
 import certifi
+from dotenv import load_dotenv
 
 # Set up GitHub credentials & variables
-username = 'MOOSEbot'
+load_dotenv()
+username = 'MengnanLi91'
 repo_owner = 'MengnanLi91'
 repo = 'moose-gh-mining'
 end_point = "https://api.github.com/graphql"
 discussion_arr = 1  # Number of discussions to fetch
-
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 
 def generate_solution(title, top_n, meta):
 
@@ -23,6 +25,9 @@ def generate_solution(title, top_n, meta):
     result = []
     result.append("-" * 79)
     result.append(f"Question: {title}")
+
+    # Ensure similarities is a 1-dimensional tensor
+    similarities = similarities.squeeze()
 
     sorted_idx = similarities.argsort(descending=True)
     top_n_idx = sorted_idx[:top_n]
@@ -36,24 +41,8 @@ def generate_solution(title, top_n, meta):
 
     return "\n".join(result)
 
-
-
-
-if __name__ == "__main__":
-    # Model used for encoding posts
-    # This model should be the same as the one used in build_db.py
-    model = SentenceTransformer("all-MiniLM-L6-v2")
-    # Database directory
-    db_dir = Path("db")
-    # Top N most similar posts to retrieve
-    top_n = 5
-
-    # Read database
-    meta = pd.read_csv(db_dir / "meta.csv")
-    encodings = np.load(db_dir / "encoding.npy")
-
-
-    # GraphQL query to fetch discussions
+def query_response(model, top_n, meta, encodings):
+        # GraphQL query to fetch discussions
     query = '''
     query($owner: String!, $repo: String!, $first: Int!) {
     repository(owner: $owner, name: $repo) {
@@ -103,13 +92,11 @@ if __name__ == "__main__":
     }
 
     # Construct the request headers
-    GITHUB_TOKEN = os.getenv("API_KEY")
     headers = {"Authorization": "bearer {}".format(GITHUB_TOKEN)}
 
 
     # Send the GraphQL request to fetch discussions
-    response = requests.post('https://api.github.com/graphql',
-                            json={'query': query, 'variables': variables}, headers=headers, verify=certifi.where())
+    response = requests.post(end_point, json={'query': query, 'variables': variables}, headers=headers, verify=certifi.where())
 
     # Check if the request was successful
     if response.status_code == 200:
@@ -131,7 +118,7 @@ if __name__ == "__main__":
                 if existing_comment_author != username:
                     continue
 
-            # Generate a concise solution using OpenAI API
+            # Generate a concise solution
             concise_solution = generate_solution(title, top_n, meta)
 
             # Construct the response body with the bot tag and warning
@@ -155,6 +142,27 @@ if __name__ == "__main__":
     else:
         print(f"Request failed with status code: {response.status_code}")
         print(response.text)
+
+
+
+if __name__ == "__main__":
+    # Model used for encoding posts
+    # This model should be the same as the one used in build_db.py
+    #model = SentenceTransformer("all-MiniLM-L6-v2")
+    model = SentenceTransformer("/Users/lim2/Research/LLM/pretrained_models/all-MiniLM-L6-v2")
+    # Database directory
+    db_dir = Path("db")
+    # Top N most similar posts to retrieve
+    top_n = 5
+
+    # Read database
+    meta = pd.read_csv(db_dir / "meta.csv")
+    encodings = np.load(db_dir / "encoding.npy")
+
+    #print(generate_solution("How do I make my code more efficient?", top_n, meta))
+
+    query_response(model, top_n, meta, encodings)
+
 
 
 ## Reference
