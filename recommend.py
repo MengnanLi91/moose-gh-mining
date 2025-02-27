@@ -3,17 +3,13 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 import requests
-from dotenv import load_dotenv
 import os
 import certifi
-
-# Load environment variables from .env file
-load_dotenv()
 
 # Set up GitHub credentials & variables
 username = 'MOOSEbot'
 repo_owner = 'MengnanLi91'
-repo = 'MengnanLi91/moose-gh-mining'
+repo = 'moose-gh-mining'
 end_point = "https://api.github.com/graphql"
 discussion_arr = 1  # Number of discussions to fetch
 
@@ -46,7 +42,7 @@ def generate_solution(title, top_n, meta):
 if __name__ == "__main__":
     # Model used for encoding posts
     # This model should be the same as the one used in build_db.py
-    model = SentenceTransformer("/Users/lim2/Research/LLM/pretrained_models/all-MiniLM-L6-v2")
+    model = SentenceTransformer("all-MiniLM-L6-v2")
     # Database directory
     db_dir = Path("db")
     # Top N most similar posts to retrieve
@@ -107,7 +103,7 @@ if __name__ == "__main__":
     }
 
     # Construct the request headers
-    GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+    GITHUB_TOKEN = os.getenv("API_KEY")
     headers = {"Authorization": "bearer {}".format(GITHUB_TOKEN)}
 
 
