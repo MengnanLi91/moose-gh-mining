@@ -132,7 +132,7 @@ if __name__ == "__main__":
                     continue
 
             # Generate a concise solution using OpenAI API
-            concise_solution = generate_solution(title)
+            concise_solution = generate_solution(title, top_n, meta)
 
             # Construct the response body with the bot tag and warning
             response_body = f"Hey, @{author} {concise_solution} \n\nNote: This is an automated response. Please review and verify the solution. `@{username} [BOT]`"
