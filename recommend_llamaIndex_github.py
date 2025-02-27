@@ -43,6 +43,8 @@ if __name__ == "__main__":
     db_dir = Path("/database")
     top_n = 5
 
-    Settings.embed_model = HuggingFaceEmbedding(model_name="sentence-transformers/all-MiniLM-L12-v2")
+    embed_model = HuggingFaceEmbedding(model_name="sentence-transformers/all-MiniLM-L12-v2")
+    Settings.embed_model = embed_model
+
     index = load_index(db_dir)
     query_index(index, top_n, questions)
