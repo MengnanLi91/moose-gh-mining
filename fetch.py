@@ -3,6 +3,7 @@ import requests
 import json
 from dotenv import load_dotenv
 import os
+import certifi
 
 end_point = "https://api.github.com/graphql"
 num_discussion = 10
@@ -25,7 +26,7 @@ if __name__ == "__main__":
     load_dotenv()
     query_template = Path("query.gql.in").read_text()
     GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
-    headers = {"Authorization": "bearer {}".format(os.getenv("GITHUB_TOKEN"))}
+    headers = {"Authorization": "bearer {}".format(GITHUB_TOKEN)}
 
     has_remaining_credit = True
     has_next_page = True
@@ -38,7 +39,7 @@ if __name__ == "__main__":
             num_comment,
             num_reply,
         )
-        response = requests.post(end_point, headers=headers, json={"query": query})
+        response = requests.post(end_point, headers=headers, json={"query": query},verify=certifi.where())
         if response.status_code == STATUS_SUCCESS:
             result = response.json()
             begin_cursor = end_cursor

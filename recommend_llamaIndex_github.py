@@ -45,13 +45,6 @@ def query_index(index, top_n, questions):
         print("-" * 79)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Choose LLM and embedding model.')
-    parser.add_argument('--load_local', action='store_true', help="Load model locally.")
-    parser.add_argument('--model_path', type=str, default="<model path>", help="Path to the local model.")
-    parser.add_argument('--model_name', type=str, default="all-MiniLM-L12-v2", help="Model name for SentenceTransformer.")
-    parser.add_argument('--database', type=str, default="database", help="Path to store the index database.")
-    parser.add_argument('--top_n', type=Real, default=5, help="Pick the number of relevent discussion to retrivive")
-    args = parser.parse_args()
 
     questions = [
         "How do I make my code more efficient?",
@@ -59,10 +52,11 @@ if __name__ == "__main__":
         "How to set up a fluid-structure interaction problem?",
     ]
 
-    db_dir = Path(args.database)
+    db_dir = Path("/database")
+    top_n = 5
 
-    embed_model = load_model(args.load_local, args.model_path, args.model_name)
+    embed_model = load_model(False, "",  "all-MiniLM-L12-v2")
     Settings.embed_model = embed_model
 
-    index = load_index(args.database)
-    query_index(index, args.top_n, questions)
+    index = load_index(db_dir)
+    query_index(index, top_n, questions)
