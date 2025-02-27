@@ -1,14 +1,9 @@
-from sentence_transformers import SentenceTransformer
 from llama_index.core.retrievers import VectorIndexRetriever
 from llama_index.core import StorageContext, load_index_from_storage, QueryBundle, Settings
 from llama_index.vector_stores.hnswlib import HnswlibVectorStore
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from pathlib import Path
 
-
-def load_model(model_name):
-
-    embed_model = SentenceTransformer(model_name)
-    return embed_model
 
 def load_index(db_dir):
 
@@ -48,8 +43,6 @@ if __name__ == "__main__":
     db_dir = Path("/database")
     top_n = 5
 
-    embed_model = load_model("all-MiniLM-L12-v2")
-    Settings.embed_model = embed_model
-
+    Settings.embed_model = HuggingFaceEmbedding(model_name="sentence-transformers/all-MiniLM-L12-v2")
     index = load_index(db_dir)
     query_index(index, top_n, questions)
