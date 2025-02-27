@@ -14,7 +14,7 @@ repo_owner = 'MengnanLi91'
 repo = 'moose-gh-mining'
 end_point = "https://api.github.com/graphql"
 discussion_arr = 1  # Number of discussions to fetch
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+GITHUB_TOKEN = os.getenv("API_KEY")
 
 def generate_solution(title, top_n, meta):
 
@@ -148,8 +148,8 @@ def query_response(model, top_n, meta, encodings):
 if __name__ == "__main__":
     # Model used for encoding posts
     # This model should be the same as the one used in build_db.py
-    #model = SentenceTransformer("all-MiniLM-L6-v2")
-    model = SentenceTransformer("/Users/lim2/Research/LLM/pretrained_models/all-MiniLM-L6-v2")
+    model = SentenceTransformer("all-MiniLM-L6-v2")
+
     # Database directory
     db_dir = Path("db")
     # Top N most similar posts to retrieve
