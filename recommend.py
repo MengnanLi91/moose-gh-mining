@@ -24,7 +24,7 @@ def generate_solution(title, top_n, meta):
     result.append("-" * 79)
     result.append(f"Question: {title}")
 
-    sorted_idx = similarities[i].argsort(descending=True)
+    sorted_idx = similarities.argsort(descending=True)
     top_n_idx = sorted_idx[:top_n]
 
     for j, idx in enumerate(top_n_idx):
