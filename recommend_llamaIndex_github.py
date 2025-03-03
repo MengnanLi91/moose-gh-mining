@@ -49,7 +49,7 @@ def generate_solution(title, top_n, index, threshold):
 
         result.append(f"    {index + 1}. Title: {node.metadata['title']}")
         result.append(f"    URL: [{node.metadata['url']}]({node.metadata['url']})")
-        result.append(f"    Similarity: {node.score}")
+        result.append(f"    Similarity: {node.score}\n")
 
 
     return "\n".join(result)
