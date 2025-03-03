@@ -9,7 +9,7 @@ from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.core import VectorStoreIndex, StorageContext, Settings
 from llama_index.core.storage.docstore import SimpleDocumentStore
 from llama_index.core.storage.index_store import SimpleIndexStore
-from llama_index.vector_stores.hnswlib import HnswlibVectorStore
+from llama_index.core.vector_stores import SimpleVectorStore
 from sentence_transformers import SentenceTransformer
 
 def get_post_content(post):
@@ -77,15 +77,10 @@ def create_index(embed_model, documents, show_progress):
     print("Generate Llama Index nodes from documentation.")
     nodes = splitter.get_nodes_from_documents(documents, show_progress=show_progress)
 
-    hnswlib_vector_store = HnswlibVectorStore.from_params(
-        space="ip",
-        dimension=embed_model._model.get_sentence_embedding_dimension(),
-        max_elements=10000,
-    )
 
     storage_context = StorageContext.from_defaults(
         docstore=SimpleDocumentStore(),
-        vector_store=hnswlib_vector_store,
+        vector_store=SimpleVectorStore(),
         index_store=SimpleIndexStore(),
     )
 
