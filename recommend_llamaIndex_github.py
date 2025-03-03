@@ -48,7 +48,7 @@ def generate_solution(title, top_n, index, threshold):
     for index, node in enumerate(filtered_nodes):
 
         result.append(f"    {index + 1}. Title: {node.metadata['title']}")
-        result.append(f"    URL: <a href='{node.metadata['url']}'>{node.metadata['url']}</a>")
+        result.append(f"    URL: [{node.metadata['url']}]({node.metadata['url']})")
         result.append(f"    Similarity: {node.score}")
 
 
